@@ -401,7 +401,7 @@ function ChartTerminal({
 // =============================================================================
 
 function TimeTab() {
-	const { timezone, timezoneAbbr } = useTimezone();
+	const { timezoneAbbr } = useTimezone();
 	const { data: calendarData, isLoading: calendarLoading } =
 		api.analytics.getCalendarData.useQuery();
 	const { data: dayOfWeekData, isLoading: dowLoading } =
@@ -439,7 +439,7 @@ function TimeTab() {
 				description="Daily P&L over the last year"
 				title="Trading Calendar"
 			>
-				<CalendarHeatmap data={calendarData ?? []} timezone={timezone} />
+				<CalendarHeatmap data={calendarData ?? []} />
 			</ChartTerminal>
 
 			{/* Day of Week & Hour Analysis */}
@@ -455,7 +455,7 @@ function TimeTab() {
 					description={`Performance by entry hour (${timezoneAbbr})`}
 					title="Hourly Performance"
 				>
-					<HourHeatmap data={hourData ?? []} timezoneAbbr={timezoneAbbr} />
+					<HourHeatmap data={hourData ?? []} />
 				</ChartTerminal>
 			</div>
 
@@ -465,9 +465,7 @@ function TimeTab() {
 					description="Performance by trading session"
 					title="Trading Sessions"
 				>
-					<SessionChart
-						data={sessionData ?? []}
-					/>
+					<SessionChart data={sessionData ?? []} />
 				</ChartTerminal>
 
 				<ChartTerminal

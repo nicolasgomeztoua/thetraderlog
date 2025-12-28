@@ -162,9 +162,12 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 
 				{/* Cumulative area */}
 				<svg
+					aria-labelledby="cumulative-pnl-title"
 					className="absolute inset-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)]"
 					preserveAspectRatio="none"
+					role="img"
 				>
+					<title id="cumulative-pnl-title">Cumulative P&L chart</title>
 					{/* Area fill */}
 					<defs>
 						<linearGradient

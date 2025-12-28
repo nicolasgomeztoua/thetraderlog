@@ -5,6 +5,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn, formatCurrency } from "@/lib/utils";
+import { useSettingsStore } from "@/stores/settings-store";
 
 interface HourData {
 	hour: number;
@@ -19,8 +20,6 @@ interface HourData {
 interface HourHeatmapProps {
 	data: HourData[];
 	className?: string;
-	/** Timezone abbreviation to display (e.g., "EST", "PST"). Defaults to "Local" */
-	timezoneAbbr?: string;
 }
 
 /**
@@ -56,11 +55,9 @@ function formatHour(hour: number): string {
 /**
  * 24-hour grid showing performance by hour of day
  */
-export function HourHeatmap({
-	data,
-	className,
-	timezoneAbbr = "Local",
-}: HourHeatmapProps) {
+export function HourHeatmap({ data, className }: HourHeatmapProps) {
+	// Get timezone abbreviation from settings store
+	const timezoneAbbr = useSettingsStore((state) => state.timezoneAbbr);
 	const maxAbsPnl = useMemo(() => {
 		if (data.length === 0) return 0;
 		return Math.max(...data.map((d) => Math.abs(d.pnl)));

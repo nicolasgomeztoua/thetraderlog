@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/tooltip";
 import { getDateStringInTimezone } from "@/lib/timezone";
 import { cn, formatCurrency } from "@/lib/utils";
+import { useSettingsStore } from "@/stores/settings-store";
 
 interface CalendarDay {
 	date: string;
@@ -18,8 +19,6 @@ interface CalendarDay {
 interface CalendarHeatmapProps {
 	data: CalendarDay[];
 	className?: string;
-	/** User's timezone for date matching (e.g., "America/New_York") */
-	timezone?: string;
 }
 
 const MONTHS = [
@@ -65,13 +64,9 @@ function getPnLColor(pnl: number, maxAbsPnl: number): string {
 /**
  * GitHub-style calendar heatmap for daily P&L
  */
-export function CalendarHeatmap({
-	data,
-	className,
-	timezone,
-}: CalendarHeatmapProps) {
-	// Get timezone, falling back to browser timezone
-	const tz = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
+	// Get timezone from settings store
+	const tz = useSettingsStore((state) => state.timezone);
 	// Create a map for quick lookup
 	const dataMap = useMemo(() => {
 		const map = new Map<string, CalendarDay>();

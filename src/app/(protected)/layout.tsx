@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AccountProvider } from "@/contexts/account-context";
 import { ThemeProvider } from "@/contexts/theme-context";
+import { SettingsHydration } from "@/hooks/use-settings-hydration";
 import { api } from "@/trpc/server";
 import { AppSidebar } from "./_components/app-sidebar";
 
@@ -36,7 +37,9 @@ export default async function ProtectedLayout({
 						<main className="relative flex-1 overflow-auto p-6">
 							{/* Background grid for content area */}
 							<div className="grid-bg pointer-events-none fixed inset-0 opacity-20" />
-							<div className="relative">{children}</div>
+							<div className="relative">
+								<SettingsHydration>{children}</SettingsHydration>
+							</div>
 						</main>
 					</SidebarInset>
 				</SidebarProvider>

@@ -5,28 +5,35 @@ import {
 	formatTimeInTimezone,
 	getTimezoneAbbreviation,
 } from "@/lib/timezone";
-import { api } from "@/trpc/react";
+import { useSettingsStore } from "@/stores/settings-store";
 
 /**
  * Hook that provides the user's timezone and timezone-aware formatting functions.
- * Falls back to browser timezone if user settings haven't loaded yet.
+ * Uses the Zustand settings store for timezone data.
+ * Falls back to browser timezone if settings haven't been hydrated yet.
  */
 export function useTimezone() {
-	const { data: settings, isLoading } = api.settings.get.useQuery();
+	const storeTimezone = useSettingsStore((state) => state.timezone);
+	const storeTimezoneAbbr = useSettingsStore((state) => state.timezoneAbbr);
+	const isHydrated = useSettingsStore((state) => state.isHydrated);
 
-	// Get user's timezone, falling back to browser timezone
+	// Get user's timezone from store, falling back to browser timezone before hydration
 	const timezone = useMemo(() => {
-		if (settings?.timezone) {
-			return settings.timezone;
+		if (isHydrated && storeTimezone) {
+			return storeTimezone;
 		}
-		// Fallback to browser timezone
+		// Fallback to browser timezone before hydration
 		return Intl.DateTimeFormat().resolvedOptions().timeZone;
-	}, [settings?.timezone]);
+	}, [storeTimezone, isHydrated]);
 
 	// Get timezone abbreviation (e.g., "EST", "PST")
 	const timezoneAbbr = useMemo(() => {
+		if (isHydrated && storeTimezoneAbbr) {
+			return storeTimezoneAbbr;
+		}
+		// Compute from fallback timezone
 		return getTimezoneAbbreviation(timezone);
-	}, [timezone]);
+	}, [storeTimezoneAbbr, isHydrated, timezone]);
 
 	// Memoized formatting functions
 	const formatDate = useCallback(
@@ -62,7 +69,7 @@ export function useTimezone() {
 	return {
 		timezone,
 		timezoneAbbr,
-		isLoading,
+		isLoading: !isHydrated,
 		formatDate,
 		formatTime,
 		formatDateTime,

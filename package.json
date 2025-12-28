@@ -63,7 +63,8 @@
 		"superjson": "^2.2.1",
 		"svix": "^1.82.0",
 		"tailwind-merge": "^3.4.0",
-		"zod": "^4.1.13"
+		"zod": "^4.1.13",
+		"zustand": "^5.0.9"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.5",

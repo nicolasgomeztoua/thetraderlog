@@ -7,6 +7,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn, formatCurrency } from "@/lib/utils";
+import { type TradingSession, useSettingsStore } from "@/stores/settings-store";
 
 interface SessionData {
 	session: string;
@@ -24,32 +25,57 @@ interface SessionChartProps {
 	className?: string;
 }
 
-// Fallback session metadata for icons (colors now come from data)
-const SESSION_META: Record<
-	string,
-	{ color: string; hours: string; icon: string }
-> = {
-	Asia: {
-		color: "#00d4ff", // Ice blue (accent)
-		hours: "00:00 - 08:00",
-		icon: "🌏",
-	},
-	London: {
-		color: "#d4ff00", // Electric chartreuse (primary)
-		hours: "08:00 - 16:00",
-		icon: "🇬🇧",
-	},
-	"New York": {
-		color: "#f59e0b", // Amber
-		hours: "13:00 - 21:00",
-		icon: "🗽",
-	},
-};
+/**
+ * Format a UTC hour to local time in the user's timezone
+ * @param utcHour - Hour in UTC (0-23)
+ * @param timezone - User's timezone (e.g., "America/New_York")
+ * @returns Formatted time string (e.g., "19:00")
+ */
+function formatUtcHourInTimezone(utcHour: number, timezone: string): string {
+	// Create a date at that UTC hour (using today's date for DST accuracy)
+	const date = new Date();
+	date.setUTCHours(utcHour, 0, 0, 0);
+
+	// Format in user's timezone
+	return date.toLocaleTimeString("en-US", {
+		hour: "2-digit",
+		minute: "2-digit",
+		timeZone: timezone,
+		hour12: false,
+	});
+}
+
+/**
+ * Get time range display string for a session in user's timezone
+ */
+function getSessionTimeRange(
+	session: TradingSession,
+	timezone: string,
+	timezoneAbbr: string,
+): string {
+	const startTime = formatUtcHourInTimezone(session.startHour, timezone);
+	const endTime = formatUtcHourInTimezone(session.endHour, timezone);
+	return `${startTime} - ${endTime} ${timezoneAbbr}`;
+}
 
 /**
  * Terminal-styled session performance cards
  */
 export function SessionChart({ data, className }: SessionChartProps) {
+	// Get settings from store
+	const tradingSessions = useSettingsStore((state) => state.tradingSessions);
+	const timezone = useSettingsStore((state) => state.timezone);
+	const timezoneAbbr = useSettingsStore((state) => state.timezoneAbbr);
+
+	// Create a map of session name -> session config for lookups
+	const sessionConfigMap = useMemo(() => {
+		const map = new Map<string, TradingSession>();
+		for (const session of tradingSessions) {
+			map.set(session.name, session);
+		}
+		return map;
+	}, [tradingSessions]);
+
 	// Find best session and max P&L for scaling
 	const { bestSession, maxAbsPnl } = useMemo(() => {
 		const withTrades = data.filter((d) => d.trades > 0);
@@ -84,10 +110,16 @@ export function SessionChart({ data, className }: SessionChartProps) {
 			{/* Session cards */}
 			<div className="grid gap-3">
 				{data.map((session) => {
-					const meta = SESSION_META[session.session];
+					// Get session config from store (for color and time range)
+					const sessionConfig = sessionConfigMap.get(session.session);
 					const barWidth = Math.abs(session.pnl) / maxAbsPnl;
 					const isProfit = session.pnl >= 0;
 					const isBest = bestSession?.session === session.session;
+
+					// Get time range in user's timezone
+					const timeRange = sessionConfig
+						? getSessionTimeRange(sessionConfig, timezone, timezoneAbbr)
+						: "";
 
 					return (
 						<div
@@ -112,7 +144,7 @@ export function SessionChart({ data, className }: SessionChartProps) {
 											className="h-3 w-3 rounded-full"
 											style={{
 												backgroundColor:
-													session.color ?? meta?.color ?? "#6366f1",
+													session.color ?? sessionConfig?.color ?? "#6366f1",
 											}}
 										/>
 										<span className="font-medium text-sm">
@@ -125,9 +157,9 @@ export function SessionChart({ data, className }: SessionChartProps) {
 										)}
 									</div>
 
-									{/* Time range */}
+									{/* Time range in user's timezone */}
 									<div className="font-mono text-[10px] text-muted-foreground">
-										{meta?.hours ?? ""} UTC
+										{timeRange}
 									</div>
 
 									{/* Progress bar */}
@@ -139,7 +171,6 @@ export function SessionChart({ data, className }: SessionChartProps) {
 											)}
 											style={{
 												width: `${barWidth * 100}%`,
-												backgroundColor: isProfit ? undefined : undefined,
 											}}
 										/>
 									</div>
@@ -207,7 +238,7 @@ export function SessionChart({ data, className }: SessionChartProps) {
 					<TooltipTrigger asChild>
 						<Link
 							className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-primary"
-							href="/settings"
+							href="/settings?tab=trading"
 						>
 							<Settings2 className="h-3 w-3" />
 							<span>Configure sessions</span>

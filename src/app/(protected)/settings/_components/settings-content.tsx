@@ -57,6 +57,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
 import { cn } from "@/lib/utils";
+import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
 
 const AI_PROVIDERS = [
@@ -578,6 +579,8 @@ export function SettingsContent() {
 		setShowKeys((prev) => ({ ...prev, [provider]: !prev[provider] }));
 	};
 
+	const updateSettingsStore = useSettingsStore((state) => state.updateSettings);
+
 	const handleSave = () => {
 		updateSettings.mutate(
 			{
@@ -597,6 +600,19 @@ export function SettingsContent() {
 				onSuccess: () => {
 					setInitialSettings(settings);
 					setHasUnsavedChanges(false);
+
+					// Sync Zustand store with the new settings for instant UI updates
+					updateSettingsStore({
+						timezone: settings.timezone,
+						currency: settings.currency,
+						breakevenThreshold: parseFloat(
+							settings.breakevenThreshold || "3.00",
+						),
+						defaultInstrumentType: settings.defaultInstrument as
+							| "futures"
+							| "forex",
+						tradingSessions: settings.tradingSessions,
+					});
 				},
 			},
 		);
@@ -717,7 +733,7 @@ export function SettingsContent() {
 						</CardHeader>
 						<CardContent>
 							<button
-								className="flex items-center gap-4 rounded-lg p-2 -m-2 transition-colors hover:bg-secondary/50 cursor-pointer text-left"
+								className="-m-2 flex cursor-pointer items-center gap-4 rounded-lg p-2 text-left transition-colors hover:bg-secondary/50"
 								onClick={() => openUserProfile()}
 								type="button"
 							>
@@ -730,7 +746,7 @@ export function SettingsContent() {
 									/>
 								)}
 								<div>
-									<p className="font-medium hover:text-primary transition-colors">
+									<p className="font-medium transition-colors hover:text-primary">
 										{user?.firstName} {user?.lastName}
 									</p>
 									<p className="font-mono text-muted-foreground text-xs">
@@ -904,7 +920,7 @@ export function SettingsContent() {
 									{settings.tradingSessions.map((session, index) => (
 										<div
 											className="flex items-center gap-3 rounded border border-border bg-card p-3"
-											key={`session-${index}`}
+											key={`session-${session.name}-${session.startHour}`}
 										>
 											{/* Color indicator */}
 											<div
@@ -928,7 +944,9 @@ export function SettingsContent() {
 											<div className="flex items-center gap-2">
 												<Select
 													onValueChange={(value) =>
-														updateSession(index, { startHour: parseInt(value) })
+														updateSession(index, {
+															startHour: parseInt(value, 10),
+														})
 													}
 													value={session.startHour.toString()}
 												>
@@ -936,9 +954,15 @@ export function SettingsContent() {
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
-														{Array.from({ length: 24 }, (_, i) => (
-															<SelectItem key={i} value={i.toString()}>
-																{i.toString().padStart(2, "0")}:00
+														{[
+															0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+															15, 16, 17, 18, 19, 20, 21, 22, 23,
+														].map((hour) => (
+															<SelectItem
+																key={`start-hour-${hour}`}
+																value={hour.toString()}
+															>
+																{hour.toString().padStart(2, "0")}:00
 															</SelectItem>
 														))}
 													</SelectContent>
@@ -946,7 +970,9 @@ export function SettingsContent() {
 												<span className="text-muted-foreground">→</span>
 												<Select
 													onValueChange={(value) =>
-														updateSession(index, { endHour: parseInt(value) })
+														updateSession(index, {
+															endHour: parseInt(value, 10),
+														})
 													}
 													value={session.endHour.toString()}
 												>
@@ -954,9 +980,15 @@ export function SettingsContent() {
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
-														{Array.from({ length: 24 }, (_, i) => (
-															<SelectItem key={i} value={i.toString()}>
-																{i.toString().padStart(2, "0")}:00
+														{[
+															0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+															15, 16, 17, 18, 19, 20, 21, 22, 23,
+														].map((hour) => (
+															<SelectItem
+																key={`end-hour-${hour}`}
+																value={hour.toString()}
+															>
+																{hour.toString().padStart(2, "0")}:00
 															</SelectItem>
 														))}
 													</SelectContent>
@@ -1014,7 +1046,7 @@ export function SettingsContent() {
 										24h Timeline (UTC)
 									</p>
 									<div className="relative h-8 rounded bg-card">
-										{settings.tradingSessions.map((session, index) => {
+										{settings.tradingSessions.map((session, _index) => {
 											const start = (session.startHour / 24) * 100;
 											const width =
 												session.endHour >= session.startHour
@@ -1024,7 +1056,7 @@ export function SettingsContent() {
 											return (
 												<div
 													className="absolute top-0 h-full rounded opacity-70"
-													key={`timeline-${index}`}
+													key={`timeline-${session.name}-${session.startHour}`}
 													style={{
 														left: `${start}%`,
 														width: `${Math.min(width, 100 - start)}%`,
