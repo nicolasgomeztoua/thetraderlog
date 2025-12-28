@@ -60,6 +60,66 @@ import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
 
+/**
+ * Get the UTC offset in hours for a timezone.
+ * Positive offset means ahead of UTC (e.g., Tokyo +9).
+ * Negative offset means behind UTC (e.g., New York -5).
+ */
+function getTimezoneOffsetHours(timezone: string): number {
+	const now = new Date();
+	const utcDate = new Date(now.toLocaleString("en-US", { timeZone: "UTC" }));
+	const tzDate = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
+	return Math.round((tzDate.getTime() - utcDate.getTime()) / (1000 * 60 * 60));
+}
+
+/**
+ * Convert a UTC hour (0-23) to local hour in the given timezone.
+ */
+function utcHourToLocal(utcHour: number, timezone: string): number {
+	const offset = getTimezoneOffsetHours(timezone);
+	let localHour = (utcHour + offset) % 24;
+	if (localHour < 0) localHour += 24;
+	return localHour;
+}
+
+/**
+ * Convert a local hour (0-23) to UTC hour.
+ */
+function localHourToUtc(localHour: number, timezone: string): number {
+	const offset = getTimezoneOffsetHours(timezone);
+	let utcHour = (localHour - offset) % 24;
+	if (utcHour < 0) utcHour += 24;
+	return utcHour;
+}
+
+/**
+ * Convert trading sessions from UTC to local timezone hours.
+ */
+function sessionsToLocal(
+	sessions: TradingSession[],
+	timezone: string,
+): TradingSession[] {
+	return sessions.map((s) => ({
+		...s,
+		startHour: utcHourToLocal(s.startHour, timezone),
+		endHour: utcHourToLocal(s.endHour, timezone),
+	}));
+}
+
+/**
+ * Convert trading sessions from local timezone to UTC hours.
+ */
+function sessionsToUtc(
+	sessions: TradingSession[],
+	timezone: string,
+): TradingSession[] {
+	return sessions.map((s) => ({
+		...s,
+		startHour: localHourToUtc(s.startHour, timezone),
+		endHour: localHourToUtc(s.endHour, timezone),
+	}));
+}
+
 const AI_PROVIDERS = [
 	{
 		id: "openai",
@@ -401,18 +461,23 @@ export function SettingsContent() {
 					// Keep defaults on parse error
 				}
 			}
+			const tz =
+				userSettings.timezone ??
+				Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+			// Convert session hours from UTC (backend) to local timezone (for editing)
+			const localSessions = sessionsToLocal(parsedSessions, tz);
+
 			const newSettings = {
 				preferredProvider: userSettings.preferredAiProvider ?? "openai",
 				openaiKey: userSettings.openaiApiKey ?? "",
 				anthropicKey: userSettings.anthropicApiKey ?? "",
 				googleKey: userSettings.googleApiKey ?? "",
 				defaultInstrument: userSettings.defaultInstrumentType ?? "futures",
-				timezone:
-					userSettings.timezone ??
-					Intl.DateTimeFormat().resolvedOptions().timeZone,
+				timezone: tz,
 				currency: userSettings.currency ?? "USD",
 				breakevenThreshold: userSettings.breakevenThreshold ?? "3.00",
-				tradingSessions: parsedSessions,
+				tradingSessions: localSessions,
 			};
 			setSettings(newSettings);
 			setInitialSettings(newSettings);
@@ -582,6 +647,12 @@ export function SettingsContent() {
 	const updateSettingsStore = useSettingsStore((state) => state.updateSettings);
 
 	const handleSave = () => {
+		// Convert session hours from local timezone back to UTC for storage
+		const utcSessions = sessionsToUtc(
+			settings.tradingSessions,
+			settings.timezone,
+		);
+
 		updateSettings.mutate(
 			{
 				preferredAiProvider: settings.preferredProvider,
@@ -594,14 +665,14 @@ export function SettingsContent() {
 				timezone: settings.timezone,
 				currency: settings.currency,
 				breakevenThreshold: settings.breakevenThreshold,
-				tradingSessions: JSON.stringify(settings.tradingSessions),
+				tradingSessions: JSON.stringify(utcSessions),
 			},
 			{
 				onSuccess: () => {
 					setInitialSettings(settings);
 					setHasUnsavedChanges(false);
 
-					// Sync Zustand store with the new settings for instant UI updates
+					// Sync Zustand store with UTC sessions (analytics use UTC internally)
 					updateSettingsStore({
 						timezone: settings.timezone,
 						currency: settings.currency,
@@ -611,7 +682,7 @@ export function SettingsContent() {
 						defaultInstrumentType: settings.defaultInstrument as
 							| "futures"
 							| "forex",
-						tradingSessions: settings.tradingSessions,
+						tradingSessions: utcSessions,
 					});
 				},
 			},
@@ -885,8 +956,7 @@ export function SettingsContent() {
 										Trading Sessions
 									</CardTitle>
 									<CardDescription>
-										Define your trading sessions for analytics breakdown (UTC
-										hours)
+										Define your trading sessions for analytics breakdown
 									</CardDescription>
 								</div>
 								<div className="flex gap-2">
@@ -993,9 +1063,6 @@ export function SettingsContent() {
 														))}
 													</SelectContent>
 												</Select>
-												<span className="font-mono text-[10px] text-muted-foreground">
-													UTC
-												</span>
 											</div>
 
 											{/* Color picker */}
@@ -1043,7 +1110,7 @@ export function SettingsContent() {
 							{settings.tradingSessions.length > 0 && (
 								<div className="mt-4 rounded border border-border bg-secondary p-3">
 									<p className="mb-2 font-mono text-[10px] text-muted-foreground uppercase">
-										24h Timeline (UTC)
+										24h Timeline
 									</p>
 									<div className="relative h-8 rounded bg-card">
 										{settings.tradingSessions.map((session, _index) => {
@@ -1062,7 +1129,7 @@ export function SettingsContent() {
 														width: `${Math.min(width, 100 - start)}%`,
 														backgroundColor: session.color,
 													}}
-													title={`${session.name}: ${session.startHour}:00 - ${session.endHour}:00 UTC`}
+													title={`${session.name}: ${session.startHour.toString().padStart(2, "0")}:00 - ${session.endHour.toString().padStart(2, "0")}:00`}
 												/>
 											);
 										})}
