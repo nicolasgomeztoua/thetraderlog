@@ -9,13 +9,15 @@ interface RiskGaugeProps {
 	riskPerTradeSource?: "calculated" | "default" | "no_losses";
 	/** Ruin threshold (drawdown %) used in calculation - as percentage (e.g., 6 for 6%) */
 	ruinThresholdPercent?: number;
+	/** Source of ruin threshold */
+	ruinThresholdSource?: "account" | "default";
 	className?: string;
 }
 
 /**
- * Get needle color based on RoR percentage
+ * Get color based on RoR percentage
  */
-function getNeedleColor(ror: number): string {
+function getRiskColor(ror: number): string {
 	if (ror <= 1) return "#00ff88"; // Low - green
 	if (ror <= 5) return "#00d4ff"; // Moderate - blue
 	if (ror <= 20) return "#fbbf24"; // Elevated - yellow
@@ -23,43 +25,40 @@ function getNeedleColor(ror: number): string {
 }
 
 /**
- * Semicircular gauge showing Risk of Ruin
- * Clean, professional visualization
+ * Get risk label based on RoR percentage
+ */
+function getRiskLabel(ror: number): string {
+	if (ror <= 1) return "Low Risk";
+	if (ror <= 5) return "Moderate";
+	if (ror <= 20) return "Elevated";
+	return "Critical";
+}
+
+/**
+ * Circular progress showing Risk of Ruin
+ * Full-width responsive gauge visualization
  */
 export function RiskGauge({
 	riskOfRuin,
 	riskPerTradePercent = 2,
 	riskPerTradeSource = "default",
 	ruinThresholdPercent = 50,
+	ruinThresholdSource = "default",
 	className,
 }: RiskGaugeProps) {
-	// Cap at 100 for display
 	const cappedRor = Math.min(Math.max(riskOfRuin, 0), 100);
+	const color = getRiskColor(riskOfRuin);
+	const riskLabel = getRiskLabel(riskOfRuin);
 
-	// Needle rotation: 0% = left (-180°), 100% = right (0°)
-	const rotation = -(cappedRor / 100) * 180;
+	// Circle math - responsive sizing
+	const size = 200;
+	const strokeWidth = 14;
+	const radius = (size - strokeWidth) / 2;
+	const circumference = 2 * Math.PI * radius;
+	const progress = cappedRor / 100;
+	const strokeDashoffset = circumference * (1 - progress);
 
-	// SVG dimensions - maximized for the container
-	const radius = 90;
-	const strokeWidth = 16;
-	const centerX = 100;
-	const centerY = 95;
-
-	// Create arc path
-	const createArc = (startAngle: number, endAngle: number) => {
-		const startRad = (startAngle * Math.PI) / 180;
-		const endRad = (endAngle * Math.PI) / 180;
-		const startX = centerX + radius * Math.cos(startRad);
-		const startY = centerY + radius * Math.sin(startRad);
-		const endX = centerX + radius * Math.cos(endRad);
-		const endY = centerY + radius * Math.sin(endRad);
-		const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-		return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
-	};
-
-	const needleColor = getNeedleColor(riskOfRuin);
-
-	// Format the percentage display
+	// Format display
 	const displayValue =
 		riskOfRuin < 0.01
 			? "<0.01%"
@@ -68,147 +67,113 @@ export function RiskGauge({
 				: `${riskOfRuin.toFixed(2)}%`;
 
 	// Build the basis text
-	const basisText = `${riskPerTradePercent.toFixed(riskPerTradeSource === "calculated" ? 2 : 1)}% risk · ${ruinThresholdPercent.toFixed(0)}% DD`;
+	const riskBasis =
+		riskPerTradeSource === "calculated"
+			? `${riskPerTradePercent.toFixed(2)}% avg risk`
+			: riskPerTradeSource === "no_losses"
+				? "1% est. (no losses)"
+				: `${riskPerTradePercent.toFixed(1)}% default`;
+
+	const ruinBasis =
+		ruinThresholdSource === "account"
+			? `${ruinThresholdPercent.toFixed(0)}% max DD`
+			: `${ruinThresholdPercent.toFixed(0)}% threshold`;
 
 	return (
-		<div className={cn("flex h-full items-center justify-center", className)}>
-			<svg
-				aria-label={`Risk of Ruin: ${displayValue}`}
-				className="h-full w-full"
-				preserveAspectRatio="xMidYMid meet"
-				role="img"
-				viewBox="0 0 200 120"
+		<div
+			className={cn(
+				"flex min-h-[280px] w-full flex-col items-center justify-center py-6",
+				className,
+			)}
+		>
+			{/* Circular progress with glow effect */}
+			<div
+				className="relative"
+				style={{
+					width: size,
+					height: size,
+					filter: `drop-shadow(0 0 20px ${color}30)`,
+				}}
 			>
-				{/* Background arc segments */}
-				{/* Green zone (0-1%) */}
-				<path
-					d={createArc(-180, -180 + 1.8)}
-					fill="none"
-					opacity="0.5"
-					stroke="#00ff88"
-					strokeLinecap="round"
-					strokeWidth={strokeWidth}
-				/>
-				{/* Blue zone (1-5%) */}
-				<path
-					d={createArc(-180 + 1.8, -180 + 9)}
-					fill="none"
-					opacity="0.5"
-					stroke="#00d4ff"
-					strokeLinecap="round"
-					strokeWidth={strokeWidth}
-				/>
-				{/* Yellow zone (5-20%) */}
-				<path
-					d={createArc(-180 + 9, -180 + 36)}
-					fill="none"
-					opacity="0.5"
-					stroke="#fbbf24"
-					strokeLinecap="round"
-					strokeWidth={strokeWidth}
-				/>
-				{/* Red zone (20-100%) */}
-				<path
-					d={createArc(-180 + 36, 0)}
-					fill="none"
-					opacity="0.5"
-					stroke="#ff3b3b"
-					strokeLinecap="round"
-					strokeWidth={strokeWidth}
-				/>
-
-				{/* Needle */}
-				<g
-					style={{
-						transformOrigin: `${centerX}px ${centerY}px`,
-						transform: `rotate(${rotation}deg)`,
-						transition: "transform 0.5s ease-out",
-					}}
+				<svg
+					aria-label={`Risk of Ruin: ${displayValue}`}
+					className="rotate-[-90deg]"
+					height={size}
+					role="img"
+					width={size}
 				>
-					<line
-						stroke={needleColor}
-						strokeLinecap="round"
-						strokeWidth="3"
-						x1={centerX}
-						x2={centerX - radius + strokeWidth / 2 + 2}
-						y1={centerY}
-						y2={centerY}
-					/>
+					{/* Outer decorative ring */}
 					<circle
-						cx={centerX}
-						cy={centerY}
-						fill="#1e293b"
-						r="8"
-						stroke={needleColor}
-						strokeWidth="2"
+						cx={size / 2}
+						cy={size / 2}
+						fill="none"
+						r={radius + 8}
+						stroke="rgba(255, 255, 255, 0.03)"
+						strokeWidth={1}
 					/>
-				</g>
+					{/* Background circle */}
+					<circle
+						cx={size / 2}
+						cy={size / 2}
+						fill="none"
+						r={radius}
+						stroke="rgba(255, 255, 255, 0.08)"
+						strokeWidth={strokeWidth}
+					/>
+					{/* Progress arc */}
+					<circle
+						cx={size / 2}
+						cy={size / 2}
+						fill="none"
+						r={radius}
+						stroke={color}
+						strokeDasharray={circumference}
+						strokeDashoffset={strokeDashoffset}
+						strokeLinecap="round"
+						strokeWidth={strokeWidth}
+						style={{ transition: "stroke-dashoffset 0.5s ease-out" }}
+					/>
+					{/* Inner decorative ring */}
+					<circle
+						cx={size / 2}
+						cy={size / 2}
+						fill="none"
+						r={radius - 20}
+						stroke="rgba(255, 255, 255, 0.03)"
+						strokeWidth={1}
+					/>
+				</svg>
 
-				{/* Scale labels */}
-				<text
-					className="fill-muted-foreground font-mono"
-					fontSize="9"
-					textAnchor="middle"
-					x={centerX - radius}
-					y={centerY + 14}
-				>
-					0%
-				</text>
-				<text
-					className="fill-muted-foreground font-mono"
-					fontSize="9"
-					textAnchor="middle"
-					x={centerX}
-					y={10}
-				>
-					50%
-				</text>
-				<text
-					className="fill-muted-foreground font-mono"
-					fontSize="9"
-					textAnchor="middle"
-					x={centerX + radius}
-					y={centerY + 14}
-				>
-					100%
-				</text>
+				{/* Center content */}
+				<div className="absolute inset-0 flex flex-col items-center justify-center">
+					<span
+						className="font-bold font-mono text-4xl tracking-tight"
+						style={{ color }}
+					>
+						{displayValue}
+					</span>
+					<span className="mt-1 font-mono text-xs text-muted-foreground">
+						Risk of Ruin
+					</span>
+				</div>
+			</div>
 
-				{/* Value display - centered under needle */}
-				<text
-					fill={needleColor}
-					fontFamily="JetBrains Mono, monospace"
-					fontSize="32"
-					fontWeight="bold"
-					textAnchor="middle"
-					x={centerX}
-					y={centerY - 12}
-				>
-					{displayValue}
-				</text>
-				<text
-					className="fill-muted-foreground"
-					fontFamily="JetBrains Mono, monospace"
-					fontSize="10"
-					textAnchor="middle"
-					x={centerX}
-					y={centerY + 2}
-				>
-					Risk of Ruin
-				</text>
+			{/* Risk level badge */}
+			<div
+				className="mt-4 rounded-full px-4 py-1.5 font-mono text-xs"
+				style={{
+					backgroundColor: `${color}15`,
+					color: color,
+					border: `1px solid ${color}30`,
+				}}
+			>
+				{riskLabel}
+			</div>
 
-				{/* Basis info */}
-				<text
-					className="fill-muted-foreground"
-					fontFamily="JetBrains Mono, monospace"
-					fontSize="8"
-					opacity="0.7"
-					textAnchor="middle"
-					x={centerX}
-					y={118}
-				>
-					{basisText}
-				</text>
-			</svg>
+			{/* Basis info */}
+			<div className="mt-3 text-center font-mono text-[10px] text-muted-foreground">
+				Based on {riskBasis} · {ruinBasis}
+			</div>
 		</div>
 	);
 }

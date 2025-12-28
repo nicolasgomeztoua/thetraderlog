@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** December 28, 2024
+> **Last Updated:** December 28, 2025 (Sprint 4.3 Risk Reports complete - R-Multiple, Risk/Reward, Position Sizing, Monte Carlo)
 
 ---
 
@@ -156,6 +156,12 @@ Document and track trading strategies with clear rules.
 - [x] Average R per strategy
 - [x] Compare strategies view/chart
 
+#### 2.5 Advanced Strategy Analytics *(NEW)*
+- [ ] Add `riskPercentPerTrade` to strategy risk parameters
+- [ ] Monte Carlo simulation per strategy (with proper compounding)
+- [ ] Strategy-specific equity curve projections
+- [ ] Risk-adjusted strategy comparison
+
 ---
 
 ## Phase 3: Dashboard Customization
@@ -239,23 +245,23 @@ Build 50+ specialized reports like TradeZella, plus professional-grade metrics u
 - [ ] Setup performance over time
 
 #### 4.3 Risk Reports
-- [ ] R-Multiple distribution
-- [ ] Risk/reward ratio analysis
-- [ ] Drawdown tracking chart
-- [ ] Maximum drawdown calculation
+- [x] R-Multiple distribution
+- [x] Risk/reward ratio analysis
+- [x] Drawdown tracking chart (Equity curve with drawdown highlighting)
+- [x] Maximum drawdown calculation
 - [ ] MAE (Maximum Adverse Excursion)
 - [ ] MFE (Maximum Favorable Excursion)
-- [ ] Position sizing analysis
+- [x] Position sizing analysis
 
-#### 4.3.1 Professional Risk Metrics *(NEW)*
-- [ ] Sharpe Ratio (risk-adjusted return)
-- [ ] Sortino Ratio (downside volatility only)
-- [ ] Calmar Ratio (return / max drawdown)
-- [ ] Risk of Ruin calculation
-- [ ] Kelly Criterion (optimal position sizing)
-- [ ] Recovery Factor
-- [ ] Ulcer Index
-- [ ] Monte Carlo simulation
+#### 4.3.1 Professional Risk Metrics *(COMPLETED)*
+- [x] Sharpe Ratio (risk-adjusted return)
+- [x] Sortino Ratio (downside volatility only)
+- [x] Calmar Ratio (return / max drawdown)
+- [x] Risk of Ruin calculation (with dynamic account limits)
+- [x] Kelly Criterion (optimal position sizing)
+- [x] Recovery Factor
+- [x] Ulcer Index
+- [ ] Monte Carlo simulation *(moved to Strategy Analytics - requires risk % per trade)*
 
 #### 4.4 Streak and Pattern Reports
 - [ ] Consecutive wins tracking

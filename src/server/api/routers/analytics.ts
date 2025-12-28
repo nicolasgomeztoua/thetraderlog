@@ -6,6 +6,7 @@ import {
 	findDrawdownPeriods,
 } from "@/lib/risk-calculations";
 import { calculateAggregateStats, parsePnl } from "@/lib/stats-calculations";
+import { getPointValue } from "@/lib/symbols";
 import {
 	getDateStringInTimezone,
 	getDayOfWeekInTimezone,
@@ -895,5 +896,596 @@ export const analyticsRouter = createTRPCRouter({
 				troughDate: period.troughDate.toISOString(),
 				recoveryDate: period.recoveryDate?.toISOString() ?? null,
 			}));
+		}),
+
+	// =========================================================================
+	// R-MULTIPLE AND RISK/REWARD ANALYSIS
+	// =========================================================================
+
+	/**
+	 * Get R-Multiple distribution for histogram chart
+	 * Groups trades by R-multiple buckets for visualization
+	 */
+	getRMultipleDistribution: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.number().nullish(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.stopLoss), // Must have stop loss to calculate R
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			const closedTrades = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					direction: trades.direction,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions));
+
+			// Define R-Multiple buckets
+			const buckets = [
+				{ label: "< -2R", min: -Infinity, max: -2 },
+				{ label: "-2R to -1R", min: -2, max: -1 },
+				{ label: "-1R to 0", min: -1, max: 0 },
+				{ label: "0 to 1R", min: 0, max: 1 },
+				{ label: "1R to 2R", min: 1, max: 2 },
+				{ label: "2R to 3R", min: 2, max: 3 },
+				{ label: "> 3R", min: 3, max: Infinity },
+			];
+
+			// Initialize bucket data
+			const bucketData = buckets.map((b) => ({
+				...b,
+				count: 0,
+				totalPnl: 0,
+				trades: [] as number[], // R-multiples in this bucket
+			}));
+
+			// Calculate R-multiple for each trade and bucket it
+			let totalWithR = 0;
+			const allRMultiples: number[] = [];
+
+			for (const trade of closedTrades) {
+				if (!trade.stopLoss || !trade.entryPrice) continue;
+
+				const entryPrice = parseFloat(trade.entryPrice);
+				const stopLoss = parseFloat(trade.stopLoss);
+				const quantity = parseFloat(trade.quantity);
+				const netPnl = parsePnl(trade.netPnl);
+
+				// Calculate risk per unit based on direction
+				const riskPerUnit = Math.abs(entryPrice - stopLoss);
+				if (riskPerUnit === 0 || quantity === 0) continue;
+
+				// Get point value for this instrument to convert to dollars
+				const pointValue = getPointValue(
+					trade.symbol,
+					trade.instrumentType as "futures" | "forex",
+				);
+
+				// Total planned risk in dollars
+				const plannedRisk = riskPerUnit * pointValue * quantity;
+				// R-Multiple = actual P&L / planned risk
+				const rMultiple = netPnl / plannedRisk;
+
+				totalWithR++;
+				allRMultiples.push(rMultiple);
+
+				// Find the bucket for this R-multiple
+				for (const bucket of bucketData) {
+					if (rMultiple >= bucket.min && rMultiple < bucket.max) {
+						bucket.count++;
+						bucket.totalPnl += netPnl;
+						bucket.trades.push(rMultiple);
+						break;
+					}
+				}
+			}
+
+			// Calculate statistics
+			const avgRMultiple =
+				allRMultiples.length > 0
+					? allRMultiples.reduce((sum, r) => sum + r, 0) / allRMultiples.length
+					: 0;
+
+			const positiveR = allRMultiples.filter((r) => r > 0);
+			const negativeR = allRMultiples.filter((r) => r < 0);
+
+			return {
+				buckets: bucketData.map((b) => ({
+					label: b.label,
+					count: b.count,
+					totalPnl: b.totalPnl,
+					avgR:
+						b.trades.length > 0
+							? b.trades.reduce((sum, r) => sum + r, 0) / b.trades.length
+							: 0,
+				})),
+				stats: {
+					totalTrades: closedTrades.length,
+					tradesWithR: totalWithR,
+					avgRMultiple,
+					avgWinR:
+						positiveR.length > 0
+							? positiveR.reduce((sum, r) => sum + r, 0) / positiveR.length
+							: 0,
+					avgLossR:
+						negativeR.length > 0
+							? negativeR.reduce((sum, r) => sum + r, 0) / negativeR.length
+							: 0,
+					maxR: allRMultiples.length > 0 ? Math.max(...allRMultiples) : 0,
+					minR: allRMultiples.length > 0 ? Math.min(...allRMultiples) : 0,
+				},
+			};
+		}),
+
+	/**
+	 * Get Risk/Reward analysis comparing planned vs actual
+	 * Requires trades with both stopLoss and takeProfit for planned R:R
+	 */
+	getRiskRewardAnalysis: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.number().nullish(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			const closedTrades = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryPrice: trades.entryPrice,
+					exitPrice: trades.exitPrice,
+					stopLoss: trades.stopLoss,
+					takeProfit: trades.takeProfit,
+					quantity: trades.quantity,
+					direction: trades.direction,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions));
+
+			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+
+			// Trades with stop loss (can calculate R-multiple)
+			const tradesWithSL = closedTrades.filter((t) => t.stopLoss);
+			// Trades with both SL and TP (can calculate planned R:R)
+			const tradesWithBoth = closedTrades.filter(
+				(t) => t.stopLoss && t.takeProfit,
+			);
+
+			// Calculate R-multiples and planned R:R
+			const rMultiples: number[] = [];
+			const plannedRRs: number[] = [];
+			const efficiencies: number[] = [];
+			let wins = 0;
+			let losses = 0;
+
+			// Performance by planned R:R category
+			const rrCategories: Record<
+				string,
+				{ trades: number; wins: number; totalPnl: number }
+			> = {
+				"< 1:1": { trades: 0, wins: 0, totalPnl: 0 },
+				"1:1 - 2:1": { trades: 0, wins: 0, totalPnl: 0 },
+				"2:1 - 3:1": { trades: 0, wins: 0, totalPnl: 0 },
+				"> 3:1": { trades: 0, wins: 0, totalPnl: 0 },
+			};
+
+			for (const trade of tradesWithSL) {
+				if (!trade.stopLoss || !trade.entryPrice) continue;
+
+				const entryPrice = parseFloat(trade.entryPrice);
+				const stopLoss = parseFloat(trade.stopLoss);
+				const quantity = parseFloat(trade.quantity);
+				const netPnl = parsePnl(trade.netPnl);
+
+				const riskPerUnit = Math.abs(entryPrice - stopLoss);
+				if (riskPerUnit === 0 || quantity === 0) continue;
+
+				// Get point value for this instrument to convert to dollars
+				const pointValue = getPointValue(
+					trade.symbol,
+					trade.instrumentType as "futures" | "forex",
+				);
+
+				// Calculate planned risk in dollars
+				const plannedRisk = riskPerUnit * pointValue * quantity;
+				const rMultiple = netPnl / plannedRisk;
+				rMultiples.push(rMultiple);
+
+				if (netPnl > beThreshold) wins++;
+				else if (netPnl < -beThreshold) losses++;
+
+				// If we have TP, calculate planned R:R and efficiency
+				if (trade.takeProfit) {
+					const takeProfit = parseFloat(trade.takeProfit);
+					const rewardPerUnit = Math.abs(takeProfit - entryPrice);
+					const plannedRR = rewardPerUnit / riskPerUnit;
+					plannedRRs.push(plannedRR);
+
+					// Trade efficiency: how much of planned R was captured
+					// If planned R:R is 2:1 and actual is 1.5R, efficiency = 75%
+					const efficiency = plannedRR > 0 ? (rMultiple / plannedRR) * 100 : 0;
+					efficiencies.push(efficiency);
+
+					// Categorize by planned R:R
+					let category: string;
+					if (plannedRR < 1) category = "< 1:1";
+					else if (plannedRR < 2) category = "1:1 - 2:1";
+					else if (plannedRR < 3) category = "2:1 - 3:1";
+					else category = "> 3:1";
+
+					const cat = rrCategories[category];
+					if (cat) {
+						cat.trades++;
+						cat.totalPnl += netPnl;
+						if (netPnl > beThreshold) cat.wins++;
+					}
+				}
+			}
+
+			// Calculate averages
+			const avgRMultiple =
+				rMultiples.length > 0
+					? rMultiples.reduce((sum, r) => sum + r, 0) / rMultiples.length
+					: 0;
+
+			const avgPlannedRR =
+				plannedRRs.length > 0
+					? plannedRRs.reduce((sum, r) => sum + r, 0) / plannedRRs.length
+					: 0;
+
+			const avgEfficiency =
+				efficiencies.length > 0
+					? efficiencies.reduce((sum, e) => sum + e, 0) / efficiencies.length
+					: 0;
+
+			// Win rate for trades with R data
+			const winRate =
+				wins + losses > 0 ? (wins / (wins + losses)) * 100 : 0;
+
+			return {
+				summary: {
+					totalTrades: closedTrades.length,
+					tradesWithSL: tradesWithSL.length,
+					tradesWithBoth: tradesWithBoth.length,
+					avgRMultiple,
+					avgPlannedRR,
+					avgEfficiency,
+					winRate,
+					wins,
+					losses,
+				},
+				categories: Object.entries(rrCategories).map(([range, data]) => ({
+					range,
+					trades: data.trades,
+					wins: data.wins,
+					winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0,
+					totalPnl: data.totalPnl,
+					avgPnl: data.trades > 0 ? data.totalPnl / data.trades : 0,
+				})),
+			};
+		}),
+
+	// =========================================================================
+	// POSITION SIZING ANALYSIS
+	// =========================================================================
+
+	/**
+	 * Analyze performance by position size
+	 * Groups trades into size buckets based on quantity distribution
+	 */
+	getPositionSizeAnalysis: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.number().nullish(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			const closedTrades = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+				})
+				.from(trades)
+				.where(and(...conditions));
+
+			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+
+			if (closedTrades.length === 0) {
+				return {
+					buckets: [],
+					stats: {
+						totalTrades: 0,
+						avgSize: 0,
+						minSize: 0,
+						maxSize: 0,
+					},
+				};
+			}
+
+			// Get all quantities
+			const quantities = closedTrades.map((t) => parseFloat(t.quantity));
+			const minQty = Math.min(...quantities);
+			const maxQty = Math.max(...quantities);
+			const avgQty =
+				quantities.reduce((sum, q) => sum + q, 0) / quantities.length;
+
+			// Create size buckets based on percentiles
+			const sortedQtys = [...quantities].sort((a, b) => a - b);
+			const p25 = sortedQtys[Math.floor(sortedQtys.length * 0.25)] ?? minQty;
+			const p50 = sortedQtys[Math.floor(sortedQtys.length * 0.5)] ?? avgQty;
+			const p75 = sortedQtys[Math.floor(sortedQtys.length * 0.75)] ?? maxQty;
+
+			// Define buckets by percentile (neutral labels)
+			const bucketDefs = [
+				{ label: "0-25%", min: minQty, max: p25 },
+				{ label: "25-50%", min: p25, max: p50 },
+				{ label: "50-75%", min: p50, max: p75 },
+				{ label: "75-100%", min: p75, max: maxQty + 0.001 },
+			];
+
+			// Initialize buckets
+			const buckets = bucketDefs.map((def) => ({
+				...def,
+				trades: 0,
+				wins: 0,
+				losses: 0,
+				totalPnl: 0,
+				avgPnl: 0,
+				winRate: 0,
+			}));
+
+			// Categorize trades
+			for (const trade of closedTrades) {
+				const qty = parseFloat(trade.quantity);
+				const pnl = parsePnl(trade.netPnl);
+
+				for (const bucket of buckets) {
+					if (qty >= bucket.min && qty < bucket.max) {
+						bucket.trades++;
+						bucket.totalPnl += pnl;
+						if (pnl > beThreshold) bucket.wins++;
+						else if (pnl < -beThreshold) bucket.losses++;
+						break;
+					}
+				}
+			}
+
+			// Calculate averages and win rates
+			for (const bucket of buckets) {
+				bucket.avgPnl = bucket.trades > 0 ? bucket.totalPnl / bucket.trades : 0;
+				bucket.winRate =
+					bucket.wins + bucket.losses > 0
+						? (bucket.wins / (bucket.wins + bucket.losses)) * 100
+						: 0;
+			}
+
+			return {
+				buckets: buckets.map((b) => ({
+					label: b.label,
+					range: `${b.min.toFixed(2)} - ${b.max.toFixed(2)}`,
+					trades: b.trades,
+					wins: b.wins,
+					losses: b.losses,
+					totalPnl: b.totalPnl,
+					avgPnl: b.avgPnl,
+					winRate: b.winRate,
+				})),
+				stats: {
+					totalTrades: closedTrades.length,
+					avgSize: avgQty,
+					minSize: minQty,
+					maxSize: maxQty,
+				},
+			};
+		}),
+
+	// =========================================================================
+	// MONTE CARLO SIMULATION
+	// =========================================================================
+
+	/**
+	 * Run Monte Carlo simulation on trade history
+	 * Randomizes trade order to show range of possible outcomes
+	 */
+	getMonteCarloSimulation: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.number().nullish(),
+					iterations: z.number().min(100).max(10000).default(1000),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			const closedTrades = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+				})
+				.from(trades)
+				.where(and(...conditions));
+
+			const iterations = input?.iterations ?? 1000;
+
+			if (closedTrades.length < 10) {
+				return {
+					hasEnoughData: false,
+					iterations: 0,
+					percentiles: {
+						p5: 0,
+						p25: 0,
+						p50: 0,
+						p75: 0,
+						p95: 0,
+					},
+					probabilityOfProfit: 0,
+					expectedValue: 0,
+					standardDeviation: 0,
+					actualOutcome: 0,
+					worstDrawdown: 0,
+					bestPeak: 0,
+				};
+			}
+
+			// Extract P&L values
+			const pnls = closedTrades.map((t) => parsePnl(t.netPnl));
+
+			// Fisher-Yates shuffle function
+			const shuffle = (array: number[]): number[] => {
+				const result = [...array];
+				for (let i = result.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					const temp = result[i];
+					const swapVal = result[j];
+					if (temp !== undefined && swapVal !== undefined) {
+						result[i] = swapVal;
+						result[j] = temp;
+					}
+				}
+				return result;
+			};
+
+			// Run simulations
+			const outcomes: number[] = [];
+			const maxDrawdowns: number[] = [];
+			const peaks: number[] = [];
+
+			for (let i = 0; i < iterations; i++) {
+				const shuffled = shuffle(pnls);
+
+				// Calculate equity curve for this simulation
+				let equity = 0;
+				let peak = 0;
+				let maxDD = 0;
+
+				for (const pnl of shuffled) {
+					equity += pnl;
+					peak = Math.max(peak, equity);
+					const dd = peak - equity;
+					maxDD = Math.max(maxDD, dd);
+				}
+
+				outcomes.push(equity);
+				maxDrawdowns.push(maxDD);
+				peaks.push(peak);
+			}
+
+			// Sort outcomes for percentile calculation
+			outcomes.sort((a, b) => a - b);
+
+			// Calculate percentiles
+			const getPercentile = (arr: number[], p: number) => {
+				const idx = Math.floor(arr.length * (p / 100));
+				return arr[Math.min(idx, arr.length - 1)] ?? 0;
+			};
+
+			const percentiles = {
+				p5: getPercentile(outcomes, 5),
+				p25: getPercentile(outcomes, 25),
+				p50: getPercentile(outcomes, 50),
+				p75: getPercentile(outcomes, 75),
+				p95: getPercentile(outcomes, 95),
+			};
+
+			// Probability of profit
+			const profitableOutcomes = outcomes.filter((o) => o > 0).length;
+			const probabilityOfProfit = (profitableOutcomes / iterations) * 100;
+
+			// Expected value and standard deviation
+			const expectedValue =
+				outcomes.reduce((sum, o) => sum + o, 0) / iterations;
+			const variance =
+				outcomes.reduce((sum, o) => sum + (o - expectedValue) ** 2, 0) /
+				iterations;
+			const standardDeviation = Math.sqrt(variance);
+
+			// Actual outcome (original order)
+			const actualOutcome = pnls.reduce((sum, p) => sum + p, 0);
+
+			// Worst drawdown and best peak across simulations
+			const worstDrawdown = Math.max(...maxDrawdowns);
+			const bestPeak = Math.max(...peaks);
+
+			return {
+				hasEnoughData: true,
+				iterations,
+				percentiles,
+				probabilityOfProfit,
+				expectedValue,
+				standardDeviation,
+				actualOutcome,
+				worstDrawdown,
+				bestPeak,
+			};
 		}),
 });

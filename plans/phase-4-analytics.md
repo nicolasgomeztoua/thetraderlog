@@ -176,6 +176,10 @@ src/app/(protected)/analytics/page.tsx # Time tab content
 | Build `RiskOfRuinGauge` component | Medium | ✅ | Visual probability |
 | Build `KellyDisplay` component | Medium | ✅ | Position size recommendation |
 | Implement Risk tab UI | High | ✅ | Layout all components |
+| Build `RMultipleChart` component | High | ✅ | R-Multiple distribution histogram |
+| Build `RiskRewardPanel` component | High | ✅ | Risk/Reward analysis panel |
+| Create `getPositionSizeAnalysis` procedure | High | ✅ | Performance by position size |
+| Build `PositionSizeChart` component | High | ✅ | Position sizing analysis |
 
 #### Files to Create
 
@@ -375,11 +379,11 @@ interface StreakAnalysis {
 | Option B: Integrate market data API | Low | ⏳ | Auto-fetch historical |
 | Create `getMAEMFEAnalysis` procedure | High | ⏳ | Requires price data |
 | Create `getTradeEfficiency` procedure | High | ⏳ | Actual / MFE |
-| Implement Monte Carlo simulation | High | ⏳ | Randomize trade order |
-| Create `runMonteCarloSimulation` procedure | High | ⏳ | N iterations |
+| Implement Monte Carlo simulation | High | ⏳ | Moved to Strategy Analytics (needs risk %) |
+| Create `runMonteCarloSimulation` procedure | High | ⏳ | Moved to Strategy Analytics (needs risk %) |
 | Build `MAEMFEScatter` component | High | ⏳ | MAE vs MFE plot |
 | Build `EfficiencyHistogram` component | Medium | ⏳ | Distribution chart |
-| Build `MonteCarloChart` component | High | ⏳ | Outcome distribution |
+| Build `MonteCarloChart` component | High | ⏳ | Moved to Strategy Analytics (needs risk %) |
 | Build `OptimizationSuggestions` component | Medium | ⏳ | SL/TP recommendations |
 | Add MAE/MFE section to analytics | High | ⏳ | Part of Risk or separate |
 
@@ -555,7 +559,29 @@ Implementation: Use the `MetricCard` component with an info icon that shows a to
 *(To be filled during implementation)*
 
 ### Sprint 4.3 Notes
-*(To be filled during implementation)*
+
+**Completed December 28, 2025:**
+
+Added comprehensive risk analysis features to the Risk tab:
+
+1. **R-Multiple Distribution** (`r-multiple-chart.tsx`)
+   - Horizontal bar histogram showing trade count per R-bucket
+   - Stats: avg R-multiple, avg win R, avg loss R, max/min R
+   - Uses existing `getRMultipleDistribution` endpoint
+
+2. **Risk/Reward Analysis** (`risk-reward-panel.tsx`)
+   - Summary cards: avg R-multiple, avg planned R:R, trade efficiency %
+   - Category breakdown table by planned R:R range
+   - Uses existing `getRiskRewardAnalysis` endpoint
+
+3. **Position Sizing Analysis** (`position-size-chart.tsx`)
+   - NEW backend: `getPositionSizeAnalysis` procedure
+   - Groups trades into small/medium-small/medium-large/large buckets based on percentiles
+   - Shows performance by position size tier
+
+**Note:** Monte Carlo simulation was initially implemented but moved to Strategy Analytics (Section 2.5) because it requires risk % per trade to properly simulate compounding. Without knowing the risk per trade, the simulation just shuffles dollar P&L values which doesn't account for position sizing based on equity.
+
+All components follow Terminal design system with tooltips explaining each metric.
 
 ### Sprint 4.4 Notes
 *(To be filled during implementation)*
@@ -564,4 +590,4 @@ Implementation: Use the `MetricCard` component with an info icon that shows a to
 *(To be filled during implementation)*
 
 ### Sprint 4.6 Notes
-*(To be filled during implementation)*
+*(To be filled during implementation - MAE/MFE skipped, requires tradeHigh/tradeLow schema fields)*

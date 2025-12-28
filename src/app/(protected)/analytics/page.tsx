@@ -13,7 +13,10 @@ import {
 	METRIC_TOOLTIPS,
 	MetricCard,
 	MonthlyChart,
+	PositionSizeChart,
 	RiskGauge,
+	RiskRewardPanel,
+	RMultipleChart,
 	SessionChart,
 } from "@/components/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -517,8 +520,26 @@ function RiskTab() {
 		api.analytics.getEquityCurve.useQuery({ accountId: selectedAccountId });
 	const { data: drawdowns, isLoading: drawdownsLoading } =
 		api.analytics.getDrawdownHistory.useQuery({ accountId: selectedAccountId });
+	const { data: rMultipleData, isLoading: rMultipleLoading } =
+		api.analytics.getRMultipleDistribution.useQuery({
+			accountId: selectedAccountId,
+		});
+	const { data: riskRewardData, isLoading: riskRewardLoading } =
+		api.analytics.getRiskRewardAnalysis.useQuery({
+			accountId: selectedAccountId,
+		});
+	const { data: positionSizeData, isLoading: positionSizeLoading } =
+		api.analytics.getPositionSizeAnalysis.useQuery({
+			accountId: selectedAccountId,
+		});
 
-	const isLoading = riskLoading || equityLoading || drawdownsLoading;
+	const isLoading =
+		riskLoading ||
+		equityLoading ||
+		drawdownsLoading ||
+		rMultipleLoading ||
+		riskRewardLoading ||
+		positionSizeLoading;
 
 	if (isLoading) {
 		return (
@@ -536,6 +557,10 @@ function RiskTab() {
 					))}
 				</div>
 				<Skeleton className="h-[300px] w-full" />
+				<div className="grid gap-6 lg:grid-cols-2">
+					<Skeleton className="h-[300px] w-full" />
+					<Skeleton className="h-[300px] w-full" />
+				</div>
 				<Skeleton className="h-[250px] w-full" />
 			</div>
 		);
@@ -669,6 +694,51 @@ function RiskTab() {
 				<EquityCurve data={equityCurve ?? []} />
 			</ChartTerminal>
 
+			{/* R-Multiple Distribution + Risk/Reward Analysis - side by side */}
+			<div className="grid gap-6 lg:grid-cols-2">
+				<ChartTerminal
+					description="Distribution of trades by R-multiple"
+					title="R-Multiple Distribution"
+				>
+					<RMultipleChart
+						buckets={rMultipleData?.buckets ?? []}
+						stats={
+							rMultipleData?.stats ?? {
+								totalTrades: 0,
+								tradesWithR: 0,
+								avgRMultiple: 0,
+								avgWinR: 0,
+								avgLossR: 0,
+								maxR: 0,
+								minR: 0,
+							}
+						}
+					/>
+				</ChartTerminal>
+
+				<ChartTerminal
+					description="Planned vs actual risk/reward"
+					title="Risk/Reward Analysis"
+				>
+					<RiskRewardPanel
+						categories={riskRewardData?.categories ?? []}
+						summary={
+							riskRewardData?.summary ?? {
+								totalTrades: 0,
+								tradesWithSL: 0,
+								tradesWithBoth: 0,
+								avgRMultiple: 0,
+								avgPlannedRR: 0,
+								avgEfficiency: 0,
+								winRate: 0,
+								wins: 0,
+								losses: 0,
+							}
+						}
+					/>
+				</ChartTerminal>
+			</div>
+
 			{/* Risk of Ruin and Kelly - side by side */}
 			<div className="grid gap-6 lg:grid-cols-2">
 				<ChartTerminal
@@ -680,6 +750,7 @@ function RiskTab() {
 						riskPerTradePercent={riskMetrics.riskPerTradePercent}
 						riskPerTradeSource={riskMetrics.riskPerTradeSource}
 						ruinThresholdPercent={riskMetrics.ruinThresholdPercent}
+						ruinThresholdSource={riskMetrics.ruinThresholdSource}
 					/>
 				</ChartTerminal>
 
@@ -696,6 +767,24 @@ function RiskTab() {
 					/>
 				</ChartTerminal>
 			</div>
+
+			{/* Position Sizing Analysis */}
+			<ChartTerminal
+				description="Performance by position size"
+				title="Position Sizing Analysis"
+			>
+				<PositionSizeChart
+					buckets={positionSizeData?.buckets ?? []}
+					stats={
+						positionSizeData?.stats ?? {
+							totalTrades: 0,
+							avgSize: 0,
+							minSize: 0,
+							maxSize: 0,
+						}
+					}
+				/>
+			</ChartTerminal>
 
 			{/* Drawdown History Table */}
 			<ChartTerminal
