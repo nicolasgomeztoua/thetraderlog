@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** December 27, 2024
+> **Last Updated:** December 28, 2024
 
 ---
 
@@ -36,12 +36,15 @@
 | Dashboard with basic stats | ✅ Done | `/dashboard` |
 | Trade journal with filters | ✅ Done | `/journal` |
 | Trade detail with executions | ✅ Done | `/journal/[id]` |
-| Basic analytics (3 charts) | ✅ Done | `/analytics` |
+| Advanced analytics (Overview + Time tabs) | ✅ Done | `/analytics` |
 | AI Insights (local analysis) | ✅ Done | `/ai` |
 | CSV import (ProjectX) | ✅ Done | `/import` |
 | Multi-account system | ✅ Done | `/settings` |
 | Prop firm account support | ✅ Done | `/settings` |
 | Account groups | ✅ Done | `/settings` |
+| Trading sessions config | ✅ Done | `/settings` (Trading tab) |
+| Clerk profile integration | ✅ Done | `/settings` (General tab) |
+| Zustand settings store (global state) | ✅ Done | `src/stores/settings-store.ts` |
 
 ---
 
@@ -220,12 +223,12 @@ Build 50+ specialized reports like TradeZella, plus professional-grade metrics u
 ### Tasks
 
 #### 4.1 Time-Based Reports
-- [ ] Performance by day of week (bar chart)
-- [ ] Performance by time of day (heatmap)
-- [ ] Performance by trading session (London, NY, Asia)
-- [ ] Performance by month/week
-- [ ] Best trading days
-- [ ] Worst trading days
+- [x] Performance by day of week (custom horizontal bar chart)
+- [x] Performance by time of day (24-hour heatmap)
+- [x] Performance by trading session (user-configurable sessions)
+- [x] Performance by month (area chart with trend line)
+- [x] Calendar heatmap (GitHub-style daily P&L)
+- [x] Best/worst trading days highlighted
 - [ ] Trading frequency analysis
 
 #### 4.2 Setup-Based Reports

@@ -1,5 +1,10 @@
 import { and, eq, gte, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
+import {
+	buildEquityCurve,
+	calculateRiskMetrics,
+	findDrawdownPeriods,
+} from "@/lib/risk-calculations";
 import { calculateAggregateStats, parsePnl } from "@/lib/stats-calculations";
 import {
 	getDateStringInTimezone,
@@ -13,7 +18,7 @@ import {
 	getUserTimezone,
 } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { trades, userSettings } from "@/server/db/schema";
+import { accounts, trades, userSettings } from "@/server/db/schema";
 
 // =============================================================================
 // ANALYTICS ROUTER
@@ -631,5 +636,264 @@ export const analyticsRouter = createTRPCRouter({
 					avgPnl: data.trades > 0 ? data.pnl / data.trades : 0,
 				}))
 				.sort((a, b) => a.month.localeCompare(b.month));
+		}),
+
+	// =========================================================================
+	// RISK ANALYSIS PROCEDURES
+	// =========================================================================
+
+	/**
+	 * Get complete risk metrics including drawdowns, risk-adjusted returns,
+	 * Kelly Criterion, and Risk of Ruin
+	 * Uses cumulative P&L (starting at $0) - no fake equity
+	 */
+	getRiskMetrics: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.number().nullish(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			// Get account's maxDrawdown and initialBalance for Risk of Ruin calculation
+			let ruinThreshold = 0.5; // Default 50% for live/demo accounts
+			let ruinThresholdSource = "default" as "account" | "default";
+			let accountInitialBalance: number | null = null;
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+
+				// Fetch the specific account's maxDrawdown and initialBalance
+				const account = await ctx.db
+					.select({
+						maxDrawdown: accounts.maxDrawdown,
+						initialBalance: accounts.initialBalance,
+					})
+					.from(accounts)
+					.where(eq(accounts.id, input.accountId))
+					.limit(1);
+
+				if (account[0]?.maxDrawdown) {
+					// Convert from percentage (e.g., 6.00) to decimal (0.06)
+					ruinThreshold = parseFloat(account[0].maxDrawdown) / 100;
+					ruinThresholdSource = "account";
+				}
+
+				if (account[0]?.initialBalance) {
+					accountInitialBalance = parseFloat(account[0].initialBalance);
+				}
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+				// When viewing multiple accounts, use default 50%
+				// Future: could aggregate account drawdown limits
+			}
+
+			// Fetch trades sorted by exit time for equity curve
+			const closedTrades = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					exitTime: trades.exitTime,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			// Also get aggregate stats for Kelly/RoR calculations
+			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			const stats = calculateAggregateStats(closedTrades, beThreshold);
+
+			// Calculate actual risk per trade from trading data
+			// riskPerTrade = avgLoss / initialBalance (as decimal)
+			let riskPerTrade = 0.02; // Default 2% if we can't calculate
+			let riskPerTradeSource = "default" as
+				| "calculated"
+				| "default"
+				| "no_losses";
+
+			if (
+				stats.avgLoss > 0 &&
+				accountInitialBalance &&
+				accountInitialBalance > 0
+			) {
+				// Calculate actual risk % based on average loss vs initial balance
+				riskPerTrade = stats.avgLoss / accountInitialBalance;
+				riskPerTradeSource = "calculated";
+			} else if (stats.avgLoss === 0 && stats.totalTrades > 0) {
+				// No losing trades - can't calculate risk
+				riskPerTradeSource = "no_losses";
+				riskPerTrade = 0.01; // Assume 1% for RoR calculation
+			}
+
+			const riskMetrics = calculateRiskMetrics(
+				closedTrades.map((t) => ({
+					netPnl: t.netPnl,
+					exitTime: t.exitTime,
+				})),
+				stats.winRate,
+				stats.avgWin,
+				stats.avgLoss,
+				riskPerTrade,
+				ruinThreshold,
+			);
+
+			// Add Sortino ratio (need to calculate from returns)
+			const pnls = closedTrades.map((t) => parsePnl(t.netPnl));
+			let sortinoRatio = 0;
+			if (pnls.length > 1) {
+				const mean = pnls.reduce((sum, p) => sum + p, 0) / pnls.length;
+				const negReturns = pnls.filter((p) => p < 0);
+				if (negReturns.length > 0) {
+					const downsideVar =
+						negReturns.reduce((sum, v) => sum + v ** 2, 0) / negReturns.length;
+					const downsideDev = Math.sqrt(downsideVar);
+					sortinoRatio = downsideDev > 0 ? mean / downsideDev : 0;
+				} else if (mean > 0) {
+					sortinoRatio = Infinity;
+				}
+			}
+
+			return {
+				...riskMetrics,
+				sortinoRatio,
+				// Include win rate and payoff for context
+				winRate: stats.winRate,
+				avgWin: stats.avgWin,
+				avgLoss: stats.avgLoss,
+				totalTrades: stats.totalTrades,
+				// Ruin threshold info for display
+				ruinThreshold, // As decimal (e.g., 0.06 for 6%)
+				ruinThresholdPercent: ruinThreshold * 100, // As percentage (e.g., 6)
+				ruinThresholdSource, // "account" or "default"
+				// Risk per trade info for display
+				riskPerTrade, // As decimal (e.g., 0.015 for 1.5%)
+				riskPerTradePercent: riskPerTrade * 100, // As percentage (e.g., 1.5)
+				riskPerTradeSource, // "calculated", "default", or "no_losses"
+			};
+		}),
+
+	/**
+	 * Get cumulative P&L curve data for charting
+	 * Returns running profit/loss at each trade with drawdown from peak
+	 */
+	getEquityCurve: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.number().nullish(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			const closedTrades = await ctx.db
+				.select({
+					id: trades.id,
+					netPnl: trades.netPnl,
+					exitTime: trades.exitTime,
+					symbol: trades.symbol,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			// Build cumulative P&L curve (starts at $0)
+			const curve = buildEquityCurve(
+				closedTrades.map((t) => ({
+					netPnl: t.netPnl,
+					exitTime: t.exitTime,
+				})),
+			);
+
+			// Add trade metadata to each point
+			return curve.map((point, i) => {
+				const trade = closedTrades[i];
+				return {
+					...point,
+					date: point.date.toISOString(),
+					tradeId: trade?.id ?? null,
+					symbol: trade?.symbol ?? null,
+				};
+			});
+		}),
+
+	/**
+	 * Get top drawdown periods for the drawdown table
+	 */
+	getDrawdownHistory: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.number().nullish(),
+					limit: z.number().min(1).max(20).default(10),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			const closedTrades = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					exitTime: trades.exitTime,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			// Build cumulative P&L curve (starts at $0)
+			const curve = buildEquityCurve(
+				closedTrades.map((t) => ({
+					netPnl: t.netPnl,
+					exitTime: t.exitTime,
+				})),
+			);
+
+			const periods = findDrawdownPeriods(curve, 1);
+			const limit = input?.limit ?? 10;
+
+			// Format dates for JSON serialization
+			return periods.slice(0, limit).map((period) => ({
+				...period,
+				startDate: period.startDate.toISOString(),
+				troughDate: period.troughDate.toISOString(),
+				recoveryDate: period.recoveryDate?.toISOString() ?? null,
+			}));
 		}),
 });

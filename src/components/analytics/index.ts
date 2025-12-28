@@ -1,7 +1,11 @@
 export { CalendarHeatmap } from "./calendar-heatmap";
 export { DayOfWeekChart } from "./day-of-week-chart";
+export { DrawdownTable } from "./drawdown-table";
+export { EquityCurve } from "./equity-curve";
 export { HourHeatmap } from "./hour-heatmap";
+export { KellyDisplay } from "./kelly-display";
 export type { MetricCardProps, MetricTooltip } from "./metric-card";
 export { METRIC_TOOLTIPS, MetricCard } from "./metric-card";
 export { MonthlyChart } from "./monthly-chart";
+export { RiskGauge } from "./risk-gauge";
 export { SessionChart } from "./session-chart";

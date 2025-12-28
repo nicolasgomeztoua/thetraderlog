@@ -103,7 +103,7 @@ src/app/(protected)/analytics/page.tsx     # Refactor with tabs
 | Create `getPerformanceByDayOfWeek` procedure | High | ✅ | P&L, win rate per day |
 | Create `getPerformanceByHour` procedure | High | ✅ | Respect user timezone |
 | Create `getPerformanceByMonth` procedure | High | ✅ | Monthly comparison |
-| Create `getPerformanceBySession` procedure | Medium | ✅ | Asia/London/NY |
+| Create `getPerformanceBySession` procedure | Medium | ✅ | Uses user-defined sessions from settings |
 | Create `getCalendarData` procedure | High | ✅ | Daily P&L for heatmap |
 | Build `CalendarHeatmap` component | High | ✅ | GitHub-style, clickable |
 | Build `DayOfWeekChart` component | High | ✅ | Bar chart by weekday |
@@ -131,13 +131,15 @@ src/app/(protected)/analytics/page.tsx # Time tab content
 
 #### Trading Sessions Configuration
 
-```typescript
-const TRADING_SESSIONS = {
-  asia: { start: 0, end: 8 },      // 00:00 - 08:00 UTC
-  london: { start: 8, end: 16 },   // 08:00 - 16:00 UTC
-  newYork: { start: 13, end: 21 }, // 13:00 - 21:00 UTC
-};
-```
+**✅ IMPLEMENTED:** Sessions are now user-configurable in Settings → Trading tab.
+
+- Added `tradingSessions` field to `userSettings` schema (JSON)
+- Added Trading tab to Settings page with session management UI
+- Sessions have name, startHour, endHour (UTC), and color
+- Analytics router fetches user's custom sessions
+- Default sessions: Asia (0-8), London (8-16), New York (13-21)
+
+**TODO:** Display session times in user's timezone (needs Zustand settings store)
 
 #### Acceptance Criteria
 
@@ -158,22 +160,22 @@ const TRADING_SESSIONS = {
 
 | Task | Priority | Status | Notes |
 |------|----------|--------|-------|
-| Create `src/lib/risk-calculations.ts` | High | ⏳ | All risk formulas |
-| Implement `calculateDrawdowns` function | High | ⏳ | Find all drawdown periods |
-| Implement `calculateSharpeRatio` function | High | ⏳ | Daily returns-based |
-| Implement `calculateSortinoRatio` function | High | ⏳ | Downside deviation only |
-| Implement `calculateCalmarRatio` function | Medium | ⏳ | Annualized return / MDD |
-| Implement `calculateRiskOfRuin` function | High | ⏳ | Probability formula |
-| Implement `calculateKellyCriterion` function | High | ⏳ | Optimal sizing |
-| Implement `calculateUlcerIndex` function | Low | ⏳ | RMS of drawdowns |
-| Implement `calculateRecoveryFactor` function | Medium | ⏳ | Net profit / MDD |
-| Create `getRiskMetrics` procedure | High | ⏳ | Return all risk data |
-| Create `getDrawdownHistory` procedure | High | ⏳ | For drawdown table |
-| Build `EquityCurve` component | High | ⏳ | With drawdown highlighting |
-| Build `DrawdownTable` component | High | ⏳ | Top 10 drawdowns |
-| Build `RiskOfRuinGauge` component | Medium | ⏳ | Visual probability |
-| Build `KellyDisplay` component | Medium | ⏳ | Position size recommendation |
-| Implement Risk tab UI | High | ⏳ | Layout all components |
+| Create `src/lib/risk-calculations.ts` | High | ✅ | All risk formulas |
+| Implement `calculateDrawdowns` function | High | ✅ | Find all drawdown periods |
+| Implement `calculateSharpeRatio` function | High | ✅ | Daily returns-based |
+| Implement `calculateSortinoRatio` function | High | ✅ | Downside deviation only |
+| Implement `calculateCalmarRatio` function | Medium | ✅ | Annualized return / MDD |
+| Implement `calculateRiskOfRuin` function | High | ✅ | Probability formula |
+| Implement `calculateKellyCriterion` function | High | ✅ | Optimal sizing |
+| Implement `calculateUlcerIndex` function | Low | ✅ | RMS of drawdowns |
+| Implement `calculateRecoveryFactor` function | Medium | ✅ | Net profit / MDD |
+| Create `getRiskMetrics` procedure | High | ✅ | Return all risk data |
+| Create `getDrawdownHistory` procedure | High | ✅ | For drawdown table |
+| Build `EquityCurve` component | High | ✅ | With drawdown highlighting |
+| Build `DrawdownTable` component | High | ✅ | Top 10 drawdowns |
+| Build `RiskOfRuinGauge` component | Medium | ✅ | Visual probability |
+| Build `KellyDisplay` component | Medium | ✅ | Position size recommendation |
+| Implement Risk tab UI | High | ✅ | Layout all components |
 
 #### Files to Create
 
@@ -208,12 +210,12 @@ function calculateRiskOfRuin(
 
 #### Acceptance Criteria
 
-- [ ] Equity curve clearly shows drawdown periods in red
-- [ ] Drawdown table shows depth, duration, and recovery time
-- [ ] Risk of Ruin displays as percentage with visual gauge
-- [ ] Kelly Criterion shows recommended position size %
-- [ ] Sharpe/Sortino/Calmar displayed with industry benchmarks
-- [ ] All calculations match standard financial formulas
+- [x] Equity curve clearly shows drawdown periods in red
+- [x] Drawdown table shows depth, duration, and recovery time
+- [x] Risk of Ruin displays as percentage with visual gauge
+- [x] Kelly Criterion shows recommended position size %
+- [x] Sharpe/Sortino/Calmar displayed with industry benchmarks
+- [x] All calculations match standard financial formulas
 
 ---
 

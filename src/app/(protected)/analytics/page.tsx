@@ -6,14 +6,19 @@ import { useMemo } from "react";
 import {
 	CalendarHeatmap,
 	DayOfWeekChart,
+	DrawdownTable,
+	EquityCurve,
 	HourHeatmap,
+	KellyDisplay,
 	METRIC_TOOLTIPS,
 	MetricCard,
 	MonthlyChart,
+	RiskGauge,
 	SessionChart,
 } from "@/components/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAccount } from "@/contexts/account-context";
 import { useTimezone } from "@/hooks/use-timezone";
 import {
 	formatCurrency,
@@ -28,7 +33,10 @@ import { api } from "@/trpc/react";
 // =============================================================================
 
 function StatsOverview() {
-	const { data: overview, isLoading } = api.analytics.getOverview.useQuery();
+	const { selectedAccountId } = useAccount();
+	const { data: overview, isLoading } = api.analytics.getOverview.useQuery({
+		accountId: selectedAccountId,
+	});
 
 	if (isLoading) {
 		return (
@@ -149,7 +157,10 @@ function StatsOverview() {
 // =============================================================================
 
 function WinLossChart() {
-	const { data: overview, isLoading } = api.analytics.getOverview.useQuery();
+	const { selectedAccountId } = useAccount();
+	const { data: overview, isLoading } = api.analytics.getOverview.useQuery({
+		accountId: selectedAccountId,
+	});
 
 	const chartOptions = useMemo(() => {
 		if (!overview) return {};
@@ -201,8 +212,10 @@ function WinLossChart() {
 }
 
 function PnLDistributionChart() {
+	const { selectedAccountId } = useAccount();
 	const { data, isLoading } = api.trades.getAll.useQuery({
 		status: "closed",
+		accountId: selectedAccountId ?? undefined,
 		limit: 100,
 	});
 
@@ -276,8 +289,10 @@ function PnLDistributionChart() {
 }
 
 function CumulativePnLChart() {
+	const { selectedAccountId } = useAccount();
 	const { data, isLoading } = api.trades.getAll.useQuery({
 		status: "closed",
+		accountId: selectedAccountId ?? undefined,
 		limit: 100,
 	});
 
@@ -402,16 +417,26 @@ function ChartTerminal({
 
 function TimeTab() {
 	const { timezoneAbbr } = useTimezone();
+	const { selectedAccountId } = useAccount();
+
 	const { data: calendarData, isLoading: calendarLoading } =
-		api.analytics.getCalendarData.useQuery();
+		api.analytics.getCalendarData.useQuery({ accountId: selectedAccountId });
 	const { data: dayOfWeekData, isLoading: dowLoading } =
-		api.analytics.getPerformanceByDayOfWeek.useQuery();
+		api.analytics.getPerformanceByDayOfWeek.useQuery({
+			accountId: selectedAccountId,
+		});
 	const { data: hourData, isLoading: hourLoading } =
-		api.analytics.getPerformanceByHour.useQuery();
+		api.analytics.getPerformanceByHour.useQuery({
+			accountId: selectedAccountId,
+		});
 	const { data: sessionData, isLoading: sessionLoading } =
-		api.analytics.getPerformanceBySession.useQuery();
+		api.analytics.getPerformanceBySession.useQuery({
+			accountId: selectedAccountId,
+		});
 	const { data: monthlyData, isLoading: monthlyLoading } =
-		api.analytics.getPerformanceByMonth.useQuery();
+		api.analytics.getPerformanceByMonth.useQuery({
+			accountId: selectedAccountId,
+		});
 
 	const isLoading =
 		calendarLoading ||
@@ -480,6 +505,210 @@ function TimeTab() {
 }
 
 // =============================================================================
+// RISK TAB
+// =============================================================================
+
+function RiskTab() {
+	const { selectedAccountId } = useAccount();
+
+	const { data: riskMetrics, isLoading: riskLoading } =
+		api.analytics.getRiskMetrics.useQuery({ accountId: selectedAccountId });
+	const { data: equityCurve, isLoading: equityLoading } =
+		api.analytics.getEquityCurve.useQuery({ accountId: selectedAccountId });
+	const { data: drawdowns, isLoading: drawdownsLoading } =
+		api.analytics.getDrawdownHistory.useQuery({ accountId: selectedAccountId });
+
+	const isLoading = riskLoading || equityLoading || drawdownsLoading;
+
+	if (isLoading) {
+		return (
+			<div className="space-y-6">
+				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+					{[...Array(8)].map((_, i) => (
+						<div
+							className="rounded border border-border bg-secondary p-4"
+							key={`skeleton-risk-${i.toString()}`}
+						>
+							<Skeleton className="mb-3 h-3 w-16" />
+							<Skeleton className="mb-2 h-6 w-24" />
+							<Skeleton className="h-2 w-14" />
+						</div>
+					))}
+				</div>
+				<Skeleton className="h-[300px] w-full" />
+				<Skeleton className="h-[250px] w-full" />
+			</div>
+		);
+	}
+
+	if (!riskMetrics) {
+		return (
+			<div className="flex h-[400px] items-center justify-center font-mono text-muted-foreground text-xs">
+				No risk data available
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			{/* Risk metrics cards */}
+			<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+				<MetricCard
+					colorClass="text-loss"
+					description={`Peak P&L: ${formatCurrency(riskMetrics.peakPnl)}`}
+					title="Max Drawdown"
+					tooltip={METRIC_TOOLTIPS.maxDrawdown}
+					value={`-${formatCurrency(riskMetrics.maxDrawdown)}`}
+				/>
+				<MetricCard
+					colorClass={
+						riskMetrics.currentDrawdown > 0 ? "text-loss" : "text-profit"
+					}
+					description={
+						riskMetrics.currentDrawdown > 0
+							? "Currently in drawdown"
+							: "At P&L peak"
+					}
+					title="Current DD"
+					tooltip={METRIC_TOOLTIPS.maxDrawdown}
+					value={
+						riskMetrics.currentDrawdown > 0
+							? `-${formatCurrency(riskMetrics.currentDrawdown)}`
+							: "$0"
+					}
+				/>
+				<MetricCard
+					colorClass={
+						riskMetrics.sortinoRatio >= 1
+							? "text-profit"
+							: riskMetrics.sortinoRatio >= 0
+								? "text-breakeven"
+								: "text-loss"
+					}
+					description="Downside risk-adjusted"
+					title="Sortino Ratio"
+					tooltip={METRIC_TOOLTIPS.sortinoRatio}
+					value={
+						riskMetrics.sortinoRatio === Infinity
+							? "∞"
+							: riskMetrics.sortinoRatio.toFixed(2)
+					}
+				/>
+				<MetricCard
+					colorClass={
+						riskMetrics.calmarRatio >= 1
+							? "text-profit"
+							: riskMetrics.calmarRatio >= 0
+								? "text-breakeven"
+								: "text-loss"
+					}
+					description="Return / max DD"
+					title="Calmar Ratio"
+					tooltip={METRIC_TOOLTIPS.calmarRatio}
+					value={
+						riskMetrics.calmarRatio === Infinity
+							? "∞"
+							: riskMetrics.calmarRatio.toFixed(2)
+					}
+				/>
+
+				{/* Row 2 */}
+				<MetricCard
+					colorClass={
+						riskMetrics.recoveryFactor >= 1 ? "text-profit" : "text-breakeven"
+					}
+					description="Net profit / max DD"
+					title="Recovery Factor"
+					tooltip={METRIC_TOOLTIPS.recoveryFactor}
+					value={
+						riskMetrics.recoveryFactor === Infinity
+							? "∞"
+							: riskMetrics.recoveryFactor.toFixed(2)
+					}
+				/>
+				<MetricCard
+					colorClass={
+						riskMetrics.ulcerIndex < 5
+							? "text-profit"
+							: riskMetrics.ulcerIndex < 15
+								? "text-breakeven"
+								: "text-loss"
+					}
+					description="Drawdown depth × duration"
+					title="Ulcer Index"
+					tooltip={METRIC_TOOLTIPS.ulcerIndex}
+					value={riskMetrics.ulcerIndex.toFixed(2)}
+				/>
+				<MetricCard
+					colorClass="text-muted-foreground"
+					description={`${riskMetrics.numberOfDrawdowns} periods recorded`}
+					title="Drawdowns"
+					tooltip={METRIC_TOOLTIPS.maxDrawdown}
+					value={riskMetrics.numberOfDrawdowns.toString()}
+				/>
+				<MetricCard
+					colorClass={
+						riskMetrics.percentTimeInDrawdown < 30
+							? "text-profit"
+							: riskMetrics.percentTimeInDrawdown < 60
+								? "text-breakeven"
+								: "text-loss"
+					}
+					description="Trades in drawdown"
+					title="Time in DD"
+					tooltip={METRIC_TOOLTIPS.maxDrawdown}
+					value={`${formatPercent(riskMetrics.percentTimeInDrawdown, 0).replace("+", "")}`}
+				/>
+			</div>
+
+			{/* Cumulative P&L Curve */}
+			<ChartTerminal
+				description="Running profit/loss with drawdown periods highlighted"
+				title="Cumulative P&L"
+			>
+				<EquityCurve data={equityCurve ?? []} />
+			</ChartTerminal>
+
+			{/* Risk of Ruin and Kelly - side by side */}
+			<div className="grid gap-6 lg:grid-cols-2">
+				<ChartTerminal
+					description={`Probability of hitting ${riskMetrics.ruinThresholdPercent.toFixed(0)}% drawdown`}
+					title="Risk of Ruin"
+				>
+					<RiskGauge
+						riskOfRuin={riskMetrics.riskOfRuin}
+						riskPerTradePercent={riskMetrics.riskPerTradePercent}
+						riskPerTradeSource={riskMetrics.riskPerTradeSource}
+						ruinThresholdPercent={riskMetrics.ruinThresholdPercent}
+					/>
+				</ChartTerminal>
+
+				<ChartTerminal
+					description="Optimal position size based on your edge"
+					title="Kelly Criterion"
+				>
+					<KellyDisplay
+						avgLoss={riskMetrics.avgLoss}
+						avgWin={riskMetrics.avgWin}
+						halfKellyPercent={riskMetrics.halfKellyPercent}
+						kellyPercent={riskMetrics.kellyPercent}
+						winRate={riskMetrics.winRate}
+					/>
+				</ChartTerminal>
+			</div>
+
+			{/* Drawdown History Table */}
+			<ChartTerminal
+				description="Top drawdown periods sorted by depth"
+				title="Drawdown History"
+			>
+				<DrawdownTable data={drawdowns ?? []} />
+			</ChartTerminal>
+		</div>
+	);
+}
+
+// =============================================================================
 // PLACEHOLDER TABS
 // =============================================================================
 
@@ -490,7 +719,7 @@ function PlaceholderTab({ title }: { title: string }) {
 			<div className="text-center">
 				<h3 className="font-medium text-muted-foreground">{title} Analysis</h3>
 				<p className="font-mono text-muted-foreground/60 text-xs">
-					Coming in Sprint 4.3+
+					Coming in Sprint 4.4+
 				</p>
 			</div>
 		</div>
@@ -588,8 +817,8 @@ export default function AnalyticsPage() {
 				</TabsContent>
 
 				{/* Risk Tab */}
-				<TabsContent value="risk">
-					<PlaceholderTab title="Risk" />
+				<TabsContent className="space-y-6" value="risk">
+					<RiskTab />
 				</TabsContent>
 
 				{/* Symbols Tab */}

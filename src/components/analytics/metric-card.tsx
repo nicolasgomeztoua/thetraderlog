@@ -192,4 +192,43 @@ export const METRIC_TOOLTIPS = {
 		benchmark:
 			"Streaks are normal. Don't oversize after wins or revenge trade after losses.",
 	},
+	// Risk metrics
+	maxDrawdown: {
+		what: "Largest peak-to-trough decline in your equity curve.",
+		why: "Shows your worst loss period. Critical for risk management and sizing.",
+		benchmark:
+			"<10% is excellent, 10-20% is acceptable, >30% requires strategy review.",
+	},
+	sortinoRatio: {
+		what: "Risk-adjusted return using only downside volatility (losses).",
+		why: "Better than Sharpe for trading - doesn't penalize upside volatility.",
+		benchmark:
+			">1 is good, >2 is excellent. Higher = better risk-adjusted returns.",
+	},
+	calmarRatio: {
+		what: "Annualized return divided by maximum drawdown.",
+		why: "Shows return per unit of drawdown risk. Rewards consistent growth.",
+		benchmark: ">1 is good, >2 is excellent, >3 is exceptional.",
+	},
+	recoveryFactor: {
+		what: "Net profit divided by maximum drawdown.",
+		why: "Shows how well you recover from losses. Higher = more resilient.",
+		benchmark: ">3 is good, >5 is excellent. <1 means still in drawdown.",
+	},
+	ulcerIndex: {
+		what: "Measures both depth and duration of drawdowns (RMS of drawdowns).",
+		why: "Captures the 'pain' of drawdowns - deeper and longer = worse.",
+		benchmark: "<5 is excellent, 5-10 is good, >15 indicates high volatility.",
+	},
+	riskOfRuin: {
+		what: "Probability of hitting 50% drawdown based on your stats.",
+		why: "Shows long-term survival odds. Even small risks compound over time.",
+		benchmark: "<1% is safe, 1-5% is acceptable, >10% requires action.",
+	},
+	kellyPercent: {
+		what: "Optimal position size for maximum geometric growth (Kelly Criterion).",
+		why: "Balances growth vs risk of ruin. Full Kelly is aggressive.",
+		benchmark:
+			"Most traders use Half or Quarter Kelly. >30% suggests verify with more data.",
+	},
 } as const;
