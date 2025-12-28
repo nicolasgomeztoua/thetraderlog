@@ -152,7 +152,7 @@ export function RiskGauge({
 					>
 						{displayValue}
 					</span>
-					<span className="mt-1 font-mono text-xs text-muted-foreground">
+					<span className="mt-1 font-mono text-muted-foreground text-xs">
 						Risk of Ruin
 					</span>
 				</div>

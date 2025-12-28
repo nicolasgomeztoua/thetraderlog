@@ -1,3 +1,4 @@
+import type { OHLCBar } from "./market-data-service";
 import { getForexPipSize, getFuturesSpec } from "./symbols";
 
 // =============================================================================
@@ -208,5 +209,213 @@ export function calculateAllStats(trade: {
 		duration: calculateDuration(trade.entryTime, trade.exitTime),
 		rMultiple: calculateRMultiple(entry, exit, sl, trade.direction),
 		plannedRR: calculatePlannedRR(entry, sl, tp),
+	};
+}
+
+// =============================================================================
+// MAE/MFE CALCULATIONS
+// Maximum Adverse Excursion / Maximum Favorable Excursion
+// =============================================================================
+
+export interface MAEMFEResult {
+	maePrice: number; // Price at maximum adverse excursion
+	mfePrice: number; // Price at maximum favorable excursion
+	maeAmount: number; // $ value of MAE
+	mfeAmount: number; // $ value of MFE
+	efficiency: number; // % of MFE captured (0-100)
+	maePoints: number; // Points of adverse movement
+	mfePoints: number; // Points of favorable movement
+}
+
+/**
+ * Calculate MAE/MFE from OHLC bars during a trade
+ *
+ * MAE (Maximum Adverse Excursion): The worst unrealized loss during the trade
+ * MFE (Maximum Favorable Excursion): The best unrealized profit during the trade
+ * Trade Efficiency: % of the MFE that was actually captured
+ *
+ * @param bars - OHLC bars during the trade (filtered to trade duration)
+ * @param entryPrice - Trade entry price
+ * @param exitPrice - Trade exit price
+ * @param direction - "long" or "short"
+ * @param quantity - Number of contracts/lots
+ * @param symbol - Trading symbol (for point value calculation)
+ * @param instrumentType - "futures" or "forex"
+ * @returns MAE/MFE metrics
+ */
+export function calculateMAEMFE(
+	bars: OHLCBar[],
+	entryPrice: number,
+	exitPrice: number,
+	direction: "long" | "short",
+	quantity: number,
+	symbol: string,
+	instrumentType: "futures" | "forex",
+): MAEMFEResult {
+	if (bars.length === 0) {
+		// No data - return zeros
+		return {
+			maePrice: entryPrice,
+			mfePrice: entryPrice,
+			maeAmount: 0,
+			mfeAmount: 0,
+			efficiency: 0,
+			maePoints: 0,
+			mfePoints: 0,
+		};
+	}
+
+	let maxAdverseExcursion = 0; // Points
+	let maxFavorableExcursion = 0; // Points
+	let maePrice = entryPrice;
+	let mfePrice = entryPrice;
+
+	for (const bar of bars) {
+		if (direction === "long") {
+			// For LONG trades:
+			// - Favorable = price going UP (bar.high - entry)
+			// - Adverse = price going DOWN (entry - bar.low)
+			const favorable = bar.high - entryPrice;
+			const adverse = entryPrice - bar.low;
+
+			if (favorable > maxFavorableExcursion) {
+				maxFavorableExcursion = favorable;
+				mfePrice = bar.high;
+			}
+			if (adverse > maxAdverseExcursion) {
+				maxAdverseExcursion = adverse;
+				maePrice = bar.low;
+			}
+		} else {
+			// For SHORT trades:
+			// - Favorable = price going DOWN (entry - bar.low)
+			// - Adverse = price going UP (bar.high - entry)
+			const favorable = entryPrice - bar.low;
+			const adverse = bar.high - entryPrice;
+
+			if (favorable > maxFavorableExcursion) {
+				maxFavorableExcursion = favorable;
+				mfePrice = bar.low;
+			}
+			if (adverse > maxAdverseExcursion) {
+				maxAdverseExcursion = adverse;
+				maePrice = bar.high;
+			}
+		}
+	}
+
+	// Calculate dollar amounts
+	const pointValue = getPointValue(symbol, instrumentType);
+	const maeAmount = maxAdverseExcursion * pointValue * quantity;
+	const mfeAmount = maxFavorableExcursion * pointValue * quantity;
+
+	// Calculate actual P&L in points
+	const actualPoints =
+		direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
+
+	// Trade efficiency: what % of the maximum favorable move did we capture?
+	// efficiency = actualPnl / MFE * 100
+	// Can be > 100% if we exited at the absolute best point
+	// Can be negative if we lost money
+	let efficiency = 0;
+	if (maxFavorableExcursion > 0) {
+		efficiency = (actualPoints / maxFavorableExcursion) * 100;
+	} else if (actualPoints > 0) {
+		// MFE was 0 but we made money (unusual but possible)
+		efficiency = 100;
+	}
+
+	return {
+		maePrice,
+		mfePrice,
+		maeAmount,
+		mfeAmount,
+		efficiency: Math.round(efficiency * 100) / 100, // Round to 2 decimals
+		maePoints: maxAdverseExcursion,
+		mfePoints: maxFavorableExcursion,
+	};
+}
+
+/**
+ * Get point value for a symbol
+ * For futures: uses contract specs
+ * For forex: uses pip value
+ */
+function getPointValue(
+	symbol: string,
+	instrumentType: "futures" | "forex",
+): number {
+	if (instrumentType === "futures") {
+		const spec = getFuturesSpec(symbol);
+		return spec?.pointValue ?? 1;
+	}
+	// For forex, pip value varies - use approximate standard lot value
+	// This is an approximation; real pip value depends on quote currency
+	return 10; // $10 per pip per standard lot (for USD-quoted pairs)
+}
+
+/**
+ * Analyze price action after trade exit
+ * Useful for "what if" analysis
+ */
+export interface PostExitAnalysis {
+	wouldHaveRecovered: boolean; // Did price return to profit after a losing exit?
+	maxPriceAfterExit: number; // Highest price after exit (for longs) or lowest (for shorts)
+	priceAtAnalysisEnd: number; // Final price in the data
+	potentialAdditionalProfit: number; // How much more could have been made (points)
+}
+
+export function analyzePostExit(
+	bars: OHLCBar[],
+	exitPrice: number,
+	entryPrice: number,
+	direction: "long" | "short",
+): PostExitAnalysis {
+	if (bars.length === 0) {
+		return {
+			wouldHaveRecovered: false,
+			maxPriceAfterExit: exitPrice,
+			priceAtAnalysisEnd: exitPrice,
+			potentialAdditionalProfit: 0,
+		};
+	}
+
+	const wasLoss =
+		direction === "long" ? exitPrice < entryPrice : exitPrice > entryPrice;
+
+	let wouldHaveRecovered = false;
+	let maxPrice = exitPrice;
+	let minPrice = exitPrice;
+
+	for (const bar of bars) {
+		maxPrice = Math.max(maxPrice, bar.high);
+		minPrice = Math.min(minPrice, bar.low);
+
+		// Check if would have recovered
+		if (wasLoss) {
+			if (direction === "long" && bar.high > entryPrice) {
+				wouldHaveRecovered = true;
+			}
+			if (direction === "short" && bar.low < entryPrice) {
+				wouldHaveRecovered = true;
+			}
+		}
+	}
+
+	const lastBar = bars[bars.length - 1];
+	const priceAtAnalysisEnd = lastBar?.close ?? exitPrice;
+
+	// Calculate how much more profit could have been made
+	const bestExitPrice = direction === "long" ? maxPrice : minPrice;
+	const potentialAdditionalProfit =
+		direction === "long"
+			? bestExitPrice - exitPrice
+			: exitPrice - bestExitPrice;
+
+	return {
+		wouldHaveRecovered,
+		maxPriceAfterExit: direction === "long" ? maxPrice : minPrice,
+		priceAtAnalysisEnd,
+		potentialAdditionalProfit: Math.max(0, potentialAdditionalProfit),
 	};
 }

@@ -1179,8 +1179,7 @@ export const analyticsRouter = createTRPCRouter({
 					: 0;
 
 			// Win rate for trades with R data
-			const winRate =
-				wins + losses > 0 ? (wins / (wins + losses)) * 100 : 0;
+			const winRate = wins + losses > 0 ? (wins / (wins + losses)) * 100 : 0;
 
 			return {
 				summary: {

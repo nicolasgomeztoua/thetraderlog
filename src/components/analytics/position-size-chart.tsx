@@ -160,7 +160,7 @@ export function PositionSizeChart({
 
 				{/* Size range */}
 				<div className="text-right">
-					<div className="font-bold font-mono text-lg text-foreground">
+					<div className="font-bold font-mono text-foreground text-lg">
 						{hasData
 							? `${stats.minSize.toFixed(2)} - ${stats.maxSize.toFixed(2)}`
 							: "—"}
@@ -214,8 +214,8 @@ export function PositionSizeChart({
 						<tbody>
 							{buckets.map((bucket) => (
 								<tr
-									key={bucket.label}
 									className="border-border border-b last:border-b-0"
+									key={bucket.label}
 								>
 									<td className="px-2 py-1.5 font-mono text-xs">
 										{bucket.label}
@@ -232,9 +232,7 @@ export function PositionSizeChart({
 											bucket.winRate >= 50 ? "text-profit" : "text-loss",
 										)}
 									>
-										{bucket.trades > 0
-											? `${bucket.winRate.toFixed(0)}%`
-											: "—"}
+										{bucket.trades > 0 ? `${bucket.winRate.toFixed(0)}%` : "—"}
 									</td>
 									<td
 										className={cn(

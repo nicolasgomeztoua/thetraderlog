@@ -6,7 +6,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface RMultipleBucket {
 	label: string;
@@ -96,9 +96,10 @@ export function RMultipleChart({
 	}, [buckets]);
 
 	const hasData = stats.tradesWithR > 0;
-	const coverage = stats.totalTrades > 0 
-		? ((stats.tradesWithR / stats.totalTrades) * 100).toFixed(0)
-		: "0";
+	const coverage =
+		stats.totalTrades > 0
+			? ((stats.tradesWithR / stats.totalTrades) * 100).toFixed(0)
+			: "0";
 
 	return (
 		<div className={cn("space-y-4", className)}>
@@ -141,8 +142,8 @@ export function RMultipleChart({
 											Why:
 										</span>
 										<p className="text-muted-foreground text-xs">
-											Normalizes performance across different position sizes.
-											1R = hit stop loss, 2R = made 2x your risk.
+											Normalizes performance across different position sizes. 1R
+											= hit stop loss, 2R = made 2x your risk.
 										</p>
 									</div>
 									<div>
@@ -173,10 +174,12 @@ export function RMultipleChart({
 								? "text-profit"
 								: stats.avgRMultiple < 0
 									? "text-loss"
-									: "text-muted-foreground"
+									: "text-muted-foreground",
 						)}
 					>
-						{hasData ? `${stats.avgRMultiple >= 0 ? "+" : ""}${stats.avgRMultiple.toFixed(2)}R` : "—"}
+						{hasData
+							? `${stats.avgRMultiple >= 0 ? "+" : ""}${stats.avgRMultiple.toFixed(2)}R`
+							: "—"}
 					</div>
 					<div className="font-mono text-[10px] text-muted-foreground">
 						Avg R-Multiple
@@ -250,4 +253,3 @@ export function RMultipleChart({
 		</div>
 	);
 }
-

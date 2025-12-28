@@ -213,6 +213,30 @@ export default function TradeDetailPage() {
 		},
 	});
 
+	// Lazy MAE/MFE calculation - trigger when viewing a closed trade without data
+	const calculateMAEMFE = api.trades.calculateMAEMFE.useMutation({
+		onSuccess: () => {
+			utils.trades.getById.invalidate({ id: tradeId });
+		},
+		onError: (error) => {
+			console.warn("MAE/MFE calculation failed:", error.message);
+			// Don't show toast - this is a background operation
+		},
+	});
+
+	// Auto-trigger MAE/MFE calculation for closed trades without data
+	useEffect(() => {
+		if (
+			trade &&
+			trade.status === "closed" &&
+			trade.exitTime &&
+			!trade.marketDataQuality && // Not yet calculated
+			!calculateMAEMFE.isPending
+		) {
+			calculateMAEMFE.mutate({ tradeId: trade.id });
+		}
+	}, [trade, calculateMAEMFE]);
+
 	// Field update handler
 	const updateField = useCallback(
 		(field: string, value: string | number | boolean | null) => {

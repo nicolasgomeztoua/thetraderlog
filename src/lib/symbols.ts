@@ -511,6 +511,123 @@ export const TWELVE_DATA_SYMBOL_MAP: Record<string, string> = {
 };
 
 // ============================================
+// TRADINGVIEW SYMBOL MAPPING
+// Maps our symbols to TradingView's exchange:symbol format
+// ============================================
+
+export const TRADINGVIEW_SYMBOL_MAP: Record<string, string> = {
+	// Equities - E-mini (CME)
+	ES: "CME_MINI:ES1!",
+	NQ: "CME_MINI:NQ1!",
+	YM: "CBOT_MINI:YM1!",
+	RTY: "CME_MINI:RTY1!",
+	// Equities - Micro (CME)
+	MES: "CME_MINI:MES1!",
+	MNQ: "CME_MINI:MNQ1!",
+	MYM: "CBOT_MINI:MYM1!",
+	M2K: "CME_MINI:M2K1!",
+	// International
+	NKD: "CME:NKD1!",
+	// Energy (NYMEX)
+	CL: "NYMEX:CL1!",
+	MCL: "NYMEX:MCL1!",
+	NG: "NYMEX:NG1!",
+	MNG: "NYMEX:MNG1!",
+	// Metals (COMEX)
+	GC: "COMEX:GC1!",
+	MGC: "COMEX:MGC1!",
+	SI: "COMEX:SI1!",
+	SIL: "COMEX:SIL1!",
+	// Currency Futures (CME)
+	"6A": "CME:6A1!",
+	"6B": "CME:6B1!",
+	"6C": "CME:6C1!",
+	"6E": "CME:6E1!",
+	"6J": "CME:6J1!",
+	"6M": "CME:6M1!",
+	"6N": "CME:6N1!",
+	"6S": "CME:6S1!",
+	// Micro Currency Futures
+	M6A: "CME:M6A1!",
+	M6B: "CME:M6B1!",
+	M6E: "CME:M6E1!",
+	MCD: "CME:MCD1!",
+	MSF: "CME:MSF1!",
+	MBT: "CME:MBT1!",
+	// Interest Rates (CBOT)
+	ZB: "CBOT:ZB1!",
+	ZN: "CBOT:ZN1!",
+	ZF: "CBOT:ZF1!",
+	ZT: "CBOT:ZT1!",
+	TN: "CBOT:TN1!",
+	UB: "CBOT:UB1!",
+	// Agriculture - Grains (CBOT)
+	ZC: "CBOT:ZC1!",
+	XC: "CBOT:XC1!",
+	ZW: "CBOT:ZW1!",
+	ZO: "CBOT:ZO1!",
+	ZR: "CBOT:ZR1!",
+	// Agriculture - Soy (CBOT)
+	ZS: "CBOT:ZS1!",
+	ZL: "CBOT:ZL1!",
+	ZM: "CBOT:ZM1!",
+	// Livestock (CME)
+	LE: "CME:LE1!",
+	GF: "CME:GF1!",
+	HE: "CME:HE1!",
+	// Forex pairs (FX exchange)
+	"EUR/USD": "FX:EURUSD",
+	"GBP/USD": "FX:GBPUSD",
+	"USD/JPY": "FX:USDJPY",
+	"USD/CHF": "FX:USDCHF",
+	"AUD/USD": "FX:AUDUSD",
+	"USD/CAD": "FX:USDCAD",
+	"NZD/USD": "FX:NZDUSD",
+	"EUR/JPY": "FX:EURJPY",
+	"GBP/JPY": "FX:GBPJPY",
+	"AUD/JPY": "FX:AUDJPY",
+	"NZD/JPY": "FX:NZDJPY",
+	"CAD/JPY": "FX:CADJPY",
+	"CHF/JPY": "FX:CHFJPY",
+	"EUR/GBP": "FX:EURGBP",
+	"EUR/AUD": "FX:EURAUD",
+	"EUR/CAD": "FX:EURCAD",
+	"EUR/CHF": "FX:EURCHF",
+	"EUR/NZD": "FX:EURNZD",
+	"GBP/AUD": "FX:GBPAUD",
+	"GBP/CAD": "FX:GBPCAD",
+	"GBP/CHF": "FX:GBPCHF",
+	"GBP/NZD": "FX:GBPNZD",
+	"AUD/CAD": "FX:AUDCAD",
+	"AUD/CHF": "FX:AUDCHF",
+	"AUD/NZD": "FX:AUDNZD",
+	"NZD/CAD": "FX:NZDCAD",
+	"NZD/CHF": "FX:NZDCHF",
+	"CAD/CHF": "FX:CADCHF",
+};
+
+/**
+ * Convert our symbol to TradingView format
+ * @param symbol - Our internal symbol (e.g., "ES", "EUR/USD", "MNQH24")
+ * @returns TradingView formatted symbol (e.g., "CME_MINI:ES1!", "FX:EURUSD")
+ */
+export function getTradingViewSymbol(symbol: string): string {
+	// Try exact match first
+	if (TRADINGVIEW_SYMBOL_MAP[symbol]) {
+		return TRADINGVIEW_SYMBOL_MAP[symbol];
+	}
+
+	// Strip month/year codes for futures (e.g., MNQH24 -> MNQ, ESZ2024 -> ES)
+	const baseSymbol = symbol.replace(/[FGHJKMNQUVXZ]\d{2,4}$/, "");
+	if (TRADINGVIEW_SYMBOL_MAP[baseSymbol]) {
+		return TRADINGVIEW_SYMBOL_MAP[baseSymbol];
+	}
+
+	// Fallback: return the symbol as-is (TradingView might still resolve it)
+	return symbol;
+}
+
+// ============================================
 // HELPER FUNCTIONS
 // ============================================
 

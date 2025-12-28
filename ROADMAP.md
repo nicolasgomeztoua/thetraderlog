@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** December 28, 2025 (Sprint 4.3 Risk Reports complete - R-Multiple, Risk/Reward, Position Sizing, Monte Carlo)
+> **Last Updated:** December 28, 2025 (MAE/MFE moved from Analytics to Trade Detail - per-trade metric)
 
 ---
 
@@ -224,7 +224,7 @@ Make the dashboard fully customizable with drag-and-drop widgets like TradeZella
 > **Status:** 🔄 In Progress
 
 ### Goal
-Build 50+ specialized reports like TradeZella, plus professional-grade metrics used by hedge funds and prop firms (Sharpe/Sortino/Calmar ratios, Risk of Ruin, Kelly Criterion, MAE/MFE, Monte Carlo simulations).
+Build 50+ specialized reports like TradeZella, plus professional-grade metrics used by hedge funds and prop firms (Sharpe/Sortino/Calmar ratios, Risk of Ruin, Kelly Criterion, Monte Carlo simulations).
 
 ### Tasks
 
@@ -249,9 +249,8 @@ Build 50+ specialized reports like TradeZella, plus professional-grade metrics u
 - [x] Risk/reward ratio analysis
 - [x] Drawdown tracking chart (Equity curve with drawdown highlighting)
 - [x] Maximum drawdown calculation
-- [ ] MAE (Maximum Adverse Excursion)
-- [ ] MFE (Maximum Favorable Excursion)
 - [x] Position sizing analysis
+- ~~MAE/MFE~~ *(moved to Trade Detail - per-trade metric, not aggregate)*
 
 #### 4.3.1 Professional Risk Metrics *(COMPLETED)*
 - [x] Sharpe Ratio (risk-adjusted return)
@@ -327,6 +326,14 @@ Match TradeZella's comprehensive trade tracking page.
 - [ ] Display entry/exit markers on chart
 - [ ] Multiple timeframe toggle
 - [ ] Chart annotation tools
+
+#### 5.5 MAE/MFE Per-Trade Analysis
+- [ ] Add `tradeHigh`, `tradeLow`, `mae`, `mfe` fields to trades schema
+- [ ] Twelve Data API integration for fetching high/low during trade
+- [ ] Lazy fetch on trade detail view (cache in DB)
+- [ ] MAE/MFE display card on trade detail page
+- [ ] Show efficiency % (captured P&L vs MFE)
+- [ ] Visual markers on TradingView chart (high/low extremes)
 
 ---
 

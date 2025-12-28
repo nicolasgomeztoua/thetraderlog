@@ -87,8 +87,8 @@ export function RiskRewardPanel({
 											What:
 										</span>
 										<p className="text-muted-foreground text-xs">
-											Compares your planned R:R (reward/risk based on TP/SL) 
-											to actual outcomes.
+											Compares your planned R:R (reward/risk based on TP/SL) to
+											actual outcomes.
 										</p>
 									</div>
 									<div>
@@ -105,7 +105,8 @@ export function RiskRewardPanel({
 											Goal:
 										</span>
 										<p className="text-muted-foreground text-xs">
-											Trade setups with higher R:R. Efficiency {">"} 60% is good.
+											Trade setups with higher R:R. Efficiency {">"} 60% is
+											good.
 										</p>
 									</div>
 								</TooltipContent>
@@ -141,7 +142,7 @@ export function RiskRewardPanel({
 						<div
 							className={cn(
 								"font-bold font-mono text-lg",
-								summary.avgRMultiple > 0 ? "text-profit" : "text-loss"
+								summary.avgRMultiple > 0 ? "text-profit" : "text-loss",
 							)}
 						>
 							{summary.avgRMultiple >= 0 ? "+" : ""}
@@ -166,7 +167,7 @@ export function RiskRewardPanel({
 						<div
 							className={cn(
 								"font-bold font-mono text-lg",
-								summary.winRate >= 50 ? "text-profit" : "text-loss"
+								summary.winRate >= 50 ? "text-profit" : "text-loss",
 							)}
 						>
 							{formatPercent(summary.winRate, 0).replace("+", "")}
@@ -211,19 +212,17 @@ export function RiskRewardPanel({
 							<tbody>
 								{categories.map((cat) => (
 									<tr
-										key={cat.range}
 										className="border-border border-b last:border-b-0"
+										key={cat.range}
 									>
-										<td className="px-3 py-2 font-mono text-xs">
-											{cat.range}
-										</td>
+										<td className="px-3 py-2 font-mono text-xs">{cat.range}</td>
 										<td className="px-3 py-2 text-right font-mono text-muted-foreground text-xs">
 											{cat.trades}
 										</td>
 										<td
 											className={cn(
 												"px-3 py-2 text-right font-mono text-xs",
-												cat.winRate >= 50 ? "text-profit" : "text-loss"
+												cat.winRate >= 50 ? "text-profit" : "text-loss",
 											)}
 										>
 											{cat.trades > 0
@@ -237,7 +236,7 @@ export function RiskRewardPanel({
 													? "text-profit"
 													: cat.avgPnl < 0
 														? "text-loss"
-														: "text-muted-foreground"
+														: "text-muted-foreground",
 											)}
 										>
 											{cat.trades > 0 ? formatCurrency(cat.avgPnl) : "—"}
@@ -255,4 +254,3 @@ export function RiskRewardPanel({
 		</div>
 	);
 }
-

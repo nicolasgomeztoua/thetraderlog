@@ -366,92 +366,21 @@ interface StreakAnalysis {
 
 ---
 
-### Sprint 4.6: MAE/MFE and Monte Carlo (Week 5)
+### ~~Sprint 4.6: MAE/MFE~~ (REMOVED)
 
-**Goal:** Advanced trade quality analysis with MAE/MFE and Monte Carlo simulations.
+**Status:** ❌ Removed from Analytics
 
-#### Tasks
+**Reason:** MAE/MFE is a per-trade metric, not an aggregate analytics feature. Comparing MAE across different symbols and trade durations in aggregate doesn't provide meaningful insights.
 
-| Task | Priority | Status | Notes |
-|------|----------|--------|-------|
-| Evaluate data requirements for MAE/MFE | High | ⏳ | Need high/low during trade |
-| Option A: Add `tradeHigh`/`tradeLow` to schema | Medium | ⏳ | Manual entry option |
-| Option B: Integrate market data API | Low | ⏳ | Auto-fetch historical |
-| Create `getMAEMFEAnalysis` procedure | High | ⏳ | Requires price data |
-| Create `getTradeEfficiency` procedure | High | ⏳ | Actual / MFE |
-| Implement Monte Carlo simulation | High | ⏳ | Moved to Strategy Analytics (needs risk %) |
-| Create `runMonteCarloSimulation` procedure | High | ⏳ | Moved to Strategy Analytics (needs risk %) |
-| Build `MAEMFEScatter` component | High | ⏳ | MAE vs MFE plot |
-| Build `EfficiencyHistogram` component | Medium | ⏳ | Distribution chart |
-| Build `MonteCarloChart` component | High | ⏳ | Moved to Strategy Analytics (needs risk %) |
-| Build `OptimizationSuggestions` component | Medium | ⏳ | SL/TP recommendations |
-| Add MAE/MFE section to analytics | High | ⏳ | Part of Risk or separate |
+**Moved to:** Phase 5 Trade Detail (Section 5.5)
 
-#### Files to Create
+The per-trade MAE/MFE implementation includes:
+- TradingView widget for chart display
+- Twelve Data API for fetching high/low during trade
+- Per-trade efficiency calculation (captured P&L vs MFE)
+- Visual markers on the trade detail chart
 
-```
-src/components/analytics/mae-mfe-scatter.tsx    # MAE vs MFE scatter plot
-src/components/analytics/efficiency-histogram.tsx # Trade efficiency dist
-src/components/analytics/monte-carlo.tsx        # Simulation results
-src/components/analytics/optimization-tips.tsx  # SL/TP suggestions
-```
-
-#### Files to Modify
-
-```
-src/server/db/schema.ts              # Potentially add tradeHigh/tradeLow
-src/lib/risk-calculations.ts         # Add Monte Carlo logic
-src/server/api/routers/analytics.ts  # Add MAE/MFE procedures
-src/app/(protected)/analytics/page.tsx # MAE/MFE UI
-```
-
-#### Monte Carlo Implementation
-
-```typescript
-interface MonteCarloResult {
-  iterations: number;
-  percentiles: {
-    p5: number;   // 5th percentile (worst likely outcome)
-    p25: number;  // 25th percentile
-    p50: number;  // Median outcome
-    p75: number;  // 75th percentile
-    p95: number;  // 95th percentile (best likely outcome)
-  };
-  probabilityOfProfit: number;  // % of simulations that were profitable
-  probabilityOfRuin: number;    // % that hit drawdown threshold
-  expectedValue: number;        // Mean final equity
-  standardDeviation: number;    // Volatility of outcomes
-}
-
-function runMonteCarloSimulation(
-  trades: Trade[],
-  iterations: number = 1000,
-  initialEquity: number,
-  ruinThreshold: number = 0.5
-): MonteCarloResult
-```
-
-#### Schema Changes (Optional)
-
-```sql
--- Option A: Store trade high/low for MAE/MFE
-ALTER TABLE trade ADD COLUMN trade_high DECIMAL(20, 8);
-ALTER TABLE trade ADD COLUMN trade_low DECIMAL(20, 8);
-
--- These can be:
--- 1. Manually entered by user
--- 2. Auto-populated from market data on import
--- 3. Fetched lazily when viewing MAE/MFE analysis
-```
-
-#### Acceptance Criteria
-
-- [ ] MAE/MFE scatter plot shows trade quality visually
-- [ ] Trade efficiency histogram identifies optimization opportunities
-- [ ] Monte Carlo runs 1000 iterations in under 3 seconds
-- [ ] Monte Carlo shows probability distribution of outcomes
-- [ ] Optimization suggestions based on MAE/MFE data
-- [ ] Works gracefully when trade high/low data unavailable
+**Monte Carlo:** Moved to Phase 2.5 Strategy Analytics (requires risk % per trade for proper compounding simulation)
 
 ---
 
@@ -484,7 +413,7 @@ ALTER TABLE trade ADD COLUMN trade_low DECIMAL(20, 8);
 
 ## File Summary
 
-### New Files (14 total)
+### New Files (12 total)
 
 ```
 src/server/api/routers/analytics.ts           # Main analytics router
@@ -501,10 +430,10 @@ src/components/analytics/
 ├── equity-curve.tsx                          # With drawdowns
 ├── drawdown-table.tsx                        # Top drawdowns
 ├── performance-table.tsx                     # Symbol/setup stats
-├── streak-card.tsx                           # Win/loss streaks
-├── monte-carlo.tsx                           # Simulation results
-└── mae-mfe-scatter.tsx                       # MAE/MFE plot
+└── streak-card.tsx                           # Win/loss streaks
 ```
+
+*Note: MAE/MFE and Monte Carlo components moved to Phase 5 Trade Detail and Phase 2.5 Strategy Analytics respectively.*
 
 ### Modified Files
 
@@ -512,7 +441,6 @@ src/components/analytics/
 src/server/api/root.ts                        # Add analytics router
 src/lib/stats-calculations.ts                 # Extend with new calcs
 src/app/(protected)/analytics/page.tsx        # Complete refactor
-src/server/db/schema.ts                       # Potentially add fields
 ```
 
 ---
@@ -590,4 +518,9 @@ All components follow Terminal design system with tooltips explaining each metri
 *(To be filled during implementation)*
 
 ### Sprint 4.6 Notes
-*(To be filled during implementation - MAE/MFE skipped, requires tradeHigh/tradeLow schema fields)*
+
+**December 28, 2025:** Sprint removed from Phase 4 Analytics.
+
+MAE/MFE was determined to be a per-trade metric rather than an aggregate analytics feature. Aggregate MAE/MFE comparison across different symbols and trade durations doesn't provide meaningful insights.
+
+**New location:** Phase 5 Trade Detail (Section 5.5) - Per-trade MAE/MFE with TradingView chart integration and Twelve Data API for price data.

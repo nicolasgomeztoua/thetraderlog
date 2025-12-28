@@ -9,6 +9,7 @@ import {
 	primaryKey,
 	text,
 	timestamp,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const createTable = pgTableCreator((name) => name);
@@ -81,6 +82,12 @@ export const strategyRuleCategoryEnum = pgEnum("strategy_rule_category", [
 	"exit",
 	"risk",
 	"management",
+]);
+export const dataQualityEnum = pgEnum("data_quality", [
+	"full", // Complete OHLC data for trade duration
+	"partial", // Some bars missing (gaps in data)
+	"unavailable", // No data found, MAE/MFE not calculated
+	"pending", // Calculation queued but not yet completed
 ]);
 
 // ============================================================================
@@ -269,6 +276,14 @@ export const trades = createTable(
 		realizedPnl: decimal("realized_pnl", { precision: 20, scale: 2 }),
 		fees: decimal("fees", { precision: 20, scale: 2 }).default("0"),
 		netPnl: decimal("net_pnl", { precision: 20, scale: 2 }),
+
+		// MAE/MFE Analysis (computed from market data)
+		maePrice: decimal("mae_price", { precision: 20, scale: 8 }), // Price of max adverse excursion
+		mfePrice: decimal("mfe_price", { precision: 20, scale: 8 }), // Price of max favorable excursion
+		maeAmount: decimal("mae_amount", { precision: 20, scale: 2 }), // $ value of MAE
+		mfeAmount: decimal("mfe_amount", { precision: 20, scale: 2 }), // $ value of MFE
+		tradeEfficiency: decimal("trade_efficiency", { precision: 5, scale: 2 }), // % of MFE captured (0-100)
+		marketDataQuality: dataQualityEnum("market_data_quality"), // Quality of market data used for analysis
 
 		// Trade metadata
 		setupType: text("setup_type"), // e.g., "breakout", "reversal", "trend_continuation"
@@ -610,6 +625,33 @@ export const tradeRuleChecks = createTable(
 );
 
 // ============================================================================
+// CANDLE CACHE TABLE (for market data caching)
+// ============================================================================
+
+export const candleCache = createTable(
+	"candle_cache",
+	{
+		id: integer().primaryKey().generatedByDefaultAsIdentity(),
+		symbol: text("symbol").notNull(), // e.g., "ES", "MNQ", "EUR/USD"
+		interval: text("interval").notNull(), // "1min", "5min", "15min", "1h"
+		date: timestamp("date", { withTimezone: true }).notNull(), // Day of data (normalized to midnight UTC)
+		bars: text("bars").notNull(), // JSON array of OHLC bars
+		barCount: integer("bar_count").notNull(), // Quick count without parsing JSON
+		source: text("source").notNull(), // "twelve_data", "polygon"
+		fetchedAt: timestamp("fetched_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		// No expiresAt - data persists forever for historical lookups
+	},
+	(t) => [
+		// Unique constraint on symbol+interval+date = our cache key
+		uniqueIndex("candle_cache_lookup_idx").on(t.symbol, t.interval, t.date),
+		// Index for queries by symbol
+		index("candle_cache_symbol_idx").on(t.symbol),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -807,3 +849,5 @@ export type StrategyRule = typeof strategyRules.$inferSelect;
 export type NewStrategyRule = typeof strategyRules.$inferInsert;
 export type TradeRuleCheck = typeof tradeRuleChecks.$inferSelect;
 export type NewTradeRuleCheck = typeof tradeRuleChecks.$inferInsert;
+export type CandleCache = typeof candleCache.$inferSelect;
+export type NewCandleCache = typeof candleCache.$inferInsert;

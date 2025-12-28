@@ -1,10 +1,23 @@
 import { z } from "zod";
 import { env } from "@/env";
+import {
+	type CacheInterval,
+	getCacheStats,
+	getOHLCForChart,
+} from "@/lib/market-data-service";
 import { TWELVE_DATA_SYMBOL_MAP } from "@/lib/symbols";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 // Use the shared symbol map for Twelve Data API
 const SYMBOL_MAP = TWELVE_DATA_SYMBOL_MAP;
+
+// Valid intervals for chart display
+const chartIntervalSchema = z.enum([
+	"5min",
+	"15min",
+	"30min",
+	"1h",
+]) as z.ZodType<CacheInterval>;
 
 interface OHLCBar {
 	timestamp: number;
@@ -281,4 +294,62 @@ export const marketDataRouter = createTRPCRouter({
 				return { available: false, message: "Failed to analyze market data" };
 			}
 		}),
+
+	// ============================================================================
+	// CACHED DATA ENDPOINTS (uses candle_cache table)
+	// ============================================================================
+
+	/**
+	 * Get OHLC data for chart display with caching
+	 * Fetches from cache first, falls back to API on miss
+	 * Designed for trade detail chart component
+	 */
+	getChartData: protectedProcedure
+		.input(
+			z.object({
+				symbol: z.string(),
+				entryTime: z.iso.datetime(),
+				exitTime: z.iso.datetime().optional(),
+				interval: chartIntervalSchema.default("15min"),
+				contextBefore: z.number().min(0).max(24).default(4), // Hours before entry
+				contextAfter: z.number().min(0).max(24).default(2), // Hours after exit
+			}),
+		)
+		.query(async ({ input }) => {
+			const exitTime = input.exitTime ? new Date(input.exitTime) : null;
+
+			const { bars, source, dataQuality } = await getOHLCForChart(
+				input.symbol,
+				input.interval,
+				new Date(input.entryTime),
+				exitTime,
+				input.contextBefore,
+				input.contextAfter,
+			);
+
+			// Convert timestamps to lightweight-charts format (seconds, not ms)
+			const chartBars = bars.map((bar) => ({
+				time: Math.floor(bar.timestamp / 1000), // Convert to seconds for lightweight-charts
+				open: bar.open,
+				high: bar.high,
+				low: bar.low,
+				close: bar.close,
+			}));
+
+			return {
+				bars: chartBars,
+				source,
+				dataQuality,
+				barCount: chartBars.length,
+			};
+		}),
+
+	/**
+	 * Get cache statistics for monitoring
+	 * Useful for admin dashboard or debugging
+	 */
+	getCacheStats: protectedProcedure.query(async () => {
+		const stats = await getCacheStats();
+		return stats;
+	}),
 });

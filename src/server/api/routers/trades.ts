@@ -11,6 +11,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { z } from "zod";
+import { getOHLCForTimeRange } from "@/lib/market-data-service";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -20,6 +21,7 @@ import {
 	tradeStatusEnum,
 } from "@/lib/schemas";
 import { calculateAggregateStats } from "@/lib/stats-calculations";
+import { calculateMAEMFE } from "@/lib/trade-calculations";
 import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
@@ -1130,5 +1132,252 @@ export const tradesRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			return result[0]?.count ?? 0;
+		}),
+
+	// ============================================================================
+	// MAE/MFE ANALYSIS
+	// ============================================================================
+
+	/**
+	 * Calculate and store MAE/MFE for a closed trade
+	 * This fetches market data, calculates the metrics, and stores them permanently.
+	 * Can be called on-demand or automatically when a trade is closed.
+	 */
+	calculateMAEMFE: protectedProcedure
+		.input(z.object({ tradeId: z.number() }))
+		.mutation(async ({ ctx, input }) => {
+			// Get the trade
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+				),
+			});
+
+			if (!trade) {
+				throw new Error("Trade not found");
+			}
+
+			if (trade.status !== "closed" || !trade.exitTime || !trade.exitPrice) {
+				throw new Error("Trade must be closed to calculate MAE/MFE");
+			}
+
+			// Mark as pending while we calculate
+			await ctx.db
+				.update(trades)
+				.set({ marketDataQuality: "pending" })
+				.where(eq(trades.id, input.tradeId));
+
+			try {
+				// Fetch market data for the trade duration
+				const { bars, dataQuality } = await getOHLCForTimeRange(
+					trade.symbol,
+					"5min", // 5-minute bars for MAE/MFE precision
+					trade.entryTime,
+					trade.exitTime,
+				);
+
+				if (bars.length === 0) {
+					// No data available
+					await ctx.db
+						.update(trades)
+						.set({ marketDataQuality: "unavailable" })
+						.where(eq(trades.id, input.tradeId));
+
+					return {
+						success: false,
+						dataQuality: "unavailable" as const,
+						message: "No market data available for this trade period",
+					};
+				}
+
+				// Calculate MAE/MFE
+				const metrics = calculateMAEMFE(
+					bars,
+					parseFloat(trade.entryPrice),
+					parseFloat(trade.exitPrice),
+					trade.direction,
+					parseFloat(trade.quantity),
+					trade.symbol,
+					trade.instrumentType,
+				);
+
+				// Store the results permanently
+				const [updated] = await ctx.db
+					.update(trades)
+					.set({
+						maePrice: metrics.maePrice.toString(),
+						mfePrice: metrics.mfePrice.toString(),
+						maeAmount: metrics.maeAmount.toFixed(2),
+						mfeAmount: metrics.mfeAmount.toFixed(2),
+						tradeEfficiency: metrics.efficiency.toFixed(2),
+						marketDataQuality: dataQuality,
+					})
+					.where(eq(trades.id, input.tradeId))
+					.returning();
+
+				return {
+					success: true,
+					dataQuality,
+					metrics: {
+						maePrice: metrics.maePrice,
+						mfePrice: metrics.mfePrice,
+						maeAmount: metrics.maeAmount,
+						mfeAmount: metrics.mfeAmount,
+						efficiency: metrics.efficiency,
+						maePoints: metrics.maePoints,
+						mfePoints: metrics.mfePoints,
+					},
+					trade: updated,
+				};
+			} catch (error) {
+				// Mark as unavailable on error
+				await ctx.db
+					.update(trades)
+					.set({ marketDataQuality: "unavailable" })
+					.where(eq(trades.id, input.tradeId));
+
+				console.error("MAE/MFE calculation error:", error);
+				throw new Error("Failed to calculate MAE/MFE");
+			}
+		}),
+
+	/**
+	 * Bulk calculate MAE/MFE for multiple trades
+	 * Useful for processing imported trades in batches
+	 */
+	bulkCalculateMAEMFE: protectedProcedure
+		.input(
+			z.object({
+				tradeIds: z.array(z.number()).min(1).max(100),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Get all trades
+			const tradesToProcess = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.userId, ctx.user.id),
+					eq(trades.status, "closed"),
+					sql`${trades.id} IN (${sql.join(
+						input.tradeIds.map((id) => sql`${id}`),
+						sql`, `,
+					)})`,
+				),
+			});
+
+			const results = {
+				processed: 0,
+				success: 0,
+				failed: 0,
+				skipped: 0,
+			};
+
+			// Process trades sequentially to avoid rate limiting
+			for (const trade of tradesToProcess) {
+				results.processed++;
+
+				if (!trade.exitTime || !trade.exitPrice) {
+					results.skipped++;
+					continue;
+				}
+
+				try {
+					// Fetch market data
+					const { bars, dataQuality } = await getOHLCForTimeRange(
+						trade.symbol,
+						"5min",
+						trade.entryTime,
+						trade.exitTime,
+					);
+
+					if (bars.length === 0) {
+						await ctx.db
+							.update(trades)
+							.set({ marketDataQuality: "unavailable" })
+							.where(eq(trades.id, trade.id));
+						results.failed++;
+						continue;
+					}
+
+					// Calculate MAE/MFE
+					const metrics = calculateMAEMFE(
+						bars,
+						parseFloat(trade.entryPrice),
+						parseFloat(trade.exitPrice),
+						trade.direction,
+						parseFloat(trade.quantity),
+						trade.symbol,
+						trade.instrumentType,
+					);
+
+					// Store results
+					await ctx.db
+						.update(trades)
+						.set({
+							maePrice: metrics.maePrice.toString(),
+							mfePrice: metrics.mfePrice.toString(),
+							maeAmount: metrics.maeAmount.toFixed(2),
+							mfeAmount: metrics.mfeAmount.toFixed(2),
+							tradeEfficiency: metrics.efficiency.toFixed(2),
+							marketDataQuality: dataQuality,
+						})
+						.where(eq(trades.id, trade.id));
+
+					results.success++;
+				} catch (error) {
+					console.error(
+						`MAE/MFE calculation failed for trade ${trade.id}:`,
+						error,
+					);
+					await ctx.db
+						.update(trades)
+						.set({ marketDataQuality: "unavailable" })
+						.where(eq(trades.id, trade.id));
+					results.failed++;
+				}
+			}
+
+			return results;
+		}),
+
+	/**
+	 * Get trades that need MAE/MFE calculation
+	 * Returns closed trades without MAE/MFE data
+	 */
+	getTradesNeedingMAEMFE: protectedProcedure
+		.input(
+			z
+				.object({
+					limit: z.number().min(1).max(100).default(50),
+					accountId: z.number().optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNull(trades.marketDataQuality), // No MAE/MFE calculated yet
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			}
+
+			const tradesNeedingCalc = await ctx.db.query.trades.findMany({
+				where: and(...conditions),
+				orderBy: [desc(trades.exitTime)], // Most recent first
+				limit: input?.limit ?? 50,
+				columns: {
+					id: true,
+					symbol: true,
+					entryTime: true,
+					exitTime: true,
+					direction: true,
+				},
+			});
+
+			return tradesNeedingCalc;
 		}),
 });

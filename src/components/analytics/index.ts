@@ -9,7 +9,7 @@ export { METRIC_TOOLTIPS, MetricCard } from "./metric-card";
 export { MonteCarloChart } from "./monte-carlo-chart";
 export { MonthlyChart } from "./monthly-chart";
 export { PositionSizeChart } from "./position-size-chart";
+export { RMultipleChart } from "./r-multiple-chart";
 export { RiskGauge } from "./risk-gauge";
 export { RiskRewardPanel } from "./risk-reward-panel";
-export { RMultipleChart } from "./r-multiple-chart";
 export { SessionChart } from "./session-chart";
