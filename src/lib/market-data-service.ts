@@ -279,12 +279,28 @@ async function fetchFromTwelveData(
 		return { success: false, bars: [], error: "API key not configured" };
 	}
 
-	// Map symbol to Twelve Data format (e.g., "ES" -> "ES1!")
-	const mappedSymbol = TWELVE_DATA_SYMBOL_MAP[symbol] || symbol;
+	// Map symbol to Twelve Data format
+	// Returns null for unsupported symbols (most CME futures)
+	const mappedSymbol = TWELVE_DATA_SYMBOL_MAP[symbol];
+
+	if (mappedSymbol === null) {
+		// Symbol explicitly not supported by Twelve Data
+		console.info(
+			`Symbol ${symbol} is not supported by Twelve Data API (CME futures not available)`,
+		);
+		return {
+			success: false,
+			bars: [],
+			error: `Symbol ${symbol} not supported by Twelve Data`,
+		};
+	}
+
+	// Use mapped symbol or fall back to original (for unmapped symbols)
+	const apiSymbol = mappedSymbol ?? symbol;
 	const dateStr = formatDateForAPI(date);
 
 	const params = new URLSearchParams({
-		symbol: mappedSymbol,
+		symbol: apiSymbol,
 		interval,
 		start_date: dateStr,
 		end_date: dateStr,

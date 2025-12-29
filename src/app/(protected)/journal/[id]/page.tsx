@@ -538,6 +538,13 @@ export default function TradeDetailPage() {
 							emotionalState: trade.emotionalState,
 							exitReason: trade.exitReason,
 							tradeTags: trade.tradeTags,
+							// MAE/MFE Analysis
+							maePrice: trade.maePrice,
+							mfePrice: trade.mfePrice,
+							maeAmount: trade.maeAmount,
+							mfeAmount: trade.mfeAmount,
+							tradeEfficiency: trade.tradeEfficiency,
+							marketDataQuality: trade.marketDataQuality,
 							executions: trade.executions?.map((e) => ({
 								id: e.id,
 								executionType: e.executionType as

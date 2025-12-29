@@ -41,6 +41,14 @@ interface Trade
 	executions?: Execution[]; // Local Execution type (simpler than full TradeExecution)
 }
 
+// Data quality labels for display
+const DATA_QUALITY_LABELS: Record<string, { label: string; color: string }> = {
+	full: { label: "Full", color: "text-profit" },
+	partial: { label: "Partial", color: "text-breakeven" },
+	unavailable: { label: "Unavailable", color: "text-muted-foreground" },
+	pending: { label: "Calculating...", color: "text-accent" },
+};
+
 interface StatsPanelProps {
 	trade: Trade;
 	stats: TradeStats;
@@ -411,7 +419,120 @@ export function StatsPanel({
 							</Section>
 
 							{/* ============================================
-							    SECTION 3: Trade Details (Read-only)
+							    SECTION 3: MAE/MFE Analysis (Closed trades only)
+							    ============================================ */}
+							{trade.status === "closed" && (
+								<Section title="MAE/MFE Analysis">
+									{trade.marketDataQuality === "pending" ? (
+										<div className="flex items-center gap-2 py-2 text-accent">
+											<div className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+											<span className="font-mono text-xs">
+												Calculating from market data...
+											</span>
+										</div>
+									) : trade.marketDataQuality === "unavailable" ? (
+										<div className="py-2 text-muted-foreground">
+											<p className="font-mono text-xs">
+												Market data unavailable for this trade
+											</p>
+											<p className="mt-1 font-mono text-[10px] opacity-70">
+												MAE/MFE analysis requires historical OHLC data
+											</p>
+										</div>
+									) : trade.marketDataQuality ? (
+										<div className="space-y-3">
+											<div className="divide-y divide-white/[0.04]">
+												<StatRow
+													label="Max Favorable (MFE)"
+													value={
+														trade.mfeAmount
+															? formatCurrency(parseFloat(trade.mfeAmount))
+															: null
+													}
+													valueClassName="text-profit"
+												/>
+												<StatRow
+													label="Max Adverse (MAE)"
+													value={
+														trade.maeAmount
+															? formatCurrency(
+																	-Math.abs(parseFloat(trade.maeAmount)),
+																)
+															: null
+													}
+													valueClassName="text-loss"
+												/>
+												<StatRow
+													label="Efficiency"
+													suffix="%"
+													value={
+														trade.tradeEfficiency
+															? `${parseFloat(trade.tradeEfficiency).toFixed(1)}`
+															: null
+													}
+													valueClassName={
+														trade.tradeEfficiency
+															? parseFloat(trade.tradeEfficiency) >= 50
+																? "text-profit"
+																: parseFloat(trade.tradeEfficiency) >= 25
+																	? "text-breakeven"
+																	: "text-loss"
+															: undefined
+													}
+												/>
+											</div>
+											{/* Price levels */}
+											<div className="rounded border border-white/[0.04] bg-white/[0.01] p-2">
+												<div className="flex items-center justify-between">
+													<span className="font-mono text-[10px] text-muted-foreground/60">
+														MFE Price
+													</span>
+													<span className="font-mono text-[11px] text-profit tabular-nums">
+														{trade.mfePrice
+															? `$${parseFloat(trade.mfePrice).toLocaleString()}`
+															: "—"}
+													</span>
+												</div>
+												<div className="mt-1 flex items-center justify-between">
+													<span className="font-mono text-[10px] text-muted-foreground/60">
+														MAE Price
+													</span>
+													<span className="font-mono text-[11px] text-loss tabular-nums">
+														{trade.maePrice
+															? `$${parseFloat(trade.maePrice).toLocaleString()}`
+															: "—"}
+													</span>
+												</div>
+											</div>
+											{/* Data quality indicator */}
+											<div className="flex items-center justify-between">
+												<span className="font-mono text-[10px] text-muted-foreground/50">
+													Data Quality
+												</span>
+												<span
+													className={cn(
+														"font-mono text-[10px]",
+														DATA_QUALITY_LABELS[trade.marketDataQuality]
+															?.color ?? "text-muted-foreground",
+													)}
+												>
+													{DATA_QUALITY_LABELS[trade.marketDataQuality]
+														?.label ?? trade.marketDataQuality}
+												</span>
+											</div>
+										</div>
+									) : (
+										<div className="py-2 text-muted-foreground">
+											<p className="font-mono text-xs">
+												MAE/MFE not yet calculated
+											</p>
+										</div>
+									)}
+								</Section>
+							)}
+
+							{/* ============================================
+							    SECTION 4: Trade Details (Read-only)
 							    ============================================ */}
 							<Section title="Trade Details">
 								<div className="divide-y divide-white/[0.04]">
@@ -476,7 +597,7 @@ export function StatsPanel({
 							</Section>
 
 							{/* ============================================
-							    SECTION 4: Entry & Exit
+							    SECTION 5: Entry & Exit
 							    ============================================ */}
 							<Section title="Entry & Exit">
 								<div className="divide-y divide-white/[0.04]">
@@ -504,7 +625,7 @@ export function StatsPanel({
 							</Section>
 
 							{/* ============================================
-							    SECTION 5: Trade Context (Editable)
+							    SECTION 6: Trade Context (Editable)
 							    ============================================ */}
 							<Section title="Context">
 								<div className="grid grid-cols-2 gap-3">

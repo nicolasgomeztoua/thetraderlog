@@ -90,6 +90,13 @@ export type TradeForStatsPanel = Pick<
 	| "trailedStopLoss"
 	| "emotionalState"
 	| "exitReason"
+	// MAE/MFE Analysis
+	| "maePrice"
+	| "mfePrice"
+	| "maeAmount"
+	| "mfeAmount"
+	| "tradeEfficiency"
+	| "marketDataQuality"
 > & {
 	executions?: TradeExecution[];
 	tradeTags?: TradeTagWithTag[];

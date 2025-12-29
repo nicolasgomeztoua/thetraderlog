@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** December 28, 2025 (MAE/MFE moved from Analytics to Trade Detail - per-trade metric)
+> **Last Updated:** December 29, 2025 (MAE/MFE + Market Data Caching Architecture implemented)
 
 ---
 
@@ -45,6 +45,9 @@
 | Trading sessions config | ✅ Done | `/settings` (Trading tab) |
 | Clerk profile integration | ✅ Done | `/settings` (General tab) |
 | Zustand settings store (global state) | ✅ Done | `src/stores/settings-store.ts` |
+| MAE/MFE per-trade analysis | ✅ Done | `/journal/[id]` (lazy calculation) |
+| Market data caching layer | ✅ Done | `src/lib/market-data-service.ts` |
+| Lightweight-charts integration | ✅ Done | Trade detail chart tab |
 
 ---
 
@@ -322,18 +325,21 @@ Match TradeZella's comprehensive trade tracking page.
 - [ ] Post-market notes section
 
 #### 5.4 Chart Integration
-- [ ] TradingView widget embed
+- [x] Lightweight-charts implementation (replaced TradingView widget)
+- [x] Real OHLC data from cached market data service
 - [ ] Display entry/exit markers on chart
 - [ ] Multiple timeframe toggle
 - [ ] Chart annotation tools
 
-#### 5.5 MAE/MFE Per-Trade Analysis
-- [ ] Add `tradeHigh`, `tradeLow`, `mae`, `mfe` fields to trades schema
-- [ ] Twelve Data API integration for fetching high/low during trade
-- [ ] Lazy fetch on trade detail view (cache in DB)
-- [ ] MAE/MFE display card on trade detail page
-- [ ] Show efficiency % (captured P&L vs MFE)
-- [ ] Visual markers on TradingView chart (high/low extremes)
+#### 5.5 MAE/MFE Per-Trade Analysis *(COMPLETED)*
+- [x] Add `maePrice`, `mfePrice`, `maeAmount`, `mfeAmount`, `tradeEfficiency`, `marketDataQuality` fields to trades schema
+- [x] Create `candle_cache` table for cross-user OHLC data deduplication
+- [x] Twelve Data API integration for fetching OHLC during trade
+- [x] Cache-first market data service (`src/lib/market-data-service.ts`)
+- [x] Lazy MAE/MFE calculation on trade detail view
+- [x] MAE/MFE stored permanently after calculation
+- [x] Show efficiency % (captured P&L vs MFE)
+- [ ] Visual markers on chart (MAE/MFE extremes)
 
 ---
 
@@ -553,6 +559,10 @@ strategies (id, userId, name, description, color, entryCriteria, exitRules, posi
 -- Strategy Rules (checklist items)
 strategy_rules (id, strategyId, text, order, createdAt)
 
+-- Market Data Cache (cross-user deduplication) ✅ IMPLEMENTED
+candle_cache (id, symbol, interval, date, bars, barCount, source, fetchedAt)
+-- Composite unique index on (symbol, interval, date)
+
 -- Notebook
 notebook_entries (id, userId, title, content, templateId, tags, tradeIds, createdAt, updatedAt)
 notebook_templates (id, userId, name, content, isDefault, createdAt)
@@ -580,6 +590,14 @@ ALTER TABLE trades ADD COLUMN is_reviewed BOOLEAN;      -- review status
 ALTER TABLE trades ADD COLUMN strategy_id INTEGER;      -- FK to strategies
 ALTER TABLE trades ADD COLUMN is_intraday BOOLEAN;      -- auto-calculated
 
+-- trades table - MAE/MFE fields ✅ IMPLEMENTED
+ALTER TABLE trades ADD COLUMN mae_price DECIMAL(20, 8);           -- worst price during trade
+ALTER TABLE trades ADD COLUMN mfe_price DECIMAL(20, 8);           -- best price during trade
+ALTER TABLE trades ADD COLUMN mae_amount DECIMAL(20, 2);          -- max adverse $ amount
+ALTER TABLE trades ADD COLUMN mfe_amount DECIMAL(20, 2);          -- max favorable $ amount
+ALTER TABLE trades ADD COLUMN trade_efficiency DECIMAL(5, 2);     -- MFE capture %
+ALTER TABLE trades ADD COLUMN market_data_quality data_quality;   -- 'full' | 'partial' | 'unavailable' | 'pending'
+
 -- user_settings table
 ALTER TABLE user_settings ADD COLUMN trade_log_columns JSONB;
 ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
@@ -595,7 +613,7 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | 2 | Strategy System | 2 weeks | ✅ Complete |
 | 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
 | 4 | Advanced Analytics | 4-5 weeks | 🔄 In Progress |
-| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout done, Screenshot/Chart pending) |
+| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Screenshot pending) |
 | 6 | Notebook System | 2 weeks | ⏳ Pending |
 | 9.1 | CSV Parsers | 1-2 weeks | ⏳ Pending |
 | 7 | Trade Replay | 3-4 weeks | ⏳ Pending |
