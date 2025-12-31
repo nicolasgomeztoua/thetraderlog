@@ -4,6 +4,7 @@ import {
 	eq,
 	gte,
 	ilike,
+	inArray,
 	isNotNull,
 	isNull,
 	lte,
@@ -11,6 +12,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { z } from "zod";
+import { inngest } from "@/inngest/client";
 import { getOHLCForTimeRange } from "@/lib/market-data-service";
 import {
 	directionEnum,
@@ -469,11 +471,29 @@ export const tradesRouter = createTRPCRouter({
 			const insertedTrades = await ctx.db
 				.insert(trades)
 				.values(tradeRecords)
-				.returning({ id: trades.id });
+				.returning({ id: trades.id, status: trades.status });
+
+			// Get IDs of closed trades that need MAE/MFE calculation
+			const closedTradeIds = insertedTrades
+				.filter((t) => t.status === "closed")
+				.map((t) => t.id);
+
+			// Trigger Inngest background job to calculate MAE/MFE
+			if (closedTradeIds.length > 0) {
+				await inngest.send({
+					name: "import/process",
+					data: {
+						tradeIds: closedTradeIds,
+						userId: ctx.user.id,
+					},
+				});
+			}
 
 			return {
 				imported: insertedTrades.length,
 				total: tradesToImport.length,
+				tradeIds: insertedTrades.map((t) => t.id),
+				processingCount: closedTradeIds.length,
 			};
 		}),
 
@@ -1146,6 +1166,10 @@ export const tradesRouter = createTRPCRouter({
 	calculateMAEMFE: protectedProcedure
 		.input(z.object({ tradeId: z.number() }))
 		.mutation(async ({ ctx, input }) => {
+			const LOG_TAG = "[MAE/MFE]";
+
+			console.log(`${LOG_TAG} Starting calculation for trade ${input.tradeId}`);
+
 			// Get the trade
 			const trade = await ctx.db.query.trades.findFirst({
 				where: and(
@@ -1155,10 +1179,30 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
+				console.error(`${LOG_TAG} Trade ${input.tradeId} not found`);
 				throw new Error("Trade not found");
 			}
 
+			console.log(
+				`${LOG_TAG} Trade details:`,
+				JSON.stringify({
+					id: trade.id,
+					symbol: trade.symbol,
+					direction: trade.direction,
+					instrumentType: trade.instrumentType,
+					status: trade.status,
+					entryPrice: trade.entryPrice,
+					exitPrice: trade.exitPrice,
+					entryTime: trade.entryTime?.toISOString(),
+					exitTime: trade.exitTime?.toISOString(),
+					quantity: trade.quantity,
+				}),
+			);
+
 			if (trade.status !== "closed" || !trade.exitTime || !trade.exitPrice) {
+				console.error(
+					`${LOG_TAG} Trade ${input.tradeId} is not closed or missing exit data`,
+				);
 				throw new Error("Trade must be closed to calculate MAE/MFE");
 			}
 
@@ -1168,17 +1212,41 @@ export const tradesRouter = createTRPCRouter({
 				.set({ marketDataQuality: "pending" })
 				.where(eq(trades.id, input.tradeId));
 
+			console.log(`${LOG_TAG} Marked trade ${input.tradeId} as pending`);
+
 			try {
 				// Fetch market data for the trade duration
+				console.log(
+					`${LOG_TAG} Fetching OHLC data for ${trade.symbol} from ${trade.entryTime.toISOString()} to ${trade.exitTime.toISOString()}`,
+				);
+
 				const { bars, dataQuality } = await getOHLCForTimeRange(
 					trade.symbol,
-					"5min", // 5-minute bars for MAE/MFE precision
+					"1min", // 1-minute bars for best available precision
 					trade.entryTime,
 					trade.exitTime,
 				);
 
+				const lastBar = bars.at(-1);
+				console.log(
+					`${LOG_TAG} OHLC fetch result:`,
+					JSON.stringify({
+						barCount: bars.length,
+						dataQuality,
+						firstBar: bars[0]
+							? { time: new Date(bars[0].timestamp).toISOString() }
+							: null,
+						lastBar: lastBar
+							? { time: new Date(lastBar.timestamp).toISOString() }
+							: null,
+					}),
+				);
+
 				if (bars.length === 0) {
 					// No data available
+					console.log(
+						`${LOG_TAG} No bars returned, marking trade ${input.tradeId} as unavailable`,
+					);
 					await ctx.db
 						.update(trades)
 						.set({ marketDataQuality: "unavailable" })
@@ -1192,6 +1260,7 @@ export const tradesRouter = createTRPCRouter({
 				}
 
 				// Calculate MAE/MFE
+				console.log(`${LOG_TAG} Calculating MAE/MFE metrics...`);
 				const metrics = calculateMAEMFE(
 					bars,
 					parseFloat(trade.entryPrice),
@@ -1200,6 +1269,17 @@ export const tradesRouter = createTRPCRouter({
 					parseFloat(trade.quantity),
 					trade.symbol,
 					trade.instrumentType,
+				);
+
+				console.log(
+					`${LOG_TAG} Calculated metrics:`,
+					JSON.stringify({
+						maePrice: metrics.maePrice,
+						mfePrice: metrics.mfePrice,
+						maeAmount: metrics.maeAmount,
+						mfeAmount: metrics.mfeAmount,
+						efficiency: metrics.efficiency,
+					}),
 				);
 
 				// Store the results permanently
@@ -1215,6 +1295,10 @@ export const tradesRouter = createTRPCRouter({
 					})
 					.where(eq(trades.id, input.tradeId))
 					.returning();
+
+				console.log(
+					`${LOG_TAG} SUCCESS: Stored MAE/MFE for trade ${input.tradeId}`,
+				);
 
 				return {
 					success: true,
@@ -1232,12 +1316,17 @@ export const tradesRouter = createTRPCRouter({
 				};
 			} catch (error) {
 				// Mark as unavailable on error
+				console.error(
+					`${LOG_TAG} ERROR for trade ${input.tradeId}:`,
+					error instanceof Error ? error.message : error,
+				);
+
 				await ctx.db
 					.update(trades)
 					.set({ marketDataQuality: "unavailable" })
 					.where(eq(trades.id, input.tradeId));
 
-				console.error("MAE/MFE calculation error:", error);
+				console.error(`${LOG_TAG} MAE/MFE calculation error:`, error);
 				throw new Error("Failed to calculate MAE/MFE");
 			}
 		}),
@@ -1379,5 +1468,38 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			return tradesNeedingCalc;
+		}),
+
+	/**
+	 * Get import processing progress
+	 * Used by frontend to poll and show progress toast
+	 */
+	getImportProgress: protectedProcedure
+		.input(
+			z.object({
+				tradeIds: z.array(z.number()).min(1).max(1000),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			// Count trades that have marketDataQuality set (processed)
+			const processedTrades = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.userId, ctx.user.id),
+					inArray(trades.id, input.tradeIds),
+					isNotNull(trades.marketDataQuality),
+				),
+				columns: { id: true },
+			});
+
+			const total = input.tradeIds.length;
+			const processed = processedTrades.length;
+			const isComplete = processed === total;
+
+			return {
+				total,
+				processed,
+				isComplete,
+				progress: total > 0 ? Math.round((processed / total) * 100) : 100,
+			};
 		}),
 });

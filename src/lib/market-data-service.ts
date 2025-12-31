@@ -3,7 +3,9 @@
  *
  * Provides a cache-first approach to fetching OHLC data.
  * - Checks PostgreSQL cache first (candle_cache table)
- * - Fetches from Twelve Data API on cache miss
+ * - Fetches from appropriate API on cache miss:
+ *   - Databento for futures (CME, NYMEX, COMEX, CBOT)
+ *   - Twelve Data for forex, crypto, commodities
  * - Stores fetched data permanently for cross-user reuse
  *
  * Data is cached by symbol + interval + date (normalized to midnight UTC).
@@ -13,7 +15,11 @@
 
 import { and, eq } from "drizzle-orm";
 import { env } from "@/env";
-import { TWELVE_DATA_SYMBOL_MAP } from "@/lib/symbols";
+import {
+	getDatabentSymbol,
+	isFuturesSymbol,
+	TWELVE_DATA_SYMBOL_MAP,
+} from "@/lib/symbols";
 import { db } from "@/server/db";
 import { candleCache } from "@/server/db/schema";
 
@@ -95,6 +101,16 @@ export async function getOHLCBars(
 	date: Date,
 ): Promise<CacheResult> {
 	const dateKey = normalizeDateToUTC(date);
+	const LOG_TAG = "[MarketData]";
+
+	console.log(
+		`${LOG_TAG} getOHLCBars:`,
+		JSON.stringify({
+			symbol,
+			interval,
+			date: dateKey.toISOString(),
+		}),
+	);
 
 	// 1. Check cache first
 	const cached = await db.query.candleCache.findFirst({
@@ -107,13 +123,14 @@ export async function getOHLCBars(
 
 	if (cached) {
 		// Cache HIT - parse and return
+		console.log(`${LOG_TAG} CACHE HIT for ${symbol}/${interval}`);
 		try {
 			const bars = JSON.parse(cached.bars) as OHLCBar[];
 			return { bars, source: "cache", dataQuality: "full" };
 		} catch {
 			// Corrupted cache entry - delete and re-fetch
 			console.warn(
-				`Corrupted cache entry for ${symbol}/${interval}/${dateKey.toISOString()}`,
+				`${LOG_TAG} Corrupted cache entry for ${symbol}/${interval}/${dateKey.toISOString()}`,
 			);
 			await db
 				.delete(candleCache)
@@ -125,12 +142,25 @@ export async function getOHLCBars(
 					),
 				);
 		}
+	} else {
+		console.log(`${LOG_TAG} CACHE MISS for ${symbol}/${interval}`);
 	}
 
-	// 2. Cache MISS - fetch from API
-	const apiResult = await fetchFromTwelveData(symbol, interval, dateKey);
+	// 2. Cache MISS - fetch from appropriate API based on symbol type
+	const apiResult = await fetchFromProvider(symbol, interval, dateKey);
+
+	console.log(
+		`${LOG_TAG} API fetch result:`,
+		JSON.stringify({
+			success: apiResult.success,
+			barCount: apiResult.bars.length,
+			provider: apiResult.provider,
+			error: apiResult.error,
+		}),
+	);
 
 	if (!apiResult.success || apiResult.bars.length === 0) {
+		console.log(`${LOG_TAG} Returning unavailable for ${symbol}`);
 		return { bars: [], source: "api", dataQuality: "unavailable" };
 	}
 
@@ -144,13 +174,16 @@ export async function getOHLCBars(
 				date: dateKey,
 				bars: JSON.stringify(apiResult.bars),
 				barCount: apiResult.bars.length,
-				source: "twelve_data",
+				source: apiResult.provider ?? "unknown",
 				fetchedAt: new Date(),
 			})
 			.onConflictDoNothing(); // Handle race conditions gracefully
+		console.log(
+			`${LOG_TAG} Cached ${apiResult.bars.length} bars for ${symbol} (source: ${apiResult.provider})`,
+		);
 	} catch (error) {
 		// Log but don't fail - the bars are still valid
-		console.error("Failed to cache OHLC data:", error);
+		console.error(`${LOG_TAG} Failed to cache OHLC data:`, error);
 	}
 
 	return {
@@ -170,6 +203,21 @@ export async function getOHLCBars(
  * @param endTime - End of time range
  * @returns Combined bars filtered to the exact time range
  */
+/**
+ * Get interval duration in milliseconds
+ */
+function getIntervalMs(interval: CacheInterval): number {
+	const intervalMap: Record<CacheInterval, number> = {
+		"1min": 60 * 1000,
+		"5min": 5 * 60 * 1000,
+		"15min": 15 * 60 * 1000,
+		"30min": 30 * 60 * 1000,
+		"1h": 60 * 60 * 1000,
+		"4h": 4 * 60 * 60 * 1000,
+	};
+	return intervalMap[interval];
+}
+
 export async function getOHLCForTimeRange(
 	symbol: string,
 	interval: CacheInterval,
@@ -197,12 +245,18 @@ export async function getOHLCForTimeRange(
 	// Combine all bars
 	const allBars = results.flatMap((r) => r.bars);
 
-	// Filter to exact time range
+	// Filter to bars that OVERLAP with the time range
+	// A bar overlaps if: barStart < rangeEnd AND barEnd > rangeStart
 	const startMs = startTime.getTime();
 	const endMs = endTime.getTime();
-	const filteredBars = allBars.filter(
-		(bar) => bar.timestamp >= startMs && bar.timestamp <= endMs,
-	);
+	const intervalMs = getIntervalMs(interval);
+
+	const filteredBars = allBars.filter((bar) => {
+		const barStart = bar.timestamp;
+		const barEnd = bar.timestamp + intervalMs;
+		// Bar overlaps with range if it starts before range ends AND ends after range starts
+		return barStart < endMs && barEnd > startMs;
+	});
 
 	// Sort by timestamp (parallel fetches might return out of order)
 	filteredBars.sort((a, b) => a.timestamp - b.timestamp);
@@ -261,7 +315,38 @@ export async function getOHLCForChart(
 interface FetchResult {
 	success: boolean;
 	bars: OHLCBar[];
+	provider?: "twelve_data" | "databento";
 	error?: string;
+}
+
+// Log prefix for easy filtering
+const LOG_TAG = "[MarketData]";
+
+// =============================================================================
+// PROVIDER ROUTING
+// =============================================================================
+
+/**
+ * Route to the appropriate data provider based on symbol type
+ * - Futures → Databento
+ * - Forex/Crypto/Commodities → Twelve Data
+ */
+async function fetchFromProvider(
+	symbol: string,
+	interval: string,
+	date: Date,
+): Promise<FetchResult> {
+	// Check if this is a futures symbol that Databento supports
+	const databentoSymbol = getDatabentSymbol(symbol);
+
+	if (databentoSymbol && isFuturesSymbol(symbol)) {
+		console.log(`${LOG_TAG} Routing ${symbol} to Databento (futures)`);
+		return fetchFromDatabento(symbol, databentoSymbol, interval, date);
+	}
+
+	// Fallback to Twelve Data for forex/crypto/commodities
+	console.log(`${LOG_TAG} Routing ${symbol} to Twelve Data (forex/crypto)`);
+	return fetchFromTwelveData(symbol, interval, date);
 }
 
 /**
@@ -273,31 +358,52 @@ async function fetchFromTwelveData(
 	date: Date,
 ): Promise<FetchResult> {
 	const apiKey = env.TWELVE_DATA_API_KEY;
+	const dateStr = formatDateForAPI(date);
+
+	console.log(
+		`${LOG_TAG} fetchFromTwelveData called:`,
+		JSON.stringify({ symbol, interval, date: dateStr }),
+	);
 
 	if (!apiKey) {
-		console.warn("TWELVE_DATA_API_KEY not configured");
-		return { success: false, bars: [], error: "API key not configured" };
+		console.warn(`${LOG_TAG} TWELVE_DATA_API_KEY not configured`);
+		return {
+			success: false,
+			bars: [],
+			provider: "twelve_data",
+			error: "API key not configured",
+		};
 	}
 
 	// Map symbol to Twelve Data format
 	// Returns null for unsupported symbols (most CME futures)
 	const mappedSymbol = TWELVE_DATA_SYMBOL_MAP[symbol];
 
+	console.log(
+		`${LOG_TAG} Symbol mapping:`,
+		JSON.stringify({
+			input: symbol,
+			mapped: mappedSymbol,
+			isSupported: mappedSymbol !== null,
+			isExplicitlyMapped: mappedSymbol !== undefined,
+		}),
+	);
+
 	if (mappedSymbol === null) {
 		// Symbol explicitly not supported by Twelve Data
 		console.info(
-			`Symbol ${symbol} is not supported by Twelve Data API (CME futures not available)`,
+			`${LOG_TAG} Symbol ${symbol} is NOT SUPPORTED by Twelve Data API (CME futures not available)`,
 		);
 		return {
 			success: false,
 			bars: [],
+			provider: "twelve_data",
 			error: `Symbol ${symbol} not supported by Twelve Data`,
 		};
 	}
 
 	// Use mapped symbol or fall back to original (for unmapped symbols)
 	const apiSymbol = mappedSymbol ?? symbol;
-	const dateStr = formatDateForAPI(date);
 
 	const params = new URLSearchParams({
 		symbol: apiSymbol,
@@ -308,30 +414,60 @@ async function fetchFromTwelveData(
 		format: "JSON",
 	});
 
+	const url = `https://api.twelvedata.com/time_series?${params.toString().replace(apiKey, "***")}`;
+	console.log(`${LOG_TAG} API Request:`, url);
+
 	try {
 		const response = await fetch(
 			`https://api.twelvedata.com/time_series?${params.toString()}`,
 		);
 
+		console.log(
+			`${LOG_TAG} API Response status:`,
+			response.status,
+			response.statusText,
+		);
+
 		if (!response.ok) {
-			console.error(`Twelve Data API error: ${response.status}`);
+			console.error(
+				`${LOG_TAG} Twelve Data API HTTP error: ${response.status}`,
+			);
 			return {
 				success: false,
 				bars: [],
+				provider: "twelve_data",
 				error: `API returned ${response.status}`,
 			};
 		}
 
 		const data = (await response.json()) as TwelveDataResponse;
 
+		console.log(
+			`${LOG_TAG} API Response:`,
+			JSON.stringify({
+				status: data.status,
+				message: data.message,
+				valueCount: data.values?.length ?? 0,
+			}),
+		);
+
 		if (data.status === "error") {
-			console.error(`Twelve Data API error: ${data.message}`);
-			return { success: false, bars: [], error: data.message };
+			console.error(
+				`${LOG_TAG} Twelve Data API Error Response: ${data.message}`,
+			);
+			return {
+				success: false,
+				bars: [],
+				provider: "twelve_data",
+				error: data.message,
+			};
 		}
 
 		if (!data.values || data.values.length === 0) {
-			// No data for this date (weekend, holiday, etc.)
-			return { success: true, bars: [] };
+			console.log(
+				`${LOG_TAG} No data returned from Twelve Data for ${apiSymbol} on ${dateStr} (weekend/holiday?)`,
+			);
+			return { success: true, bars: [], provider: "twelve_data" };
 		}
 
 		// Convert to our format
@@ -347,12 +483,278 @@ async function fetchFromTwelveData(
 		// Sort by timestamp ascending
 		bars.sort((a, b) => a.timestamp - b.timestamp);
 
-		return { success: true, bars };
+		console.log(
+			`${LOG_TAG} SUCCESS: Fetched ${bars.length} bars from Twelve Data for ${apiSymbol}`,
+		);
+		return { success: true, bars, provider: "twelve_data" };
 	} catch (error) {
-		console.error("Twelve Data fetch error:", error);
+		console.error(`${LOG_TAG} Twelve Data fetch exception:`, error);
 		return {
 			success: false,
 			bars: [],
+			provider: "twelve_data",
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
+}
+
+// =============================================================================
+// DATABENTO API (Futures)
+// =============================================================================
+
+/**
+ * Map our interval format to Databento schema
+ * Databento uses ohlcv-1m, ohlcv-5m, etc.
+ */
+function mapIntervalToDatabento(interval: string): string {
+	const mapping: Record<string, string> = {
+		"1min": "ohlcv-1m",
+		"5min": "ohlcv-1m", // Databento doesn't have 5min, we'll aggregate from 1min
+		"15min": "ohlcv-1m", // Same - aggregate from 1min
+		"30min": "ohlcv-1m", // Same
+		"1h": "ohlcv-1h",
+		"4h": "ohlcv-1h", // Aggregate from 1h
+	};
+	return mapping[interval] ?? "ohlcv-1m";
+}
+
+/**
+ * Aggregate 1-minute bars to larger intervals
+ */
+function aggregateBars(bars: OHLCBar[], targetInterval: string): OHLCBar[] {
+	if (targetInterval === "1min") return bars;
+
+	const intervalMinutes: Record<string, number> = {
+		"5min": 5,
+		"15min": 15,
+		"30min": 30,
+		"1h": 60,
+		"4h": 240,
+	};
+
+	const minutes = intervalMinutes[targetInterval];
+	if (!minutes || bars.length === 0) return bars;
+
+	const aggregated: OHLCBar[] = [];
+	const msPerInterval = minutes * 60 * 1000;
+
+	let currentBucket: OHLCBar | null = null;
+	let bucketStart = 0;
+
+	for (const bar of bars) {
+		const barBucketStart =
+			Math.floor(bar.timestamp / msPerInterval) * msPerInterval;
+
+		if (currentBucket === null || barBucketStart !== bucketStart) {
+			// Start new bucket
+			if (currentBucket) {
+				aggregated.push(currentBucket);
+			}
+			bucketStart = barBucketStart;
+			currentBucket = {
+				timestamp: barBucketStart,
+				open: bar.open,
+				high: bar.high,
+				low: bar.low,
+				close: bar.close,
+				volume: bar.volume,
+			};
+		} else {
+			// Update current bucket
+			currentBucket.high = Math.max(currentBucket.high, bar.high);
+			currentBucket.low = Math.min(currentBucket.low, bar.low);
+			currentBucket.close = bar.close;
+			if (bar.volume !== undefined && currentBucket.volume !== undefined) {
+				currentBucket.volume += bar.volume;
+			}
+		}
+	}
+
+	if (currentBucket) {
+		aggregated.push(currentBucket);
+	}
+
+	return aggregated;
+}
+
+/**
+ * Fetch OHLC data from Databento API for futures
+ */
+async function fetchFromDatabento(
+	originalSymbol: string,
+	databentoSymbol: string,
+	interval: string,
+	date: Date,
+): Promise<FetchResult> {
+	const apiKey = env.DATABENTO_API_KEY;
+	const dateStr = formatDateForAPI(date);
+
+	console.log(
+		`${LOG_TAG} fetchFromDatabento called:`,
+		JSON.stringify({
+			originalSymbol,
+			databentoSymbol,
+			interval,
+			date: dateStr,
+		}),
+	);
+
+	if (!apiKey) {
+		console.warn(`${LOG_TAG} DATABENTO_API_KEY not configured`);
+		return {
+			success: false,
+			bars: [],
+			provider: "databento",
+			error: "Databento API key not configured",
+		};
+	}
+
+	// Calculate start and end times for the full trading day
+	// CME Globex trading hours are roughly 17:00 CT to 16:00 CT next day
+	const startTime = new Date(date);
+	startTime.setUTCHours(0, 0, 0, 0);
+
+	const endTime = new Date(date);
+	endTime.setUTCHours(23, 59, 59, 999);
+
+	const schema = mapIntervalToDatabento(interval);
+
+	// Databento Historical API endpoint
+	// stype_in=continuous for continuous contract symbols like ES.v.0
+	const params = new URLSearchParams({
+		dataset: "GLBX.MDP3",
+		symbols: databentoSymbol,
+		schema: schema,
+		start: startTime.toISOString(),
+		end: endTime.toISOString(),
+		encoding: "json",
+		stype_in: "continuous",
+	});
+
+	const url = `https://hist.databento.com/v0/timeseries.get_range?${params.toString()}`;
+	console.log(`${LOG_TAG} Databento API Request:`, url.replace(apiKey, "***"));
+
+	try {
+		const response = await fetch(url, {
+			headers: {
+				Accept: "application/json",
+				Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`,
+			},
+		});
+
+		console.log(
+			`${LOG_TAG} Databento API Response status:`,
+			response.status,
+			response.statusText,
+		);
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error(
+				`${LOG_TAG} Databento API HTTP error: ${response.status}`,
+				errorText,
+			);
+			return {
+				success: false,
+				bars: [],
+				provider: "databento",
+				error: `Databento API returned ${response.status}: ${errorText}`,
+			};
+		}
+
+		// Databento returns newline-delimited JSON (NDJSON)
+		const text = await response.text();
+
+		// Debug: Log first 500 chars of response to see format
+		console.log(
+			`${LOG_TAG} Databento response preview (first 500 chars):`,
+			text.substring(0, 500),
+		);
+		console.log(`${LOG_TAG} Response length: ${text.length} bytes`);
+
+		if (!text.trim()) {
+			console.log(
+				`${LOG_TAG} No data returned from Databento for ${databentoSymbol} on ${dateStr} (weekend/holiday?)`,
+			);
+			return { success: true, bars: [], provider: "databento" };
+		}
+
+		// Parse NDJSON - each line is a separate JSON object
+		const lines = text.trim().split("\n");
+		console.log(`${LOG_TAG} Number of lines in response: ${lines.length}`);
+
+		const bars: OHLCBar[] = [];
+
+		// Log first record to understand structure
+		if (lines.length > 0 && lines[0]?.trim()) {
+			console.log(
+				`${LOG_TAG} First record sample:`,
+				lines[0].substring(0, 500),
+			);
+		}
+
+		for (const line of lines) {
+			if (!line.trim()) continue;
+
+			try {
+				const record = JSON.parse(line) as Record<string, unknown>;
+
+				// Databento OHLCV records have timestamp in the "hd" (header) object
+				// Structure: { hd: { ts_event: nanoseconds }, open, high, low, close, volume }
+				const hd = record.hd as { ts_event?: number } | undefined;
+				const ts_event = hd?.ts_event;
+				const open = record.open as number | undefined;
+				const high = record.high as number | undefined;
+				const low = record.low as number | undefined;
+				const close = record.close as number | undefined;
+				const volume = record.volume as number | undefined;
+
+				if (ts_event && open !== undefined) {
+					// Databento uses fixed-point prices with 9 decimal places (divide by 1 billion)
+					// Timestamps are in nanoseconds (divide by 1 million to get milliseconds)
+					bars.push({
+						timestamp: Math.floor(ts_event / 1_000_000),
+						open: open / 1_000_000_000,
+						high:
+							high !== undefined ? high / 1_000_000_000 : open / 1_000_000_000,
+						low: low !== undefined ? low / 1_000_000_000 : open / 1_000_000_000,
+						close:
+							close !== undefined
+								? close / 1_000_000_000
+								: open / 1_000_000_000,
+						volume: volume,
+					});
+				}
+			} catch {
+				console.warn(
+					`${LOG_TAG} Failed to parse Databento record:`,
+					line.substring(0, 200),
+				);
+			}
+		}
+
+		// Debug: Log sample bar if we have any
+		if (bars.length > 0) {
+			console.log(`${LOG_TAG} Sample parsed bar:`, JSON.stringify(bars[0]));
+		}
+
+		// Sort by timestamp ascending
+		bars.sort((a, b) => a.timestamp - b.timestamp);
+
+		// Aggregate to target interval if needed
+		const aggregatedBars = aggregateBars(bars, interval);
+
+		console.log(
+			`${LOG_TAG} SUCCESS: Fetched ${bars.length} raw bars, aggregated to ${aggregatedBars.length} ${interval} bars for ${databentoSymbol}`,
+		);
+
+		return { success: true, bars: aggregatedBars, provider: "databento" };
+	} catch (error) {
+		console.error(`${LOG_TAG} Databento fetch exception:`, error);
+		return {
+			success: false,
+			bars: [],
+			provider: "databento",
 			error: error instanceof Error ? error.message : "Unknown error",
 		};
 	}

@@ -292,7 +292,7 @@ export function SettingsContent() {
 		color: "#6366f1",
 	});
 
-	const { refetchAccounts } = useAccount();
+	const { refetchAccounts, setSelectedAccountId } = useAccount();
 	const {
 		data: accounts = [],
 		isLoading: loadingAccounts,
@@ -304,12 +304,16 @@ export function SettingsContent() {
 
 	// Account mutations
 	const createAccount = api.accounts.create.useMutation({
-		onSuccess: () => {
+		onSuccess: (newAccount) => {
 			toast.success("Account created");
 			setIsAccountDialogOpen(false);
 			resetAccountForm();
 			refetchAccountsList();
 			refetchAccounts();
+			// Auto-select the newly created account
+			if (newAccount?.id) {
+				setSelectedAccountId(newAccount.id);
+			}
 		},
 		onError: (error) => {
 			toast.error(error.message || "Failed to create account");

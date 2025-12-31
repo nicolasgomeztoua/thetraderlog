@@ -111,6 +111,8 @@ tests/
 ## Documentation
 
 - [Design System](./DESIGN_SYSTEM.md) — "The Terminal" design language, colors, typography, and components
+- [Market Data Architecture](./MARKET_DATA_ARCHITECTURE.md) — OHLC caching, MAE/MFE calculation, and cost optimization
+- [Roadmap](./ROADMAP.md) — Feature parity roadmap with TradeZella
 - [Testing Guide](./tests/README.md) — Testing philosophy, fixtures, and conventions
 
 ## Data Model

@@ -14,6 +14,10 @@ export const env = createEnv({
 		CLERK_SECRET_KEY: z.string().min(1),
 		CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
 		TWELVE_DATA_API_KEY: z.string().min(1).optional(),
+		DATABENTO_API_KEY: z.string().min(1).optional(),
+		// Inngest for background jobs
+		INNGEST_EVENT_KEY: z.string().min(1).optional(),
+		INNGEST_SIGNING_KEY: z.string().min(1).optional(),
 	},
 
 	/**
@@ -47,6 +51,9 @@ export const env = createEnv({
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL,
 		NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL:
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
+		DATABENTO_API_KEY: process.env.DATABENTO_API_KEY,
+		INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
+		INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

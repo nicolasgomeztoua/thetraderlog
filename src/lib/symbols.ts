@@ -872,3 +872,159 @@ export function getTickSize(
 	}
 	return FOREX_SPECS[symbol]?.pipSize ?? 0.0001;
 }
+
+// ============================================
+// DATABENTO SYMBOL MAPPING
+// Maps our futures symbols to Databento format
+// Dataset: GLBX.MDP3 (CME Globex)
+// ============================================
+
+/**
+ * Databento symbol format for CME futures
+ * Uses continuous contract format: [ROOT].[ROLL_RULE].[RANK]
+ * - v = volume-based roll (follows liquidity)
+ * - c = calendar-based roll (nearest expiration)
+ * - n = open interest-based roll
+ * - 0 = front month, 1 = second month, etc.
+ *
+ * We use volume-based roll (.v.0) as it follows market liquidity.
+ * See: https://databento.com/docs/standards-and-conventions/symbology
+ *
+ * Databento supports:
+ * - All CME Globex products (ES, NQ, MES, MNQ, etc.)
+ * - NYMEX energy products (CL, NG, etc.)
+ * - COMEX metals (GC, SI, etc.)
+ * - CBOT products (ZB, ZN, ZC, ZW, etc.)
+ */
+export const DATABENTO_SYMBOL_MAP: Record<string, string | null> = {
+	// === EQUITY INDEX FUTURES (Supported) ===
+	// E-mini contracts
+	ES: "ES.v.0",
+	NQ: "NQ.v.0",
+	YM: "YM.v.0",
+	RTY: "RTY.v.0",
+	// Micro contracts
+	MES: "MES.v.0",
+	MNQ: "MNQ.v.0",
+	MYM: "MYM.v.0",
+	M2K: "M2K.v.0",
+	// International
+	NKD: "NKD.v.0",
+
+	// === ENERGY FUTURES (Supported) ===
+	CL: "CL.v.0",
+	MCL: "MCL.v.0",
+	NG: "NG.v.0",
+	MNG: "MNG.v.0",
+
+	// === METALS FUTURES (Supported) ===
+	GC: "GC.v.0",
+	MGC: "MGC.v.0",
+	SI: "SI.v.0",
+	SIL: "SIL.v.0",
+
+	// === CURRENCY FUTURES (Supported) ===
+	"6A": "6A.v.0",
+	"6B": "6B.v.0",
+	"6C": "6C.v.0",
+	"6E": "6E.v.0",
+	"6J": "6J.v.0",
+	"6M": "6M.v.0",
+	"6N": "6N.v.0",
+	"6S": "6S.v.0",
+	// Micro currency futures
+	M6A: "M6A.v.0",
+	M6B: "M6B.v.0",
+	M6E: "M6E.v.0",
+	MCD: "MCD.v.0",
+	MSF: "MSF.v.0",
+	MBT: "MBT.v.0",
+
+	// === INTEREST RATE FUTURES (Supported) ===
+	ZB: "ZB.v.0",
+	ZN: "ZN.v.0",
+	ZF: "ZF.v.0",
+	ZT: "ZT.v.0",
+	TN: "TN.v.0",
+	UB: "UB.v.0",
+
+	// === AGRICULTURE FUTURES (Supported) ===
+	ZC: "ZC.v.0",
+	XC: "XC.v.0",
+	ZW: "ZW.v.0",
+	ZO: "ZO.v.0",
+	ZR: "ZR.v.0",
+	ZS: "ZS.v.0",
+	ZL: "ZL.v.0",
+	ZM: "ZM.v.0",
+	LE: "LE.v.0",
+	GF: "GF.v.0",
+	HE: "HE.v.0",
+
+	// === FOREX PAIRS (NOT supported by Databento - use Twelve Data) ===
+	"EUR/USD": null,
+	"GBP/USD": null,
+	"USD/JPY": null,
+	"USD/CHF": null,
+	"AUD/USD": null,
+	"USD/CAD": null,
+	"NZD/USD": null,
+	"EUR/GBP": null,
+	"EUR/JPY": null,
+	"GBP/JPY": null,
+	"EUR/CHF": null,
+	"EUR/AUD": null,
+	"EUR/CAD": null,
+	"EUR/NZD": null,
+	"GBP/CHF": null,
+	"GBP/AUD": null,
+	"GBP/CAD": null,
+	"GBP/NZD": null,
+	"AUD/JPY": null,
+	"AUD/CHF": null,
+	"AUD/CAD": null,
+	"AUD/NZD": null,
+	"CAD/JPY": null,
+	"CAD/CHF": null,
+	"CHF/JPY": null,
+	"NZD/JPY": null,
+	"NZD/CHF": null,
+	"NZD/CAD": null,
+};
+
+/**
+ * Check if a symbol is a futures contract (supported by Databento)
+ */
+export function isFuturesSymbol(symbol: string): boolean {
+	// Check if it's in FUTURES_SPECS or matches a futures pattern
+	const baseSymbol = symbol.replace(/[FGHJKMNQUVXZ]\d{2,4}$/, "");
+	return (
+		FUTURES_SPECS[baseSymbol] !== undefined ||
+		FUTURES_SPECS[symbol] !== undefined
+	);
+}
+
+/**
+ * Get Databento symbol for a futures contract
+ * Handles month codes like MNQH24, ESZ2024
+ */
+export function getDatabentSymbol(symbol: string): string | null {
+	// Try exact match first
+	if (DATABENTO_SYMBOL_MAP[symbol] !== undefined) {
+		return DATABENTO_SYMBOL_MAP[symbol];
+	}
+
+	// Strip month/year codes (e.g., MNQH24 -> MNQ, ESZ2024 -> ES)
+	const baseSymbol = symbol.replace(/[FGHJKMNQUVXZ]\d{2,4}$/, "");
+	if (DATABENTO_SYMBOL_MAP[baseSymbol] !== undefined) {
+		return DATABENTO_SYMBOL_MAP[baseSymbol];
+	}
+
+	// Unknown symbol - assume it might be a futures symbol
+	// Return with continuous contract format (.v.0 = volume-based, front month)
+	if (isFuturesSymbol(symbol)) {
+		return `${baseSymbol || symbol}.v.0`;
+	}
+
+	return null;
+}

@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
+import { useImportProgress } from "@/hooks/use-import-progress";
 import type { ParsedTrade, TradingPlatform } from "@/lib/csv-parsers";
 import { getParser, TRADING_PLATFORMS } from "@/lib/csv-parsers";
 import { api } from "@/trpc/react";
@@ -120,8 +121,20 @@ export default function ImportPage() {
 
 	const [importing, setImporting] = useState(false);
 	const [importedCount, setImportedCount] = useState(0);
+	const [processingTradeIds, setProcessingTradeIds] = useState<number[] | null>(
+		null,
+	);
 
 	const batchImport = api.trades.batchImport.useMutation();
+
+	// Track MAE/MFE processing progress
+	useImportProgress({
+		tradeIds: processingTradeIds,
+		onComplete: () => {
+			// Optionally invalidate trade queries to refresh data
+			setProcessingTradeIds(null);
+		},
+	});
 
 	const selectedImportAccount = accounts.find(
 		(a) => a.id === selectedImportAccountId,
@@ -365,7 +378,22 @@ export default function ImportPage() {
 			});
 
 			setImportedCount(result.imported);
-			toast.success(`Imported ${result.imported} trades`);
+
+			// Start tracking MAE/MFE processing progress
+			if (
+				result.processingCount &&
+				result.processingCount > 0 &&
+				result.tradeIds
+			) {
+				// Filter to only closed trades that will be processed
+				setProcessingTradeIds(result.tradeIds);
+				toast.success(
+					`Imported ${result.imported} trades. Processing market data in background...`,
+				);
+			} else {
+				toast.success(`Imported ${result.imported} trades`);
+			}
+
 			setStep("complete");
 		} catch (error) {
 			console.error("Failed to import trades:", error);
