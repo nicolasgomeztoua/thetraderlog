@@ -11,6 +11,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { ids } from "@/lib/id";
 
 export const createTable = pgTableCreator((name) => name);
 
@@ -97,7 +98,9 @@ export const dataQualityEnum = pgEnum("data_quality", [
 export const users = createTable(
 	"user",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.user()),
 		clerkId: text("clerk_id").notNull().unique(),
 		email: text("email").notNull(),
 		name: text("name"),
@@ -120,8 +123,10 @@ export const users = createTable(
 export const accountGroups = createTable(
 	"account_group",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		userId: integer("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.accountGroup()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		name: text("name").notNull(), // e.g., "Copy Trading Group A"
@@ -144,8 +149,10 @@ export const accountGroups = createTable(
 export const accounts = createTable(
 	"account",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		userId: integer("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.account()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 
@@ -193,10 +200,10 @@ export const accounts = createTable(
 		payoutFrequency: payoutFrequencyEnum("payout_frequency"), // weekly, bi_weekly, monthly
 
 		// Account linking (funded → challenge) - self-referencing FK
-		linkedAccountId: integer("linked_account_id"),
+		linkedAccountId: text("linked_account_id"),
 
 		// Account groups (for copy trading)
-		groupId: integer("group_id").references(() => accountGroups.id, {
+		groupId: text("group_id").references(() => accountGroups.id, {
 			onDelete: "set null",
 		}),
 
@@ -222,14 +229,16 @@ export const accounts = createTable(
 export const trades = createTable(
 	"trade",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		userId: integer("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.trade()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		accountId: integer("account_id").references(() => accounts.id, {
+		accountId: text("account_id").references(() => accounts.id, {
 			onDelete: "set null",
 		}),
-		strategyId: integer("strategy_id"), // FK added after strategies table is defined
+		strategyId: text("strategy_id"), // FK added after strategies table is defined
 
 		// Instrument info
 		symbol: text("symbol").notNull(), // e.g., "ES", "NQ", "EUR/USD"
@@ -327,8 +336,10 @@ export const trades = createTable(
 export const tradeExecutions = createTable(
 	"trade_execution",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		tradeId: integer("trade_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.execution()),
+		tradeId: text("trade_id")
 			.notNull()
 			.references(() => trades.id, { onDelete: "cascade" }),
 
@@ -358,8 +369,10 @@ export const tradeExecutions = createTable(
 export const tags = createTable(
 	"tag",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		userId: integer("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.tag()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
@@ -378,10 +391,10 @@ export const tags = createTable(
 export const tradeTags = createTable(
 	"trade_tag",
 	{
-		tradeId: integer("trade_id")
+		tradeId: text("trade_id")
 			.notNull()
 			.references(() => trades.id, { onDelete: "cascade" }),
-		tagId: integer("tag_id")
+		tagId: text("tag_id")
 			.notNull()
 			.references(() => tags.id, { onDelete: "cascade" }),
 	},
@@ -399,8 +412,10 @@ export const tradeTags = createTable(
 export const tradeScreenshots = createTable(
 	"trade_screenshot",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		tradeId: integer("trade_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.screenshot()),
+		tradeId: text("trade_id")
 			.notNull()
 			.references(() => trades.id, { onDelete: "cascade" }),
 		url: text("url").notNull(),
@@ -417,8 +432,10 @@ export const tradeScreenshots = createTable(
 // ============================================================================
 
 export const userSettings = createTable("user_settings", {
-	id: integer().primaryKey().generatedByDefaultAsIdentity(),
-	userId: integer("user_id")
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => ids.settings()),
+	userId: text("user_id")
 		.notNull()
 		.unique()
 		.references(() => users.id, { onDelete: "cascade" }),
@@ -467,8 +484,10 @@ export const userSettings = createTable("user_settings", {
 export const filterPresets = createTable(
 	"filter_preset",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		userId: integer("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.filterPreset()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
@@ -487,8 +506,10 @@ export const filterPresets = createTable(
 export const aiConversations = createTable(
 	"ai_conversation",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		userId: integer("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.conversation()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		title: text("title"),
@@ -509,8 +530,10 @@ export const aiConversations = createTable(
 export const aiMessages = createTable(
 	"ai_message",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		conversationId: integer("conversation_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.message()),
+		conversationId: text("conversation_id")
 			.notNull()
 			.references(() => aiConversations.id, { onDelete: "cascade" }),
 		role: text("role").notNull(), // "user" or "assistant"
@@ -529,8 +552,10 @@ export const aiMessages = createTable(
 export const strategies = createTable(
 	"strategy",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		userId: integer("user_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.strategy()),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 
@@ -581,8 +606,10 @@ export const strategies = createTable(
 export const strategyRules = createTable(
 	"strategy_rule",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
-		strategyId: integer("strategy_id")
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.strategyRule()),
+		strategyId: text("strategy_id")
 			.notNull()
 			.references(() => strategies.id, { onDelete: "cascade" }),
 
@@ -607,10 +634,10 @@ export const strategyRules = createTable(
 export const tradeRuleChecks = createTable(
 	"trade_rule_check",
 	{
-		tradeId: integer("trade_id")
+		tradeId: text("trade_id")
 			.notNull()
 			.references(() => trades.id, { onDelete: "cascade" }),
-		ruleId: integer("rule_id")
+		ruleId: text("rule_id")
 			.notNull()
 			.references(() => strategyRules.id, { onDelete: "cascade" }),
 
@@ -631,7 +658,9 @@ export const tradeRuleChecks = createTable(
 export const candleCache = createTable(
 	"candle_cache",
 	{
-		id: integer().primaryKey().generatedByDefaultAsIdentity(),
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.candleCache()),
 		symbol: text("symbol").notNull(), // e.g., "ES", "MNQ", "EUR/USD"
 		interval: text("interval").notNull(), // "1min", "5min", "15min", "1h"
 		date: timestamp("date", { withTimezone: true }).notNull(), // Day of data (normalized to midnight UTC)

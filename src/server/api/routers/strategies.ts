@@ -78,7 +78,7 @@ const trailingRulesSchema = z.object({
 });
 
 const strategyRuleSchema = z.object({
-	id: z.number().optional(), // Optional for new rules
+	id: z.string().optional(), // Optional for new rules
 	text: z.string().min(1),
 	category: z.enum(["entry", "exit", "risk", "management"]),
 	order: z.number(),
@@ -102,7 +102,7 @@ const createStrategySchema = z.object({
 });
 
 const updateStrategySchema = z.object({
-	id: z.number(),
+	id: z.string(),
 	name: z.string().min(1).max(100).optional(),
 	description: z.string().nullish(),
 	color: z.string().optional(),
@@ -187,7 +187,7 @@ export const strategiesRouter = createTRPCRouter({
 
 	// Get a single strategy by ID
 	getById: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const strategy = await ctx.db.query.strategies.findFirst({
 				where: and(
@@ -330,7 +330,7 @@ export const strategiesRouter = createTRPCRouter({
 
 	// Delete a strategy (soft delete by setting inactive)
 	delete: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingStrategy = await ctx.db.query.strategies.findFirst({
 				where: and(
@@ -359,7 +359,7 @@ export const strategiesRouter = createTRPCRouter({
 
 	// Duplicate a strategy
 	duplicate: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const original = await ctx.db.query.strategies.findFirst({
 				where: and(
@@ -413,7 +413,7 @@ export const strategiesRouter = createTRPCRouter({
 
 	// Get strategy statistics
 	getStats: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			// Verify ownership
 			const strategy = await ctx.db.query.strategies.findFirst({
@@ -459,7 +459,7 @@ export const strategiesRouter = createTRPCRouter({
 
 	// Get rule compliance for a strategy
 	getRuleCompliance: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			// Verify ownership
 			const strategy = await ctx.db.query.strategies.findFirst({
@@ -542,8 +542,8 @@ export const strategiesRouter = createTRPCRouter({
 	checkRule: protectedProcedure
 		.input(
 			z.object({
-				tradeId: z.number(),
-				ruleId: z.number(),
+				tradeId: z.string(),
+				ruleId: z.string(),
 				checked: z.boolean(),
 			}),
 		)
@@ -584,10 +584,10 @@ export const strategiesRouter = createTRPCRouter({
 	bulkCheckRules: protectedProcedure
 		.input(
 			z.object({
-				tradeId: z.number(),
+				tradeId: z.string(),
 				ruleChecks: z.array(
 					z.object({
-						ruleId: z.number(),
+						ruleId: z.string(),
 						checked: z.boolean(),
 					}),
 				),
@@ -628,7 +628,7 @@ export const strategiesRouter = createTRPCRouter({
 
 	// Get rule checks for a trade
 	getTradeRuleChecks: protectedProcedure
-		.input(z.object({ tradeId: z.number() }))
+		.input(z.object({ tradeId: z.string() }))
 		.query(async ({ ctx, input }) => {
 			// Verify trade ownership
 			const trade = await ctx.db.query.trades.findFirst({

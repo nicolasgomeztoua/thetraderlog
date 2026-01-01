@@ -53,14 +53,14 @@ const createTradeSchema = z.object({
 	setupType: z.string().optional(),
 	emotionalState: emotionalStateEnum.optional(),
 	notes: z.string().optional(),
-	tagIds: z.array(z.number()).optional(),
-	accountId: z.number(), // Required: Link to trading account
+	tagIds: z.array(z.string()).optional(),
+	accountId: z.string(), // Required: Link to trading account
 	externalId: z.string().optional(), // For tracking imported trades
-	strategyId: z.number().optional(), // Link to strategy
+	strategyId: z.string().optional(), // Link to strategy
 });
 
 const updateTradeSchema = z.object({
-	id: z.number(),
+	id: z.string(),
 	symbol: z.string().optional(),
 	instrumentType: instrumentTypeEnum.optional(),
 	direction: directionEnum.optional(),
@@ -88,12 +88,12 @@ const updateTradeSchema = z.object({
 	rating: z.number().min(1).max(5).optional().nullable(),
 	isReviewed: z.boolean().optional(),
 	// Strategy
-	strategyId: z.number().nullish(),
+	strategyId: z.string().nullish(),
 });
 
 // Schema for adding a partial exit / execution
 const addExecutionSchema = z.object({
-	tradeId: z.number(),
+	tradeId: z.string(),
 	executionType: executionTypeEnum,
 	price: z.string(),
 	quantity: z.string(),
@@ -124,7 +124,7 @@ const batchImportTradeSchema = z.object({
 });
 
 const batchImportSchema = z.object({
-	accountId: z.number(),
+	accountId: z.string(),
 	trades: z.array(batchImportTradeSchema).min(1).max(1000), // Limit batch size
 });
 
@@ -135,14 +135,14 @@ export const tradesRouter = createTRPCRouter({
 			z
 				.object({
 					limit: z.number().min(1).max(100).default(50),
-					cursor: z.number().nullish(),
+					cursor: z.string().nullish(),
 					direction: z.enum(["forward", "backward"]).optional(), // tRPC infinite query pagination direction
 					status: tradeStatusEnum.nullish(),
 					symbol: z.string().nullish(),
 					tradeDirection: directionEnum.nullish(),
 					startDate: z.iso.datetime().nullish(),
 					endDate: z.iso.datetime().nullish(),
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 					search: z.string().nullish(), // Server-side search
 					includeDeleted: z.boolean().nullish(), // Include soft-deleted trades
 					// Advanced filters
@@ -155,9 +155,9 @@ export const tradesRouter = createTRPCRouter({
 					isReviewed: z.boolean().nullish(),
 					setupType: z.string().nullish(),
 					dayOfWeek: z.array(z.number().min(0).max(6)).nullish(), // 0=Sunday, 6=Saturday
-					tagIds: z.array(z.number()).nullish(),
+					tagIds: z.array(z.string()).nullish(),
 					exitReason: exitReasonEnum.nullish(),
-					strategyId: z.number().nullish(),
+					strategyId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -299,7 +299,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Get a single trade by ID
 	getById: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const trade = await ctx.db.query.trades.findFirst({
 				where: and(eq(trades.id, input.id), eq(trades.userId, ctx.user.id)),
@@ -535,7 +535,7 @@ export const tradesRouter = createTRPCRouter({
 	close: protectedProcedure
 		.input(
 			z.object({
-				id: z.number(),
+				id: z.string(),
 				exitPrice: z.string(),
 				exitTime: z.iso.datetime(),
 				fees: z.string().optional(),
@@ -591,7 +591,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Soft delete a trade
 	delete: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingTrade = await ctx.db.query.trades.findFirst({
 				where: and(eq(trades.id, input.id), eq(trades.userId, ctx.user.id)),
@@ -612,7 +612,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Bulk soft delete trades
 	deleteMany: protectedProcedure
-		.input(z.object({ ids: z.array(z.number()).min(1).max(100) }))
+		.input(z.object({ ids: z.array(z.string()).min(1).max(100) }))
 		.mutation(async ({ ctx, input }) => {
 			// Verify all trades belong to user before deleting
 			const existingTrades = await ctx.db.query.trades.findMany({
@@ -648,7 +648,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Restore a soft-deleted trade
 	restore: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingTrade = await ctx.db.query.trades.findFirst({
 				where: and(
@@ -672,7 +672,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Permanently delete a trade (hard delete)
 	permanentDelete: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingTrade = await ctx.db.query.trades.findFirst({
 				where: and(eq(trades.id, input.id), eq(trades.userId, ctx.user.id)),
@@ -688,7 +688,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Empty trash - permanently delete all trashed trades
 	emptyTrash: protectedProcedure
-		.input(z.object({ accountId: z.number().optional() }).optional())
+		.input(z.object({ accountId: z.string().optional() }).optional())
 		.mutation(async ({ ctx, input }) => {
 			const conditions = [
 				eq(trades.userId, ctx.user.id),
@@ -712,7 +712,7 @@ export const tradesRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().optional(),
+					accountId: z.string().optional(),
 					limit: z.number().min(1).max(100).default(50),
 				})
 				.optional(),
@@ -746,7 +746,7 @@ export const tradesRouter = createTRPCRouter({
 				.object({
 					startDate: z.iso.datetime().optional(),
 					endDate: z.iso.datetime().optional(),
-					accountId: z.number().optional(), // Filter by account
+					accountId: z.string().optional(), // Filter by account
 				})
 				.optional(),
 		)
@@ -794,7 +794,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Get all executions for a trade
 	getExecutions: protectedProcedure
-		.input(z.object({ tradeId: z.number() }))
+		.input(z.object({ tradeId: z.string() }))
 		.query(async ({ ctx, input }) => {
 			// Verify trade ownership
 			const trade = await ctx.db.query.trades.findFirst({
@@ -893,7 +893,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Delete an execution
 	deleteExecution: protectedProcedure
-		.input(z.object({ executionId: z.number() }))
+		.input(z.object({ executionId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// Get the execution and verify trade ownership
 			const execution = await ctx.db.query.tradeExecutions.findFirst({
@@ -941,7 +941,7 @@ export const tradesRouter = createTRPCRouter({
 	updateTrailingStop: protectedProcedure
 		.input(
 			z.object({
-				tradeId: z.number(),
+				tradeId: z.string(),
 				trailedStopLoss: z.string(),
 			}),
 		)
@@ -978,7 +978,7 @@ export const tradesRouter = createTRPCRouter({
 	updateRating: protectedProcedure
 		.input(
 			z.object({
-				id: z.number(),
+				id: z.string(),
 				rating: z.number().min(0).max(5),
 			}),
 		)
@@ -1004,7 +1004,7 @@ export const tradesRouter = createTRPCRouter({
 	bulkUpdateRating: protectedProcedure
 		.input(
 			z.object({
-				ids: z.array(z.number()).min(1).max(100),
+				ids: z.array(z.string()).min(1).max(100),
 				rating: z.number().min(1).max(5).nullable(),
 			}),
 		)
@@ -1044,7 +1044,7 @@ export const tradesRouter = createTRPCRouter({
 	markReviewed: protectedProcedure
 		.input(
 			z.object({
-				id: z.number(),
+				id: z.string(),
 				isReviewed: z.boolean(),
 			}),
 		)
@@ -1070,8 +1070,8 @@ export const tradesRouter = createTRPCRouter({
 	updateStrategy: protectedProcedure
 		.input(
 			z.object({
-				id: z.number(),
-				strategyId: z.number().nullable(),
+				id: z.string(),
+				strategyId: z.string().nullable(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -1096,7 +1096,7 @@ export const tradesRouter = createTRPCRouter({
 	bulkMarkReviewed: protectedProcedure
 		.input(
 			z.object({
-				ids: z.array(z.number()).min(1).max(100),
+				ids: z.array(z.string()).min(1).max(100),
 				isReviewed: z.boolean(),
 			}),
 		)
@@ -1134,7 +1134,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Get unreviewed trades count
 	getUnreviewedCount: protectedProcedure
-		.input(z.object({ accountId: z.number().optional() }).optional())
+		.input(z.object({ accountId: z.string().optional() }).optional())
 		.query(async ({ ctx, input }) => {
 			const conditions = [
 				eq(trades.userId, ctx.user.id),
@@ -1165,7 +1165,7 @@ export const tradesRouter = createTRPCRouter({
 	 * Can be called on-demand or automatically when a trade is closed.
 	 */
 	calculateMAEMFE: protectedProcedure
-		.input(z.object({ tradeId: z.number() }))
+		.input(z.object({ tradeId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// First verify the user owns this trade
 			const trade = await ctx.db.query.trades.findFirst({
@@ -1215,7 +1215,7 @@ export const tradesRouter = createTRPCRouter({
 	bulkCalculateMAEMFE: protectedProcedure
 		.input(
 			z.object({
-				tradeIds: z.array(z.number()).min(1).max(100),
+				tradeIds: z.array(z.string()).min(1).max(100),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -1277,7 +1277,7 @@ export const tradesRouter = createTRPCRouter({
 			z
 				.object({
 					limit: z.number().min(1).max(100).default(50),
-					accountId: z.number().optional(),
+					accountId: z.string().optional(),
 				})
 				.optional(),
 		)
@@ -1316,7 +1316,7 @@ export const tradesRouter = createTRPCRouter({
 	getImportProgress: protectedProcedure
 		.input(
 			z.object({
-				tradeIds: z.array(z.number()).min(1).max(1000),
+				tradeIds: z.array(z.string()).min(1).max(1000),
 			}),
 		)
 		.query(async ({ ctx, input }) => {

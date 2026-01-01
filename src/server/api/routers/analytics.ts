@@ -35,7 +35,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 					startDate: z.string().datetime().nullish(),
 					endDate: z.string().datetime().nullish(),
 				})
@@ -185,7 +185,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -267,7 +267,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -340,7 +340,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -412,7 +412,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -554,7 +554,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 					months: z.number().min(1).max(24).default(12),
 				})
 				.optional(),
@@ -652,7 +652,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -790,7 +790,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -848,7 +848,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 					limit: z.number().min(1).max(20).default(10),
 				})
 				.optional(),
@@ -910,7 +910,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -1048,7 +1048,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -1216,7 +1216,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 				})
 				.optional(),
 		)
@@ -1347,7 +1347,7 @@ export const analyticsRouter = createTRPCRouter({
 		.input(
 			z
 				.object({
-					accountId: z.number().nullish(),
+					accountId: z.string().nullish(),
 					iterations: z.number().min(100).max(10000).default(1000),
 				})
 				.optional(),

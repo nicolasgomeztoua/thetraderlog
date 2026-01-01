@@ -10,7 +10,7 @@ import {
 import { api } from "@/trpc/react";
 
 interface Account {
-	id: number;
+	id: string;
 	name: string;
 	broker: string | null;
 	platform: string | null;
@@ -32,15 +32,15 @@ interface Account {
 	challengeStatus: "active" | "passed" | "failed" | null;
 	profitSplit: string | null;
 	payoutFrequency: "weekly" | "bi_weekly" | "monthly" | null;
-	linkedAccountId: number | null;
-	groupId: number | null;
+	linkedAccountId: string | null;
+	groupId: string | null;
 }
 
 interface AccountContextType {
 	accounts: Account[];
 	selectedAccount: Account | null;
-	selectedAccountId: number | null;
-	setSelectedAccountId: (id: number | null) => void;
+	selectedAccountId: string | null;
+	setSelectedAccountId: (id: string | null) => void;
 	isLoading: boolean;
 	refetchAccounts: () => void;
 }
@@ -48,7 +48,7 @@ interface AccountContextType {
 const AccountContext = createContext<AccountContextType | undefined>(undefined);
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-	const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
+	const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
 		null,
 	);
 
@@ -72,7 +72,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 	// Persist selected account to localStorage
 	useEffect(() => {
 		if (selectedAccountId !== null) {
-			localStorage.setItem("selectedAccountId", selectedAccountId.toString());
+			localStorage.setItem("selectedAccountId", selectedAccountId);
 		}
 	}, [selectedAccountId]);
 
@@ -80,10 +80,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		const stored = localStorage.getItem("selectedAccountId");
 		if (stored) {
-			const id = parseInt(stored, 10);
 			// Verify the account still exists and belongs to user
-			if (accounts.some((a) => a.id === id)) {
-				setSelectedAccountId(id);
+			if (accounts.some((a) => a.id === stored)) {
+				setSelectedAccountId(stored);
 			}
 		}
 	}, [accounts]);

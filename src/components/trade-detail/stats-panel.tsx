@@ -2,6 +2,7 @@ import {
 	BookMarked,
 	Camera,
 	ExternalLink,
+	Info,
 	TrendingDown,
 	TrendingUp,
 } from "lucide-react";
@@ -21,6 +22,11 @@ import {
 } from "@/components/ui/select";
 import { StarRating } from "@/components/ui/star-rating";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useTimezone } from "@/hooks/use-timezone";
 import type { TradeStats } from "@/lib/trade-calculations";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -123,9 +129,9 @@ function StrategySection({
 	strategyId,
 	onStrategyChange,
 }: {
-	tradeId: number;
-	strategyId: number | null;
-	onStrategyChange: (strategyId: number | null) => void;
+	tradeId: string;
+	strategyId: string | null;
+	onStrategyChange: (strategyId: string | null) => void;
 }) {
 	const utils = api.useUtils();
 	const { data: strategies } = api.strategies.getAll.useQuery();
@@ -145,7 +151,7 @@ function StrategySection({
 	});
 
 	const handleStrategyChange = (value: string) => {
-		const newStrategyId = value === "none" ? null : parseInt(value, 10);
+		const newStrategyId = value === "none" ? null : value;
 		onStrategyChange(newStrategyId);
 		updateTradeMutation.mutate({ id: tradeId, strategyId: newStrategyId });
 	};
@@ -416,17 +422,59 @@ export function StatsPanel({
 							{trade.status === "closed" &&
 								trade.maePrice &&
 								trade.mfePrice && (
-									<Section title="Price MAE / MFE">
-										<div className="flex items-center justify-end gap-2 py-1">
+									<div className="grid grid-cols-2 gap-2">
+										{/* MAE Card */}
+										<div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+											<div className="mb-1 flex items-center gap-1">
+												<span className="font-mono text-[10px] text-muted-foreground/80 uppercase tracking-widest">
+													MAE
+												</span>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<Info className="h-3 w-3 cursor-help text-muted-foreground/50 transition-colors hover:text-muted-foreground" />
+													</TooltipTrigger>
+													<TooltipContent className="max-w-[200px]" side="top">
+														<p className="font-sans text-xs">
+															<span className="font-semibold">
+																Maximum Adverse Excursion
+															</span>
+															<br />
+															The worst price reached against your position
+														</p>
+													</TooltipContent>
+												</Tooltip>
+											</div>
 											<span className="font-mono text-loss text-sm tabular-nums">
 												${parseFloat(trade.maePrice).toLocaleString()}
 											</span>
-											<span className="text-muted-foreground">/</span>
+										</div>
+
+										{/* MFE Card */}
+										<div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+											<div className="mb-1 flex items-center gap-1">
+												<span className="font-mono text-[10px] text-muted-foreground/80 uppercase tracking-widest">
+													MFE
+												</span>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<Info className="h-3 w-3 cursor-help text-muted-foreground/50 transition-colors hover:text-muted-foreground" />
+													</TooltipTrigger>
+													<TooltipContent className="max-w-[200px]" side="top">
+														<p className="font-sans text-xs">
+															<span className="font-semibold">
+																Maximum Favorable Excursion
+															</span>
+															<br />
+															The best price reached in your favor
+														</p>
+													</TooltipContent>
+												</Tooltip>
+											</div>
 											<span className="font-mono text-profit text-sm tabular-nums">
 												${parseFloat(trade.mfePrice).toLocaleString()}
 											</span>
 										</div>
-									</Section>
+									</div>
 								)}
 
 							{/* ============================================

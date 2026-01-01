@@ -9,19 +9,19 @@ import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 
 interface Rule {
-	id: number;
+	id: string;
 	text: string;
 	category: "entry" | "exit" | "risk" | "management";
 	order: number;
 }
 
 interface RuleCheck {
-	ruleId: number;
+	ruleId: string;
 	checked: boolean;
 }
 
 interface RuleChecklistProps {
-	tradeId: number;
+	tradeId: string;
 	rules: Rule[];
 	checks: RuleCheck[];
 	onUpdate?: () => void;
@@ -74,7 +74,7 @@ export function RuleChecklist({
 	});
 
 	const handleCheck = useCallback(
-		(ruleId: number, checked: boolean) => {
+		(ruleId: string, checked: boolean) => {
 			checkRule.mutate({ tradeId, ruleId, checked });
 		},
 		[tradeId, checkRule],
@@ -95,7 +95,7 @@ export function RuleChecklist({
 
 	// Get check status for a rule (with optimistic updates)
 	const isChecked = useCallback(
-		(ruleId: number): boolean => {
+		(ruleId: string): boolean => {
 			// Check optimistic state first
 			const optimistic = optimisticUpdates.get(ruleId);
 			if (optimistic?.checked !== undefined) {

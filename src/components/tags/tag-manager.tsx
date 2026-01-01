@@ -34,7 +34,7 @@ export function TagManager() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const [editingTag, setEditingTag] = useState<{
-		id: number;
+		id: string;
 		name: string;
 		color: string;
 	} | null>(null);
@@ -95,7 +95,7 @@ export function TagManager() {
 		});
 	};
 
-	const handleDelete = (id: number, name: string) => {
+	const handleDelete = (id: string, name: string) => {
 		if (confirm(`Delete tag "${name}"? This will remove it from all trades.`)) {
 			deleteTag.mutate({ id });
 		}

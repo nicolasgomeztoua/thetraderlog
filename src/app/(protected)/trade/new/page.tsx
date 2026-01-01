@@ -83,7 +83,7 @@ export default function NewTradePage() {
 		| "anxious"
 	>("neutral");
 	const [notes, setNotes] = useState("");
-	const [accountId, setAccountId] = useState<number | undefined>(
+	const [accountId, setAccountId] = useState<string | undefined>(
 		selectedAccountId ?? undefined,
 	);
 
@@ -181,10 +181,8 @@ export default function NewTradePage() {
 							</span>
 						</div>
 						<Select
-							onValueChange={(value) =>
-								setAccountId(value ? parseInt(value, 10) : undefined)
-							}
-							value={accountId?.toString() ?? ""}
+							onValueChange={(value) => setAccountId(value || undefined)}
+							value={accountId ?? ""}
 						>
 							<SelectTrigger className="font-mono text-xs">
 								<SelectValue placeholder="Select account" />

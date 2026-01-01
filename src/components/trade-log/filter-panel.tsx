@@ -47,7 +47,7 @@ export interface FilterState {
 	dayOfWeek: number[];
 	startDate: string;
 	endDate: string;
-	tagIds: number[];
+	tagIds: string[];
 	exitReason: string;
 	strategyId: string;
 }
@@ -67,7 +67,7 @@ export const DEFAULT_FILTERS: FilterState = {
 	dayOfWeek: [],
 	startDate: "",
 	endDate: "",
-	tagIds: [],
+	tagIds: [] as string[],
 	exitReason: "",
 	strategyId: "",
 };

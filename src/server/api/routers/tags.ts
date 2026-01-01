@@ -32,7 +32,7 @@ export const tagsRouter = createTRPCRouter({
 
 	// Get a single tag by ID
 	getById: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const tag = await ctx.db.query.tags.findFirst({
 				where: and(eq(tags.id, input.id), eq(tags.userId, ctx.user.id)),
@@ -86,7 +86,7 @@ export const tagsRouter = createTRPCRouter({
 	update: protectedProcedure
 		.input(
 			z.object({
-				id: z.number(),
+				id: z.string(),
 				name: z.string().min(1).max(50).optional(),
 				color: z.string().optional(),
 			}),
@@ -124,7 +124,7 @@ export const tagsRouter = createTRPCRouter({
 
 	// Delete a tag
 	delete: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existing = await ctx.db.query.tags.findFirst({
 				where: and(eq(tags.id, input.id), eq(tags.userId, ctx.user.id)),
@@ -144,8 +144,8 @@ export const tagsRouter = createTRPCRouter({
 	addToTrade: protectedProcedure
 		.input(
 			z.object({
-				tradeId: z.number(),
-				tagId: z.number(),
+				tradeId: z.string(),
+				tagId: z.string(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -194,8 +194,8 @@ export const tagsRouter = createTRPCRouter({
 	removeFromTrade: protectedProcedure
 		.input(
 			z.object({
-				tradeId: z.number(),
-				tagId: z.number(),
+				tradeId: z.string(),
+				tagId: z.string(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -227,8 +227,8 @@ export const tagsRouter = createTRPCRouter({
 	bulkAddToTrades: protectedProcedure
 		.input(
 			z.object({
-				tradeIds: z.array(z.number()).min(1).max(100),
-				tagId: z.number(),
+				tradeIds: z.array(z.string()).min(1).max(100),
+				tagId: z.string(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -288,8 +288,8 @@ export const tagsRouter = createTRPCRouter({
 	bulkRemoveFromTrades: protectedProcedure
 		.input(
 			z.object({
-				tradeIds: z.array(z.number()).min(1).max(100),
-				tagId: z.number(),
+				tradeIds: z.array(z.string()).min(1).max(100),
+				tagId: z.string(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -317,7 +317,7 @@ export const tagsRouter = createTRPCRouter({
 
 	// Get trades by tag
 	getTradesByTag: protectedProcedure
-		.input(z.object({ tagId: z.number() }))
+		.input(z.object({ tagId: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const tag = await ctx.db.query.tags.findFirst({
 				where: and(eq(tags.id, input.tagId), eq(tags.userId, ctx.user.id)),

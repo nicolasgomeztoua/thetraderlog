@@ -61,7 +61,7 @@ export interface CalculateAndStoreOptions {
  * @returns Result with success status, data quality, and optional metrics
  */
 export async function calculateAndStoreMAEMFE(
-	tradeId: number,
+	tradeId: string,
 	options: CalculateAndStoreOptions = {},
 ): Promise<MAEMFEServiceResult> {
 	const { skipAlreadyProcessed = true, logTag = "[MAE/MFE]" } = options;

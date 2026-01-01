@@ -34,13 +34,13 @@ function getRandomColor() {
 }
 
 interface TagSelectorProps {
-	tradeId: number;
-	currentTagIds: number[];
+	tradeId: string;
+	currentTagIds: string[];
 	onTagAdded?: (
-		tagId: number,
-		tag: { id: number; name: string; color: string | null },
+		tagId: string,
+		tag: { id: string; name: string; color: string | null },
 	) => void;
-	onTagRemoved?: (tagId: number) => void;
+	onTagRemoved?: (tagId: string) => void;
 	onUpdate?: () => void;
 }
 
@@ -96,9 +96,9 @@ export function TagSelector({
 	});
 
 	const handleToggleTag = (
-		tagId: number,
+		tagId: string,
 		isSelected: boolean,
-		tag?: { id: number; name: string; color: string | null },
+		tag?: { id: string; name: string; color: string | null },
 	) => {
 		if (isSelected) {
 			onTagRemoved?.(tagId);
@@ -195,10 +195,10 @@ export function TagSelector({
 
 // Compact tag display with inline tag selector
 interface TradeTagsProps {
-	tradeId: number;
+	tradeId: string;
 	tags: Array<{
-		tagId: number;
-		tag: { id: number; name: string; color: string | null };
+		tagId: string;
+		tag: { id: string; name: string; color: string | null };
 	}>;
 	onUpdate?: () => void;
 	maxDisplay?: number;
@@ -218,7 +218,7 @@ export function TradeTags({
 	} = useOptimisticState<{
 		removed?: boolean;
 		added?: boolean;
-		tag?: { id: number; name: string; color: string | null };
+		tag?: { id: string; name: string; color: string | null };
 	}>();
 
 	const removeTag = api.tags.removeFromTrade.useMutation({
@@ -236,18 +236,18 @@ export function TradeTags({
 		},
 	});
 
-	const handleRemoveTag = (tagId: number) => {
+	const handleRemoveTag = (tagId: string) => {
 		removeTag.mutate({ tradeId, tagId });
 	};
 
 	const handleTagAdded = (
-		tagId: number,
-		tag: { id: number; name: string; color: string | null },
+		tagId: string,
+		tag: { id: string; name: string; color: string | null },
 	) => {
 		applyOptimisticUpdate(tagId, { added: true, tag });
 	};
 
-	const handleTagRemoved = (tagId: number) => {
+	const handleTagRemoved = (tagId: string) => {
 		applyOptimisticUpdate(tagId, { removed: true });
 	};
 
@@ -269,10 +269,10 @@ export function TradeTags({
 				(
 					entry,
 				): entry is [
-					number | string,
+					string,
 					{
 						added: true;
-						tag: { id: number; name: string; color: string | null };
+						tag: { id: string; name: string; color: string | null };
 					},
 				] => {
 					const [id, update] = entry;
@@ -282,7 +282,7 @@ export function TradeTags({
 				},
 			)
 			.map(([id, update]) => ({
-				tagId: id as number,
+				tagId: id,
 				tag: update.tag,
 			})),
 	];

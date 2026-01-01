@@ -263,13 +263,13 @@ export function SettingsContent() {
 
 	// Account management state
 	const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
-	const [editingAccount, setEditingAccount] = useState<number | null>(null);
+	const [editingAccount, setEditingAccount] = useState<string | null>(null);
 	const [accountForm, setAccountForm] =
 		useState<AccountFormState>(defaultAccountForm);
 
 	// Convert to funded dialog state
 	const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
-	const [convertingAccountId, setConvertingAccountId] = useState<number | null>(
+	const [convertingAccountId, setConvertingAccountId] = useState<string | null>(
 		null,
 	);
 	const [convertForm, setConvertForm] = useState({
@@ -285,7 +285,7 @@ export function SettingsContent() {
 
 	// Group management state
 	const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
-	const [editingGroup, setEditingGroup] = useState<number | null>(null);
+	const [editingGroup, setEditingGroup] = useState<string | null>(null);
 	const [groupForm, setGroupForm] = useState({
 		name: "",
 		description: "",
@@ -587,9 +587,7 @@ export function SettingsContent() {
 			challengeEndDate: accountForm.challengeEndDate || undefined,
 			profitSplit: accountForm.profitSplit || undefined,
 			payoutFrequency: accountForm.payoutFrequency || undefined,
-			groupId: accountForm.groupId
-				? parseInt(accountForm.groupId, 10)
-				: undefined,
+			groupId: accountForm.groupId || undefined,
 		};
 
 		if (editingAccount) {

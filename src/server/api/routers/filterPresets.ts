@@ -16,7 +16,7 @@ export const filterPresetsRouter = createTRPCRouter({
 
 	// Get a single preset by ID
 	getById: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const preset = await ctx.db.query.filterPresets.findFirst({
 				where: and(
@@ -57,7 +57,7 @@ export const filterPresetsRouter = createTRPCRouter({
 	update: protectedProcedure
 		.input(
 			z.object({
-				id: z.number(),
+				id: z.string(),
 				name: z.string().min(1).max(50).optional(),
 				filters: z.string().optional(),
 			}),
@@ -88,7 +88,7 @@ export const filterPresetsRouter = createTRPCRouter({
 
 	// Delete a filter preset
 	delete: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existing = await ctx.db.query.filterPresets.findFirst({
 				where: and(

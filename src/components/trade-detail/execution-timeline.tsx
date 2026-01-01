@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 // =============================================================================
 
 export interface Execution {
-	id: number;
+	id: string;
 	executionType: "entry" | "exit" | "scale_in" | "scale_out";
 	price: string;
 	quantity: string;
@@ -31,7 +31,7 @@ export interface Execution {
 interface ExecutionTimelineProps {
 	executions: Execution[];
 	onAddExecution?: (execution: Omit<Execution, "id">) => void;
-	onDeleteExecution?: (id: number) => void;
+	onDeleteExecution?: (id: string) => void;
 	instrumentType?: string;
 	className?: string;
 }

@@ -29,7 +29,7 @@ const createAccountSchema = z
 
 const updateAccountSchema = z
 	.object({
-		id: z.number(),
+		id: z.string(),
 		name: z.string().min(1).max(100).optional(),
 		broker: z.string().optional(),
 		platform: tradingPlatformEnum.optional(),
@@ -52,7 +52,7 @@ const createGroupSchema = z.object({
 });
 
 const updateGroupSchema = z.object({
-	id: z.number(),
+	id: z.string(),
 	name: z.string().min(1).max(100).optional(),
 	description: z.string().optional(),
 	color: z.string().optional(),
@@ -60,7 +60,7 @@ const updateGroupSchema = z.object({
 
 // Convert to funded schema
 const convertToFundedSchema = z.object({
-	challengeAccountId: z.number(),
+	challengeAccountId: z.string(),
 	// New funded account details
 	name: z.string().min(1).max(100),
 	initialBalance: z.string(),
@@ -127,7 +127,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Get account by ID
 	getById: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const account = await ctx.db.query.accounts.findFirst({
 				where: and(eq(accounts.id, input.id), eq(accounts.userId, ctx.user.id)),
@@ -147,7 +147,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Get linked account (for challenge/funded pairs)
 	getLinkedAccount: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const account = await ctx.db.query.accounts.findFirst({
 				where: and(eq(accounts.id, input.id), eq(accounts.userId, ctx.user.id)),
@@ -330,7 +330,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Mark challenge as failed
 	markChallengeFailed: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const account = await ctx.db.query.accounts.findFirst({
 				where: and(eq(accounts.id, input.id), eq(accounts.userId, ctx.user.id)),
@@ -355,7 +355,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Set account as default
 	setDefault: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// Verify ownership
 			const existingAccount = await ctx.db.query.accounts.findFirst({
@@ -384,7 +384,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Delete an account
 	delete: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingAccount = await ctx.db.query.accounts.findFirst({
 				where: and(eq(accounts.id, input.id), eq(accounts.userId, ctx.user.id)),
@@ -431,7 +431,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Get account stats
 	getStats: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			// Verify ownership
 			const account = await ctx.db.query.accounts.findFirst({
@@ -493,7 +493,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Get group by ID with accounts
 	getGroupById: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const group = await ctx.db.query.accountGroups.findFirst({
 				where: and(
@@ -556,7 +556,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Delete a group
 	deleteGroup: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingGroup = await ctx.db.query.accountGroups.findFirst({
 				where: and(
@@ -582,7 +582,7 @@ export const accountsRouter = createTRPCRouter({
 
 	// Get cumulative stats for a group
 	getGroupStats: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(z.object({ id: z.string() }))
 		.query(async ({ ctx, input }) => {
 			// Verify ownership
 			const group = await ctx.db.query.accountGroups.findFirst({

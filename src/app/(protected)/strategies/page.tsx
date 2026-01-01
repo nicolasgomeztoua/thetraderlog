@@ -174,7 +174,7 @@ function PerformanceComparisonTable() {
 export default function StrategiesPage() {
 	const router = useRouter();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [strategyToDelete, setStrategyToDelete] = useState<number | null>(null);
+	const [strategyToDelete, setStrategyToDelete] = useState<string | null>(null);
 
 	const utils = api.useUtils();
 
@@ -206,7 +206,7 @@ export default function StrategiesPage() {
 		},
 	});
 
-	const handleDelete = (id: number) => {
+	const handleDelete = (id: string) => {
 		setStrategyToDelete(id);
 		setDeleteDialogOpen(true);
 	};
@@ -223,7 +223,7 @@ export default function StrategiesPage() {
 	);
 
 	const statsMap = new Map<
-		number,
+		string,
 		{ winRate: number; totalPnl: number; avgPnl: number }
 	>();
 	strategies?.forEach((s, i) => {

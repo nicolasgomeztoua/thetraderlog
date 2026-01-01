@@ -80,7 +80,7 @@ function saveSizes(sizes: number[]) {
 export default function TradeDetailPage() {
 	const params = useParams();
 	const router = useRouter();
-	const tradeId = parseInt(params.id as string, 10);
+	const tradeId = params.id as string;
 	const { timezone } = useTimezone();
 
 	const [isClosing, setIsClosing] = useState(false);
@@ -109,7 +109,7 @@ export default function TradeDetailPage() {
 
 	const { data: trade, isLoading } = api.trades.getById.useQuery(
 		{ id: tradeId },
-		{ enabled: !Number.isNaN(tradeId) },
+		{ enabled: !!tradeId },
 	);
 
 	// Adjacent trades for navigation

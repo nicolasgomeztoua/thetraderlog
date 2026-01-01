@@ -10,7 +10,7 @@ interface EquityPoint {
 	drawdownPercent: number;
 	pnl: number;
 	tradeIndex: number;
-	tradeId: number | null;
+	tradeId: string | null;
 	symbol: string | null;
 }
 

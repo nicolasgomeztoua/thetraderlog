@@ -26,7 +26,7 @@ import { api } from "@/trpc/react";
 export default function StrategyDetailPage() {
 	const params = useParams();
 	const router = useRouter();
-	const strategyId = parseInt(params.id as string, 10);
+	const strategyId = params.id as string;
 
 	const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -34,12 +34,12 @@ export default function StrategyDetailPage() {
 
 	const { data: strategy, isLoading } = api.strategies.getById.useQuery(
 		{ id: strategyId },
-		{ enabled: !Number.isNaN(strategyId) },
+		{ enabled: !!strategyId },
 	);
 
 	const { data: stats } = api.strategies.getStats.useQuery(
 		{ id: strategyId },
-		{ enabled: !Number.isNaN(strategyId) && !!strategy },
+		{ enabled: !!strategyId && !!strategy },
 	);
 
 	const updateMutation = api.strategies.update.useMutation({

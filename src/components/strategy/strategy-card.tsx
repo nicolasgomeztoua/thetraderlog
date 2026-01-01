@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 interface StrategyCardProps {
 	strategy: {
-		id: number;
+		id: string;
 		name: string;
 		description: string | null;
 		color: string | null;

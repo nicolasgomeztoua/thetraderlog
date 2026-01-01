@@ -6,7 +6,7 @@ import { api } from "@/trpc/react";
 
 interface UseImportProgressOptions {
 	/** Trade IDs to track */
-	tradeIds: number[] | null;
+	tradeIds: string[] | null;
 	/** Called when processing completes */
 	onComplete?: () => void;
 }

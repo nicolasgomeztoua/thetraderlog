@@ -104,7 +104,7 @@ export default function ImportPage() {
 		selectedAccountId ? "upload" : "select-account",
 	);
 	const [selectedImportAccountId, setSelectedImportAccountId] = useState<
-		number | null
+		string | null
 	>(selectedAccountId);
 	const [instrumentType, setInstrumentType] = useState<"futures" | "forex">(
 		"futures",
@@ -121,7 +121,7 @@ export default function ImportPage() {
 
 	const [importing, setImporting] = useState(false);
 	const [importedCount, setImportedCount] = useState(0);
-	const [processingTradeIds, setProcessingTradeIds] = useState<number[] | null>(
+	const [processingTradeIds, setProcessingTradeIds] = useState<string[] | null>(
 		null,
 	);
 
@@ -515,9 +515,7 @@ export default function ImportPage() {
 						) : (
 							<>
 								<Select
-									onValueChange={(value) =>
-										setSelectedImportAccountId(parseInt(value, 10))
-									}
+									onValueChange={(value) => setSelectedImportAccountId(value)}
 									value={selectedImportAccountId?.toString() || ""}
 								>
 									<SelectTrigger className="w-full">

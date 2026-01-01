@@ -88,9 +88,9 @@ export default function JournalPage() {
 	} = useTradeColumns();
 
 	// Selection for bulk actions
-	const [selectedTrades, setSelectedTrades] = useState<Set<number>>(new Set());
+	const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set());
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [tradeToDelete, setTradeToDelete] = useState<number | null>(null);
+	const [tradeToDelete, setTradeToDelete] = useState<string | null>(null);
 
 	// Debounce search input
 	useEffect(() => {
@@ -127,8 +127,7 @@ export default function JournalPage() {
 		if (filters.dayOfWeek.length > 0) params.dayOfWeek = filters.dayOfWeek;
 		if (filters.exitReason) params.exitReason = filters.exitReason;
 		if (filters.tagIds.length > 0) params.tagIds = filters.tagIds;
-		if (filters.strategyId)
-			params.strategyId = parseInt(filters.strategyId, 10);
+		if (filters.strategyId) params.strategyId = filters.strategyId;
 
 		return params;
 	}, [filters, selectedAccountId, debouncedSearch]);
@@ -228,7 +227,7 @@ export default function JournalPage() {
 
 	// Debounced rating updates with per-trade debouncing
 	const { trigger: updateRating } = useDebouncedMutation({
-		mutationFn: ({ id, rating }: { id: number; rating: number }) => {
+		mutationFn: ({ id, rating }: { id: string; rating: number }) => {
 			updateRatingMutation.mutate({ id, rating });
 		},
 		onOptimisticUpdate: ({ id, rating }) => {
@@ -320,7 +319,7 @@ export default function JournalPage() {
 		}
 	};
 
-	const handleSelectTrade = (id: number, checked: boolean) => {
+	const handleSelectTrade = (id: string, checked: boolean) => {
 		const newSelected = new Set(selectedTrades);
 		if (checked) {
 			newSelected.add(id);
@@ -584,7 +583,7 @@ export default function JournalPage() {
 				return (
 					<Select
 						onValueChange={(value) => {
-							const strategyId = value === "none" ? null : parseInt(value, 10);
+							const strategyId = value === "none" ? null : value;
 							updateStrategyMutation.mutate({ id: trade.id, strategyId });
 						}}
 						value={trade.strategyId?.toString() ?? "none"}
