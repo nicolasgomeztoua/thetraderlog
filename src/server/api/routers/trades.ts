@@ -13,8 +13,8 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "@/env";
-import { qstash } from "@/lib/queue";
 import { calculateAndStoreMAEMFE } from "@/lib/maemfe-service";
+import { qstash } from "@/lib/queue";
 import {
 	directionEnum,
 	emotionalStateEnum,

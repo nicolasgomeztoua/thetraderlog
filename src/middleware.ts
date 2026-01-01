@@ -6,6 +6,7 @@ const isPublicRoute = createRouteMatcher([
 	"/sign-in(.*)",
 	"/sign-up(.*)",
 	"/api/webhooks(.*)",
+	"/api/queue(.*)", // QStash callback endpoint
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

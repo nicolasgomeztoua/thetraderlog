@@ -10,7 +10,10 @@
  */
 
 import { eq } from "drizzle-orm";
-import { type DataQuality, getOHLCForTimeRange } from "@/lib/market-data-service";
+import {
+	type DataQuality,
+	getOHLCForTimeRange,
+} from "@/lib/market-data-service";
 import { calculateMAEMFE, type MAEMFEResult } from "@/lib/trade-calculations";
 import { db } from "@/server/db";
 import { type Trade, trades } from "@/server/db/schema";
@@ -61,10 +64,7 @@ export async function calculateAndStoreMAEMFE(
 	tradeId: number,
 	options: CalculateAndStoreOptions = {},
 ): Promise<MAEMFEServiceResult> {
-	const {
-		skipAlreadyProcessed = true,
-		logTag = "[MAE/MFE]",
-	} = options;
+	const { skipAlreadyProcessed = true, logTag = "[MAE/MFE]" } = options;
 
 	console.log(`${logTag} Processing trade ${tradeId}`);
 
@@ -219,8 +219,8 @@ export async function calculateAndStoreMAEMFE(
 		return {
 			success: false,
 			dataQuality: "unavailable",
-			message: error instanceof Error ? error.message : "Failed to calculate MAE/MFE",
+			message:
+				error instanceof Error ? error.message : "Failed to calculate MAE/MFE",
 		};
 	}
 }
-

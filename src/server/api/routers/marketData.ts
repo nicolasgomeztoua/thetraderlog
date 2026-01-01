@@ -5,10 +5,7 @@ import {
 	getOHLCForChart,
 	getOHLCForTimeRange,
 } from "@/lib/market-data-service";
-import {
-	calculateMAEMFE,
-	analyzePostExit,
-} from "@/lib/trade-calculations";
+import { analyzePostExit, calculateMAEMFE } from "@/lib/trade-calculations";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 // Valid intervals for chart display
