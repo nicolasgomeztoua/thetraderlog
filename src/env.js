@@ -7,17 +7,20 @@ export const env = createEnv({
 	 * isn't built with invalid env vars.
 	 */
 	server: {
-		DATABASE_URL: z.string().url(),
+		DATABASE_URL: z.url(),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
 		CLERK_SECRET_KEY: z.string().min(1),
-		CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
-		TWELVE_DATA_API_KEY: z.string().min(1).optional(),
-		DATABENTO_API_KEY: z.string().min(1).optional(),
-		// Inngest for background jobs
-		INNGEST_EVENT_KEY: z.string().min(1).optional(),
-		INNGEST_SIGNING_KEY: z.string().min(1).optional(),
+		CLERK_WEBHOOK_SECRET: z.string().min(1),
+		TWELVE_DATA_API_KEY: z.string().min(1),
+		DATABENTO_API_KEY: z.string().min(1),
+		// Upstash QStash for background jobs
+		QSTASH_TOKEN: z.string().min(1),
+		QSTASH_CURRENT_SIGNING_KEY: z.string().min(1),
+		QSTASH_NEXT_SIGNING_KEY: z.string().min(1),
+		// App URL for QStash callbacks
+		APP_URL: z.url(),
 	},
 
 	/**
@@ -52,8 +55,10 @@ export const env = createEnv({
 		NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL:
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
 		DATABENTO_API_KEY: process.env.DATABENTO_API_KEY,
-		INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
-		INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
+		QSTASH_TOKEN: process.env.QSTASH_TOKEN,
+		QSTASH_CURRENT_SIGNING_KEY: process.env.QSTASH_CURRENT_SIGNING_KEY,
+		QSTASH_NEXT_SIGNING_KEY: process.env.QSTASH_NEXT_SIGNING_KEY,
+		APP_URL: process.env.APP_URL,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

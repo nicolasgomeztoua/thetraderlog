@@ -12,8 +12,9 @@ import {
 	sql,
 } from "drizzle-orm";
 import { z } from "zod";
-import { inngest } from "@/inngest/client";
-import { getOHLCForTimeRange } from "@/lib/market-data-service";
+import { env } from "@/env";
+import { qstash } from "@/lib/queue";
+import { calculateAndStoreMAEMFE } from "@/lib/maemfe-service";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -23,7 +24,6 @@ import {
 	tradeStatusEnum,
 } from "@/lib/schemas";
 import { calculateAggregateStats } from "@/lib/stats-calculations";
-import { calculateMAEMFE } from "@/lib/trade-calculations";
 import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
@@ -478,14 +478,15 @@ export const tradesRouter = createTRPCRouter({
 				.filter((t) => t.status === "closed")
 				.map((t) => t.id);
 
-			// Trigger Inngest background job to calculate MAE/MFE
+			// Trigger background job to calculate MAE/MFE via Upstash QStash
 			if (closedTradeIds.length > 0) {
-				await inngest.send({
-					name: "import/process",
-					data: {
+				await qstash.publishJSON({
+					url: `${env.APP_URL}/api/queue/process`,
+					body: {
 						tradeIds: closedTradeIds,
 						userId: ctx.user.id,
 					},
+					retries: 3,
 				});
 			}
 
@@ -1166,169 +1167,45 @@ export const tradesRouter = createTRPCRouter({
 	calculateMAEMFE: protectedProcedure
 		.input(z.object({ tradeId: z.number() }))
 		.mutation(async ({ ctx, input }) => {
-			const LOG_TAG = "[MAE/MFE]";
-
-			console.log(`${LOG_TAG} Starting calculation for trade ${input.tradeId}`);
-
-			// Get the trade
+			// First verify the user owns this trade
 			const trade = await ctx.db.query.trades.findFirst({
 				where: and(
 					eq(trades.id, input.tradeId),
 					eq(trades.userId, ctx.user.id),
 				),
+				columns: { id: true },
 			});
 
 			if (!trade) {
-				console.error(`${LOG_TAG} Trade ${input.tradeId} not found`);
 				throw new Error("Trade not found");
 			}
 
-			console.log(
-				`${LOG_TAG} Trade details:`,
-				JSON.stringify({
-					id: trade.id,
-					symbol: trade.symbol,
-					direction: trade.direction,
-					instrumentType: trade.instrumentType,
-					status: trade.status,
-					entryPrice: trade.entryPrice,
-					exitPrice: trade.exitPrice,
-					entryTime: trade.entryTime?.toISOString(),
-					exitTime: trade.exitTime?.toISOString(),
-					quantity: trade.quantity,
-				}),
-			);
+			// Use the shared service for calculation
+			const result = await calculateAndStoreMAEMFE(input.tradeId, {
+				skipAlreadyProcessed: false, // User explicitly requested recalculation
+				logTag: "[MAE/MFE:tRPC]",
+			});
 
-			if (trade.status !== "closed" || !trade.exitTime || !trade.exitPrice) {
-				console.error(
-					`${LOG_TAG} Trade ${input.tradeId} is not closed or missing exit data`,
-				);
-				throw new Error("Trade must be closed to calculate MAE/MFE");
+			if (!result.success && result.message !== "Already processed") {
+				throw new Error(result.message ?? "Failed to calculate MAE/MFE");
 			}
 
-			// Mark as pending while we calculate
-			await ctx.db
-				.update(trades)
-				.set({ marketDataQuality: "pending" })
-				.where(eq(trades.id, input.tradeId));
-
-			console.log(`${LOG_TAG} Marked trade ${input.tradeId} as pending`);
-
-			try {
-				// Fetch market data for the trade duration
-				console.log(
-					`${LOG_TAG} Fetching OHLC data for ${trade.symbol} from ${trade.entryTime.toISOString()} to ${trade.exitTime.toISOString()}`,
-				);
-
-				const { bars, dataQuality } = await getOHLCForTimeRange(
-					trade.symbol,
-					"1min", // 1-minute bars for best available precision
-					trade.entryTime,
-					trade.exitTime,
-				);
-
-				const lastBar = bars.at(-1);
-				console.log(
-					`${LOG_TAG} OHLC fetch result:`,
-					JSON.stringify({
-						barCount: bars.length,
-						dataQuality,
-						firstBar: bars[0]
-							? { time: new Date(bars[0].timestamp).toISOString() }
-							: null,
-						lastBar: lastBar
-							? { time: new Date(lastBar.timestamp).toISOString() }
-							: null,
-					}),
-				);
-
-				if (bars.length === 0) {
-					// No data available
-					console.log(
-						`${LOG_TAG} No bars returned, marking trade ${input.tradeId} as unavailable`,
-					);
-					await ctx.db
-						.update(trades)
-						.set({ marketDataQuality: "unavailable" })
-						.where(eq(trades.id, input.tradeId));
-
-					return {
-						success: false,
-						dataQuality: "unavailable" as const,
-						message: "No market data available for this trade period",
-					};
-				}
-
-				// Calculate MAE/MFE
-				console.log(`${LOG_TAG} Calculating MAE/MFE metrics...`);
-				const metrics = calculateMAEMFE(
-					bars,
-					parseFloat(trade.entryPrice),
-					parseFloat(trade.exitPrice),
-					trade.direction,
-					parseFloat(trade.quantity),
-					trade.symbol,
-					trade.instrumentType,
-				);
-
-				console.log(
-					`${LOG_TAG} Calculated metrics:`,
-					JSON.stringify({
-						maePrice: metrics.maePrice,
-						mfePrice: metrics.mfePrice,
-						maeAmount: metrics.maeAmount,
-						mfeAmount: metrics.mfeAmount,
-						efficiency: metrics.efficiency,
-					}),
-				);
-
-				// Store the results permanently
-				const [updated] = await ctx.db
-					.update(trades)
-					.set({
-						maePrice: metrics.maePrice.toString(),
-						mfePrice: metrics.mfePrice.toString(),
-						maeAmount: metrics.maeAmount.toFixed(2),
-						mfeAmount: metrics.mfeAmount.toFixed(2),
-						tradeEfficiency: metrics.efficiency.toFixed(2),
-						marketDataQuality: dataQuality,
-					})
-					.where(eq(trades.id, input.tradeId))
-					.returning();
-
-				console.log(
-					`${LOG_TAG} SUCCESS: Stored MAE/MFE for trade ${input.tradeId}`,
-				);
-
-				return {
-					success: true,
-					dataQuality,
-					metrics: {
-						maePrice: metrics.maePrice,
-						mfePrice: metrics.mfePrice,
-						maeAmount: metrics.maeAmount,
-						mfeAmount: metrics.mfeAmount,
-						efficiency: metrics.efficiency,
-						maePoints: metrics.maePoints,
-						mfePoints: metrics.mfePoints,
-					},
-					trade: updated,
-				};
-			} catch (error) {
-				// Mark as unavailable on error
-				console.error(
-					`${LOG_TAG} ERROR for trade ${input.tradeId}:`,
-					error instanceof Error ? error.message : error,
-				);
-
-				await ctx.db
-					.update(trades)
-					.set({ marketDataQuality: "unavailable" })
-					.where(eq(trades.id, input.tradeId));
-
-				console.error(`${LOG_TAG} MAE/MFE calculation error:`, error);
-				throw new Error("Failed to calculate MAE/MFE");
-			}
+			return {
+				success: result.success,
+				dataQuality: result.dataQuality,
+				metrics: result.metrics
+					? {
+							maePrice: result.metrics.maePrice,
+							mfePrice: result.metrics.mfePrice,
+							maeAmount: result.metrics.maeAmount,
+							mfeAmount: result.metrics.mfeAmount,
+							efficiency: result.metrics.efficiency,
+							maePoints: result.metrics.maePoints,
+							mfePoints: result.metrics.mfePoints,
+						}
+					: undefined,
+				trade: result.trade,
+			};
 		}),
 
 	/**
@@ -1342,17 +1219,19 @@ export const tradesRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			// Get all trades
-			const tradesToProcess = await ctx.db.query.trades.findMany({
+			// First verify user owns all the trades
+			const userTradeIds = await ctx.db.query.trades.findMany({
 				where: and(
 					eq(trades.userId, ctx.user.id),
-					eq(trades.status, "closed"),
 					sql`${trades.id} IN (${sql.join(
 						input.tradeIds.map((id) => sql`${id}`),
 						sql`, `,
 					)})`,
 				),
+				columns: { id: true },
 			});
+
+			const validTradeIds = new Set(userTradeIds.map((t) => t.id));
 
 			const results = {
 				processed: 0,
@@ -1362,66 +1241,26 @@ export const tradesRouter = createTRPCRouter({
 			};
 
 			// Process trades sequentially to avoid rate limiting
-			for (const trade of tradesToProcess) {
+			for (const tradeId of input.tradeIds) {
 				results.processed++;
 
-				if (!trade.exitTime || !trade.exitPrice) {
+				// Skip if user doesn't own this trade
+				if (!validTradeIds.has(tradeId)) {
 					results.skipped++;
 					continue;
 				}
 
-				try {
-					// Fetch market data
-					const { bars, dataQuality } = await getOHLCForTimeRange(
-						trade.symbol,
-						"5min",
-						trade.entryTime,
-						trade.exitTime,
-					);
+				// Use the shared service for calculation
+				const result = await calculateAndStoreMAEMFE(tradeId, {
+					skipAlreadyProcessed: true,
+					logTag: "[MAE/MFE:bulk]",
+				});
 
-					if (bars.length === 0) {
-						await ctx.db
-							.update(trades)
-							.set({ marketDataQuality: "unavailable" })
-							.where(eq(trades.id, trade.id));
-						results.failed++;
-						continue;
-					}
-
-					// Calculate MAE/MFE
-					const metrics = calculateMAEMFE(
-						bars,
-						parseFloat(trade.entryPrice),
-						parseFloat(trade.exitPrice),
-						trade.direction,
-						parseFloat(trade.quantity),
-						trade.symbol,
-						trade.instrumentType,
-					);
-
-					// Store results
-					await ctx.db
-						.update(trades)
-						.set({
-							maePrice: metrics.maePrice.toString(),
-							mfePrice: metrics.mfePrice.toString(),
-							maeAmount: metrics.maeAmount.toFixed(2),
-							mfeAmount: metrics.mfeAmount.toFixed(2),
-							tradeEfficiency: metrics.efficiency.toFixed(2),
-							marketDataQuality: dataQuality,
-						})
-						.where(eq(trades.id, trade.id));
-
+				if (result.success) {
 					results.success++;
-				} catch (error) {
-					console.error(
-						`MAE/MFE calculation failed for trade ${trade.id}:`,
-						error,
-					);
-					await ctx.db
-						.update(trades)
-						.set({ marketDataQuality: "unavailable" })
-						.where(eq(trades.id, trade.id));
+				} else if (result.message === "Already processed") {
+					results.skipped++;
+				} else {
 					results.failed++;
 				}
 			}
@@ -1481,24 +1320,25 @@ export const tradesRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			// Count trades that have marketDataQuality set (processed)
-			const processedTrades = await ctx.db.query.trades.findMany({
-				where: and(
-					eq(trades.userId, ctx.user.id),
-					inArray(trades.id, input.tradeIds),
-					isNotNull(trades.marketDataQuality),
-				),
-				columns: { id: true },
-			});
+			// Use COUNT for efficiency instead of fetching rows
+			const [result] = await ctx.db
+				.select({ count: sql<number>`count(*)::int` })
+				.from(trades)
+				.where(
+					and(
+						eq(trades.userId, ctx.user.id),
+						inArray(trades.id, input.tradeIds),
+						isNotNull(trades.marketDataQuality),
+					),
+				);
 
 			const total = input.tradeIds.length;
-			const processed = processedTrades.length;
-			const isComplete = processed === total;
+			const processed = result?.count ?? 0;
 
 			return {
 				total,
 				processed,
-				isComplete,
+				isComplete: processed === total,
 				progress: total > 0 ? Math.round((processed / total) * 100) : 100,
 			};
 		}),

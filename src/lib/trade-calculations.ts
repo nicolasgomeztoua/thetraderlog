@@ -1,5 +1,5 @@
 import type { OHLCBar } from "./market-data-service";
-import { getForexPipSize, getFuturesSpec } from "./symbols";
+import { FOREX_SPECS, getForexPipSize, getFuturesSpec } from "./symbols";
 
 // =============================================================================
 // TRADE CALCULATIONS
@@ -338,8 +338,8 @@ export function calculateMAEMFE(
 
 /**
  * Get point value for a symbol
- * For futures: uses contract specs
- * For forex: uses pip value
+ * For futures: uses contract specs (pointValue per full point)
+ * For forex: uses pip value per standard lot from FOREX_SPECS
  */
 function getPointValue(
 	symbol: string,
@@ -349,9 +349,9 @@ function getPointValue(
 		const spec = getFuturesSpec(symbol);
 		return spec?.pointValue ?? 1;
 	}
-	// For forex, pip value varies - use approximate standard lot value
-	// This is an approximation; real pip value depends on quote currency
-	return 10; // $10 per pip per standard lot (for USD-quoted pairs)
+	// Use the pip value per lot from FOREX_SPECS
+	// This gives accurate per-pair pip values (e.g., $10 for EUR/USD, ~$9.10 for USD/JPY)
+	return FOREX_SPECS[symbol]?.pipValuePerLot ?? 10;
 }
 
 /**

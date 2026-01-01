@@ -1,15 +1,15 @@
 import { z } from "zod";
-import { env } from "@/env";
 import {
 	type CacheInterval,
 	getCacheStats,
 	getOHLCForChart,
+	getOHLCForTimeRange,
 } from "@/lib/market-data-service";
-import { TWELVE_DATA_SYMBOL_MAP } from "@/lib/symbols";
+import {
+	calculateMAEMFE,
+	analyzePostExit,
+} from "@/lib/trade-calculations";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-
-// Use the shared symbol map for Twelve Data API
-const SYMBOL_MAP = TWELVE_DATA_SYMBOL_MAP;
 
 // Valid intervals for chart display
 const chartIntervalSchema = z.enum([
@@ -19,111 +19,58 @@ const chartIntervalSchema = z.enum([
 	"1h",
 ]) as z.ZodType<CacheInterval>;
 
-interface OHLCBar {
-	timestamp: number;
-	open: number;
-	high: number;
-	low: number;
-	close: number;
-	volume?: number;
-}
-
-interface TwelveDataResponse {
-	values?: Array<{
-		datetime: string;
-		open: string;
-		high: string;
-		low: string;
-		close: string;
-		volume?: string;
-	}>;
-	status?: string;
-	message?: string;
-}
+// Valid intervals including 1min for OHLC data
+const ohlcIntervalSchema = z.enum([
+	"1min",
+	"5min",
+	"15min",
+	"30min",
+	"1h",
+	"4h",
+]) as z.ZodType<CacheInterval>;
 
 export const marketDataRouter = createTRPCRouter({
-	// Get OHLC data for a symbol
+	/**
+	 * Get OHLC data for a symbol with caching
+	 *
+	 * Uses the cache-first strategy: checks PostgreSQL cache first,
+	 * fetches from API on miss, and caches for future use.
+	 *
+	 * @deprecated Prefer `getChartData` for trade-specific chart display
+	 */
 	getOHLC: protectedProcedure
 		.input(
 			z.object({
 				symbol: z.string(),
-				interval: z.enum([
-					"1min",
-					"5min",
-					"15min",
-					"30min",
-					"1h",
-					"4h",
-					"1day",
-				]),
+				interval: ohlcIntervalSchema,
 				startDate: z.iso.datetime(),
 				endDate: z.iso.datetime(),
 			}),
 		)
 		.query(async ({ input }) => {
-			const apiKey = env.TWELVE_DATA_API_KEY;
-
-			if (!apiKey) {
-				throw new Error("TWELVE_DATA_API_KEY not configured");
-			}
-
-			const mappedSymbol = SYMBOL_MAP[input.symbol] || input.symbol;
-
-			// Convert interval format for Twelve Data
-			const intervalMap: Record<string, string> = {
-				"1min": "1min",
-				"5min": "5min",
-				"15min": "15min",
-				"30min": "30min",
-				"1h": "1h",
-				"4h": "4h",
-				"1day": "1day",
-			};
-
-			const params = new URLSearchParams({
-				symbol: mappedSymbol,
-				interval: intervalMap[input.interval] || "1h",
-				start_date: input.startDate.split("T")[0] ?? "",
-				end_date: input.endDate.split("T")[0] ?? "",
-				apikey: apiKey,
-				format: "JSON",
-			});
-
-			const response = await fetch(
-				`https://api.twelvedata.com/time_series?${params.toString()}`,
+			// Use the cached service instead of direct API call
+			const { bars, dataQuality } = await getOHLCForTimeRange(
+				input.symbol,
+				input.interval,
+				new Date(input.startDate),
+				new Date(input.endDate),
 			);
 
-			if (!response.ok) {
-				throw new Error(`Failed to fetch market data: ${response.statusText}`);
-			}
-
-			const data = (await response.json()) as TwelveDataResponse;
-
-			if (data.status === "error") {
-				throw new Error(data.message || "Failed to fetch market data");
-			}
-
-			if (!data.values || data.values.length === 0) {
-				return { bars: [] };
-			}
-
-			// Convert to our format
-			const bars: OHLCBar[] = data.values.map((bar) => ({
-				timestamp: new Date(bar.datetime).getTime(),
-				open: parseFloat(bar.open),
-				high: parseFloat(bar.high),
-				low: parseFloat(bar.low),
-				close: parseFloat(bar.close),
-				volume: bar.volume ? parseFloat(bar.volume) : undefined,
-			}));
-
-			// Sort by timestamp ascending
-			bars.sort((a, b) => a.timestamp - b.timestamp);
-
-			return { bars };
+			return {
+				bars,
+				dataQuality,
+			};
 		}),
 
-	// Analyze if price hit a level within a time range
+	/**
+	 * Analyze price action for a trade
+	 * Uses cached market data and shared calculation functions
+	 *
+	 * Calculates:
+	 * - MAE/MFE (Maximum Adverse/Favorable Excursion)
+	 * - Whether SL/TP would have been hit
+	 * - Post-exit recovery analysis
+	 */
 	analyzePriceAction: protectedProcedure
 		.input(
 			z.object({
@@ -138,155 +85,97 @@ export const marketDataRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ input }) => {
-			const apiKey = env.TWELVE_DATA_API_KEY;
-
-			if (!apiKey) {
-				// Return mock analysis if no API key
-				return {
-					available: false,
-					message: "Market data API not configured",
-				};
-			}
-
-			const mappedSymbol = SYMBOL_MAP[input.symbol] || input.symbol;
-
-			// Fetch 1-hour bars for the trade duration + buffer
-			const startDate = new Date(input.entryTime);
-			startDate.setHours(startDate.getHours() - 2); // 2 hour buffer before
-
-			const endDate = input.exitTime ? new Date(input.exitTime) : new Date();
-			endDate.setHours(endDate.getHours() + 24); // 24 hour buffer after (for post-exit analysis)
-
-			const params = new URLSearchParams({
-				symbol: mappedSymbol,
-				interval: "1h",
-				start_date: startDate.toISOString().split("T")[0] ?? "",
-				end_date: endDate.toISOString().split("T")[0] ?? "",
-				apikey: apiKey,
-				format: "JSON",
-			});
-
 			try {
-				const response = await fetch(
-					`https://api.twelvedata.com/time_series?${params.toString()}`,
+				const entryTime = new Date(input.entryTime);
+				const exitTime = input.exitTime ? new Date(input.exitTime) : new Date();
+
+				// Fetch bars during the trade using cached service
+				const { bars: tradeBars, dataQuality } = await getOHLCForTimeRange(
+					input.symbol,
+					"1h", // 1-hour bars for analysis
+					entryTime,
+					exitTime,
 				);
 
-				if (!response.ok) {
-					return { available: false, message: "Failed to fetch market data" };
-				}
-
-				const data = (await response.json()) as TwelveDataResponse;
-
-				if (!data.values || data.values.length === 0) {
+				if (tradeBars.length === 0) {
 					return {
 						available: false,
 						message: "No market data available for this period",
 					};
 				}
 
-				const bars = data.values.map((bar) => ({
-					timestamp: new Date(bar.datetime).getTime(),
-					open: parseFloat(bar.open),
-					high: parseFloat(bar.high),
-					low: parseFloat(bar.low),
-					close: parseFloat(bar.close),
-				}));
+				// Calculate MAE/MFE using shared function
+				// Note: We pass 1 for quantity since we only care about points here
+				const maemfe = calculateMAEMFE(
+					tradeBars,
+					input.entryPrice,
+					input.exitPrice ?? input.entryPrice,
+					input.direction,
+					1, // quantity not relevant for point calculations
+					input.symbol,
+					"futures", // Default to futures for point-based calculations
+				);
 
-				// Sort ascending
-				bars.sort((a, b) => a.timestamp - b.timestamp);
-
-				const entryTimestamp = new Date(input.entryTime).getTime();
-				const exitTimestamp = input.exitTime
-					? new Date(input.exitTime).getTime()
-					: Date.now();
-
-				// Analyze the trade
+				// Check SL/TP hit
 				let stopLossWouldHit = false;
 				let takeProfitWouldHit = false;
-				let maxFavorableExcursion = 0; // Best unrealized profit
-				let maxAdverseExcursion = 0; // Worst unrealized loss
-				let priceAfterExit: number | null = null;
-				let wouldHaveRecovered = false;
 
-				for (const bar of bars) {
-					const isBeforeExit = bar.timestamp <= exitTimestamp;
-					const isAfterEntry = bar.timestamp >= entryTimestamp;
-					const isAfterExit = bar.timestamp > exitTimestamp;
-
-					if (isAfterEntry && isBeforeExit) {
-						// During the trade
-						if (input.direction === "long") {
-							// Check MFE (highest high - entry)
-							const favorable = bar.high - input.entryPrice;
-							if (favorable > maxFavorableExcursion) {
-								maxFavorableExcursion = favorable;
-							}
-							// Check MAE (entry - lowest low)
-							const adverse = input.entryPrice - bar.low;
-							if (adverse > maxAdverseExcursion) {
-								maxAdverseExcursion = adverse;
-							}
-							// Check SL hit
-							if (input.stopLoss && bar.low <= input.stopLoss) {
-								stopLossWouldHit = true;
-							}
-							// Check TP hit
-							if (input.takeProfit && bar.high >= input.takeProfit) {
-								takeProfitWouldHit = true;
-							}
-						} else {
-							// Short
-							const favorable = input.entryPrice - bar.low;
-							if (favorable > maxFavorableExcursion) {
-								maxFavorableExcursion = favorable;
-							}
-							const adverse = bar.high - input.entryPrice;
-							if (adverse > maxAdverseExcursion) {
-								maxAdverseExcursion = adverse;
-							}
-							if (input.stopLoss && bar.high >= input.stopLoss) {
-								stopLossWouldHit = true;
-							}
-							if (input.takeProfit && bar.low <= input.takeProfit) {
-								takeProfitWouldHit = true;
-							}
+				for (const bar of tradeBars) {
+					if (input.direction === "long") {
+						if (input.stopLoss && bar.low <= input.stopLoss) {
+							stopLossWouldHit = true;
+						}
+						if (input.takeProfit && bar.high >= input.takeProfit) {
+							takeProfitWouldHit = true;
+						}
+					} else {
+						if (input.stopLoss && bar.high >= input.stopLoss) {
+							stopLossWouldHit = true;
+						}
+						if (input.takeProfit && bar.low <= input.takeProfit) {
+							takeProfitWouldHit = true;
 						}
 					}
+				}
 
-					// After exit - check if price would have recovered
-					if (isAfterExit && input.exitPrice) {
-						priceAfterExit = bar.close;
+				// Fetch post-exit data for recovery analysis (if trade is closed)
+				let postExitAnalysis = null;
+				if (input.exitTime && input.exitPrice) {
+					const postExitEnd = new Date(input.exitTime);
+					postExitEnd.setHours(postExitEnd.getHours() + 24);
 
-						if (input.direction === "long") {
-							// For a losing long that got stopped out, did price go back above entry?
-							if (
-								input.exitPrice < input.entryPrice &&
-								bar.high > input.entryPrice
-							) {
-								wouldHaveRecovered = true;
-							}
-						} else {
-							// For a losing short, did price go back below entry?
-							if (
-								input.exitPrice > input.entryPrice &&
-								bar.low < input.entryPrice
-							) {
-								wouldHaveRecovered = true;
-							}
-						}
+					const { bars: postExitBars } = await getOHLCForTimeRange(
+						input.symbol,
+						"1h",
+						new Date(input.exitTime),
+						postExitEnd,
+					);
+
+					if (postExitBars.length > 0) {
+						postExitAnalysis = analyzePostExit(
+							postExitBars,
+							input.exitPrice,
+							input.entryPrice,
+							input.direction,
+						);
 					}
 				}
 
 				return {
 					available: true,
+					dataQuality,
 					analysis: {
 						stopLossWouldHit,
 						takeProfitWouldHit,
-						maxFavorableExcursion,
-						maxAdverseExcursion,
-						wouldHaveRecovered,
-						priceAfterExit,
-						barsAnalyzed: bars.length,
+						maxFavorableExcursion: maemfe.mfePoints,
+						maxAdverseExcursion: maemfe.maePoints,
+						maePrice: maemfe.maePrice,
+						mfePrice: maemfe.mfePrice,
+						wouldHaveRecovered: postExitAnalysis?.wouldHaveRecovered ?? false,
+						priceAfterExit: postExitAnalysis?.priceAtAnalysisEnd ?? null,
+						potentialAdditionalProfit:
+							postExitAnalysis?.potentialAdditionalProfit ?? 0,
+						barsAnalyzed: tradeBars.length,
 					},
 				};
 			} catch (error) {
@@ -295,14 +184,15 @@ export const marketDataRouter = createTRPCRouter({
 			}
 		}),
 
-	// ============================================================================
-	// CACHED DATA ENDPOINTS (uses candle_cache table)
-	// ============================================================================
-
 	/**
 	 * Get OHLC data for chart display with caching
 	 * Fetches from cache first, falls back to API on miss
 	 * Designed for trade detail chart component
+	 *
+	 * This is the recommended endpoint for chart data as it:
+	 * - Uses the cache-first strategy with cross-user deduplication
+	 * - Adds context before/after the trade for better visualization
+	 * - Supports both Databento (futures) and Twelve Data (forex)
 	 */
 	getChartData: protectedProcedure
 		.input(
