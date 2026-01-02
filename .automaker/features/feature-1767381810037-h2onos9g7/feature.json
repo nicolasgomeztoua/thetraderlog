@@ -1,0 +1,97 @@
+{
+  "category": "Uncategorized",
+  "description": "Hello, so we currently don't have any check to see whether the trades that a user is importing are duplicated. So for example, a user could import the same CSV two times and get duplicate trades. They could import CSVs from similar time ranges and get a couple duplicate trades there. So yeah, we just need to fix that. It's a bit of a logic in the batch import, so not sure what the best way to check that is, whether a query or a smart hash or something more technical to make it faster or just a simple ID query. Then for testing, we want to add a imports or a trades tester. We do testing with our skill that we have in our skills folder. And we should do it in the same format as the back end is in, right? So per router testing sort of thing. We just don't have that set up yet.",
+  "title": "Add duplicate trade detection for batch imports",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "opus",
+  "thinkingLevel": "none",
+  "branchName": "fix/duplicate-csv-trades-imports",
+  "priority": 1,
+  "planningMode": "full",
+  "requirePlanApproval": true,
+  "dependencies": [],
+  "titleGenerating": false,
+  "status": "waiting_approval",
+  "id": "feature-1767381810037-h2onos9g7",
+  "startedAt": "2026-01-02T19:57:55.270Z",
+  "updatedAt": "2026-01-02T19:59:15.594Z",
+  "planSpec": {
+    "status": "approved",
+    "version": 1,
+    "reviewedByUser": true,
+    "generatedAt": "2026-01-02T19:26:38.654Z",
+    "tasks": [
+      {
+        "id": "T001",
+        "description": "Add tradeHash column to trades table schema",
+        "filePath": "src/server/db/schema.ts",
+        "phase": "Phase 1: Foundation",
+        "status": "pending"
+      },
+      {
+        "id": "T002",
+        "description": "Create trade hash utility function",
+        "filePath": "src/lib/trade-hash.ts",
+        "phase": "Phase 1: Foundation",
+        "status": "pending"
+      },
+      {
+        "id": "T003",
+        "description": "Update batchImport procedure to compute hashes",
+        "filePath": "src/server/api/routers/trades.ts",
+        "phase": "Phase 2: Core Implementation",
+        "status": "pending"
+      },
+      {
+        "id": "T004",
+        "description": "Add duplicate detection query before insert",
+        "filePath": "src/server/api/routers/trades.ts",
+        "phase": "Phase 2: Core Implementation",
+        "status": "pending"
+      },
+      {
+        "id": "T005",
+        "description": "Update batchImport response to include skipped count",
+        "filePath": "src/server/api/routers/trades.ts",
+        "phase": "Phase 2: Core Implementation",
+        "status": "pending"
+      },
+      {
+        "id": "T006",
+        "description": "Create trades router test file with setup",
+        "filePath": "tests/integration/trades.test.ts",
+        "phase": "Phase 3: Integration & Testing",
+        "status": "pending"
+      },
+      {
+        "id": "T007",
+        "description": "Add tests for batchImport happy path",
+        "filePath": "tests/integration/trades.test.ts",
+        "phase": "Phase 3: Integration & Testing",
+        "status": "pending"
+      },
+      {
+        "id": "T008",
+        "description": "Add tests for duplicate detection scenarios",
+        "filePath": "tests/integration/trades.test.ts",
+        "phase": "Phase 3: Integration & Testing",
+        "status": "pending"
+      },
+      {
+        "id": "T009",
+        "description": "Add tests for edge cases (different accounts, time precision)",
+        "filePath": "tests/integration/trades.test.ts",
+        "phase": "Phase 3: Integration & Testing",
+        "status": "pending"
+      }
+    ],
+    "tasksTotal": 9,
+    "tasksCompleted": 9,
+    "approvedAt": "2026-01-02T19:28:22.823Z",
+    "currentTaskId": "T009"
+  },
+  "justFinishedAt": "2026-01-02T19:59:15.594Z"
+}
