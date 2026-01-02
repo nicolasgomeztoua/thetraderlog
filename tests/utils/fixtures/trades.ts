@@ -26,8 +26,8 @@ let _tradeCounter = 0;
  * Requires userId and accountId (trades belong to a user and account).
  */
 export async function createTestTrade(
-	userId: number,
-	accountId: number,
+	userId: string,
+	accountId: string,
 	options: CreateTestTradeOptions = {},
 ) {
 	const db = getTestDb();
@@ -101,8 +101,8 @@ export async function createTestTrade(
  * Creates multiple test trades at once.
  */
 export async function createTestTrades(
-	userId: number,
-	accountId: number,
+	userId: string,
+	accountId: string,
 	count: number,
 	options: CreateTestTradeOptions = {},
 ) {

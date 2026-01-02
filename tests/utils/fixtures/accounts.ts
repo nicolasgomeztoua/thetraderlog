@@ -22,7 +22,7 @@ let accountCounter = 0;
  * Requires a userId (accounts must belong to a user).
  */
 export async function createTestAccount(
-	userId: number,
+	userId: string,
 	options: CreateTestAccountOptions = {},
 ) {
 	const db = getTestDb();

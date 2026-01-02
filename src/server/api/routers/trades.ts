@@ -285,7 +285,7 @@ export const tradesRouter = createTRPCRouter({
 				});
 			}
 
-			let nextCursor: number | undefined;
+			let nextCursor: string | undefined;
 			if (items.length > limit) {
 				const nextItem = items.pop();
 				nextCursor = nextItem?.id;

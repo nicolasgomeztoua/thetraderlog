@@ -167,7 +167,7 @@ describe("accounts router", () => {
 	describe("getById", () => {
 		it("should return account by ID with relations", async () => {
 			const allAccounts = await caller.accounts.getAll();
-			const accountId = allAccounts[0]?.id ?? 0;
+			const accountId = allAccounts[0]?.id ?? "";
 
 			const account = await caller.accounts.getById({ id: accountId });
 
@@ -176,7 +176,7 @@ describe("accounts router", () => {
 		});
 
 		it("should throw error for non-existent account", async () => {
-			await expect(caller.accounts.getById({ id: 999999 })).rejects.toThrow(
+			await expect(caller.accounts.getById({ id: "non-existent-id" })).rejects.toThrow(
 				"Account not found",
 			);
 		});
@@ -201,7 +201,7 @@ describe("accounts router", () => {
 			const account = allAccounts.find((a) => a.name === "Demo Account");
 
 			const updated = await caller.accounts.update({
-				id: account?.id ?? 0,
+				id: account?.id ?? "",
 				name: "Updated Demo Account",
 				broker: "New Broker",
 				notes: "Updated notes",
@@ -219,7 +219,7 @@ describe("accounts router", () => {
 			);
 
 			const updated = await caller.accounts.update({
-				id: propAccount?.id ?? 0,
+				id: propAccount?.id ?? "",
 				maxDrawdown: "8",
 				profitTarget: "12",
 			});
@@ -233,7 +233,7 @@ describe("accounts router", () => {
 			const nonDefaultAccount = allAccounts.find((a) => !a.isDefault);
 
 			await caller.accounts.update({
-				id: nonDefaultAccount?.id ?? 0,
+				id: nonDefaultAccount?.id ?? "",
 				isDefault: true,
 			});
 
@@ -246,7 +246,7 @@ describe("accounts router", () => {
 
 		it("should throw error when updating non-existent account", async () => {
 			await expect(
-				caller.accounts.update({ id: 999999, name: "Test" }),
+				caller.accounts.update({ id: "non-existent-id", name: "Test" }),
 			).rejects.toThrow("Account not found");
 		});
 	});
@@ -257,7 +257,7 @@ describe("accounts router", () => {
 			const nonDefaultAccount = allAccounts.find((a) => !a.isDefault);
 
 			const updated = await caller.accounts.setDefault({
-				id: nonDefaultAccount?.id ?? 0,
+				id: nonDefaultAccount?.id ?? "",
 			});
 
 			expect(updated?.isDefault).toBe(true);
@@ -278,12 +278,12 @@ describe("accounts router", () => {
 				initialBalance: "5000",
 			});
 
-			const result = await caller.accounts.delete({ id: toDelete?.id ?? 0 });
+			const result = await caller.accounts.delete({ id: toDelete?.id ?? "" });
 			expect(result.success).toBe(true);
 
 			// Verify it's gone
 			await expect(
-				caller.accounts.getById({ id: toDelete?.id ?? 0 }),
+				caller.accounts.getById({ id: toDelete?.id ?? "" }),
 			).rejects.toThrow("Account not found");
 		});
 
@@ -296,12 +296,12 @@ describe("accounts router", () => {
 			});
 
 			// Create trades for this account
-			await createTestTrades(user.id, account?.id ?? 0, 2, {
+			await createTestTrades(user.id, account?.id ?? "", 2, {
 				status: "closed",
 			});
 
 			// Delete account
-			const result = await caller.accounts.delete({ id: account?.id ?? 0 });
+			const result = await caller.accounts.delete({ id: account?.id ?? "" });
 			expect(result.success).toBe(true);
 		});
 
@@ -315,7 +315,7 @@ describe("accounts router", () => {
 				accountType: "live",
 			});
 
-			await caller.accounts.delete({ id: defaultAccount?.id ?? 0 });
+			await caller.accounts.delete({ id: defaultAccount?.id ?? "" });
 
 			// A new default should be set
 			const newDefault = await caller.accounts.getDefault();
@@ -351,7 +351,7 @@ describe("accounts router", () => {
 
 		it("should convert challenge to funded account on pass", async () => {
 			const result = await caller.accounts.convertToFunded({
-				challengeAccountId: challengeAccount?.id ?? 0,
+				challengeAccountId: challengeAccount?.id ?? "",
 				name: "MFF Funded Account",
 				initialBalance: "50000",
 				maxDrawdown: "5",
@@ -374,7 +374,7 @@ describe("accounts router", () => {
 			);
 
 			const linked = await caller.accounts.getLinkedAccount({
-				id: fundedAccount?.id ?? 0,
+				id: fundedAccount?.id ?? "",
 			});
 
 			expect(linked?.id).toBe(challengeAccount?.id);
@@ -389,7 +389,7 @@ describe("accounts router", () => {
 			});
 
 			const result = await caller.accounts.markChallengeFailed({
-				id: failedChallenge?.id ?? 0,
+				id: failedChallenge?.id ?? "",
 			});
 
 			expect(result?.challengeStatus).toBe("failed");
@@ -404,7 +404,7 @@ describe("accounts router", () => {
 
 			await expect(
 				caller.accounts.convertToFunded({
-					challengeAccountId: liveAccount?.id ?? 0,
+					challengeAccountId: liveAccount?.id ?? "",
 					name: "Should Fail",
 					initialBalance: "10000",
 				}),
@@ -416,7 +416,7 @@ describe("accounts router", () => {
 			const liveAccount = accounts.find((a) => a.accountType === "live");
 
 			await expect(
-				caller.accounts.markChallengeFailed({ id: liveAccount?.id ?? 0 }),
+				caller.accounts.markChallengeFailed({ id: liveAccount?.id ?? "" }),
 			).rejects.toThrow("Account is not a prop challenge account");
 		});
 	});
@@ -436,7 +436,7 @@ describe("accounts router", () => {
 			});
 
 			// Create winning trades
-			await createTestTrades(user.id, statsAccount?.id ?? 0, 3, {
+			await createTestTrades(user.id, statsAccount?.id ?? "", 3, {
 				status: "closed",
 				direction: "long",
 				entryPrice: "100.00",
@@ -445,7 +445,7 @@ describe("accounts router", () => {
 			});
 
 			// Create losing trades
-			await createTestTrades(user.id, statsAccount?.id ?? 0, 2, {
+			await createTestTrades(user.id, statsAccount?.id ?? "", 2, {
 				status: "closed",
 				direction: "long",
 				entryPrice: "100.00",
@@ -456,7 +456,7 @@ describe("accounts router", () => {
 
 		it("should calculate account statistics correctly", async () => {
 			const stats = await caller.accounts.getStats({
-				id: statsAccount?.id ?? 0,
+				id: statsAccount?.id ?? "",
 			});
 
 			expect(stats.totalTrades).toBe(5);
@@ -467,7 +467,7 @@ describe("accounts router", () => {
 		});
 
 		it("should throw error for non-existent account", async () => {
-			await expect(caller.accounts.getStats({ id: 999999 })).rejects.toThrow(
+			await expect(caller.accounts.getStats({ id: "non-existent-id" })).rejects.toThrow(
 				"Account not found",
 			);
 		});
@@ -516,7 +516,7 @@ describe("accounts router", () => {
 		describe("getGroupById", () => {
 			it("should return group with accounts", async () => {
 				const fetchedGroup = await caller.accounts.getGroupById({
-					id: group?.id ?? 0,
+					id: group?.id ?? "",
 				});
 
 				expect(fetchedGroup?.name).toBe("Prop Firm Accounts");
@@ -525,7 +525,7 @@ describe("accounts router", () => {
 
 			it("should throw error for non-existent group", async () => {
 				await expect(
-					caller.accounts.getGroupById({ id: 999999 }),
+					caller.accounts.getGroupById({ id: "non-existent-id" }),
 				).rejects.toThrow("Group not found");
 			});
 		});
@@ -533,7 +533,7 @@ describe("accounts router", () => {
 		describe("updateGroup", () => {
 			it("should update group fields", async () => {
 				const updated = await caller.accounts.updateGroup({
-					id: group?.id ?? 0,
+					id: group?.id ?? "",
 					name: "Updated Group Name",
 					color: "#00d4ff",
 				});
@@ -546,7 +546,7 @@ describe("accounts router", () => {
 		describe("getGroupStats", () => {
 			it("should return cumulative stats for empty group", async () => {
 				const stats = await caller.accounts.getGroupStats({
-					id: group?.id ?? 0,
+					id: group?.id ?? "",
 				});
 
 				expect(stats.totalTrades).toBe(0);
@@ -562,14 +562,14 @@ describe("accounts router", () => {
 				});
 
 				const result = await caller.accounts.deleteGroup({
-					id: toDelete?.id ?? 0,
+					id: toDelete?.id ?? "",
 				});
 
 				expect(result.success).toBe(true);
 
 				// Verify it's deleted
 				await expect(
-					caller.accounts.getGroupById({ id: toDelete?.id ?? 0 }),
+					caller.accounts.getGroupById({ id: toDelete?.id ?? "" }),
 				).rejects.toThrow("Group not found");
 			});
 		});
@@ -608,18 +608,18 @@ describe("accounts router", () => {
 			});
 
 			await expect(
-				caller.accounts.getGroupById({ id: otherGroup?.id ?? 0 }),
+				caller.accounts.getGroupById({ id: otherGroup?.id ?? "" }),
 			).rejects.toThrow("Group not found");
 
 			await expect(
 				caller.accounts.updateGroup({
-					id: otherGroup?.id ?? 0,
+					id: otherGroup?.id ?? "",
 					name: "Hacked Group",
 				}),
 			).rejects.toThrow("Group not found");
 
 			await expect(
-				caller.accounts.deleteGroup({ id: otherGroup?.id ?? 0 }),
+				caller.accounts.deleteGroup({ id: otherGroup?.id ?? "" }),
 			).rejects.toThrow("Group not found");
 		});
 	});

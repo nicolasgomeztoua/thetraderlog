@@ -14,8 +14,8 @@ const LOG_TAG = "[Queue:ProcessImport]";
 
 // Schema for the message body
 const messageSchema = z.object({
-	tradeIds: z.array(z.number()),
-	userId: z.number(),
+	tradeIds: z.array(z.string()),
+	userId: z.string(),
 });
 
 // Create receiver for signature verification

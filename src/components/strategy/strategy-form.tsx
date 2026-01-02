@@ -33,7 +33,7 @@ const PRESET_COLORS = [
 ];
 
 export interface StrategyRule {
-	id?: number;
+	id?: string;
 	text: string;
 	category: "entry" | "exit" | "risk" | "management";
 	order: number;

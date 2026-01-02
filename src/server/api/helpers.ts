@@ -19,7 +19,7 @@ type Db = typeof DbType;
  */
 export async function getUserBreakevenThreshold(
 	db: Db,
-	userId: number,
+	userId: string,
 ): Promise<number> {
 	const result = await db.query.userSettings.findFirst({
 		where: eq(userSettings.userId, userId),
@@ -32,7 +32,7 @@ export async function getUserBreakevenThreshold(
  * Get user's timezone setting
  * Default is UTC if not set
  */
-export async function getUserTimezone(db: Db, userId: number): Promise<string> {
+export async function getUserTimezone(db: Db, userId: string): Promise<string> {
 	const result = await db.query.userSettings.findFirst({
 		where: eq(userSettings.userId, userId),
 		columns: { timezone: true },
@@ -52,7 +52,7 @@ export async function getUserTimezone(db: Db, userId: number): Promise<string> {
  * const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
  * conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
  */
-export function getActiveAccountsSubquery(db: Db, userId: number) {
+export function getActiveAccountsSubquery(db: Db, userId: string) {
 	return db
 		.select({ id: accounts.id })
 		.from(accounts)

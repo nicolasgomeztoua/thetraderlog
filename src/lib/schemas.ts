@@ -130,6 +130,6 @@ export const propFieldsSchema = z.object({
 	challengeStatus: challengeStatusEnum.optional(),
 	profitSplit: z.string().optional(),
 	payoutFrequency: payoutFrequencyEnum.optional(),
-	linkedAccountId: z.number().optional(),
-	groupId: z.number().optional(),
+	linkedAccountId: z.string().optional(),
+	groupId: z.string().optional(),
 });
