@@ -1,34 +1,41 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1766855773340,
-			"tag": "0000_strong_swarm",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1766883767385,
-			"tag": "0001_foamy_dracula",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1766964076958,
-			"tag": "0002_bright_jamie_braddock",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1767312000000,
-			"tag": "0003_prefixed_uuid_migration",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1766855773340,
+      "tag": "0000_strong_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766883767385,
+      "tag": "0001_foamy_dracula",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1766964076958,
+      "tag": "0002_bright_jamie_braddock",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1767312000000,
+      "tag": "0003_prefixed_uuid_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1767378168272,
+      "tag": "0004_bored_daredevil",
+      "breakpoints": true
+    }
+  ]
 }
