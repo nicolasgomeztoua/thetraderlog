@@ -306,6 +306,7 @@ export const trades = createTable(
 		// Import tracking
 		importSource: importSourceEnum("import_source").notNull().default("manual"),
 		externalId: text("external_id"), // For tracking imported trades
+		tradeHash: text("trade_hash"), // SHA-256 hash for duplicate detection on CSV imports
 
 		// Soft delete
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -326,6 +327,7 @@ export const trades = createTable(
 		index("trade_entry_time_idx").on(t.entryTime),
 		index("trade_status_idx").on(t.status),
 		index("trade_deleted_at_idx").on(t.deletedAt),
+		index("trade_hash_idx").on(t.tradeHash),
 	],
 );
 

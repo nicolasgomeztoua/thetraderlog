@@ -24,6 +24,7 @@ import {
 	tradeStatusEnum,
 } from "@/lib/schemas";
 import { calculateAggregateStats } from "@/lib/stats-calculations";
+import { computeTradeHash } from "@/lib/trade-hash";
 import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
@@ -442,6 +443,22 @@ export const tradesRouter = createTRPCRouter({
 					}
 				}
 
+				// Compute trade hash for duplicate detection (only for closed trades)
+				// Open trades without exit data cannot be reliably deduplicated
+				let tradeHash: string | null = null;
+				if (isClosed && trade.exitPrice && trade.exitTime) {
+					tradeHash = computeTradeHash({
+						accountId,
+						symbol: trade.symbol,
+						direction: trade.direction,
+						entryPrice: trade.entryPrice,
+						entryTime: new Date(trade.entryTime),
+						exitPrice: trade.exitPrice,
+						exitTime: new Date(trade.exitTime),
+						quantity: trade.quantity,
+					});
+				}
+
 				return {
 					userId: ctx.user.id,
 					accountId,
@@ -464,14 +481,57 @@ export const tradesRouter = createTRPCRouter({
 					netPnl,
 					stopLossHit,
 					takeProfitHit,
+					tradeHash,
 				};
 			});
 
-			// Insert all trades in a single batch
-			const insertedTrades = await ctx.db
-				.insert(trades)
-				.values(tradeRecords)
-				.returning({ id: trades.id, status: trades.status });
+			// Collect hashes for duplicate detection (only non-null hashes)
+			const hashesToCheck = tradeRecords
+				.map((r) => r.tradeHash)
+				.filter((hash): hash is string => hash !== null);
+
+			// Query for existing trades with these hashes in the same account
+			let existingHashes = new Set<string>();
+			if (hashesToCheck.length > 0) {
+				const existingTrades = await ctx.db
+					.select({ tradeHash: trades.tradeHash })
+					.from(trades)
+					.where(
+						and(
+							eq(trades.accountId, accountId),
+							eq(trades.userId, ctx.user.id),
+							isNull(trades.deletedAt),
+							inArray(trades.tradeHash, hashesToCheck),
+						),
+					);
+				existingHashes = new Set(
+					existingTrades
+						.map((t) => t.tradeHash)
+						.filter((h): h is string => h !== null),
+				);
+			}
+
+			// Filter out duplicates (trades whose hash already exists)
+			const newTradeRecords = tradeRecords.filter((record) => {
+				// If no hash (open trade), always include
+				if (record.tradeHash === null) {
+					return true;
+				}
+				// If hash exists in database, skip (duplicate)
+				return !existingHashes.has(record.tradeHash);
+			});
+
+			// Track skipped count
+			const skippedCount = tradeRecords.length - newTradeRecords.length;
+
+			// Insert only non-duplicate trades
+			let insertedTrades: { id: string; status: "open" | "closed" }[] = [];
+			if (newTradeRecords.length > 0) {
+				insertedTrades = await ctx.db
+					.insert(trades)
+					.values(newTradeRecords)
+					.returning({ id: trades.id, status: trades.status });
+			}
 
 			// Get IDs of closed trades that need MAE/MFE calculation
 			const closedTradeIds = insertedTrades
@@ -492,6 +552,7 @@ export const tradesRouter = createTRPCRouter({
 
 			return {
 				imported: insertedTrades.length,
+				skipped: skippedCount,
 				total: tradesToImport.length,
 				tradeIds: insertedTrades.map((t) => t.id),
 				processingCount: closedTradeIds.length,
