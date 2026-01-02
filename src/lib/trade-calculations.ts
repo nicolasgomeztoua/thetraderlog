@@ -222,7 +222,6 @@ export interface MAEMFEResult {
 	mfePrice: number; // Price at maximum favorable excursion
 	maeAmount: number; // $ value of MAE
 	mfeAmount: number; // $ value of MFE
-	efficiency: number; // % of MFE captured (0-100)
 	maePoints: number; // Points of adverse movement
 	mfePoints: number; // Points of favorable movement
 }
@@ -259,7 +258,6 @@ export function calculateMAEMFE(
 			mfePrice: entryPrice,
 			maeAmount: 0,
 			mfeAmount: 0,
-			efficiency: 0,
 			maePoints: 0,
 			mfePoints: 0,
 		};
@@ -309,28 +307,11 @@ export function calculateMAEMFE(
 	const maeAmount = maxAdverseExcursion * pointValue * quantity;
 	const mfeAmount = maxFavorableExcursion * pointValue * quantity;
 
-	// Calculate actual P&L in points
-	const actualPoints =
-		direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
-
-	// Trade efficiency: what % of the maximum favorable move did we capture?
-	// efficiency = actualPnl / MFE * 100
-	// Can be > 100% if we exited at the absolute best point
-	// Can be negative if we lost money
-	let efficiency = 0;
-	if (maxFavorableExcursion > 0) {
-		efficiency = (actualPoints / maxFavorableExcursion) * 100;
-	} else if (actualPoints > 0) {
-		// MFE was 0 but we made money (unusual but possible)
-		efficiency = 100;
-	}
-
 	return {
 		maePrice,
 		mfePrice,
 		maeAmount,
 		mfeAmount,
-		efficiency: Math.round(efficiency * 100) / 100, // Round to 2 decimals
 		maePoints: maxAdverseExcursion,
 		mfePoints: maxFavorableExcursion,
 	};

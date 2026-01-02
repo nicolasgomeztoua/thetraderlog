@@ -178,7 +178,6 @@ export async function calculateAndStoreMAEMFE(
 				mfePrice: metrics.mfePrice,
 				maeAmount: metrics.maeAmount,
 				mfeAmount: metrics.mfeAmount,
-				efficiency: metrics.efficiency,
 			}),
 		);
 
@@ -190,7 +189,6 @@ export async function calculateAndStoreMAEMFE(
 				mfePrice: metrics.mfePrice.toString(),
 				maeAmount: metrics.maeAmount.toFixed(2),
 				mfeAmount: metrics.mfeAmount.toFixed(2),
-				tradeEfficiency: metrics.efficiency.toFixed(2),
 				marketDataQuality: dataQuality,
 			})
 			.where(eq(trades.id, tradeId))

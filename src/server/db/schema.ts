@@ -291,7 +291,6 @@ export const trades = createTable(
 		mfePrice: decimal("mfe_price", { precision: 20, scale: 8 }), // Price of max favorable excursion
 		maeAmount: decimal("mae_amount", { precision: 20, scale: 2 }), // $ value of MAE
 		mfeAmount: decimal("mfe_amount", { precision: 20, scale: 2 }), // $ value of MFE
-		tradeEfficiency: decimal("trade_efficiency", { precision: 5, scale: 2 }), // % of MFE captured (0-100)
 		marketDataQuality: dataQualityEnum("market_data_quality"), // Quality of market data used for analysis
 
 		// Trade metadata

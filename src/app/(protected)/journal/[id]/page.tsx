@@ -519,7 +519,6 @@ export default function TradeDetailPage() {
 							mfePrice: trade.mfePrice,
 							maeAmount: trade.maeAmount,
 							mfeAmount: trade.mfeAmount,
-							tradeEfficiency: trade.tradeEfficiency,
 							marketDataQuality: trade.marketDataQuality,
 							executions: trade.executions?.map((e) => ({
 								id: e.id,

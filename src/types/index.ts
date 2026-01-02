@@ -95,7 +95,6 @@ export type TradeForStatsPanel = Pick<
 	| "mfePrice"
 	| "maeAmount"
 	| "mfeAmount"
-	| "tradeEfficiency"
 	| "marketDataQuality"
 > & {
 	executions?: TradeExecution[];

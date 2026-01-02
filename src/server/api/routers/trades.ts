@@ -1260,7 +1260,6 @@ export const tradesRouter = createTRPCRouter({
 							mfePrice: result.metrics.mfePrice,
 							maeAmount: result.metrics.maeAmount,
 							mfeAmount: result.metrics.mfeAmount,
-							efficiency: result.metrics.efficiency,
 							maePoints: result.metrics.maePoints,
 							mfePoints: result.metrics.mfePoints,
 						}
