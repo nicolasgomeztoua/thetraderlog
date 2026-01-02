@@ -1,0 +1,106 @@
+{
+  "category": "Uncategorized",
+  "description": "Migrate Documentation to Claude Code Skills and Custom Markdown Files\n\nResearch Claude Code's skills system and custom markdown file capabilities, then reorganize existing markdown documentation into the appropriate format based on best practices.\n\nRequirements:\n\nDocumentation Audit:\n- Inventory all existing markdown files in the repository\n- Categorize files by purpose (design guidelines, architecture docs, testing procedures, project tracking, etc.)\n- Identify which documents would benefit from being interactive skills vs static reference files\n\nResearch Phase:\n- Review Claude Code documentation for skills best practices and capabilities\n- Understand the difference between .claud.md files and regular markdown files\n- Determine when to use skills vs custom markdown vs standard markdown\n- Document findings and make recommendations for each file type\n\nSkill Creation:\n- Create a \"frontend-engineer\" skill containing design system guidelines and component patterns\n- Create an \"architecture\" skill with system architecture overview and best practices\n- Create a \"testing\" skill with testing philosophy, integration test patterns, and examples\n- Ensure skills are properly structured to be invoked and provide contextual assistance\n\nProject Tracking Files:\n- Evaluate whether roadmap.md and plan.md should be converted to .claud.md files or remain as standard markdown\n- Consider if these active planning documents benefit from special treatment or can stay as-is\n- Make decision based on how frequently they're referenced and whether Claude needs special awareness of them\n\nImplementation:\n- Migrate appropriate documentation to chosen formats\n- Test that skills can be invoked and provide useful context\n- Verify custom markdown files (if used) are properly recognized\n- Update any references or documentation about where to find these resources\n- Document the organizational system for future additions\n\nSuccess Criteria:\n- All documentation is in the optimal format for its use case\n- Skills are functional and provide relevant guidance when invoked\n- Clear rationale documented for format choices made",
+  "title": "Refactor documentation into Claude Code skills system",
+  "images": [],
+  "imagePaths": [],
+  "textFilePaths": [],
+  "skipTests": true,
+  "model": "opus",
+  "thinkingLevel": "medium",
+  "branchName": "main",
+  "priority": 1,
+  "planningMode": "spec",
+  "requirePlanApproval": true,
+  "dependencies": [],
+  "titleGenerating": false,
+  "status": "waiting_approval",
+  "id": "feature-1767375744088-rgrkasnz6",
+  "startedAt": "2026-01-02T18:15:26.762Z",
+  "updatedAt": "2026-01-02T18:18:39.217Z",
+  "planSpec": {
+    "status": "approved",
+    "version": 1,
+    "reviewedByUser": true,
+    "generatedAt": "2026-01-02T17:46:11.381Z",
+    "tasks": [
+      {
+        "id": "T001",
+        "description": "Create root CLAUDE.md with project context",
+        "filePath": "CLAUDE.md",
+        "status": "pending"
+      },
+      {
+        "id": "T002",
+        "description": "Create .claude/skills directory structure",
+        "filePath": ".claude/skills/",
+        "status": "pending"
+      },
+      {
+        "id": "T003",
+        "description": "Create frontend-engineer skill SKILL.md",
+        "filePath": ".claude/skills/frontend-engineer/SKILL.md",
+        "status": "pending"
+      },
+      {
+        "id": "T004",
+        "description": "Create frontend-engineer DESIGN_REFERENCE.md",
+        "filePath": ".claude/skills/frontend-engineer/DESIGN_REFERENCE.md",
+        "status": "pending"
+      },
+      {
+        "id": "T005",
+        "description": "Create architecture skill SKILL.md",
+        "filePath": ".claude/skills/architecture/SKILL.md",
+        "status": "pending"
+      },
+      {
+        "id": "T006",
+        "description": "Create architecture MARKET_DATA_REFERENCE.md",
+        "filePath": ".claude/skills/architecture/MARKET_DATA_REFERENCE.md",
+        "status": "pending"
+      },
+      {
+        "id": "T007",
+        "description": "Create testing skill SKILL.md",
+        "filePath": ".claude/skills/testing/SKILL.md",
+        "status": "pending"
+      },
+      {
+        "id": "T008",
+        "description": "Create testing TESTING_REFERENCE.md",
+        "filePath": ".claude/skills/testing/TESTING_REFERENCE.md",
+        "status": "pending"
+      },
+      {
+        "id": "T009",
+        "description": "Update README.md documentation section",
+        "filePath": "README.md",
+        "status": "pending"
+      },
+      {
+        "id": "T010",
+        "description": "Add skill reference note to DESIGN_SYSTEM.md",
+        "filePath": "DESIGN_SYSTEM.md",
+        "status": "pending"
+      },
+      {
+        "id": "T011",
+        "description": "Add skill reference note to MARKET_DATA_ARCHITECTURE.md",
+        "filePath": "MARKET_DATA_ARCHITECTURE.md",
+        "status": "pending"
+      },
+      {
+        "id": "T012",
+        "description": "Add skill reference note to tests/README.md",
+        "filePath": "tests/README.md",
+        "status": "pending"
+      }
+    ],
+    "tasksTotal": 12,
+    "tasksCompleted": 12,
+    "approvedAt": "2026-01-02T17:59:40.023Z",
+    "currentTaskId": "T012"
+  },
+  "justFinishedAt": "2026-01-02T18:18:39.217Z"
+}

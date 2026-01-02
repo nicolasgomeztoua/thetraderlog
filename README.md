@@ -110,10 +110,27 @@ tests/
 
 ## Documentation
 
-- [Design System](./DESIGN_SYSTEM.md) — "The Terminal" design language, colors, typography, and components
-- [Market Data Architecture](./MARKET_DATA_ARCHITECTURE.md) — OHLC caching, MAE/MFE calculation, and cost optimization
+### Project Tracking
+
 - [Roadmap](./ROADMAP.md) — Feature parity roadmap with TradeZella
+- [Phase Plans](./plans/) — Detailed implementation plans for each phase
 - [Testing Guide](./tests/README.md) — Testing philosophy, fixtures, and conventions
+
+### Claude Code Integration
+
+This project includes [Claude Code](https://claude.com/claude-code) integration for AI-assisted development:
+
+- **[CLAUDE.md](./CLAUDE.md)** — Project context automatically loaded when Claude Code starts
+
+- **Skills** — Specialized guidance in `.claude/skills/`:
+
+  | Skill | Purpose | Documentation |
+  |-------|---------|---------------|
+  | `frontend-engineer` | Terminal design system, component patterns | `SKILL.md` + `DESIGN_REFERENCE.md` |
+  | `architecture` | System architecture, data flow, caching | `SKILL.md` + `MARKET_DATA_REFERENCE.md` |
+  | `testing` | Testing patterns, fixtures, conventions | `SKILL.md` + `TESTING_REFERENCE.md` |
+
+Skills provide contextual guidance when working with Claude Code and are automatically invoked based on the type of work being requested.
 
 ## Data Model
 

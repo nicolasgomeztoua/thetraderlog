@@ -10,7 +10,7 @@
 		"check:write": "biome check --write .",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:migrate:custom": "npx tsx scripts/migrate.ts",
+		"db:migrate:sql": "npx tsx scripts/run-sql-migration.ts",
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"dev": "bun run --bun next dev --turbo",
