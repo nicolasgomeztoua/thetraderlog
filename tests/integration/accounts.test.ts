@@ -176,9 +176,9 @@ describe("accounts router", () => {
 		});
 
 		it("should throw error for non-existent account", async () => {
-			await expect(caller.accounts.getById({ id: "non-existent-id" })).rejects.toThrow(
-				"Account not found",
-			);
+			await expect(
+				caller.accounts.getById({ id: "non-existent-id" }),
+			).rejects.toThrow("Account not found");
 		});
 
 		it("should throw error for account owned by another user", async () => {
@@ -467,9 +467,9 @@ describe("accounts router", () => {
 		});
 
 		it("should throw error for non-existent account", async () => {
-			await expect(caller.accounts.getStats({ id: "non-existent-id" })).rejects.toThrow(
-				"Account not found",
-			);
+			await expect(
+				caller.accounts.getStats({ id: "non-existent-id" }),
+			).rejects.toThrow("Account not found");
 		});
 	});
 

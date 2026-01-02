@@ -1,94 +1,94 @@
 {
-  "category": "Refactor",
-  "description": "We were in the middle of porting our ID system of the database into a prefix plus nano ID base system. Obviously, this requires a bunch of touches around the app to change the types and the database schema and basically how we use it. So we're kind of stuck in the middle. We did a lot of them already, but we still have some linting errors and stuff where we need to port over parts of the app over to this new plan and I'll drop in the whole plan here as follows.\n\n# Prefixed UUID Migration\n\n## Summary\n\nReplace sequential integer primary keys with prefixed short UUIDs (e.g., `tr-a1b2c3d4e5f6`) across all database tables. This improves security, prevents ID enumeration, and makes IDs self-documenting.\n\n## ID Format\n\n- Pattern: `{prefix}-{16 chars}` where 16 chars = nanoid (URL-safe, collision-resistant)\n- 16 chars with 62-char alphabet = ~95 bits of entropy (collision-proof at any realistic scale)\n- Examples: `tr-Xk3jD9mPq2LwN4Hy`, `ac-7nR4vB8xK1ZpT2Mf`, `us-mQ5cF2hT9WyuJ6Rg`\n\n## Tables and Prefixes\n\n| Table | Prefix | Example ||-------|--------|---------|| users | `us` | `us-Xk3jD9mPq2LwN4Hy` || accounts | `ac` | `ac-7nR4vB8xK1ZpT2Mf` || accountGroups | `ag` | `ag-mQ5cF2hT9WyuJ6Rg` || trades | `tr` | `tr-pL6sN1dY4RxvQ8Bc` || tradeExecutions | `ex` | `ex-qW9aH3gE7UjtK5Nd` || tags | `tg` | `tg-kI2oM5fC8SnbV0Xe` || tradeScreenshots | `ss` | `ss-vZ4yT0wP6BhcL1Yf` || userSettings | `st` | `st-jU1xD7rA3GmfW2Zg` || filterPresets | `fp` | `fp-eO8lK2iV5QzsR4Ah` || aiConversations | `cv` | `cv-cG4bJ6nX9YtwS3Bi` || aiMessages | `mg` | `mg-hR0pE5uS2FkdU7Cj` || strategies | `sy` | `sy-wN3vL8qM1ZxcP6Dk` || strategyRules | `sr` | `sr-tB7yC0jK4PafO9El` || candleCache | `cc` | `cc-uH5rW2dG6LmeI8Fm` |\n\n## Implementation Steps\n\n### 1. Add ID Generation Utility\n\nCreate [`src/lib/id.ts`](src/lib/id.ts) with nanoid-based ID generator:\n\n```typescript\nimport { customAlphabet } from \"nanoid\";\n\nconst alphabet = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\";\nconst nanoid = customAlphabet(alphabet, 16);\n\nexport const createId = (prefix: string) => `${prefix}-${nanoid()}`;\n\n// Typed helpers for each entity\nexport const ids = {\n  user: () => createId(\"us\"),\n  account: () => createId(\"ac\"),\n  accountGroup: () => createId(\"ag\"),\n  trade: () => createId(\"tr\"),\n  execution: () => createId(\"ex\"),\n  tag: () => createId(\"tg\"),\n  screenshot: () => createId(\"ss\"),\n  settings: () => createId(\"st\"),\n  filterPreset: () => createId(\"fp\"),\n  conversation: () => createId(\"cv\"),\n  message: () => createId(\"mg\"),\n  strategy: () => createId(\"sy\"),\n  strategyRule: () => createId(\"sr\"),\n  candleCache: () => createId(\"cc\"),\n};\n```\n\n\n\n### 2. Update Schema ([`src/server/db/schema.ts`](src/server/db/schema.ts))\n\nChange all ID columns from:\n\n```typescript\nid: integer().primaryKey().generatedByDefaultAsIdentity(),\n```\n\nTo:\n\n```typescript\nid: text().primaryKey().$defaultFn(() => ids.trade()),\n```\n\nForeign keys change from `integer` to `text`.\n\n### 3. Create Migration Script\n\nWrite a Drizzle migration that:\n\n1. Adds new `id_new` text columns to all tables\n2. Generates prefixed UUIDs for existing rows\n3. Updates all foreign key references\n4. Drops old integer columns and renames new ones\n5. Recreates indexes and constraints\n\nThis is complex due to FK dependencies - we must migrate in correct order (users first, then accounts, then trades, etc.)\n\n### 4. Update tRPC Routers\n\nAll routers in [`src/server/api/routers/`](src/server/api/routers/) need updates:\n\n- Change Zod schemas from `z.number()` to `z.string()` for ID inputs\n- Update any `.eq(id)` comparisons (already work with text)\n\nKey files:\n\n- [`trades.ts`](src/server/api/routers/trades.ts) - extensive ID usage\n- [`accounts.ts`](src/server/api/routers/accounts.ts)\n- [`strategies.ts`](src/server/api/routers/strategies.ts)\n- [`tags.ts`](src/server/api/routers/tags.ts)\n\n### 5. Update Frontend Routes\n\nDynamic routes currently use numeric IDs:\n\n- [`src/app/(protected)/trade/[id]/page.tsx`](src/app/(protected)/trade/[id]/page.tsx) - no code change needed (params are already strings)\n- [`src/app/(protected)/strategies/[id]/page.tsx`](src/app/(protected)/strategies/[id]/page.tsx)\n\nLinks and navigation that construct URLs need updates where they parse/cast IDs.\n\n### 6. Update Components\n\nComponents that handle IDs as numbers need updates:\n\n- Optimistic update maps: `Map<number, ...>` becomes `Map<string, ...>`\n- Any `parseInt()` calls on IDs should be removed\n- TypeScript types will update automatically from schema changes\n\n## Migration Order (FK Dependencies)\n\n```mermaid\ngraph TD\n    Users[users] --> Accounts[accounts]\n    Users --> AccountGroups[accountGroups]\n    Users --> Trades[trades]\n    Users --> Tags[tags]\n    Users --> UserSettings[userSettings]\n    Users --> FilterPresets[filterPresets]\n    Users --> AIConversations[aiConversations]\n    Users --> Strategies[strategies]\n    \n    AccountGroups --> Accounts\n    Accounts --> Trades\n    \n    Trades --> TradeExecutions[tradeExecutions]\n    Trades --> TradeTags[tradeTags]\n    Trades --> TradeScreenshots[tradeScreenshots]\n    Trades --> TradeRuleChecks[tradeRuleChecks]\n    \n    Tags --> TradeTags\n    \n    AIConversations --> AIMessages[aiMessages]\n    \n    Strategies --> StrategyRules[strategyRules]\n    StrategyRules --> TradeRuleChecks\n    \n    CandleCache[candleCache]\n```\n\n\n\n## Risk Mitigation\n\n1. **Backup database before migration**\n2. **Test migration on staging first**\n3. **Migration is irreversible** - integer IDs are lost after migration\n4. **URL bookmarks will break** - old `/trade/123` links become invalid\n\n## Files Changed (Estimated)\n\n- `src/lib/id.ts` (new)\n- `src/server/db/schema.ts`\n- `drizzle/` (new migration file)",
-  "title": "Prefixed UUID Migration",
-  "images": [],
-  "imagePaths": [],
-  "textFilePaths": [],
-  "skipTests": true,
-  "model": "opus",
-  "thinkingLevel": "ultrathink",
-  "branchName": "main",
-  "priority": 2,
-  "planningMode": "spec",
-  "requirePlanApproval": true,
-  "dependencies": [],
-  "titleGenerating": false,
-  "status": "completed",
-  "id": "feature-1767368893919-y5wtg6q5q",
-  "startedAt": "2026-01-02T15:48:35.069Z",
-  "updatedAt": "2026-01-02T16:02:03.400Z",
-  "planSpec": {
-    "status": "approved",
-    "version": 1,
-    "reviewedByUser": true,
-    "generatedAt": "2026-01-02T15:50:13.326Z",
-    "tasks": [
-      {
-        "id": "T001",
-        "description": "Update propFieldsSchema - change linkedAccountId and groupId from z.number() to z.string()",
-        "filePath": "src/lib/schemas.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T002",
-        "description": "Update helper functions - change userId parameter from number to string",
-        "filePath": "src/server/api/helpers.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T003",
-        "description": "Update analytics router - ensure string userId is used in all getActiveAccountsSubquery calls",
-        "filePath": "src/server/api/routers/analytics.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T004",
-        "description": "Update strategies router - ensure string userId is used in all getActiveAccountsSubquery calls",
-        "filePath": "src/server/api/routers/strategies.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T005",
-        "description": "Fix trades router - change nextCursor type from number to string",
-        "filePath": "src/server/api/routers/trades.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T006",
-        "description": "Update queue process route - change tradeIds and userId schema from z.number() to z.string()",
-        "filePath": "src/app/api/queue/process/route.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T007",
-        "description": "Update StrategyForm - change StrategyRule.id from number to string",
-        "filePath": "src/components/strategy/strategy-form.tsx",
-        "status": "pending"
-      },
-      {
-        "id": "T008",
-        "description": "Update test fixture accounts.ts - change userId parameter from number to string",
-        "filePath": "tests/utils/fixtures/accounts.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T009",
-        "description": "Update accounts integration tests - change all ID type references from number to string",
-        "filePath": "tests/integration/accounts.test.ts",
-        "status": "pending"
-      },
-      {
-        "id": "T010",
-        "description": "Verify TypeScript compiles without errors",
-        "filePath": "N/A",
-        "status": "pending"
-      }
-    ],
-    "tasksTotal": 10,
-    "tasksCompleted": 10,
-    "approvedAt": "2026-01-02T15:50:53.605Z",
-    "currentTaskId": "T010"
-  },
-  "justFinishedAt": "2026-01-02T16:02:03.400Z"
+	"category": "Refactor",
+	"description": "We were in the middle of porting our ID system of the database into a prefix plus nano ID base system. Obviously, this requires a bunch of touches around the app to change the types and the database schema and basically how we use it. So we're kind of stuck in the middle. We did a lot of them already, but we still have some linting errors and stuff where we need to port over parts of the app over to this new plan and I'll drop in the whole plan here as follows.\n\n# Prefixed UUID Migration\n\n## Summary\n\nReplace sequential integer primary keys with prefixed short UUIDs (e.g., `tr-a1b2c3d4e5f6`) across all database tables. This improves security, prevents ID enumeration, and makes IDs self-documenting.\n\n## ID Format\n\n- Pattern: `{prefix}-{16 chars}` where 16 chars = nanoid (URL-safe, collision-resistant)\n- 16 chars with 62-char alphabet = ~95 bits of entropy (collision-proof at any realistic scale)\n- Examples: `tr-Xk3jD9mPq2LwN4Hy`, `ac-7nR4vB8xK1ZpT2Mf`, `us-mQ5cF2hT9WyuJ6Rg`\n\n## Tables and Prefixes\n\n| Table | Prefix | Example ||-------|--------|---------|| users | `us` | `us-Xk3jD9mPq2LwN4Hy` || accounts | `ac` | `ac-7nR4vB8xK1ZpT2Mf` || accountGroups | `ag` | `ag-mQ5cF2hT9WyuJ6Rg` || trades | `tr` | `tr-pL6sN1dY4RxvQ8Bc` || tradeExecutions | `ex` | `ex-qW9aH3gE7UjtK5Nd` || tags | `tg` | `tg-kI2oM5fC8SnbV0Xe` || tradeScreenshots | `ss` | `ss-vZ4yT0wP6BhcL1Yf` || userSettings | `st` | `st-jU1xD7rA3GmfW2Zg` || filterPresets | `fp` | `fp-eO8lK2iV5QzsR4Ah` || aiConversations | `cv` | `cv-cG4bJ6nX9YtwS3Bi` || aiMessages | `mg` | `mg-hR0pE5uS2FkdU7Cj` || strategies | `sy` | `sy-wN3vL8qM1ZxcP6Dk` || strategyRules | `sr` | `sr-tB7yC0jK4PafO9El` || candleCache | `cc` | `cc-uH5rW2dG6LmeI8Fm` |\n\n## Implementation Steps\n\n### 1. Add ID Generation Utility\n\nCreate [`src/lib/id.ts`](src/lib/id.ts) with nanoid-based ID generator:\n\n```typescript\nimport { customAlphabet } from \"nanoid\";\n\nconst alphabet = \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\";\nconst nanoid = customAlphabet(alphabet, 16);\n\nexport const createId = (prefix: string) => `${prefix}-${nanoid()}`;\n\n// Typed helpers for each entity\nexport const ids = {\n  user: () => createId(\"us\"),\n  account: () => createId(\"ac\"),\n  accountGroup: () => createId(\"ag\"),\n  trade: () => createId(\"tr\"),\n  execution: () => createId(\"ex\"),\n  tag: () => createId(\"tg\"),\n  screenshot: () => createId(\"ss\"),\n  settings: () => createId(\"st\"),\n  filterPreset: () => createId(\"fp\"),\n  conversation: () => createId(\"cv\"),\n  message: () => createId(\"mg\"),\n  strategy: () => createId(\"sy\"),\n  strategyRule: () => createId(\"sr\"),\n  candleCache: () => createId(\"cc\"),\n};\n```\n\n\n\n### 2. Update Schema ([`src/server/db/schema.ts`](src/server/db/schema.ts))\n\nChange all ID columns from:\n\n```typescript\nid: integer().primaryKey().generatedByDefaultAsIdentity(),\n```\n\nTo:\n\n```typescript\nid: text().primaryKey().$defaultFn(() => ids.trade()),\n```\n\nForeign keys change from `integer` to `text`.\n\n### 3. Create Migration Script\n\nWrite a Drizzle migration that:\n\n1. Adds new `id_new` text columns to all tables\n2. Generates prefixed UUIDs for existing rows\n3. Updates all foreign key references\n4. Drops old integer columns and renames new ones\n5. Recreates indexes and constraints\n\nThis is complex due to FK dependencies - we must migrate in correct order (users first, then accounts, then trades, etc.)\n\n### 4. Update tRPC Routers\n\nAll routers in [`src/server/api/routers/`](src/server/api/routers/) need updates:\n\n- Change Zod schemas from `z.number()` to `z.string()` for ID inputs\n- Update any `.eq(id)` comparisons (already work with text)\n\nKey files:\n\n- [`trades.ts`](src/server/api/routers/trades.ts) - extensive ID usage\n- [`accounts.ts`](src/server/api/routers/accounts.ts)\n- [`strategies.ts`](src/server/api/routers/strategies.ts)\n- [`tags.ts`](src/server/api/routers/tags.ts)\n\n### 5. Update Frontend Routes\n\nDynamic routes currently use numeric IDs:\n\n- [`src/app/(protected)/trade/[id]/page.tsx`](src/app/(protected)/trade/[id]/page.tsx) - no code change needed (params are already strings)\n- [`src/app/(protected)/strategies/[id]/page.tsx`](src/app/(protected)/strategies/[id]/page.tsx)\n\nLinks and navigation that construct URLs need updates where they parse/cast IDs.\n\n### 6. Update Components\n\nComponents that handle IDs as numbers need updates:\n\n- Optimistic update maps: `Map<number, ...>` becomes `Map<string, ...>`\n- Any `parseInt()` calls on IDs should be removed\n- TypeScript types will update automatically from schema changes\n\n## Migration Order (FK Dependencies)\n\n```mermaid\ngraph TD\n    Users[users] --> Accounts[accounts]\n    Users --> AccountGroups[accountGroups]\n    Users --> Trades[trades]\n    Users --> Tags[tags]\n    Users --> UserSettings[userSettings]\n    Users --> FilterPresets[filterPresets]\n    Users --> AIConversations[aiConversations]\n    Users --> Strategies[strategies]\n    \n    AccountGroups --> Accounts\n    Accounts --> Trades\n    \n    Trades --> TradeExecutions[tradeExecutions]\n    Trades --> TradeTags[tradeTags]\n    Trades --> TradeScreenshots[tradeScreenshots]\n    Trades --> TradeRuleChecks[tradeRuleChecks]\n    \n    Tags --> TradeTags\n    \n    AIConversations --> AIMessages[aiMessages]\n    \n    Strategies --> StrategyRules[strategyRules]\n    StrategyRules --> TradeRuleChecks\n    \n    CandleCache[candleCache]\n```\n\n\n\n## Risk Mitigation\n\n1. **Backup database before migration**\n2. **Test migration on staging first**\n3. **Migration is irreversible** - integer IDs are lost after migration\n4. **URL bookmarks will break** - old `/trade/123` links become invalid\n\n## Files Changed (Estimated)\n\n- `src/lib/id.ts` (new)\n- `src/server/db/schema.ts`\n- `drizzle/` (new migration file)",
+	"title": "Prefixed UUID Migration",
+	"images": [],
+	"imagePaths": [],
+	"textFilePaths": [],
+	"skipTests": true,
+	"model": "opus",
+	"thinkingLevel": "ultrathink",
+	"branchName": "main",
+	"priority": 2,
+	"planningMode": "spec",
+	"requirePlanApproval": true,
+	"dependencies": [],
+	"titleGenerating": false,
+	"status": "completed",
+	"id": "feature-1767368893919-y5wtg6q5q",
+	"startedAt": "2026-01-02T15:48:35.069Z",
+	"updatedAt": "2026-01-02T16:02:03.400Z",
+	"planSpec": {
+		"status": "approved",
+		"version": 1,
+		"reviewedByUser": true,
+		"generatedAt": "2026-01-02T15:50:13.326Z",
+		"tasks": [
+			{
+				"id": "T001",
+				"description": "Update propFieldsSchema - change linkedAccountId and groupId from z.number() to z.string()",
+				"filePath": "src/lib/schemas.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T002",
+				"description": "Update helper functions - change userId parameter from number to string",
+				"filePath": "src/server/api/helpers.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T003",
+				"description": "Update analytics router - ensure string userId is used in all getActiveAccountsSubquery calls",
+				"filePath": "src/server/api/routers/analytics.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T004",
+				"description": "Update strategies router - ensure string userId is used in all getActiveAccountsSubquery calls",
+				"filePath": "src/server/api/routers/strategies.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T005",
+				"description": "Fix trades router - change nextCursor type from number to string",
+				"filePath": "src/server/api/routers/trades.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T006",
+				"description": "Update queue process route - change tradeIds and userId schema from z.number() to z.string()",
+				"filePath": "src/app/api/queue/process/route.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T007",
+				"description": "Update StrategyForm - change StrategyRule.id from number to string",
+				"filePath": "src/components/strategy/strategy-form.tsx",
+				"status": "pending"
+			},
+			{
+				"id": "T008",
+				"description": "Update test fixture accounts.ts - change userId parameter from number to string",
+				"filePath": "tests/utils/fixtures/accounts.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T009",
+				"description": "Update accounts integration tests - change all ID type references from number to string",
+				"filePath": "tests/integration/accounts.test.ts",
+				"status": "pending"
+			},
+			{
+				"id": "T010",
+				"description": "Verify TypeScript compiles without errors",
+				"filePath": "N/A",
+				"status": "pending"
+			}
+		],
+		"tasksTotal": 10,
+		"tasksCompleted": 10,
+		"approvedAt": "2026-01-02T15:50:53.605Z",
+		"currentTaskId": "T010"
+	},
+	"justFinishedAt": "2026-01-02T16:02:03.400Z"
 }

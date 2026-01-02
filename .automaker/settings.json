@@ -1,14 +1,14 @@
 {
-  "version": 1,
-  "boardBackground": {
-    "imagePath": "/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/.automaker/board/background.png",
-    "cardOpacity": 100,
-    "columnOpacity": 90,
-    "columnBorderEnabled": true,
-    "cardGlassmorphism": true,
-    "cardBorderEnabled": true,
-    "cardBorderOpacity": 100,
-    "hideScrollbar": false,
-    "imageVersion": 1767368697972
-  }
+	"version": 1,
+	"boardBackground": {
+		"imagePath": "/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/.automaker/board/background.png",
+		"cardOpacity": 100,
+		"columnOpacity": 90,
+		"columnBorderEnabled": true,
+		"cardGlassmorphism": true,
+		"cardBorderEnabled": true,
+		"cardBorderOpacity": 100,
+		"hideScrollbar": false,
+		"imageVersion": 1767368697972
+	}
 }
