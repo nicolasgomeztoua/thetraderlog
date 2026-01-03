@@ -47,3 +47,8 @@ yarn-error.log*
 
 # trigger.dev
 .trigger/
+
+# Auto Claude data directory
+.auto-claude/
+
+
