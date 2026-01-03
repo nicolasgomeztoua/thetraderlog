@@ -12,9 +12,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { z } from "zod";
-import { env } from "@/env";
 import { calculateAndStoreMAEMFE } from "@/lib/maemfe-service";
-import { qstash } from "@/lib/queue";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -31,6 +29,7 @@ import {
 } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { tradeExecutions, trades, tradeTags } from "@/server/db/schema";
+import { processTradeMAEMFE } from "@/trigger/process-trade-maemfe";
 
 // Input schemas
 const createTradeSchema = z.object({
@@ -538,16 +537,18 @@ export const tradesRouter = createTRPCRouter({
 				.filter((t) => t.status === "closed")
 				.map((t) => t.id);
 
-			// Trigger background job to calculate MAE/MFE via Upstash QStash
+			// Trigger background jobs to calculate MAE/MFE via Trigger.dev
+			// batchTrigger supports up to 1000 payloads per call
 			if (closedTradeIds.length > 0) {
-				await qstash.publishJSON({
-					url: `${env.APP_URL}/api/queue/process`,
-					body: {
-						tradeIds: closedTradeIds,
-						userId: ctx.user.id,
-					},
-					retries: 3,
-				});
+				const BATCH_SIZE = 1000;
+				for (let i = 0; i < closedTradeIds.length; i += BATCH_SIZE) {
+					const batch = closedTradeIds.slice(i, i + BATCH_SIZE);
+					await processTradeMAEMFE.batchTrigger(
+						batch.map((tradeId) => ({
+							payload: { tradeId, userId: ctx.user.id },
+						})),
+					);
+				}
 			}
 
 			return {

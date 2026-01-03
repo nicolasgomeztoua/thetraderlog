@@ -6,7 +6,7 @@
  *
  * This service is used by:
  * - tRPC trades.calculateMAEMFE mutation (on-demand calculation)
- * - Queue process endpoint (background batch processing via Upstash QStash)
+ * - Trigger.dev background tasks (batch processing during imports)
  */
 
 import { eq } from "drizzle-orm";

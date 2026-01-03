@@ -15,12 +15,8 @@ export const env = createEnv({
 		CLERK_WEBHOOK_SECRET: z.string().min(1),
 		TWELVE_DATA_API_KEY: z.string().min(1),
 		DATABENTO_API_KEY: z.string().min(1),
-		// Upstash QStash for background jobs
-		QSTASH_TOKEN: z.string().min(1),
-		QSTASH_CURRENT_SIGNING_KEY: z.string().min(1),
-		QSTASH_NEXT_SIGNING_KEY: z.string().min(1),
-		// App URL for QStash callbacks
-		APP_URL: z.url(),
+		// Trigger.dev for background jobs
+		TRIGGER_SECRET_KEY: z.string().min(1),
 	},
 
 	/**
@@ -55,10 +51,7 @@ export const env = createEnv({
 		NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL:
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
 		DATABENTO_API_KEY: process.env.DATABENTO_API_KEY,
-		QSTASH_TOKEN: process.env.QSTASH_TOKEN,
-		QSTASH_CURRENT_SIGNING_KEY: process.env.QSTASH_CURRENT_SIGNING_KEY,
-		QSTASH_NEXT_SIGNING_KEY: process.env.QSTASH_NEXT_SIGNING_KEY,
-		APP_URL: process.env.APP_URL,
+		TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

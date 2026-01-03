@@ -44,3 +44,11 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# trigger.dev
+.trigger/
+
+# Auto Claude data directory
+.auto-claude/
+
+
