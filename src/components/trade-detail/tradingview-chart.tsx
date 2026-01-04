@@ -312,12 +312,12 @@ function LightweightChartInner({
 			: "live"
 		: "mock";
 
-	// Build markers array - thin arrows for entry/exit
+	// Build markers array - elegant entry/exit indicators
 	const markers = useMemo(() => {
 		const markerList: SeriesMarker<UTCTimestamp>[] = [];
 		const intervalMs = INTERVAL_MS[interval];
 
-		// Entry marker - thin arrow in trade direction
+		// Entry marker - arrow in trade direction
 		if (entryTime) {
 			const entryTs = roundToCandle(entryTime, intervalMs);
 			markerList.push({
@@ -325,19 +325,19 @@ function LightweightChartInner({
 				position: direction === "long" ? "belowBar" : "aboveBar",
 				shape: direction === "long" ? "arrowUp" : "arrowDown",
 				color: "#d4ff00", // Primary accent (Electric Chartreuse)
-				size: 0, // Thinnest size
+				size: 1,
 			});
 		}
 
-		// Exit marker - thin arrow opposite direction
+		// Exit marker - grey circle
 		if (status === "closed" && exitTime) {
 			const exitTs = roundToCandle(exitTime, intervalMs);
 			markerList.push({
 				time: exitTs,
 				position: direction === "long" ? "aboveBar" : "belowBar",
-				shape: direction === "long" ? "arrowDown" : "arrowUp",
+				shape: "circle",
 				color: "#71717a", // Zinc-500, muted
-				size: 0, // Thinnest size
+				size: 1,
 			});
 		}
 
