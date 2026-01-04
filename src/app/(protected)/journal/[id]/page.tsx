@@ -555,10 +555,15 @@ export default function TradeDetailPage() {
 							status: trade.status,
 							entryPrice: trade.entryPrice,
 							exitPrice: trade.exitPrice,
+							entryTime: trade.entryTime,
+							exitTime: trade.exitTime,
 							stopLoss: trade.stopLoss,
 							takeProfit: trade.takeProfit,
+							wasTrailed: trade.wasTrailed,
+							trailedStopLoss: trade.trailedStopLoss,
 							notes: trade.notes,
 							tradeTags: trade.tradeTags,
+							executions: trade.executions,
 						}}
 					/>
 				</ResizablePanel>

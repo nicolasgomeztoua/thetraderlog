@@ -115,8 +115,14 @@ export type TradeForContentPanel = Pick<
 	| "stopLoss"
 	| "takeProfit"
 	| "notes"
+	// Chart visualization fields
+	| "entryTime"
+	| "exitTime"
+	| "wasTrailed"
+	| "trailedStopLoss"
 > & {
 	tradeTags?: TradeTagWithTag[];
+	executions?: TradeExecution[];
 };
 
 /**

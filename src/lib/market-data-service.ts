@@ -761,6 +761,94 @@ async function fetchFromDatabento(
 }
 
 // =============================================================================
+// FULL DAY DATA FOR CLIENT-SIDE AGGREGATION
+// =============================================================================
+
+/**
+ * Get full day(s) of 1-minute bars for a trade.
+ * Returns all bars for each day the trade spans, without filtering to trade window.
+ * Optimized for client-side timeframe aggregation.
+ *
+ * @param symbol - Trading symbol
+ * @param entryTime - Trade entry time
+ * @param exitTime - Trade exit time (or null for open trades)
+ * @returns Full day(s) of 1-minute bars
+ */
+export async function getFullDayBars(
+	symbol: string,
+	entryTime: Date,
+	exitTime: Date | null,
+): Promise<CacheResult> {
+	const LOG_TAG = "[MarketData]";
+	const effectiveExitTime = exitTime ?? new Date();
+
+	// Get all unique dates from entry to exit
+	const dates: Date[] = [];
+	const currentDate = new Date(entryTime);
+	currentDate.setUTCHours(0, 0, 0, 0);
+
+	const endDate = new Date(effectiveExitTime);
+	endDate.setUTCHours(0, 0, 0, 0);
+
+	while (currentDate <= endDate) {
+		dates.push(new Date(currentDate));
+		currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+	}
+
+	console.log(
+		`${LOG_TAG} getFullDayBars:`,
+		JSON.stringify({
+			symbol,
+			entryTime: entryTime.toISOString(),
+			exitTime: exitTime?.toISOString() ?? "open",
+			daysToFetch: dates.length,
+		}),
+	);
+
+	// Fetch all days in parallel (always 1min for client-side aggregation)
+	const results = await Promise.all(
+		dates.map((date) => getOHLCBars(symbol, "1min", date)),
+	);
+
+	// Combine all bars from all days (no filtering - return full days)
+	const allBars: OHLCBar[] = [];
+	for (const result of results) {
+		allBars.push(...result.bars);
+	}
+
+	// Sort by timestamp
+	allBars.sort((a, b) => a.timestamp - b.timestamp);
+
+	// Determine data quality
+	const allUnavailable = results.every((r) => r.dataQuality === "unavailable");
+	const anyUnavailable = results.some((r) => r.dataQuality === "unavailable");
+
+	let dataQuality: DataQuality;
+	if (allUnavailable) {
+		dataQuality = "unavailable";
+	} else if (anyUnavailable) {
+		dataQuality = "partial";
+	} else {
+		dataQuality = "full";
+	}
+
+	// Determine source (cache if all from cache)
+	const allFromCache = results.every((r) => r.source === "cache");
+	const source = allFromCache ? "cache" : "api";
+
+	console.log(
+		`${LOG_TAG} getFullDayBars result:`,
+		JSON.stringify({
+			totalBars: allBars.length,
+			dataQuality,
+			source,
+		}),
+	);
+
+	return { bars: allBars, source, dataQuality };
+}
+
+// =============================================================================
 // CACHE MANAGEMENT
 // =============================================================================
 

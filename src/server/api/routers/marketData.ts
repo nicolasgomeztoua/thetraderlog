@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	type CacheInterval,
 	getCacheStats,
+	getFullDayBars,
 	getOHLCForChart,
 	getOHLCForTimeRange,
 } from "@/lib/market-data-service";
@@ -10,6 +11,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 // Valid intervals for chart display
 const chartIntervalSchema = z.enum([
+	"1min",
 	"5min",
 	"15min",
 	"30min",
@@ -217,6 +219,47 @@ export const marketDataRouter = createTRPCRouter({
 			// Convert timestamps to lightweight-charts format (seconds, not ms)
 			const chartBars = bars.map((bar) => ({
 				time: Math.floor(bar.timestamp / 1000), // Convert to seconds for lightweight-charts
+				open: bar.open,
+				high: bar.high,
+				low: bar.low,
+				close: bar.close,
+			}));
+
+			return {
+				bars: chartBars,
+				source,
+				dataQuality,
+				barCount: chartBars.length,
+			};
+		}),
+
+	/**
+	 * Get full day(s) of 1-minute bars for a trade
+	 * Optimized for client-side timeframe aggregation
+	 *
+	 * Returns all bars for each day the trade spans, without filtering.
+	 * Client can then aggregate to 5min/15min/30min/1h instantly.
+	 */
+	getFullDayChartData: protectedProcedure
+		.input(
+			z.object({
+				symbol: z.string(),
+				entryTime: z.iso.datetime(),
+				exitTime: z.iso.datetime().optional(),
+			}),
+		)
+		.query(async ({ input }) => {
+			const exitTime = input.exitTime ? new Date(input.exitTime) : null;
+
+			const { bars, source, dataQuality } = await getFullDayBars(
+				input.symbol,
+				new Date(input.entryTime),
+				exitTime,
+			);
+
+			// Convert timestamps to lightweight-charts format (seconds, not ms)
+			const chartBars = bars.map((bar) => ({
+				time: Math.floor(bar.timestamp / 1000),
 				open: bar.open,
 				high: bar.high,
 				low: bar.low,

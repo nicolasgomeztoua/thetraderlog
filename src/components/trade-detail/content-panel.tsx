@@ -133,11 +133,16 @@ export function ContentPanel({
 					<TradingViewChart
 						direction={trade.direction}
 						entryPrice={trade.entryPrice}
+						entryTime={trade.entryTime}
+						executions={trade.executions}
 						exitPrice={trade.exitPrice}
+						exitTime={trade.exitTime}
 						status={trade.status}
 						stopLoss={trade.stopLoss}
 						symbol={trade.symbol}
 						takeProfit={trade.takeProfit}
+						trailedStopLoss={trade.trailedStopLoss}
+						wasTrailed={trade.wasTrailed ?? undefined}
 					/>
 				</TabsContent>
 

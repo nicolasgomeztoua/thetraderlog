@@ -1039,7 +1039,9 @@ describe("trades router - batchImport", () => {
 					entryPrice: "28.00",
 					exitPrice: "28.50",
 					entryTime: sameTimeConstructed.toISOString(),
-					exitTime: new Date(sameTimeConstructed.getTime() + 3600000).toISOString(),
+					exitTime: new Date(
+						sameTimeConstructed.getTime() + 3600000,
+					).toISOString(),
 					quantity: "5",
 					profit: "2500.00",
 				});

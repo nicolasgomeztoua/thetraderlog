@@ -2,13 +2,16 @@ import {
 	type CandlestickData,
 	CandlestickSeries,
 	createChart,
+	createSeriesMarkers,
 	type IChartApi,
 	type ISeriesApi,
+	type SeriesMarker,
 	type UTCTimestamp,
 } from "lightweight-charts";
 import { ExternalLink, Loader2 } from "lucide-react";
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/contexts/theme-context";
+import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
 import { getTradingViewSymbol } from "@/lib/symbols";
 import { getThemeById } from "@/lib/themes";
 import { cn } from "@/lib/utils";
@@ -55,10 +58,74 @@ interface ChartProps {
 	takeProfit?: string | null;
 	direction?: "long" | "short";
 	status?: "open" | "closed";
+	executions?: Array<{
+		executionType: "entry" | "exit" | "scale_in" | "scale_out";
+		executedAt: Date | string;
+		price: string;
+		quantity: string;
+	}>;
+	wasTrailed?: boolean;
+	trailedStopLoss?: string | null;
 	className?: string;
 }
 
 type CandleDataPoint = CandlestickData<UTCTimestamp>;
+
+// Interval display labels
+const INTERVAL_LABELS: Record<ChartInterval, string> = {
+	"1min": "1m",
+	"5min": "5m",
+	"15min": "15m",
+	"30min": "30m",
+	"1h": "1h",
+};
+
+// Interval durations in milliseconds
+const INTERVAL_MS: Record<ChartInterval, number> = {
+	"1min": 60 * 1000,
+	"5min": 5 * 60 * 1000,
+	"15min": 15 * 60 * 1000,
+	"30min": 30 * 60 * 1000,
+	"1h": 60 * 60 * 1000,
+};
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+/**
+ * Round a timestamp to the nearest candle bucket for the given interval
+ */
+function roundToCandle(time: Date | string, intervalMs: number): UTCTimestamp {
+	const timestamp = new Date(time).getTime();
+	const rounded = Math.floor(timestamp / intervalMs) * intervalMs;
+	return Math.floor(rounded / 1000) as UTCTimestamp;
+}
+
+/**
+ * Calculate the visible range for auto-fit
+ * Shows trade duration plus context candles on each side
+ */
+function calculateVisibleRange(
+	entryTime: Date | string | null,
+	exitTime: Date | string | null,
+	intervalMs: number,
+	contextCandles: number = 3,
+): { from: UTCTimestamp; to: UTCTimestamp } | null {
+	if (!entryTime) return null;
+
+	const entryTs = Math.floor(new Date(entryTime).getTime() / 1000);
+	const exitTs = exitTime
+		? Math.floor(new Date(exitTime).getTime() / 1000)
+		: Math.floor(Date.now() / 1000);
+
+	const candleSeconds = intervalMs / 1000;
+
+	return {
+		from: (entryTs - contextCandles * candleSeconds) as UTCTimestamp,
+		to: (exitTs + contextCandles * candleSeconds) as UTCTimestamp,
+	};
+}
 
 // =============================================================================
 // MOCK DATA GENERATOR (Fallback when real data unavailable)
@@ -98,24 +165,68 @@ function generateMockCandles(
 }
 
 // =============================================================================
+// TIMEFRAME SELECTOR COMPONENT
+// =============================================================================
+
+function TimeframeSelector({
+	interval,
+	onIntervalChange,
+	disabled,
+}: {
+	interval: ChartInterval;
+	onIntervalChange: (interval: ChartInterval) => void;
+	disabled?: boolean;
+}) {
+	const intervals: ChartInterval[] = ["1min", "5min", "15min", "30min", "1h"];
+
+	return (
+		<div className="flex items-center gap-1">
+			{intervals.map((tf) => (
+				<button
+					className={cn(
+						"rounded px-2 py-1 font-mono text-[10px] uppercase transition-colors",
+						"disabled:cursor-not-allowed disabled:opacity-50",
+						interval === tf
+							? "bg-primary text-primary-foreground"
+							: "bg-white/5 text-muted-foreground hover:bg-white/10",
+					)}
+					disabled={disabled}
+					key={tf}
+					onClick={() => onIntervalChange(tf)}
+					type="button"
+				>
+					{INTERVAL_LABELS[tf]}
+				</button>
+			))}
+		</div>
+	);
+}
+
+// =============================================================================
 // LIGHTWEIGHT CHART COMPONENT
 // =============================================================================
 
 function LightweightChartInner({
 	symbol,
 	entryPrice,
-	exitPrice,
-	entryTime,
 	exitTime,
+	entryTime,
 	stopLoss,
 	takeProfit,
 	direction,
 	status,
+	executions,
+	wasTrailed,
+	trailedStopLoss,
 	className,
 }: ChartProps) {
+	// entryPrice used for mock data fallback base price
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chartRef = useRef<IChartApi | null>(null);
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+
+	// Timeframe state
+	const [interval, setInterval] = useState<ChartInterval>("15min");
 
 	// Get theme colors from the actual theme configuration
 	const { theme } = useTheme();
@@ -129,25 +240,40 @@ function LightweightChartInner({
 	const tvSymbol = getTradingViewSymbol(symbol);
 	const tradingViewUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
 
-	// Fetch real chart data from cache
+	// Fetch full day(s) of 1-min data once - then aggregate client-side
 	const canFetchRealData = !!entryTime;
-	const { data: chartData, isLoading } = api.marketData.getChartData.useQuery(
-		{
-			symbol,
-			entryTime: entryTime
-				? new Date(entryTime).toISOString()
-				: new Date().toISOString(),
-			exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
-			interval: "15min",
-			contextBefore: 4,
-			contextAfter: 2,
-		},
-		{
-			enabled: canFetchRealData,
-			staleTime: 1000 * 60 * 5, // 5 minutes - data doesn't change often
-			refetchOnWindowFocus: false,
-		},
-	);
+	const { data: rawChartData, isLoading } =
+		api.marketData.getFullDayChartData.useQuery(
+			{
+				symbol,
+				entryTime: entryTime
+					? new Date(entryTime).toISOString()
+					: new Date().toISOString(),
+				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
+			},
+			{
+				enabled: canFetchRealData,
+				staleTime: 1000 * 60 * 5, // 5 minutes - data doesn't change often
+				refetchOnWindowFocus: false,
+			},
+		);
+
+	// Aggregate 1-min bars to selected interval client-side (instant!)
+	const chartData = useMemo(() => {
+		if (!rawChartData?.bars?.length) return null;
+
+		const aggregatedBars =
+			interval === "1min"
+				? rawChartData.bars
+				: aggregateBars(rawChartData.bars, interval);
+
+		return {
+			bars: aggregatedBars,
+			source: rawChartData.source,
+			dataQuality: rawChartData.dataQuality,
+			barCount: aggregatedBars.length,
+		};
+	}, [rawChartData, interval]);
 
 	// Determine data source for display
 	const hasRealData = chartData && chartData.bars.length > 0;
@@ -156,6 +282,76 @@ function LightweightChartInner({
 			? "cached"
 			: "live"
 		: "mock";
+
+	// Build markers array - thin arrows for entry/exit
+	const markers = useMemo(() => {
+		const markerList: SeriesMarker<UTCTimestamp>[] = [];
+		const intervalMs = INTERVAL_MS[interval];
+
+		// Entry marker - thin arrow in trade direction
+		if (entryTime) {
+			const entryTs = roundToCandle(entryTime, intervalMs);
+			markerList.push({
+				time: entryTs,
+				position: direction === "long" ? "belowBar" : "aboveBar",
+				shape: direction === "long" ? "arrowUp" : "arrowDown",
+				color: "#d4ff00", // Primary accent (Electric Chartreuse)
+				size: 0, // Thinnest size
+			});
+		}
+
+		// Exit marker - thin arrow opposite direction
+		if (status === "closed" && exitTime) {
+			const exitTs = roundToCandle(exitTime, intervalMs);
+			markerList.push({
+				time: exitTs,
+				position: direction === "long" ? "aboveBar" : "belowBar",
+				shape: direction === "long" ? "arrowDown" : "arrowUp",
+				color: "#71717a", // Zinc-500, muted
+				size: 0, // Thinnest size
+			});
+		}
+
+		// Scale-in/out markers - smaller arrows
+		if (executions && executions.length > 0) {
+			for (const execution of executions) {
+				// Skip primary entry/exit (already marked)
+				if (
+					execution.executionType === "entry" ||
+					execution.executionType === "exit"
+				) {
+					continue;
+				}
+
+				const execTs = roundToCandle(execution.executedAt, intervalMs);
+
+				if (execution.executionType === "scale_in") {
+					markerList.push({
+						time: execTs,
+						position: direction === "long" ? "belowBar" : "aboveBar",
+						shape: direction === "long" ? "arrowUp" : "arrowDown",
+						color: "rgba(212, 255, 0, 0.5)", // Primary accent, transparent
+						size: 0,
+					});
+				}
+
+				if (execution.executionType === "scale_out") {
+					markerList.push({
+						time: execTs,
+						position: direction === "long" ? "aboveBar" : "belowBar",
+						shape: direction === "long" ? "arrowDown" : "arrowUp",
+						color: "rgba(113, 113, 122, 0.5)", // Zinc-500, transparent
+						size: 0,
+					});
+				}
+			}
+		}
+
+		// Sort markers by time
+		markerList.sort((a, b) => (a.time as number) - (b.time as number));
+
+		return markerList;
+	}, [entryTime, exitTime, direction, status, executions, interval]);
 
 	useEffect(() => {
 		if (!containerRef.current) return;
@@ -222,29 +418,13 @@ function LightweightChartInner({
 
 		candlestickSeries.setData(chartBars);
 
-		// Add price lines for entry/exit/SL/TP
-		if (entryPrice) {
-			candlestickSeries.createPriceLine({
-				price: parseFloat(entryPrice),
-				color: direction === "long" ? "#00ff88" : "#ff3b3b",
-				lineWidth: 2,
-				lineStyle: 0, // Solid
-				axisLabelVisible: true,
-				title: "Entry",
-			});
+		// Add markers for entry/exit/executions
+		let markersPrimitive: { detach: () => void } | null = null;
+		if (markers.length > 0 && hasRealData) {
+			markersPrimitive = createSeriesMarkers(candlestickSeries, markers);
 		}
 
-		if (status === "closed" && exitPrice) {
-			candlestickSeries.createPriceLine({
-				price: parseFloat(exitPrice),
-				color: direction === "long" ? "#ff3b3b" : "#00ff88",
-				lineWidth: 2,
-				lineStyle: 0,
-				axisLabelVisible: true,
-				title: "Exit",
-			});
-		}
-
+		// Add price lines for SL/TP (these are levels, not time events)
 		if (stopLoss) {
 			candlestickSeries.createPriceLine({
 				price: parseFloat(stopLoss),
@@ -267,26 +447,65 @@ function LightweightChartInner({
 			});
 		}
 
-		// Fit content
-		chart.timeScale().fitContent();
+		// Add trailed stop loss line (orange, dashed)
+		if (wasTrailed && trailedStopLoss) {
+			candlestickSeries.createPriceLine({
+				price: parseFloat(trailedStopLoss),
+				color: "#ffa500", // Orange
+				lineWidth: 1,
+				lineStyle: 2, // Dashed
+				axisLabelVisible: true,
+				title: "Trailed SL",
+			});
+		}
+
+		// Auto-fit to show trade window with context
+		if (hasRealData && entryTime) {
+			const range = calculateVisibleRange(
+				entryTime,
+				exitTime ?? null,
+				INTERVAL_MS[interval],
+				3,
+			);
+			if (range) {
+				// Ensure we have at least 5 candles visible
+				const minVisibleSeconds = 5 * (INTERVAL_MS[interval] / 1000);
+				const actualRange = (range.to as number) - (range.from as number);
+				if (actualRange < minVisibleSeconds) {
+					const padding = (minVisibleSeconds - actualRange) / 2;
+					range.from = ((range.from as number) - padding) as UTCTimestamp;
+					range.to = ((range.to as number) + padding) as UTCTimestamp;
+				}
+				chart.timeScale().setVisibleRange(range);
+			} else {
+				chart.timeScale().fitContent();
+			}
+		} else {
+			chart.timeScale().fitContent();
+		}
 
 		// Cleanup
 		return () => {
+			if (markersPrimitive) {
+				markersPrimitive.detach();
+			}
 			chart.remove();
 			chartRef.current = null;
 			seriesRef.current = null;
 		};
 	}, [
 		basePrice,
-		entryPrice,
-		exitPrice,
 		stopLoss,
 		takeProfit,
-		direction,
-		status,
+		wasTrailed,
+		trailedStopLoss,
 		colors,
 		hasRealData,
 		chartData,
+		markers,
+		entryTime,
+		exitTime,
+		interval,
 	]);
 
 	return (
@@ -303,6 +522,21 @@ function LightweightChartInner({
 					</div>
 				</div>
 			)}
+
+			{/* Top controls bar */}
+			<div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+				{/* Symbol badge */}
+				<div className="rounded bg-background/80 px-2 py-1 backdrop-blur-sm">
+					<span className="font-bold font-mono text-xs">{symbol}</span>
+				</div>
+
+				{/* Timeframe selector */}
+				<TimeframeSelector
+					disabled={isLoading}
+					interval={interval}
+					onIntervalChange={setInterval}
+				/>
+			</div>
 
 			{/* Data source notice overlay */}
 			<div className="absolute right-3 bottom-3 z-10 flex items-center gap-2">
@@ -328,14 +562,6 @@ function LightweightChartInner({
 					<ExternalLink className="h-3 w-3" />
 					TradingView
 				</a>
-			</div>
-
-			{/* Symbol badge */}
-			<div className="absolute top-3 left-3 z-10 rounded bg-background/80 px-2 py-1 backdrop-blur-sm">
-				<span className="font-bold font-mono text-xs">{symbol}</span>
-				<span className="ml-2 font-mono text-[10px] text-muted-foreground">
-					15m
-				</span>
 			</div>
 		</div>
 	);

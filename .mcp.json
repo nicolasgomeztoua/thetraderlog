@@ -1,12 +1,8 @@
 {
-  "mcpServers": {
-    "trigger": {
-      "args": [
-        "trigger.dev@4.3.1",
-        "mcp",
-        "--dev-only"
-      ],
-      "command": "npx"
-    }
-  }
+	"mcpServers": {
+		"trigger": {
+			"args": ["trigger.dev@4.3.1", "mcp", "--dev-only"],
+			"command": "npx"
+		}
+	}
 }
