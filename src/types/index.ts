@@ -120,6 +120,9 @@ export type TradeForContentPanel = Pick<
 	| "exitTime"
 	| "wasTrailed"
 	| "trailedStopLoss"
+	// MAE/MFE visualization
+	| "maePrice"
+	| "mfePrice"
 > & {
 	tradeTags?: TradeTagWithTag[];
 	executions?: TradeExecution[];

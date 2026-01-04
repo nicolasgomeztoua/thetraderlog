@@ -564,6 +564,8 @@ export default function TradeDetailPage() {
 							notes: trade.notes,
 							tradeTags: trade.tradeTags,
 							executions: trade.executions,
+							maePrice: trade.maePrice,
+							mfePrice: trade.mfePrice,
 						}}
 					/>
 				</ResizablePanel>

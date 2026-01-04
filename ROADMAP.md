@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** December 29, 2025 (MAE/MFE + Market Data Caching Architecture implemented)
+> **Last Updated:** January 4, 2026 (MAE/MFE visual markers on chart)
 
 ---
 
@@ -48,6 +48,9 @@
 | MAE/MFE per-trade analysis | ✅ Done | `/journal/[id]` (lazy calculation) |
 | Market data caching layer | ✅ Done | `src/lib/market-data-service.ts` |
 | Lightweight-charts integration | ✅ Done | Trade detail chart tab |
+| Chart preferences persistence (Zustand) | ✅ Done | `src/stores/chart-preferences-store.ts` |
+| OHLC snapping crosshair | ✅ Done | Trade detail chart (snaps to nearest O/H/L/C) |
+| Multi-day trade data fetching | ✅ Done | Parallel fetch for trades spanning multiple days |
 
 ---
 
@@ -327,9 +330,11 @@ Match TradeZella's comprehensive trade tracking page.
 #### 5.4 Chart Integration
 - [x] Lightweight-charts implementation (replaced TradingView widget)
 - [x] Real OHLC data from cached market data service
-- [ ] Display entry/exit markers on chart
-- [ ] Multiple timeframe toggle
-- [ ] Chart annotation tools
+- [x] Display entry/exit markers on chart (elegant arrows + circles)
+- [x] Multiple timeframe toggle (1m, 5m, 15m, 30m, 1h with persistence)
+- [x] OHLC snapping crosshair (snaps to nearest O/H/L/C value)
+- [x] Fit-to-trade button (reset zoom to trade window)
+- [x] Chart preferences persistence (timeframe + zoom via Zustand)
 
 #### 5.5 MAE/MFE Per-Trade Analysis *(COMPLETED)*
 - [x] Add `maePrice`, `mfePrice`, `maeAmount`, `mfeAmount`, `tradeEfficiency`, `marketDataQuality` fields to trades schema
@@ -339,7 +344,7 @@ Match TradeZella's comprehensive trade tracking page.
 - [x] Lazy MAE/MFE calculation on trade detail view
 - [x] MAE/MFE stored permanently after calculation
 - [x] Show efficiency % (captured P&L vs MFE)
-- [ ] Visual markers on chart (MAE/MFE extremes)
+- [x] Visual markers on chart (MAE/MFE extremes as dotted price lines)
 
 ---
 
@@ -613,7 +618,7 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | 2 | Strategy System | 2 weeks | ✅ Complete |
 | 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
 | 4 | Advanced Analytics | 4-5 weeks | 🔄 In Progress |
-| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Screenshot pending) |
+| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Screenshot pending) |
 | 6 | Notebook System | 2 weeks | ⏳ Pending |
 | 9.1 | CSV Parsers | 1-2 weeks | ⏳ Pending |
 | 7 | Trade Replay | 3-4 weeks | ⏳ Pending |

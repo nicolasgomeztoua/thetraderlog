@@ -137,6 +137,8 @@ export function ContentPanel({
 						executions={trade.executions}
 						exitPrice={trade.exitPrice}
 						exitTime={trade.exitTime}
+						maePrice={trade.maePrice}
+						mfePrice={trade.mfePrice}
 						status={trade.status}
 						stopLoss={trade.stopLoss}
 						symbol={trade.symbol}

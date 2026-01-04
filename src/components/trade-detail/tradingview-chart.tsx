@@ -68,6 +68,8 @@ interface ChartProps {
 	}>;
 	wasTrailed?: boolean;
 	trailedStopLoss?: string | null;
+	maePrice?: string | null;
+	mfePrice?: string | null;
 	className?: string;
 }
 
@@ -220,6 +222,8 @@ function LightweightChartInner({
 	executions,
 	wasTrailed,
 	trailedStopLoss,
+	maePrice,
+	mfePrice,
 	className,
 }: ChartProps) {
 	// entryPrice used for mock data fallback base price
@@ -487,6 +491,29 @@ function LightweightChartInner({
 			});
 		}
 
+		// Add MAE/MFE lines (dotted, semi-transparent)
+		if (maePrice) {
+			candlestickSeries.createPriceLine({
+				price: parseFloat(maePrice),
+				color: "#ff3b3b80", // Red with opacity
+				lineWidth: 1,
+				lineStyle: 1, // Dotted
+				axisLabelVisible: true,
+				title: "MAE",
+			});
+		}
+
+		if (mfePrice) {
+			candlestickSeries.createPriceLine({
+				price: parseFloat(mfePrice),
+				color: "#00ff8880", // Green with opacity
+				lineWidth: 1,
+				lineStyle: 1, // Dotted
+				axisLabelVisible: true,
+				title: "MFE",
+			});
+		}
+
 		// Apply zoom: only on initial load, use saved visibleBarsCount or auto-fit
 		const savedBarsCount = initialVisibleBarsCountRef.current;
 		const shouldApplyInitialZoom =
@@ -636,6 +663,8 @@ function LightweightChartInner({
 		entryTime,
 		exitTime,
 		interval,
+		maePrice,
+		mfePrice,
 	]);
 
 	return (
