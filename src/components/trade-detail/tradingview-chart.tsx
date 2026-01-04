@@ -10,6 +10,7 @@ import {
 	type UTCTimestamp,
 } from "lightweight-charts";
 import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
+import { toast } from "sonner";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTheme } from "@/contexts/theme-context";
 import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
@@ -231,6 +232,7 @@ function LightweightChartInner({
 	const chartRef = useRef<IChartApi | null>(null);
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 	const ohlcSnapLineRef = useRef<IPriceLine | null>(null);
+	const currentSnappedPriceRef = useRef<number | null>(null);
 
 	// Chart preferences from persistent store
 	const interval = useChartPreferencesStore((s) => s.interval);
@@ -589,6 +591,7 @@ function LightweightChartInner({
 					seriesRef.current.removePriceLine(ohlcSnapLineRef.current);
 					ohlcSnapLineRef.current = null;
 				}
+				currentSnappedPriceRef.current = null;
 				return;
 			}
 
@@ -614,6 +617,9 @@ function LightweightChartInner({
 					: prev,
 			);
 
+			// Store for click-to-copy
+			currentSnappedPriceRef.current = nearest.price;
+
 			// Update or create the snap line
 			if (ohlcSnapLineRef.current) {
 				ohlcSnapLineRef.current.applyOptions({
@@ -629,6 +635,17 @@ function LightweightChartInner({
 					axisLabelVisible: true,
 					axisLabelColor: colors.crosshairLabel,
 					title: nearest.label,
+				});
+			}
+		});
+
+		// Subscribe to click for copy-to-clipboard
+		chart.subscribeClick(() => {
+			if (currentSnappedPriceRef.current !== null) {
+				navigator.clipboard.writeText(currentSnappedPriceRef.current.toString());
+				toast("Price copied", {
+					description: currentSnappedPriceRef.current.toString(),
+					duration: 1500,
 				});
 			}
 		});
