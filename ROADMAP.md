@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** January 4, 2026 (MAE/MFE visual markers on chart)
+> **Last Updated:** January 4, 2026 (Trade Replay complete)
 
 ---
 
@@ -51,6 +51,7 @@
 | Chart preferences persistence (Zustand) | ✅ Done | `src/stores/chart-preferences-store.ts` |
 | OHLC snapping crosshair | ✅ Done | Trade detail chart (snaps to nearest O/H/L/C) |
 | Multi-day trade data fetching | ✅ Done | Parallel fetch for trades spanning multiple days |
+| Trade Replay | ✅ Done | Trade detail Replay tab (play/pause, speed, scrub, jump by interval) |
 
 ---
 
@@ -398,6 +399,8 @@ Comprehensive planning and note-taking like TradeZella's Notebook.
 > **Priority:** LOW | **Dependencies:** Phase 4 | **Estimate:** 3-4 weeks
 >
 > **Sub-plan:** [./plans/phase-7-replay.md](./plans/phase-7-replay.md)
+>
+> **Status:** ✅ Complete
 
 ### Goal
 Tick-by-tick trade replay functionality.
@@ -405,24 +408,27 @@ Tick-by-tick trade replay functionality.
 ### Tasks
 
 #### 7.1 Historical Data Integration
-- [ ] Market data provider integration (Polygon/Alpha Vantage)
-- [ ] Data fetching and caching
-- [ ] Support for forex, futures, stocks
-- [ ] Handle different data granularities
+- [x] Market data provider integration (Databento for futures, Twelve Data for forex)
+- [x] Data fetching and caching (existing market data service)
+- [x] Support for forex and futures
+- [x] Handle different data granularities (1m, 5m, 15m, 30m, 1h aggregation)
 
 #### 7.2 Replay Engine
-- [ ] Replay player component
-- [ ] Play/pause controls
-- [ ] Variable speed (0.5x, 1x, 2x, 5x, 10x)
-- [ ] Timeline scrubber
-- [ ] Jump to entry/exit buttons
+- [x] Replay player component (`TradeReplay`, `useReplayEngine` hook)
+- [x] Play/pause controls
+- [x] Variable speed (1x, 2x, 5x, 10x)
+- [x] Timeline scrubber (Shadcn Slider)
+- [x] Jump forward/backward by candle interval
+- [x] Reset to start button
+- [x] Speed preferences persistence (Zustand store)
 
 #### 7.3 Replay Visualization
-- [ ] Candlestick chart renderer
-- [ ] Trade markers on chart
-- [ ] Time and sales display
-- [ ] Real-time P&L during replay
-- [ ] Volume visualization
+- [x] Candlestick chart renderer (lightweight-charts)
+- [x] Trade markers on chart (entry arrows, exit circles, scale-in/out)
+- [x] Time & Sales panel component
+- [x] Real-time running P&L during replay (proper futures/forex calculations)
+- [x] SL/TP price lines on chart
+- [x] Chart zoom/position preserved during playback
 
 ---
 
@@ -618,10 +624,10 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | 2 | Strategy System | 2 weeks | ✅ Complete |
 | 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
 | 4 | Advanced Analytics | 4-5 weeks | 🔄 In Progress |
-| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Screenshot pending) |
+| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Screenshot pending) |
 | 6 | Notebook System | 2 weeks | ⏳ Pending |
 | 9.1 | CSV Parsers | 1-2 weeks | ⏳ Pending |
-| 7 | Trade Replay | 3-4 weeks | ⏳ Pending |
+| 7 | Trade Replay | 3-4 weeks | ✅ Complete |
 | 8 | Backtesting | 3-4 weeks | ⏳ Pending |
 | 10 | Mobile Optimization | 2 weeks | ⏳ Pending |
 | 11 | Educational/Social | Ongoing | ⏳ Pending |

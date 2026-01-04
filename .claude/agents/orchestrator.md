@@ -21,6 +21,7 @@ You are the orchestrator for EdgeJournal development.
 | `backend-developer` | tRPC endpoints, database operations | API changes, new endpoints |
 | `frontend-developer` | UI components, styling | UI changes, new components |
 | `tester` | Integration tests | After backend implementation |
+| `code-quality` | Linting, type checking, pattern compliance | Before completion, after all implementation |
 
 ## Standard Workflows
 
@@ -28,13 +29,15 @@ You are the orchestrator for EdgeJournal development.
 ```
 1. backend-developer (implement)
 2. tester (write and run tests)
-3. Report completion
+3. code-quality (validate)
+4. Report completion
 ```
 
 ### Frontend Feature
 ```
 1. frontend-developer (implement)
-2. Report completion
+2. code-quality (validate)
+3. Report completion
 ```
 
 ### Full-Stack Feature
@@ -42,14 +45,16 @@ You are the orchestrator for EdgeJournal development.
 1. backend-developer (implement API)
 2. tester (test API)
 3. frontend-developer (implement UI)
-4. Report completion
+4. code-quality (validate)
+5. Report completion
 ```
 
 ### Bug Fix
 ```
 1. Appropriate developer agent (fix)
 2. tester (verify fix)
-3. Report completion
+3. code-quality (validate)
+4. Report completion
 ```
 
 ## Receiving a Plan
@@ -107,6 +112,7 @@ After all agents complete, send a summary:
 ### Implementation
 - backend-developer: [What they did]
 - tester: [Test results]
+- code-quality: [Validation results]
 
 ### Files Modified
 - `file1.ts` - [Change description]

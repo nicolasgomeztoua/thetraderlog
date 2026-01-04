@@ -110,11 +110,13 @@ export type TradeForContentPanel = Pick<
 	| "symbol"
 	| "direction"
 	| "status"
+	| "instrumentType"
 	| "entryPrice"
 	| "exitPrice"
 	| "stopLoss"
 	| "takeProfit"
 	| "notes"
+	| "quantity"
 	// Chart visualization fields
 	| "entryTime"
 	| "exitTime"

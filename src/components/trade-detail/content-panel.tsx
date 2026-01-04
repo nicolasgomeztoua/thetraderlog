@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import type { TradeForContentPanel } from "@/types";
 import { EditableTextarea } from "./editable-field";
+import { TradeReplay } from "./replay";
 import { TradingViewChart } from "./tradingview-chart";
 
 // =============================================================================
@@ -122,6 +123,12 @@ export function ContentPanel({
 					</TabsTrigger>
 					<TabsTrigger
 						className="rounded-none border-transparent border-b-2 font-mono text-[10px] uppercase tracking-wider data-[state=active]:border-primary data-[state=active]:bg-transparent"
+						value="replay"
+					>
+						Replay
+					</TabsTrigger>
+					<TabsTrigger
+						className="rounded-none border-transparent border-b-2 font-mono text-[10px] uppercase tracking-wider data-[state=active]:border-primary data-[state=active]:bg-transparent"
 						value="running-pnl"
 					>
 						Running P&L
@@ -155,6 +162,31 @@ export function ContentPanel({
 							<NotesSection onUpdateField={onUpdateField} trade={trade} />
 						</div>
 					</ScrollArea>
+				</TabsContent>
+
+				{/* REPLAY TAB */}
+				<TabsContent className="m-0 flex-1 p-0" value="replay">
+					<TradeReplay
+						direction={trade.direction}
+						entryPrice={trade.entryPrice}
+						entryTime={trade.entryTime}
+						executions={trade.executions?.map((exec) => ({
+							id: exec.id,
+							executionType: exec.executionType,
+							executedAt: exec.executedAt,
+							price: exec.price,
+							quantity: exec.quantity,
+							realizedPnl: exec.realizedPnl,
+						}))}
+						exitPrice={trade.exitPrice}
+						exitTime={trade.exitTime}
+						instrumentType={trade.instrumentType}
+						quantity={trade.quantity}
+						stopLoss={trade.stopLoss}
+						symbol={trade.symbol}
+						takeProfit={trade.takeProfit}
+						tradeId={trade.id}
+					/>
 				</TabsContent>
 
 				{/* RUNNING P&L TAB */}

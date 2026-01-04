@@ -431,16 +431,6 @@ export default function TradeDetailPage() {
 						{trade.isReviewed ? "Reviewed" : "Mark as reviewed"}
 					</button>
 
-					{/* Replay button (placeholder) */}
-					<Button
-						className="font-mono text-[10px] uppercase tracking-wider"
-						disabled
-						size="sm"
-						variant="default"
-					>
-						Replay
-					</Button>
-
 					{/* Share button (placeholder) */}
 					<Button className="h-8 w-8" disabled size="icon" variant="ghost">
 						<Share2 className="h-4 w-4" />
@@ -553,6 +543,7 @@ export default function TradeDetailPage() {
 							symbol: trade.symbol,
 							direction: trade.direction,
 							status: trade.status,
+							instrumentType: trade.instrumentType,
 							entryPrice: trade.entryPrice,
 							exitPrice: trade.exitPrice,
 							entryTime: trade.entryTime,
@@ -566,6 +557,7 @@ export default function TradeDetailPage() {
 							executions: trade.executions,
 							maePrice: trade.maePrice,
 							mfePrice: trade.mfePrice,
+							quantity: trade.quantity,
 						}}
 					/>
 				</ResizablePanel>

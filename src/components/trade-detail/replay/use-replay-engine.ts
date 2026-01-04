@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChartBar } from "@/lib/candle-aggregation";
+import { calculateForexPnL, calculateFuturesPnL } from "@/lib/symbols";
 import type { ReplaySpeed } from "@/stores/replay-preferences-store";
 
 // =============================================================================
@@ -35,6 +36,8 @@ interface UseReplayEngineOptions {
 	exitTime: Date | string | null;
 	entryPrice: string | null;
 	direction: "long" | "short";
+	symbol: string;
+	instrumentType: "futures" | "forex";
 	initialSpeed?: ReplaySpeed;
 }
 
@@ -55,8 +58,10 @@ export function useReplayEngine({
 	executions,
 	entryTime,
 	exitTime,
-	entryPrice,
+	entryPrice: _entryPrice,
 	direction,
+	symbol,
+	instrumentType,
 	initialSpeed = "1x",
 }: UseReplayEngineOptions) {
 	// Convert times to timestamps (seconds)
@@ -69,7 +74,7 @@ export function useReplayEngine({
 			const entryTs = Math.floor(new Date(entryTime).getTime() / 1000);
 			// Add 5 minutes of context before entry
 			startTimeRef.current = entryTs - 5 * 60;
-		} else if (bars.length > 0) {
+		} else if (bars.length > 0 && bars[0]) {
 			startTimeRef.current = bars[0].time;
 		}
 
@@ -78,7 +83,10 @@ export function useReplayEngine({
 			// Add 2 minutes of context after exit
 			endTimeRef.current = exitTs + 2 * 60;
 		} else if (bars.length > 0) {
-			endTimeRef.current = bars[bars.length - 1].time;
+			const lastBar = bars[bars.length - 1];
+			if (lastBar) {
+				endTimeRef.current = lastBar.time;
+			}
 		}
 	}, [bars, entryTime, exitTime]);
 
@@ -115,8 +123,7 @@ export function useReplayEngine({
 			// delta is in milliseconds, convert to seconds
 			const deltaSeconds = delta / 1000;
 			// Market time advance = real seconds * speed * 60 (minutes to seconds)
-			const marketTimeAdvance =
-				deltaSeconds * SPEED_MULTIPLIERS[speed] * 60;
+			const marketTimeAdvance = deltaSeconds * SPEED_MULTIPLIERS[speed] * 60;
 
 			setCurrentTime((prev) => {
 				const next = prev + marketTimeAdvance;
@@ -160,12 +167,13 @@ export function useReplayEngine({
 		return execTs <= currentTime;
 	});
 
-	// Calculate running P&L
+	// Calculate running P&L using proper point/pip values
 	const runningPnl = calculateRunningPnl(
 		visibleExecutions,
 		visibleBars,
-		entryPrice,
 		direction,
+		symbol,
+		instrumentType,
 	);
 
 	// Calculate progress percentage
@@ -196,10 +204,7 @@ export function useReplayEngine({
 
 	const seekTo = useCallback((time: number) => {
 		setCurrentTime(
-			Math.max(
-				startTimeRef.current,
-				Math.min(endTimeRef.current, time),
-			),
+			Math.max(startTimeRef.current, Math.min(endTimeRef.current, time)),
 		);
 	}, []);
 
@@ -267,8 +272,9 @@ export function useReplayEngine({
 function calculateRunningPnl(
 	visibleExecutions: ReplayExecution[],
 	visibleBars: ChartBar[],
-	entryPrice: string | null,
 	direction: "long" | "short",
+	symbol: string,
+	instrumentType: "futures" | "forex",
 ): number {
 	if (visibleExecutions.length === 0 || visibleBars.length === 0) {
 		return 0;
@@ -282,20 +288,18 @@ function calculateRunningPnl(
 	const quantity = parseFloat(entryExec.quantity);
 	const currentPrice = visibleBars[visibleBars.length - 1]?.close ?? entry;
 
-	// Calculate unrealized P&L based on direction
-	const priceDiff =
-		direction === "long" ? currentPrice - entry : entry - currentPrice;
+	// Calculate unrealized P&L using proper point/pip values
+	const unrealizedPnl =
+		instrumentType === "futures"
+			? calculateFuturesPnL(symbol, entry, currentPrice, quantity, direction)
+			: calculateForexPnL(symbol, entry, currentPrice, quantity, direction);
 
 	// Sum realized P&L from scale-outs and exits
 	const realizedPnl = visibleExecutions
 		.filter(
-			(e) =>
-				e.executionType === "exit" ||
-				e.executionType === "scale_out",
+			(e) => e.executionType === "exit" || e.executionType === "scale_out",
 		)
 		.reduce((sum, e) => sum + (parseFloat(e.realizedPnl ?? "0") || 0), 0);
 
-	// For simplicity, return unrealized + realized
-	// In a real implementation, you'd track remaining position size
-	return priceDiff * quantity + realizedPnl;
+	return unrealizedPnl + realizedPnl;
 }
