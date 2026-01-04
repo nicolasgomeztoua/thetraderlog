@@ -20,7 +20,7 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          use_oauth: true
           prompt: |
             Review this PR. ONLY comment on critical security issues or critical bugs.
             Do not comment on anything else. Be silent if nothing critical.
