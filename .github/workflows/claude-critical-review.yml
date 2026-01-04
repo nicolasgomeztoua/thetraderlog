@@ -20,7 +20,6 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          use_oauth: true
           prompt: |
             Review this PR. ONLY comment on critical security issues or critical bugs.
             Do not comment on anything else. Be silent if nothing critical.
