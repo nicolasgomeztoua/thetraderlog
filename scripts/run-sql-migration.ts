@@ -8,8 +8,12 @@ config();
 const sqlFile = process.argv[2] as string | undefined;
 
 if (!sqlFile) {
-	console.error("❌ Usage: npx tsx scripts/run-sql-migration.ts <path-to-sql-file>");
-	console.error("   Example: npx tsx scripts/run-sql-migration.ts drizzle/0003_prefixed_uuid_migration.sql");
+	console.error(
+		"❌ Usage: npx tsx scripts/run-sql-migration.ts <path-to-sql-file>",
+	);
+	console.error(
+		"   Example: npx tsx scripts/run-sql-migration.ts drizzle/0003_prefixed_uuid_migration.sql",
+	);
 	process.exit(1);
 }
 
@@ -48,7 +52,11 @@ async function runMigration() {
 					const lines = s.split("\n");
 					// Skip leading comment and empty lines
 					let firstLine = lines[0];
-					while (lines.length > 0 && firstLine && (firstLine.trim().startsWith("--") || firstLine.trim() === "")) {
+					while (
+						lines.length > 0 &&
+						firstLine &&
+						(firstLine.trim().startsWith("--") || firstLine.trim() === "")
+					) {
 						lines.shift();
 						firstLine = lines[0];
 					}
@@ -72,7 +80,9 @@ async function runMigration() {
 
 		for (const statement of statements) {
 			const preview = statement.replace(/\s+/g, " ").slice(0, 70);
-			process.stdout.write(`[${completed + skipped + 1}/${statements.length}] ${preview}...`);
+			process.stdout.write(
+				`[${completed + skipped + 1}/${statements.length}] ${preview}...`,
+			);
 
 			try {
 				await client.unsafe(statement);
@@ -108,7 +118,9 @@ async function runMigration() {
 	} catch (e) {
 		const error = e as Error;
 		console.error("\n❌ Migration failed:", error.message);
-		console.error("\n💡 If partially completed, you may need to restore from backup.");
+		console.error(
+			"\n💡 If partially completed, you may need to restore from backup.",
+		);
 		process.exit(1);
 	} finally {
 		await client.end();

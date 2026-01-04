@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 /**
  * Trade data required for hash computation.
@@ -25,7 +25,7 @@ export interface TradeHashInput {
  */
 function normalizeDecimal(value: string): string {
 	const num = parseFloat(value);
-	if (isNaN(num)) {
+	if (Number.isNaN(num)) {
 		return "0.00000000";
 	}
 	return num.toFixed(8);

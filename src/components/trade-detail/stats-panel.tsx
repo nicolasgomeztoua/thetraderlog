@@ -75,7 +75,7 @@ function Section({
 	return (
 		<div
 			className={cn(
-				"rounded-sm border border-white/[0.06] bg-white/[0.02] p-4",
+				"rounded-sm border border-white/6 bg-white/2 p-4",
 				className,
 			)}
 		>
@@ -210,7 +210,7 @@ function StrategySection({
 			)}
 
 			{!strategyId && (
-				<div className="flex items-center gap-3 rounded border border-white/5 bg-white/[0.01] p-3">
+				<div className="flex items-center gap-3 rounded border border-white/5 bg-white/1 p-3">
 					<BookMarked className="h-4 w-4 text-muted-foreground/50" />
 					<p className="font-mono text-[11px] text-muted-foreground">
 						No strategy assigned
@@ -368,7 +368,7 @@ export function StatsPanel({
 							    SECTION 2: Performance Metrics (Read-only)
 							    ============================================ */}
 							<Section title="Performance">
-								<div className="divide-y divide-white/[0.04]">
+								<div className="divide-y divide-white/4">
 									<StatRow
 										label="Planned R:R"
 										suffix="R"
@@ -424,7 +424,7 @@ export function StatsPanel({
 								trade.mfePrice && (
 									<div className="grid grid-cols-2 gap-2">
 										{/* MAE Card */}
-										<div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+										<div className="rounded-sm border border-white/6 bg-white/2 p-3">
 											<div className="mb-1 flex items-center gap-1">
 												<span className="font-mono text-[10px] text-muted-foreground/80 uppercase tracking-widest">
 													MAE
@@ -450,7 +450,7 @@ export function StatsPanel({
 										</div>
 
 										{/* MFE Card */}
-										<div className="rounded-sm border border-white/[0.06] bg-white/[0.02] p-3">
+										<div className="rounded-sm border border-white/6 bg-white/2 p-3">
 											<div className="mb-1 flex items-center gap-1">
 												<span className="font-mono text-[10px] text-muted-foreground/80 uppercase tracking-widest">
 													MFE
@@ -481,7 +481,7 @@ export function StatsPanel({
 							    SECTION 4: Trade Details (Read-only)
 							    ============================================ */}
 							<Section title="Trade Details">
-								<div className="divide-y divide-white/[0.04]">
+								<div className="divide-y divide-white/4">
 									<StatRow
 										label={
 											trade.instrumentType === "futures" ? "Contracts" : "Lots"
@@ -546,7 +546,7 @@ export function StatsPanel({
 							    SECTION 5: Entry & Exit
 							    ============================================ */}
 							<Section title="Entry & Exit">
-								<div className="divide-y divide-white/[0.04]">
+								<div className="divide-y divide-white/4">
 									<StatRow
 										label="Entry Price"
 										value={`$${parseFloat(trade.entryPrice).toLocaleString()}`}

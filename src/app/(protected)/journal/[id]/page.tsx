@@ -711,7 +711,7 @@ export default function TradeDetailPage() {
 							This will move the trade to trash. You can restore it later.
 						</DialogDescription>
 					</DialogHeader>
-					<div className="flex items-center justify-between rounded border border-white/10 bg-white/[0.02] p-4">
+					<div className="flex items-center justify-between rounded border border-white/10 bg-white/2 p-4">
 						<div className="flex items-center gap-3">
 							<Trash2 className="h-5 w-5 text-loss" />
 							<div>

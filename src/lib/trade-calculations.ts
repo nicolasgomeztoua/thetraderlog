@@ -245,7 +245,7 @@ export interface MAEMFEResult {
 export function calculateMAEMFE(
 	bars: OHLCBar[],
 	entryPrice: number,
-	exitPrice: number,
+	_exitPrice: number,
 	direction: "long" | "short",
 	quantity: number,
 	symbol: string,
