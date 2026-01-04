@@ -623,10 +623,11 @@ function LightweightChartInner({
 			} else {
 				ohlcSnapLineRef.current = seriesRef.current.createPriceLine({
 					price: nearest.price,
-					color: colors.crosshairLabel,
+					color: colors.crosshair, // Same as vertical crosshair
 					lineWidth: 1,
-					lineStyle: 0, // Solid
+					lineStyle: 2, // Dashed
 					axisLabelVisible: true,
+					axisLabelColor: colors.crosshairLabel,
 					title: nearest.label,
 				});
 			}
