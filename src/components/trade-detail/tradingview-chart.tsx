@@ -554,6 +554,57 @@ function LightweightChartInner({
 		};
 		chart.timeScale().subscribeVisibleLogicalRangeChange(zoomHandler);
 
+		// Subscribe to crosshair move for OHLC snapping
+		chart.subscribeCrosshairMove((param) => {
+			if (!param.point || !param.time || !seriesRef.current) {
+				// Mouse left chart - remove snap line
+				if (ohlcSnapLineRef.current && seriesRef.current) {
+					seriesRef.current.removePriceLine(ohlcSnapLineRef.current);
+					ohlcSnapLineRef.current = null;
+				}
+				return;
+			}
+
+			// Get the bar data at the crosshair time
+			const barData = param.seriesData.get(seriesRef.current);
+			if (!barData || !("open" in barData)) return;
+
+			// Calculate which OHLC value is closest to cursor Y position
+			const price = seriesRef.current.coordinateToPrice(param.point.y);
+			if (price === null) return;
+
+			const ohlcValues = [
+				{ label: "O", price: barData.open },
+				{ label: "H", price: barData.high },
+				{ label: "L", price: barData.low },
+				{ label: "C", price: barData.close },
+			];
+
+			// Find nearest OHLC value
+			const nearest = ohlcValues.reduce((prev, curr) =>
+				Math.abs(curr.price - price) < Math.abs(prev.price - price)
+					? curr
+					: prev,
+			);
+
+			// Update or create the snap line
+			if (ohlcSnapLineRef.current) {
+				ohlcSnapLineRef.current.applyOptions({
+					price: nearest.price,
+					title: nearest.label,
+				});
+			} else {
+				ohlcSnapLineRef.current = seriesRef.current.createPriceLine({
+					price: nearest.price,
+					color: colors.crosshairLabel,
+					lineWidth: 1,
+					lineStyle: 0, // Solid
+					axisLabelVisible: true,
+					title: nearest.label,
+				});
+			}
+		});
+
 		// Cleanup
 		return () => {
 			chart.timeScale().unsubscribeVisibleLogicalRangeChange(zoomHandler);
@@ -562,6 +613,11 @@ function LightweightChartInner({
 			}
 			if (markersPrimitive) {
 				markersPrimitive.detach();
+			}
+			// Clean up OHLC snap line
+			if (ohlcSnapLineRef.current && seriesRef.current) {
+				seriesRef.current.removePriceLine(ohlcSnapLineRef.current);
+				ohlcSnapLineRef.current = null;
 			}
 			chart.remove();
 			chartRef.current = null;
