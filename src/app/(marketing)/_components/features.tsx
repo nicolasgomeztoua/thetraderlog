@@ -21,7 +21,7 @@ const features = [
 		className: "md:col-span-2",
 		visual: (
 			<div className="mt-6 space-y-3">
-				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/[0.02] p-3">
+				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/2 p-3">
 					<span className="font-mono text-muted-foreground text-xs">
 						ES 03/15
 					</span>
@@ -30,14 +30,14 @@ const features = [
 						+$425.00
 					</span>
 				</div>
-				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/[0.02] p-3">
+				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/2 p-3">
 					<span className="font-mono text-muted-foreground text-xs">
 						NQ 03/15
 					</span>
 					<span className="font-medium font-mono text-sm">SHORT</span>
 					<span className="ml-auto font-mono text-loss text-sm">-$180.00</span>
 				</div>
-				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/[0.02] p-3">
+				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/2 p-3">
 					<span className="font-mono text-muted-foreground text-xs">
 						EUR/USD
 					</span>
@@ -60,7 +60,7 @@ const features = [
 			<div className="mt-6 flex h-24 items-end justify-between gap-1">
 				{[35, 55, 42, 78, 65, 88, 72, 95, 82, 68].map((h) => (
 					<div
-						className="flex-1 rounded-t bg-gradient-to-t from-primary/60 to-primary/20"
+						className="flex-1 rounded-t bg-linear-to-t from-primary/60 to-primary/20"
 						key={`bar-${h}`}
 						style={{ height: `${h}%` }}
 					/>
@@ -77,7 +77,7 @@ const features = [
 		className: "md:col-span-1",
 		visual: (
 			<div className="mt-6 space-y-2">
-				<div className="rounded bg-white/[0.02] p-3">
+				<div className="rounded bg-white/2 p-3">
 					<p className="font-mono text-muted-foreground text-xs">
 						&gt; Analyze my morning trades
 					</p>
@@ -113,7 +113,7 @@ const features = [
 					<span className="text-primary">2.5:1</span>
 				</div>
 				<div className="h-2 overflow-hidden rounded-full bg-white/5">
-					<div className="h-full w-3/4 bg-gradient-to-r from-primary to-accent" />
+					<div className="h-full w-3/4 bg-linear-to-r from-primary to-accent" />
 				</div>
 				<div className="flex justify-between font-mono text-xs">
 					<span className="text-muted-foreground">Actual RR</span>
@@ -132,7 +132,7 @@ const features = [
 			<div className="mt-6 flex flex-wrap gap-2">
 				{["Breakout", "Reversal", "Trend", "Range"].map((tag) => (
 					<span
-						className="rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-xs"
+						className="rounded border border-white/10 bg-white/2 px-2 py-1 font-mono text-xs"
 						key={tag}
 					>
 						{tag}
@@ -152,7 +152,7 @@ const features = [
 			<div className="mt-6 grid grid-cols-3 gap-2">
 				{["ES", "NQ", "CL", "EUR", "GBP", "JPY"].map((symbol) => (
 					<div
-						className="rounded border border-white/5 bg-white/[0.02] p-2 text-center font-mono text-xs"
+						className="rounded border border-white/5 bg-white/2 p-2 text-center font-mono text-xs"
 						key={symbol}
 					>
 						{symbol}
@@ -207,8 +207,8 @@ export function Features() {
 						<div
 							className={`group relative overflow-hidden rounded border transition-all duration-300 ${
 								feature.highlight
-									? "border-primary/20 bg-primary/[0.02] hover:border-primary/40"
-									: "border-white/5 bg-white/[0.01] hover:border-white/10"
+									? "border-primary/20 bg-primary/2 hover:border-primary/40"
+									: "border-white/5 bg-white/1 hover:border-white/10"
 							} p-6 ${feature.className}`}
 							key={feature.title}
 						>
@@ -236,8 +236,8 @@ export function Features() {
 
 							{/* Hover glow effect for highlighted cards */}
 							{feature.highlight && (
-								<div className="absolute -inset-px rounded opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-									<div className="absolute inset-0 rounded bg-gradient-to-r from-primary/10 via-transparent to-transparent" />
+								<div className="-inset-px absolute rounded opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+									<div className="absolute inset-0 rounded bg-linear-to-r from-primary/10 via-transparent to-transparent" />
 								</div>
 							)}
 						</div>

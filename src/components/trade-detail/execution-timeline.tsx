@@ -115,7 +115,7 @@ export function ExecutionTimeline({
 				<div className="space-y-1">
 					{sortedExecutions.map((execution) => (
 						<div
-							className="group flex items-center gap-3 rounded px-3 py-2 transition-colors hover:bg-white/[0.02]"
+							className="group flex items-center gap-3 rounded px-3 py-2 transition-colors hover:bg-white/2"
 							key={execution.id}
 						>
 							{/* Icon */}
