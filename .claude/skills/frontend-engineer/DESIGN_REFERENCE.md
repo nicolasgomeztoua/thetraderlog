@@ -220,21 +220,21 @@ button, a { line-height: 1.5; }
 
 **Standard Card**
 ```tsx
-<div className="rounded border border-white/5 bg-white/[0.01] p-6 hover:border-white/10 transition-all">
+<div className="rounded border border-white/5 bg-white/1hover:border-white/10 transition-all">
   {/* content */}
 </div>
 ```
 
 **Highlighted Card**
 ```tsx
-<div className="rounded border border-primary/20 bg-primary/[0.02] p-6 hover:border-primary/40 transition-all">
+<div className="rounded border border-primary/20 bg-primary/2 p-6 hover:border-primary/40 transition-all">
   {/* content */}
 </div>
 ```
 
 **Data Card (Dense)**
 ```tsx
-<div className="rounded border border-white/5 bg-white/[0.02] p-3">
+<div className="rounded border border-white/5 bg-white/2>
   <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
     Label
   </div>
@@ -250,7 +250,7 @@ The signature element—use this for any preview/demo content:
 ```tsx
 <div className="overflow-hidden rounded border border-white/10 bg-black/80 shadow-2xl">
   {/* Terminal header with traffic light dots */}
-  <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-4 py-2">
+  <div className="flex items-center justify-between border-b border-white/5 bg-white/2 py-2">
     <div className="flex items-center gap-2">
       <div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
       <div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
@@ -272,7 +272,7 @@ The signature element—use this for any preview/demo content:
 ### Status Badge
 
 ```tsx
-<div className="inline-flex items-center gap-3 rounded-none border border-white/10 bg-white/[0.02] px-4 py-2">
+<div className="inline-flex items-center gap-3 rounded-none border border-white/10 bg-white/2 px-4 py-2">
   <span className="pulse-dot h-2 w-2 rounded-full bg-profit" />
   <span className="font-mono text-xs text-muted-foreground uppercase tracking-wider">
     Now in public beta
@@ -326,7 +326,7 @@ Every section should follow this structure:
 ### Data Row (Trade List Item)
 
 ```tsx
-<div className="flex items-center justify-between rounded bg-white/[0.02] px-2 py-1">
+<div className="flex items-center justify-between rounded bg-white/2 px-2 py-1">
   <div className="flex items-center gap-2">
     <span className="font-mono text-[10px] text-muted-foreground">ES</span>
     <span className="font-mono text-[10px] text-profit">LONG</span>
@@ -365,7 +365,7 @@ Every section should follow this structure:
 ### Tags/Pills
 
 ```tsx
-<span className="rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-xs">
+<span className="rounded border border-white/10 bg-white/2 px-2 py-1 font-mono text-xs">
   Breakout
 </span>
 ```
@@ -374,7 +374,7 @@ Every section should follow this structure:
 
 ```tsx
 <div className="h-2 overflow-hidden rounded-full bg-white/5">
-  <div className="h-full w-3/4 bg-gradient-to-r from-primary to-accent" />
+  <div className="h-full w-3/4 bg-linear-to-r from-primary to-accent" />
 </div>
 ```
 
@@ -479,12 +479,12 @@ Floating blur orbs that create atmosphere:
 
 Bottom fade for content cutoff:
 ```tsx
-<div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+<div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-background to-transparent" />
 ```
 
 Section gradient:
 ```tsx
-<div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent" />
+<div className="absolute inset-0 bg-linear-to-brom-transparent via-primary/2 to-transparent" />
 ```
 
 ---
@@ -584,7 +584,7 @@ function AnimatedCounter({
 
 ```tsx
 <div
-  className="flex-1 rounded-t bg-gradient-to-t from-primary/60 to-primary/30"
+  className="flex-1 rounded-t bg-linear-to-t from-primary/60 to-primary/30"
   style={{ height: '80%' }}
 />
 ```
@@ -597,8 +597,8 @@ return (
   <div
     className={`flex-1 rounded-t transition-all ${
       isPositive
-        ? "bg-gradient-to-t from-primary/60 to-primary/30"
-        : "bg-gradient-to-t from-loss/60 to-loss/30"
+        ? "bg-linear-to-t from-primary/60 to-primary/30"
+        : "bg-linear-to-trom-loss/60 to-loss/30"
     }`}
     style={{ height: `${Math.abs(value)}%` }}
   />
@@ -723,7 +723,7 @@ const formatPercentage = (value: number) => {
     </div>
 
     {/* Content area */}
-    <div className="rounded border border-white/5 bg-white/[0.01] p-6">
+    <div className="rounded border border-white/5 bg-white/1 p-6">
       {/* Main content */}
     </div>
   </main>
@@ -737,7 +737,7 @@ const formatPercentage = (value: number) => {
   {items.map((item) => (
     <div
       key={item.id}
-      className="rounded border border-white/5 bg-white/[0.01] p-6 hover:border-white/10 transition-all"
+      className="rounded border border-white/5 bg-white/1 p-6 hover:border-white/10 transition-all"
     >
       {/* Card content */}
     </div>

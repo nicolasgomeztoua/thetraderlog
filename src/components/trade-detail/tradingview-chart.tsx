@@ -4,17 +4,19 @@ import {
 	createChart,
 	createSeriesMarkers,
 	type IChartApi,
+	type IPriceLine,
 	type ISeriesApi,
 	type SeriesMarker,
 	type UTCTimestamp,
 } from "lightweight-charts";
-import { ExternalLink, Loader2 } from "lucide-react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTheme } from "@/contexts/theme-context";
 import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
 import { getTradingViewSymbol } from "@/lib/symbols";
 import { getThemeById } from "@/lib/themes";
 import { cn } from "@/lib/utils";
+import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
 import { api } from "@/trpc/react";
 
 // =============================================================================
@@ -224,9 +226,36 @@ function LightweightChartInner({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chartRef = useRef<IChartApi | null>(null);
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+	const ohlcSnapLineRef = useRef<IPriceLine | null>(null);
 
-	// Timeframe state
-	const [interval, setInterval] = useState<ChartInterval>("15min");
+	// Chart preferences from persistent store
+	const interval = useChartPreferencesStore((s) => s.interval);
+	const setInterval = useChartPreferencesStore((s) => s.setInterval);
+
+	// Use refs for zoom to avoid re-renders - only apply on initial load
+	const setVisibleBarsCountRef = useRef(
+		useChartPreferencesStore.getState().setVisibleBarsCount,
+	);
+	const initialVisibleBarsCountRef = useRef(
+		useChartPreferencesStore.getState().visibleBarsCount,
+	);
+	const hasAppliedInitialZoomRef = useRef(false);
+	const zoomDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	// Reset initial zoom flag when navigating to a different trade
+	// biome-ignore lint/correctness/useExhaustiveDependencies: entryTime triggers reset for new trades
+	useEffect(() => {
+		hasAppliedInitialZoomRef.current = false;
+		initialVisibleBarsCountRef.current =
+			useChartPreferencesStore.getState().visibleBarsCount;
+	}, [entryTime]);
+
+	// Handler to fit chart to trade (called from Fit button)
+	const handleFitToTrade = useCallback(() => {
+		if (chartRef.current) {
+			chartRef.current.timeScale().fitContent();
+		}
+	}, []);
 
 	// Get theme colors from the actual theme configuration
 	const { theme } = useTheme();
@@ -374,8 +403,7 @@ function LightweightChartInner({
 					labelBackgroundColor: colors.crosshairLabel,
 				},
 				horzLine: {
-					color: colors.crosshair,
-					labelBackgroundColor: colors.crosshairLabel,
+					visible: false, // Hidden - we use custom OHLC-snapping line
 				},
 			},
 			rightPriceScale: {
@@ -459,33 +487,79 @@ function LightweightChartInner({
 			});
 		}
 
-		// Auto-fit to show trade window with context
-		if (hasRealData && entryTime) {
-			const range = calculateVisibleRange(
-				entryTime,
-				exitTime ?? null,
-				INTERVAL_MS[interval],
-				3,
+		// Apply zoom: only on initial load, use saved visibleBarsCount or auto-fit
+		const savedBarsCount = initialVisibleBarsCountRef.current;
+		const shouldApplyInitialZoom =
+			!hasAppliedInitialZoomRef.current &&
+			savedBarsCount &&
+			chartBars.length > 0 &&
+			entryTime;
+
+		if (shouldApplyInitialZoom) {
+			// User has a saved zoom preference - center on trade entry
+			const entryTs = Math.floor(new Date(entryTime).getTime() / 1000);
+			const entryIndex = chartBars.findIndex(
+				(bar) => (bar.time as number) >= entryTs,
 			);
-			if (range) {
-				// Ensure we have at least 5 candles visible
-				const minVisibleSeconds = 5 * (INTERVAL_MS[interval] / 1000);
-				const actualRange = (range.to as number) - (range.from as number);
-				if (actualRange < minVisibleSeconds) {
-					const padding = (minVisibleSeconds - actualRange) / 2;
-					range.from = ((range.from as number) - padding) as UTCTimestamp;
-					range.to = ((range.to as number) + padding) as UTCTimestamp;
-				}
-				chart.timeScale().setVisibleRange(range);
+			if (entryIndex >= 0) {
+				const halfVisible = savedBarsCount / 2;
+				chart.timeScale().setVisibleLogicalRange({
+					from: entryIndex - halfVisible,
+					to: entryIndex + halfVisible,
+				});
 			} else {
 				chart.timeScale().fitContent();
 			}
-		} else {
-			chart.timeScale().fitContent();
+			hasAppliedInitialZoomRef.current = true;
+		} else if (!hasAppliedInitialZoomRef.current) {
+			// No saved zoom - auto-fit to show trade window with context
+			if (hasRealData && entryTime) {
+				const range = calculateVisibleRange(
+					entryTime,
+					exitTime ?? null,
+					INTERVAL_MS[interval],
+					3,
+				);
+				if (range) {
+					// Ensure we have at least 5 candles visible
+					const minVisibleSeconds = 5 * (INTERVAL_MS[interval] / 1000);
+					const actualRange = (range.to as number) - (range.from as number);
+					if (actualRange < minVisibleSeconds) {
+						const padding = (minVisibleSeconds - actualRange) / 2;
+						range.from = ((range.from as number) - padding) as UTCTimestamp;
+						range.to = ((range.to as number) + padding) as UTCTimestamp;
+					}
+					chart.timeScale().setVisibleRange(range);
+				} else {
+					chart.timeScale().fitContent();
+				}
+			} else {
+				chart.timeScale().fitContent();
+			}
+			hasAppliedInitialZoomRef.current = true;
 		}
+
+		// Subscribe to zoom changes to persist for next trade load
+		const zoomHandler = (range: { from: number; to: number } | null) => {
+			if (range) {
+				const barsVisible = Math.round(range.to - range.from);
+				// Debounced save to store (won't cause re-renders due to refs)
+				if (zoomDebounceRef.current) {
+					clearTimeout(zoomDebounceRef.current);
+				}
+				zoomDebounceRef.current = setTimeout(() => {
+					setVisibleBarsCountRef.current(barsVisible);
+				}, 300);
+			}
+		};
+		chart.timeScale().subscribeVisibleLogicalRangeChange(zoomHandler);
 
 		// Cleanup
 		return () => {
+			chart.timeScale().unsubscribeVisibleLogicalRangeChange(zoomHandler);
+			if (zoomDebounceRef.current) {
+				clearTimeout(zoomDebounceRef.current);
+			}
 			if (markersPrimitive) {
 				markersPrimitive.detach();
 			}
@@ -536,6 +610,17 @@ function LightweightChartInner({
 					interval={interval}
 					onIntervalChange={setInterval}
 				/>
+
+				{/* Fit to trade button */}
+				<button
+					className="flex items-center gap-1 rounded bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+					onClick={handleFitToTrade}
+					title="Fit to trade"
+					type="button"
+				>
+					<Maximize2 className="h-3 w-3" />
+					<span>Fit</span>
+				</button>
 			</div>
 
 			{/* Data source notice overlay */}
