@@ -10,8 +10,8 @@ import {
 	type UTCTimestamp,
 } from "lightweight-charts";
 import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
-import { toast } from "sonner";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import { useTheme } from "@/contexts/theme-context";
 import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
 import { getTradingViewSymbol } from "@/lib/symbols";
@@ -642,7 +642,9 @@ function LightweightChartInner({
 		// Subscribe to click for copy-to-clipboard
 		chart.subscribeClick(() => {
 			if (currentSnappedPriceRef.current !== null) {
-				navigator.clipboard.writeText(currentSnappedPriceRef.current.toString());
+				navigator.clipboard.writeText(
+					currentSnappedPriceRef.current.toString(),
+				);
 				toast("Price copied", {
 					description: currentSnappedPriceRef.current.toString(),
 					duration: 1500,
