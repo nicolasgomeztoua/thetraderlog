@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChartBar } from "@/lib/market-data";
 import { calculateForexPnL, calculateFuturesPnL } from "@/lib/market-data";
+import { toUnixTimestamp } from "@/lib/shared";
 import type { ReplaySpeed } from "@/stores/replay-preferences-store";
 
 // =============================================================================
@@ -71,7 +72,7 @@ export function useReplayEngine({
 	// Calculate start and end times from trade data
 	useEffect(() => {
 		if (entryTime) {
-			const entryTs = Math.floor(new Date(entryTime).getTime() / 1000);
+			const entryTs = toUnixTimestamp(entryTime);
 			// Add 5 minutes of context before entry
 			startTimeRef.current = entryTs - 5 * 60;
 		} else if (bars.length > 0 && bars[0]) {
@@ -79,7 +80,7 @@ export function useReplayEngine({
 		}
 
 		if (exitTime) {
-			const exitTs = Math.floor(new Date(exitTime).getTime() / 1000);
+			const exitTs = toUnixTimestamp(exitTime);
 			// Add 2 minutes of context after exit
 			endTimeRef.current = exitTs + 2 * 60;
 		} else if (bars.length > 0) {
@@ -102,7 +103,7 @@ export function useReplayEngine({
 	// Reset to start when trade data changes
 	useEffect(() => {
 		if (entryTime) {
-			const entryTs = Math.floor(new Date(entryTime).getTime() / 1000);
+			const entryTs = toUnixTimestamp(entryTime);
 			startTimeRef.current = entryTs - 5 * 60;
 			setCurrentTime(startTimeRef.current);
 			setIsPlaying(false);
@@ -163,7 +164,7 @@ export function useReplayEngine({
 
 	// Filter executions visible up to currentTime
 	const visibleExecutions = executions.filter((exec) => {
-		const execTs = Math.floor(new Date(exec.executedAt).getTime() / 1000);
+		const execTs = toUnixTimestamp(exec.executedAt);
 		return execTs <= currentTime;
 	});
 

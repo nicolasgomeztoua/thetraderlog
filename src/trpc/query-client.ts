@@ -3,6 +3,7 @@ import {
 	QueryClient,
 } from "@tanstack/react-query";
 import SuperJSON from "superjson";
+import { STALE_TIME_SHORT } from "@/lib/shared";
 
 export const createQueryClient = () =>
 	new QueryClient({
@@ -10,7 +11,7 @@ export const createQueryClient = () =>
 			queries: {
 				// With SSR, we usually want to set some default staleTime
 				// above 0 to avoid refetching immediately on the client
-				staleTime: 30 * 1000,
+				staleTime: STALE_TIME_SHORT,
 			},
 			dehydrate: {
 				serializeData: SuperJSON.serialize,

@@ -1245,7 +1245,6 @@ export const tradesRouter = createTRPCRouter({
 			// Use the shared service for calculation
 			const result = await calculateAndStoreMAEMFE(input.tradeId, {
 				skipAlreadyProcessed: false, // User explicitly requested recalculation
-				logTag: "[MAE/MFE:tRPC]",
 			});
 
 			if (!result.success && result.message !== "Already processed") {
@@ -1314,7 +1313,6 @@ export const tradesRouter = createTRPCRouter({
 				// Use the shared service for calculation
 				const result = await calculateAndStoreMAEMFE(tradeId, {
 					skipAlreadyProcessed: true,
-					logTag: "[MAE/MFE:bulk]",
 				});
 
 				if (result.success) {

@@ -74,8 +74,6 @@ export const mt4Parser: CSVParser = {
 		//    e. Handle commission + swap as fees
 		// 4. Return ParseResult with trades array
 
-		console.log("[MT4 Parser] Parsing not yet implemented");
-
 		return {
 			success: false,
 			trades: [],
@@ -148,8 +146,6 @@ export const mt5Parser: CSVParser = {
 	async parse(_csvContent: string): Promise<ParseResult> {
 		// TODO: Implement actual parsing logic
 		// Similar to MT4 but with MT5-specific field mappings
-
-		console.log("[MT5 Parser] Parsing not yet implemented");
 
 		return {
 			success: false,

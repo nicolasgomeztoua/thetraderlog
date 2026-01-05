@@ -3,7 +3,7 @@
  * Single source of truth for timeframe-related values.
  */
 
-import { MS_PER_MINUTE, MS_PER_HOUR } from "./time";
+import { MS_PER_HOUR, MS_PER_MINUTE } from "./time";
 
 // =============================================================================
 // CHART INTERVAL TYPE
