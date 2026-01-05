@@ -15,13 +15,13 @@
 
 import { and, eq } from "drizzle-orm";
 import { env } from "@/env";
+import { db } from "@/server/db";
+import { candleCache } from "@/server/db/schema";
 import {
 	getDatabentSymbol,
 	isFuturesSymbol,
 	TWELVE_DATA_SYMBOL_MAP,
-} from "@/lib/symbols";
-import { db } from "@/server/db";
-import { candleCache } from "@/server/db/schema";
+} from "./symbols";
 
 // =============================================================================
 // TYPES
@@ -101,16 +101,6 @@ export async function getOHLCBars(
 	date: Date,
 ): Promise<CacheResult> {
 	const dateKey = normalizeDateToUTC(date);
-	const LOG_TAG = "[MarketData]";
-
-	console.log(
-		`${LOG_TAG} getOHLCBars:`,
-		JSON.stringify({
-			symbol,
-			interval,
-			date: dateKey.toISOString(),
-		}),
-	);
 
 	// 1. Check cache first
 	const cached = await db.query.candleCache.findFirst({
@@ -122,16 +112,11 @@ export async function getOHLCBars(
 	});
 
 	if (cached) {
-		// Cache HIT - parse and return
-		console.log(`${LOG_TAG} CACHE HIT for ${symbol}/${interval}`);
 		try {
 			const bars = JSON.parse(cached.bars) as OHLCBar[];
 			return { bars, source: "cache", dataQuality: "full" };
 		} catch {
 			// Corrupted cache entry - delete and re-fetch
-			console.warn(
-				`${LOG_TAG} Corrupted cache entry for ${symbol}/${interval}/${dateKey.toISOString()}`,
-			);
 			await db
 				.delete(candleCache)
 				.where(
@@ -142,25 +127,12 @@ export async function getOHLCBars(
 					),
 				);
 		}
-	} else {
-		console.log(`${LOG_TAG} CACHE MISS for ${symbol}/${interval}`);
 	}
 
 	// 2. Cache MISS - fetch from appropriate API based on symbol type
 	const apiResult = await fetchFromProvider(symbol, interval, dateKey);
 
-	console.log(
-		`${LOG_TAG} API fetch result:`,
-		JSON.stringify({
-			success: apiResult.success,
-			barCount: apiResult.bars.length,
-			provider: apiResult.provider,
-			error: apiResult.error,
-		}),
-	);
-
 	if (!apiResult.success || apiResult.bars.length === 0) {
-		console.log(`${LOG_TAG} Returning unavailable for ${symbol}`);
 		return { bars: [], source: "api", dataQuality: "unavailable" };
 	}
 
@@ -177,13 +149,9 @@ export async function getOHLCBars(
 				source: apiResult.provider ?? "unknown",
 				fetchedAt: new Date(),
 			})
-			.onConflictDoNothing(); // Handle race conditions gracefully
-		console.log(
-			`${LOG_TAG} Cached ${apiResult.bars.length} bars for ${symbol} (source: ${apiResult.provider})`,
-		);
-	} catch (error) {
-		// Log but don't fail - the bars are still valid
-		console.error(`${LOG_TAG} Failed to cache OHLC data:`, error);
+			.onConflictDoNothing();
+	} catch {
+		// Cache write failed - continue with API results
 	}
 
 	return {
@@ -319,9 +287,6 @@ interface FetchResult {
 	error?: string;
 }
 
-// Log prefix for easy filtering
-const LOG_TAG = "[MarketData]";
-
 // =============================================================================
 // PROVIDER ROUTING
 // =============================================================================
@@ -340,12 +305,10 @@ async function fetchFromProvider(
 	const databentoSymbol = getDatabentSymbol(symbol);
 
 	if (databentoSymbol && isFuturesSymbol(symbol)) {
-		console.log(`${LOG_TAG} Routing ${symbol} to Databento (futures)`);
 		return fetchFromDatabento(symbol, databentoSymbol, interval, date);
 	}
 
 	// Fallback to Twelve Data for forex/crypto/commodities
-	console.log(`${LOG_TAG} Routing ${symbol} to Twelve Data (forex/crypto)`);
 	return fetchFromTwelveData(symbol, interval, date);
 }
 
@@ -360,13 +323,7 @@ async function fetchFromTwelveData(
 	const apiKey = env.TWELVE_DATA_API_KEY;
 	const dateStr = formatDateForAPI(date);
 
-	console.log(
-		`${LOG_TAG} fetchFromTwelveData called:`,
-		JSON.stringify({ symbol, interval, date: dateStr }),
-	);
-
 	if (!apiKey) {
-		console.warn(`${LOG_TAG} TWELVE_DATA_API_KEY not configured`);
 		return {
 			success: false,
 			bars: [],
@@ -379,21 +336,7 @@ async function fetchFromTwelveData(
 	// Returns null for unsupported symbols (most CME futures)
 	const mappedSymbol = TWELVE_DATA_SYMBOL_MAP[symbol];
 
-	console.log(
-		`${LOG_TAG} Symbol mapping:`,
-		JSON.stringify({
-			input: symbol,
-			mapped: mappedSymbol,
-			isSupported: mappedSymbol !== null,
-			isExplicitlyMapped: mappedSymbol !== undefined,
-		}),
-	);
-
 	if (mappedSymbol === null) {
-		// Symbol explicitly not supported by Twelve Data
-		console.info(
-			`${LOG_TAG} Symbol ${symbol} is NOT SUPPORTED by Twelve Data API (CME futures not available)`,
-		);
 		return {
 			success: false,
 			bars: [],
@@ -414,24 +357,12 @@ async function fetchFromTwelveData(
 		format: "JSON",
 	});
 
-	const url = `https://api.twelvedata.com/time_series?${params.toString().replace(apiKey, "***")}`;
-	console.log(`${LOG_TAG} API Request:`, url);
-
 	try {
 		const response = await fetch(
 			`https://api.twelvedata.com/time_series?${params.toString()}`,
 		);
 
-		console.log(
-			`${LOG_TAG} API Response status:`,
-			response.status,
-			response.statusText,
-		);
-
 		if (!response.ok) {
-			console.error(
-				`${LOG_TAG} Twelve Data API HTTP error: ${response.status}`,
-			);
 			return {
 				success: false,
 				bars: [],
@@ -442,19 +373,7 @@ async function fetchFromTwelveData(
 
 		const data = (await response.json()) as TwelveDataResponse;
 
-		console.log(
-			`${LOG_TAG} API Response:`,
-			JSON.stringify({
-				status: data.status,
-				message: data.message,
-				valueCount: data.values?.length ?? 0,
-			}),
-		);
-
 		if (data.status === "error") {
-			console.error(
-				`${LOG_TAG} Twelve Data API Error Response: ${data.message}`,
-			);
 			return {
 				success: false,
 				bars: [],
@@ -464,9 +383,6 @@ async function fetchFromTwelveData(
 		}
 
 		if (!data.values || data.values.length === 0) {
-			console.log(
-				`${LOG_TAG} No data returned from Twelve Data for ${apiSymbol} on ${dateStr} (weekend/holiday?)`,
-			);
 			return { success: true, bars: [], provider: "twelve_data" };
 		}
 
@@ -483,12 +399,8 @@ async function fetchFromTwelveData(
 		// Sort by timestamp ascending
 		bars.sort((a, b) => a.timestamp - b.timestamp);
 
-		console.log(
-			`${LOG_TAG} SUCCESS: Fetched ${bars.length} bars from Twelve Data for ${apiSymbol}`,
-		);
 		return { success: true, bars, provider: "twelve_data" };
 	} catch (error) {
-		console.error(`${LOG_TAG} Twelve Data fetch exception:`, error);
 		return {
 			success: false,
 			bars: [],
@@ -581,26 +493,14 @@ function aggregateBars(bars: OHLCBar[], targetInterval: string): OHLCBar[] {
  * Fetch OHLC data from Databento API for futures
  */
 async function fetchFromDatabento(
-	originalSymbol: string,
+	_originalSymbol: string,
 	databentoSymbol: string,
 	interval: string,
 	date: Date,
 ): Promise<FetchResult> {
 	const apiKey = env.DATABENTO_API_KEY;
-	const dateStr = formatDateForAPI(date);
-
-	console.log(
-		`${LOG_TAG} fetchFromDatabento called:`,
-		JSON.stringify({
-			originalSymbol,
-			databentoSymbol,
-			interval,
-			date: dateStr,
-		}),
-	);
 
 	if (!apiKey) {
-		console.warn(`${LOG_TAG} DATABENTO_API_KEY not configured`);
 		return {
 			success: false,
 			bars: [],
@@ -632,7 +532,6 @@ async function fetchFromDatabento(
 	});
 
 	const url = `https://hist.databento.com/v0/timeseries.get_range?${params.toString()}`;
-	console.log(`${LOG_TAG} Databento API Request:`, url.replace(apiKey, "***"));
 
 	try {
 		const response = await fetch(url, {
@@ -642,18 +541,8 @@ async function fetchFromDatabento(
 			},
 		});
 
-		console.log(
-			`${LOG_TAG} Databento API Response status:`,
-			response.status,
-			response.statusText,
-		);
-
 		if (!response.ok) {
 			const errorText = await response.text();
-			console.error(
-				`${LOG_TAG} Databento API HTTP error: ${response.status}`,
-				errorText,
-			);
 			return {
 				success: false,
 				bars: [],
@@ -665,33 +554,13 @@ async function fetchFromDatabento(
 		// Databento returns newline-delimited JSON (NDJSON)
 		const text = await response.text();
 
-		// Debug: Log first 500 chars of response to see format
-		console.log(
-			`${LOG_TAG} Databento response preview (first 500 chars):`,
-			text.substring(0, 500),
-		);
-		console.log(`${LOG_TAG} Response length: ${text.length} bytes`);
-
 		if (!text.trim()) {
-			console.log(
-				`${LOG_TAG} No data returned from Databento for ${databentoSymbol} on ${dateStr} (weekend/holiday?)`,
-			);
 			return { success: true, bars: [], provider: "databento" };
 		}
 
 		// Parse NDJSON - each line is a separate JSON object
 		const lines = text.trim().split("\n");
-		console.log(`${LOG_TAG} Number of lines in response: ${lines.length}`);
-
 		const bars: OHLCBar[] = [];
-
-		// Log first record to understand structure
-		if (lines.length > 0 && lines[0]?.trim()) {
-			console.log(
-				`${LOG_TAG} First record sample:`,
-				lines[0].substring(0, 500),
-			);
-		}
 
 		for (const line of lines) {
 			if (!line.trim()) continue;
@@ -726,16 +595,8 @@ async function fetchFromDatabento(
 					});
 				}
 			} catch {
-				console.warn(
-					`${LOG_TAG} Failed to parse Databento record:`,
-					line.substring(0, 200),
-				);
+				// Skip malformed records
 			}
-		}
-
-		// Debug: Log sample bar if we have any
-		if (bars.length > 0) {
-			console.log(`${LOG_TAG} Sample parsed bar:`, JSON.stringify(bars[0]));
 		}
 
 		// Sort by timestamp ascending
@@ -744,13 +605,8 @@ async function fetchFromDatabento(
 		// Aggregate to target interval if needed
 		const aggregatedBars = aggregateBars(bars, interval);
 
-		console.log(
-			`${LOG_TAG} SUCCESS: Fetched ${bars.length} raw bars, aggregated to ${aggregatedBars.length} ${interval} bars for ${databentoSymbol}`,
-		);
-
 		return { success: true, bars: aggregatedBars, provider: "databento" };
 	} catch (error) {
-		console.error(`${LOG_TAG} Databento fetch exception:`, error);
 		return {
 			success: false,
 			bars: [],
@@ -779,7 +635,6 @@ export async function getFullDayBars(
 	entryTime: Date,
 	exitTime: Date | null,
 ): Promise<CacheResult> {
-	const LOG_TAG = "[MarketData]";
 	const effectiveExitTime = exitTime ?? new Date();
 
 	// Get all unique dates from entry to exit
@@ -794,16 +649,6 @@ export async function getFullDayBars(
 		dates.push(new Date(currentDate));
 		currentDate.setUTCDate(currentDate.getUTCDate() + 1);
 	}
-
-	console.log(
-		`${LOG_TAG} getFullDayBars:`,
-		JSON.stringify({
-			symbol,
-			entryTime: entryTime.toISOString(),
-			exitTime: exitTime?.toISOString() ?? "open",
-			daysToFetch: dates.length,
-		}),
-	);
 
 	// Fetch all days in parallel (always 1min for client-side aggregation)
 	const results = await Promise.all(
@@ -835,15 +680,6 @@ export async function getFullDayBars(
 	// Determine source (cache if all from cache)
 	const allFromCache = results.every((r) => r.source === "cache");
 	const source = allFromCache ? "cache" : "api";
-
-	console.log(
-		`${LOG_TAG} getFullDayBars result:`,
-		JSON.stringify({
-			totalBars: allBars.length,
-			dataQuality,
-			source,
-		}),
-	);
 
 	return { bars: allBars, source, dataQuality };
 }

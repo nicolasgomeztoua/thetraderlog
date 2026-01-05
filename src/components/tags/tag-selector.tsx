@@ -15,19 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useOptimisticState } from "@/hooks/use-debounced-mutation";
+import { PRESET_COLORS } from "@/lib/shared";
 import { api } from "@/trpc/react";
-
-const PRESET_COLORS = [
-	"#d4ff00", // Electric Chartreuse (primary)
-	"#00d4ff", // Ice Blue (accent)
-	"#00ff88", // Profit green
-	"#f59e0b", // Amber
-	"#ec4899", // Pink
-	"#8b5cf6", // Violet
-	"#14b8a6", // Teal
-	"#f97316", // Orange
-	"#6366f1", // Indigo
-];
 
 function getRandomColor() {
 	return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];

@@ -1,12 +1,13 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Account, User } from "@/server/db/schema";
+import { triggerMock } from "../../mocks/trigger";
 import {
 	createTestAccount,
 	createTestCaller,
 	createTestUser,
 	type TestCaller,
 	truncateAllTables,
-} from "../utils";
+} from "../../utils";
 
 /**
  * Helper to create a valid batch import trade object.
@@ -71,6 +72,11 @@ describe("trades router - batchImport", () => {
 
 	afterAll(async () => {
 		await truncateAllTables();
+	});
+
+	// Reset trigger mock between tests to ensure isolation
+	beforeEach(() => {
+		triggerMock.reset();
 	});
 
 	// ============================================================================
@@ -204,19 +210,20 @@ describe("trades router - batchImport", () => {
 			expect(importedTrade.symbol).toBe("CL");
 			expect(importedTrade.instrumentType).toBe("futures");
 			expect(importedTrade.direction).toBe("short");
-			expect(importedTrade.entryPrice).toBe("75.50");
-			expect(importedTrade.exitPrice).toBe("74.00");
-			expect(importedTrade.quantity).toBe("5");
-			expect(importedTrade.stopLoss).toBe("76.00");
-			expect(importedTrade.takeProfit).toBe("73.50");
-			expect(importedTrade.fees).toBe("12.50");
+			// Decimal fields are stored with 8 decimal places in DB, use parseFloat for comparison
+			expect(parseFloat(importedTrade.entryPrice)).toBe(75.5);
+			expect(parseFloat(importedTrade.exitPrice ?? "0")).toBe(74.0);
+			expect(parseFloat(importedTrade.quantity)).toBe(5);
+			expect(parseFloat(importedTrade.stopLoss ?? "0")).toBe(76.0);
+			expect(parseFloat(importedTrade.takeProfit ?? "0")).toBe(73.5);
+			expect(parseFloat(importedTrade.fees ?? "0")).toBe(12.5);
 			expect(importedTrade.notes).toBe("Oil trade during inventory report");
 			expect(importedTrade.externalId).toBe("ext-12345");
 			expect(importedTrade.status).toBe("closed");
 			expect(importedTrade.importSource).toBe("csv");
-			expect(importedTrade.realizedPnl).toBe("750.00");
+			expect(parseFloat(importedTrade.realizedPnl ?? "0")).toBe(750.0);
 			// netPnl = realizedPnl - fees = 750.00 - 12.50 = 737.50
-			expect(importedTrade.netPnl).toBe("737.50");
+			expect(parseFloat(importedTrade.netPnl ?? "0")).toBe(737.5);
 		});
 
 		it("should calculate netPnl correctly from profit and fees", async () => {
@@ -1192,10 +1199,12 @@ describe("trades router - batchImport", () => {
 				const entryTime = baseDate.toISOString();
 				const exitTime = new Date(baseDate.getTime() + 3600000).toISOString();
 
+				// Use prices that are genuinely different only beyond 8 decimals
+				// Both should round to "5900.12345678" via toFixed(8)
 				const trade1 = createBatchImportTrade({
 					symbol: "ES",
 					direction: "long",
-					entryPrice: "5900.123456789", // 9 decimal places
+					entryPrice: "5900.123456780001", // Rounds to 5900.12345678
 					exitPrice: "5910.00",
 					entryTime,
 					exitTime,
@@ -1210,11 +1219,12 @@ describe("trades router - batchImport", () => {
 				});
 				expect(result1.imported).toBe(1);
 
-				// Trade with price that differs only in 9th+ decimal place
+				// Trade with price that differs only beyond 8th decimal place
+				// Also rounds to "5900.12345678" via toFixed(8)
 				const trade2 = createBatchImportTrade({
 					symbol: "ES",
 					direction: "long",
-					entryPrice: "5900.123456781", // Differs only in 9th decimal
+					entryPrice: "5900.123456780009", // Also rounds to 5900.12345678
 					exitPrice: "5910.00",
 					entryTime,
 					exitTime,

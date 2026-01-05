@@ -13,10 +13,16 @@ import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/theme-context";
-import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
-import { getTradingViewSymbol } from "@/lib/symbols";
-import { getThemeById } from "@/lib/themes";
-import { cn } from "@/lib/utils";
+import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
+import {
+	type ChartInterval,
+	cn,
+	INTERVAL_LABELS,
+	INTERVAL_MS,
+	roundToCandle,
+	STALE_TIME_MEDIUM,
+} from "@/lib/shared";
+import { getThemeById } from "@/lib/ui";
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
 import { api } from "@/trpc/react";
 
@@ -76,36 +82,9 @@ interface ChartProps {
 
 type CandleDataPoint = CandlestickData<UTCTimestamp>;
 
-// Interval display labels
-const INTERVAL_LABELS: Record<ChartInterval, string> = {
-	"1min": "1m",
-	"5min": "5m",
-	"15min": "15m",
-	"30min": "30m",
-	"1h": "1h",
-};
-
-// Interval durations in milliseconds
-const INTERVAL_MS: Record<ChartInterval, number> = {
-	"1min": 60 * 1000,
-	"5min": 5 * 60 * 1000,
-	"15min": 15 * 60 * 1000,
-	"30min": 30 * 60 * 1000,
-	"1h": 60 * 60 * 1000,
-};
-
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
-
-/**
- * Round a timestamp to the nearest candle bucket for the given interval
- */
-function roundToCandle(time: Date | string, intervalMs: number): UTCTimestamp {
-	const timestamp = new Date(time).getTime();
-	const rounded = Math.floor(timestamp / intervalMs) * intervalMs;
-	return Math.floor(rounded / 1000) as UTCTimestamp;
-}
 
 /**
  * Calculate the visible range for auto-fit
@@ -288,7 +267,7 @@ function LightweightChartInner({
 			},
 			{
 				enabled: canFetchRealData,
-				staleTime: 1000 * 60 * 5, // 5 minutes - data doesn't change often
+				staleTime: STALE_TIME_MEDIUM,
 				refetchOnWindowFocus: false,
 			},
 		);
@@ -325,7 +304,7 @@ function LightweightChartInner({
 
 		// Entry marker - arrow in trade direction
 		if (entryTime) {
-			const entryTs = roundToCandle(entryTime, intervalMs);
+			const entryTs = roundToCandle(entryTime, intervalMs) as UTCTimestamp;
 			markerList.push({
 				time: entryTs,
 				position: direction === "long" ? "belowBar" : "aboveBar",
@@ -337,7 +316,7 @@ function LightweightChartInner({
 
 		// Exit marker - grey circle
 		if (status === "closed" && exitTime) {
-			const exitTs = roundToCandle(exitTime, intervalMs);
+			const exitTs = roundToCandle(exitTime, intervalMs) as UTCTimestamp;
 			markerList.push({
 				time: exitTs,
 				position: direction === "long" ? "aboveBar" : "belowBar",
@@ -358,7 +337,10 @@ function LightweightChartInner({
 					continue;
 				}
 
-				const execTs = roundToCandle(execution.executedAt, intervalMs);
+				const execTs = roundToCandle(
+					execution.executedAt,
+					intervalMs,
+				) as UTCTimestamp;
 
 				if (execution.executionType === "scale_in") {
 					markerList.push({

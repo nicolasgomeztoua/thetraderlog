@@ -11,7 +11,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
 
 interface StrategyCardProps {
 	strategy: {
@@ -47,7 +47,7 @@ export function StrategyCard({
 	return (
 		<div
 			className={cn(
-				"group relative rounded border border-white/5 bg-white/[0.02] p-5 transition-all hover:border-white/10",
+				"group relative rounded border border-white/5 bg-white/2 p-5 transition-all hover:border-white/10",
 				!strategy.isActive && "opacity-60",
 			)}
 		>

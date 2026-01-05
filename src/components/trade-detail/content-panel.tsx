@@ -2,7 +2,7 @@ import { CandlestickChart } from "lucide-react";
 import { TradeTags } from "@/components/tags/tag-selector";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 import type { TradeForContentPanel } from "@/types";
 import { EditableTextarea } from "./editable-field";

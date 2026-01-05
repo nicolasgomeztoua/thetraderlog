@@ -4,7 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTimezone } from "@/hooks/use-timezone";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
 import type { ReplayExecution } from "./use-replay-engine";
 
 // =============================================================================

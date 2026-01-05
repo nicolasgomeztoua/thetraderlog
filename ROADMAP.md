@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** January 4, 2026 (Trade Replay complete)
+> **Last Updated:** January 4, 2026 (Phase 4 COMPLETE - all 5 tabs + cross-filtering + query builder + presets + export)
 
 ---
 
@@ -222,67 +222,69 @@ Make the dashboard fully customizable with drag-and-drop widgets like TradeZella
 
 ---
 
-## Phase 4: Advanced Analytics
+## Phase 4: Advanced Analytics (RESTRUCTURED)
 
-> **Priority:** HIGH | **Dependencies:** Phase 1, 2 | **Estimate:** 4-5 weeks
+> **Priority:** HIGH | **Dependencies:** Phase 1, 2 | **Estimate:** 6-8 weeks
 >
-> **Sub-plan:** [./plans/phase-4-analytics.md](./plans/phase-4-analytics.md) *(DETAILED)*
+> **Sub-plan:** [./plans/phase-4-analytics.md](./plans/phase-4-analytics.md)
 >
-> **Status:** 🔄 In Progress
+> **Status:** ✅ Complete
 
 ### Goal
-Build 50+ specialized reports like TradeZella, plus professional-grade metrics used by hedge funds and prop firms (Sharpe/Sortino/Calmar ratios, Risk of Ruin, Kelly Criterion, Monte Carlo simulations).
+Complete 5-tab analytics system (Overview, Time, Risk, Symbols, Behavior) with cross-filterable dimensions and a full query builder.
 
-### Tasks
+### Completed Tabs
 
-#### 4.1 Time-Based Reports
-- [x] Performance by day of week (custom horizontal bar chart)
-- [x] Performance by time of day (24-hour heatmap)
-- [x] Performance by trading session (user-configurable sessions)
-- [x] Performance by month (area chart with trend line)
-- [x] Calendar heatmap (GitHub-style daily P&L)
-- [x] Best/worst trading days highlighted
-- [ ] Trading frequency analysis
+#### Overview Tab ✅
+- [x] 8 metric cards (P&L, Win Rate, Profit Factor, Avg Trade, Expectancy, Payoff Ratio, Sharpe, Streak)
+- [x] Win/Loss distribution donut chart
+- [x] Cumulative P&L area chart
+- [x] P&L by trade bar chart (last 50)
 
-#### 4.2 Setup-Based Reports
-- [ ] Best setup analysis
-- [ ] Setup comparison matrix
-- [ ] Win rate by setup type
-- [ ] Profit factor by setup
-- [ ] Setup performance over time
+#### Time Tab ✅
+- [x] Calendar heatmap (365 days daily P&L)
+- [x] Day of week performance breakdown
+- [x] Hourly performance heatmap (24h, timezone-aware)
+- [x] Trading session analysis (user-configurable)
+- [x] Monthly P&L trend chart
 
-#### 4.3 Risk Reports
-- [x] R-Multiple distribution
-- [x] Risk/reward ratio analysis
-- [x] Drawdown tracking chart (Equity curve with drawdown highlighting)
-- [x] Maximum drawdown calculation
+#### Risk Tab ✅
+- [x] 8 risk metric cards (Max DD, Current DD, Sortino, Calmar, Recovery Factor, Ulcer Index, Drawdowns, Time in DD)
+- [x] Equity curve with drawdown highlighting
+- [x] R-Multiple distribution histogram
+- [x] Risk/Reward analysis (planned vs actual)
+- [x] Risk of Ruin gauge
+- [x] Kelly Criterion display
 - [x] Position sizing analysis
-- ~~MAE/MFE~~ *(moved to Trade Detail - per-trade metric, not aggregate)*
+- [x] Drawdown history table
 
-#### 4.3.1 Professional Risk Metrics *(COMPLETED)*
-- [x] Sharpe Ratio (risk-adjusted return)
-- [x] Sortino Ratio (downside volatility only)
-- [x] Calmar Ratio (return / max drawdown)
-- [x] Risk of Ruin calculation (with dynamic account limits)
-- [x] Kelly Criterion (optimal position sizing)
-- [x] Recovery Factor
-- [x] Ulcer Index
-- [ ] Monte Carlo simulation *(moved to Strategy Analytics - requires risk % per trade)*
+#### Symbols Tab ✅
+- [x] Symbol performance table (P&L, trades, win rate, profit factor per symbol)
+- [x] Best/worst symbols ranking
+- [x] Symbol distribution pie chart
+- [x] Symbol performance over time (line chart per symbol)
 
-#### 4.4 Streak and Pattern Reports
-- [ ] Consecutive wins tracking
-- [ ] Consecutive losses tracking
-- [ ] Performance after win
-- [ ] Performance after loss
-- [ ] Recovery from drawdown
-- [ ] Tilt detection patterns
+#### Behavior Tab ✅
+- [x] Streak analysis (consecutive wins/losses, max streaks)
+- [x] Performance after win vs after loss (revenge trading detection)
+- [x] Trade frequency analysis (trades per day distribution)
+- [x] Overtrading detection (performance vs trade count correlation)
+- [x] Holding time analysis (performance by duration buckets)
+- [x] Behavioral metrics summary (tilt score, discipline, overtrading tendency)
 
-#### 4.5 Custom Reports & Export
-- [ ] Report builder interface
-- [ ] Export to PDF
-- [ ] Export to CSV
-- [ ] Share report (public link)
-- [ ] Scheduled report emails
+#### Cross-Filtering System ✅
+- [x] Zustand store for analytics filters (`src/stores/analytics-filter-store.ts`)
+- [x] 11 filter dimensions: symbol, date range, day of week, hour, session, strategy, tags, R-multiple range, position size range, outcome, reviewed
+- [x] All 19+ analytics queries accept filter parameters
+- [x] Filter chips UI showing active filters
+- [x] Filter panel with all controls
+- [x] Query builder with AND/OR conditions between groups
+- [x] Filter presets (save/load/manage/set default)
+- [x] Auto-load default preset on page visit
+
+#### Export ✅
+- [x] Export filtered trades to CSV
+- [x] Export button in page header
 
 ---
 
@@ -623,12 +625,12 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | 1 | Enhanced Trade Log | 2-3 weeks | ✅ Complete |
 | 2 | Strategy System | 2 weeks | ✅ Complete |
 | 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
-| 4 | Advanced Analytics | 4-5 weeks | 🔄 In Progress |
-| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Screenshot pending) |
+| 4 | Advanced Analytics | 6-8 weeks | ✅ Complete (5 tabs + cross-filtering + query builder + presets + export) |
+| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Screenshot ⏳) |
 | 6 | Notebook System | 2 weeks | ⏳ Pending |
-| 9.1 | CSV Parsers | 1-2 weeks | ⏳ Pending |
 | 7 | Trade Replay | 3-4 weeks | ✅ Complete |
 | 8 | Backtesting | 3-4 weeks | ⏳ Pending |
+| 9.1 | CSV Parsers | 1-2 weeks | ⏳ Pending |
 | 10 | Mobile Optimization | 2 weeks | ⏳ Pending |
 | 11 | Educational/Social | Ongoing | ⏳ Pending |
 

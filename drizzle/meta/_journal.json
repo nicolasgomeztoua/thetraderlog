@@ -50,6 +50,13 @@
 			"when": 1767389097533,
 			"tag": "0006_real_rictor",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1767616086537,
+			"tag": "0007_curved_prima",
+			"breakpoints": true
 		}
 	]
 }

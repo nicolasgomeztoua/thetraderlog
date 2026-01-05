@@ -12,25 +12,13 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PRESET_COLORS } from "@/lib/shared";
 import type { RiskParameters } from "./risk-config";
 import { RiskConfig } from "./risk-config";
 import type { ScalingRules } from "./scaling-config";
 import { ScalingConfig } from "./scaling-config";
 import type { TrailingRules } from "./trailing-config";
 import { TrailingConfig } from "./trailing-config";
-
-// Preset colors following the design system
-const PRESET_COLORS = [
-	"#d4ff00", // Primary chartreuse
-	"#00d4ff", // Accent ice blue
-	"#00ff88", // Profit green
-	"#f59e0b", // Amber
-	"#ec4899", // Pink
-	"#8b5cf6", // Purple
-	"#14b8a6", // Teal
-	"#f97316", // Orange
-	"#6366f1", // Indigo
-];
 
 export interface StrategyRule {
 	id?: string;
@@ -286,7 +274,7 @@ export function StrategyForm({
 					</div>
 
 					{formData.rules.length === 0 ? (
-						<div className="rounded border border-white/5 bg-white/[0.02] py-8 text-center">
+						<div className="rounded border border-white/5 bg-white/2 py-8 text-center">
 							<p className="font-mono text-muted-foreground text-sm">
 								No rules defined yet
 							</p>
@@ -304,7 +292,7 @@ export function StrategyForm({
 						<div className="space-y-2">
 							{formData.rules.map((rule, idx) => (
 								<div
-									className="flex items-center gap-3 rounded border border-white/5 bg-white/[0.02] p-3"
+									className="flex items-center gap-3 rounded border border-white/5 bg-white/2 p-3"
 									key={rule.id ?? `new-${rule.order}`}
 								>
 									<GripVertical className="h-4 w-4 cursor-grab text-muted-foreground/50" />

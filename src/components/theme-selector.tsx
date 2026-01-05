@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { useTheme } from "@/contexts/theme-context";
-import { darkThemes, lightThemes, type Theme } from "@/lib/themes";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
+import { darkThemes, lightThemes, type Theme } from "@/lib/ui";
 
 function ThemeSwatch({ theme }: { theme: Theme }) {
 	return (

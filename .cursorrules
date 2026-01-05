@@ -137,17 +137,6 @@ notes: z.string().optional(),
 - Log errors to console for debugging
 - Provide meaningful error messages
 
-### Tags System
-When creating tags quickly, assign random colors:
-```tsx
-const PRESET_COLORS = [
-  "#d4ff00", "#00d4ff", "#00ff88", "#f59e0b", 
-  "#ec4899", "#8b5cf6", "#14b8a6", "#f97316", "#6366f1"
-];
-
-function getRandomColor() {
-  return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
-}
 ```
 
 ## File Structure

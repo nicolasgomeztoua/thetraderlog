@@ -4,8 +4,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getDateStringInTimezone } from "@/lib/timezone";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, getDateStringInTimezone } from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 
 interface CalendarDay {
@@ -247,7 +246,7 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 													<TooltipTrigger asChild>
 														<div
 															className={cn(
-																"h-[12px] w-[12px] rounded-[2px] transition-colors",
+																"h-[12px] w-[12px] rounded-sm transition-colors",
 																hasTrades
 																	? getPnLColor(dayData.pnl, maxAbsPnl)
 																	: "bg-secondary/50",
@@ -307,11 +306,11 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 							Less
 						</span>
 						<div className="flex gap-[2px]">
-							<div className="h-[10px] w-[10px] rounded-[2px] bg-loss/80" />
-							<div className="h-[10px] w-[10px] rounded-[2px] bg-loss/40" />
-							<div className="h-[10px] w-[10px] rounded-[2px] bg-secondary" />
-							<div className="h-[10px] w-[10px] rounded-[2px] bg-profit/40" />
-							<div className="h-[10px] w-[10px] rounded-[2px] bg-profit/80" />
+							<div className="h-[10px] w-[10px] rounded-sm bg-loss/80" />
+							<div className="h-[10px] w-[10px] rounded-sm bg-loss/40" />
+							<div className="h-[10px] w-[10px] rounded-sm bg-secondary" />
+							<div className="h-[10px] w-[10px] rounded-sm bg-profit/40" />
+							<div className="h-[10px] w-[10px] rounded-sm bg-profit/80" />
 						</div>
 						<span className="font-mono text-[10px] text-muted-foreground">
 							More

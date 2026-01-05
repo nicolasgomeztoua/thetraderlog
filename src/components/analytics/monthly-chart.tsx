@@ -1,5 +1,12 @@
+import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
-import { cn, formatCurrency } from "@/lib/utils";
+import {
+	ANALYTICS_COLORS,
+	CHART_AXIS_STYLE,
+	CHART_DIMENSIONS,
+	formatMonth as formatMonthIndex,
+} from "@/lib/analytics";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface MonthData {
 	month: string; // YYYY-MM format
@@ -23,78 +30,164 @@ function formatMonth(monthStr: string): string {
 	const [year, month] = monthStr.split("-");
 	if (!year || !month) return monthStr;
 
-	const monthNames = [
-		"Jan",
-		"Feb",
-		"Mar",
-		"Apr",
-		"May",
-		"Jun",
-		"Jul",
-		"Aug",
-		"Sep",
-		"Oct",
-		"Nov",
-		"Dec",
-	];
 	const monthIndex = parseInt(month, 10) - 1;
-	const monthName = monthNames[monthIndex] ?? month;
+	const monthName = formatMonthIndex(monthIndex) || month;
 
 	return `${monthName} '${year.slice(-2)}`;
 }
 
 /**
- * Terminal-styled monthly performance chart with cumulative line
+ * Terminal-styled monthly performance chart using AG Charts
+ * Displays cumulative P&L as an area chart
  */
 export function MonthlyChart({ data, className }: MonthlyChartProps) {
-	// Calculate stats and cumulative data
-	const { stats, chartData, maxAbsPnl, maxCumulative, minCumulative } =
-		useMemo(() => {
-			const profitableMonths = data.filter((d) => d.pnl > 0).length;
-			const totalPnl = data.reduce((sum, d) => sum + d.pnl, 0);
-			const avgMonthlyPnl = data.length > 0 ? totalPnl / data.length : 0;
+	// Calculate stats and transform data for AG Charts
+	const { stats, chartData } = useMemo(() => {
+		const profitableMonths = data.filter((d) => d.pnl > 0).length;
+		const totalPnl = data.reduce((sum, d) => sum + d.pnl, 0);
+		const avgMonthlyPnl = data.length > 0 ? totalPnl / data.length : 0;
+		const totalTrades = data.reduce((sum, d) => sum + d.trades, 0);
 
-			const bestMonth = data.reduce(
-				(best, current) => (current.pnl > best.pnl ? current : best),
-				data[0] ?? { month: "", pnl: -Infinity },
-			);
-			const worstMonth = data.reduce(
-				(worst, current) => (current.pnl < worst.pnl ? current : worst),
-				data[0] ?? { month: "", pnl: Infinity },
-			);
-
-			// Build cumulative data
-			let cumulative = 0;
-			const withCumulative = data.map((d) => {
-				cumulative += d.pnl;
-				return { ...d, cumulative };
-			});
-
-			const maxAbs = Math.max(...data.map((d) => Math.abs(d.pnl)), 1);
-			const maxCum = Math.max(...withCumulative.map((d) => d.cumulative), 0);
-			const minCum = Math.min(...withCumulative.map((d) => d.cumulative), 0);
-
+		// Build chart data with cumulative values
+		let cumulative = 0;
+		const transformed = data.map((d) => {
+			cumulative += d.pnl;
 			return {
-				stats: {
-					profitableMonths,
-					totalMonths: data.length,
-					avgMonthlyPnl,
-					bestMonth: bestMonth.pnl > 0 ? bestMonth : null,
-					worstMonth: worstMonth.pnl < 0 ? worstMonth : null,
-					totalPnl,
-				},
-				chartData: withCumulative,
-				maxAbsPnl: maxAbs,
-				maxCumulative: maxCum,
-				minCumulative: minCum,
+				...d,
+				cumulative: Math.round(cumulative * 100) / 100,
+				pnlRounded: Math.round(d.pnl * 100) / 100,
+				monthLabel: formatMonth(d.month),
 			};
-		}, [data]);
+		});
+
+		return {
+			stats: {
+				profitableMonths,
+				totalMonths: data.length,
+				avgMonthlyPnl,
+				totalPnl,
+				totalTrades,
+			},
+			chartData: transformed,
+		};
+	}, [data]);
+
+	// AG Charts configuration
+	const chartOptions = useMemo(() => {
+		if (chartData.length === 0) return {};
+
+		return {
+			background: { fill: "transparent" },
+			data: chartData,
+			series: [
+				{
+					type: "area" as const,
+					xKey: "monthLabel",
+					yKey: "cumulative",
+					yName: "Cumulative P&L",
+					fill:
+						stats.totalPnl >= 0
+							? ANALYTICS_COLORS.profitFill
+							: ANALYTICS_COLORS.lossFill,
+					stroke:
+						stats.totalPnl >= 0
+							? ANALYTICS_COLORS.profit
+							: ANALYTICS_COLORS.loss,
+					strokeWidth: CHART_DIMENSIONS.monthly.strokeWidth,
+					marker: {
+						enabled: true,
+						size: CHART_DIMENSIONS.monthly.markerSize,
+						fill:
+							stats.totalPnl >= 0
+								? ANALYTICS_COLORS.profit
+								: ANALYTICS_COLORS.loss,
+						stroke: ANALYTICS_COLORS.background,
+						strokeWidth: 1,
+					},
+					tooltip: {
+						renderer: (params: {
+							datum: {
+								monthLabel: string;
+								pnlRounded: number;
+								cumulative: number;
+								trades: number;
+								winRate: number;
+							};
+						}) => {
+							const d = params.datum;
+							const pnlColor =
+								d.pnlRounded >= 0
+									? ANALYTICS_COLORS.profit
+									: ANALYTICS_COLORS.loss;
+							const cumulativeColor =
+								d.cumulative >= 0
+									? ANALYTICS_COLORS.profit
+									: ANALYTICS_COLORS.loss;
+
+							return {
+								title: d.monthLabel,
+								content: `
+									<div style="margin-bottom: 4px;">Cumulative: <b style="color: ${cumulativeColor}">${formatCurrency(d.cumulative)}</b></div>
+									<div style="margin-bottom: 4px;">Monthly P&L: <b style="color: ${pnlColor}">${formatCurrency(d.pnlRounded)}</b></div>
+									<div style="color: ${ANALYTICS_COLORS.mutedLight};">${d.trades} trades · ${d.winRate.toFixed(0)}% win rate</div>
+								`,
+							};
+						},
+					},
+				},
+			],
+			axes: [
+				{
+					type: "category" as const,
+					position: "bottom" as const,
+					label: {
+						color: CHART_AXIS_STYLE.label.fill,
+						fontFamily: "JetBrains Mono, monospace",
+						fontSize: 10,
+					},
+					line: { color: CHART_AXIS_STYLE.line.stroke },
+					tick: { color: CHART_AXIS_STYLE.tick.stroke },
+					gridLine: { enabled: false },
+					paddingInner: 0.2,
+				},
+				{
+					type: "number" as const,
+					position: "left" as const,
+					label: {
+						color: CHART_AXIS_STYLE.label.fill,
+						fontFamily: "JetBrains Mono, monospace",
+						fontSize: 10,
+						formatter: (params: { value: number }) => {
+							const v = params.value;
+							if (Math.abs(v) >= 1000) {
+								return `$${(v / 1000).toFixed(1)}k`;
+							}
+							return `$${v.toFixed(0)}`;
+						},
+					},
+					line: { color: CHART_AXIS_STYLE.line.stroke },
+					tick: { color: CHART_AXIS_STYLE.tick.stroke },
+					gridLine: { style: [{ stroke: ANALYTICS_COLORS.gridMedium }] },
+				},
+			],
+			legend: { enabled: false },
+			tooltip: {
+				class: "ag-chart-tooltip-dark",
+			},
+			padding: {
+				top: 40,
+				right: 20,
+				bottom: 20,
+				left: 10,
+			},
+		};
+	}, [chartData, stats.totalPnl]);
 
 	if (data.length === 0) {
 		return (
 			<div
 				className={cn(
-					"flex h-[350px] items-center justify-center font-mono text-muted-foreground text-xs",
+					"flex h-[300px] items-center justify-center font-mono text-muted-foreground text-xs",
 					className,
 				)}
 			>
@@ -103,189 +196,58 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 		);
 	}
 
-	// Calculate cumulative line position (percentage from bottom)
-	const getCumulativeY = (cumulative: number) => {
-		const range = maxCumulative - minCumulative;
-		if (range === 0) return 50;
-		return ((cumulative - minCumulative) / range) * 100;
-	};
-
 	return (
-		<div className={cn("space-y-4", className)}>
-			{/* Summary stats */}
-			<div className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
-				<div className="rounded border border-border bg-secondary/30 p-2">
-					<div className="text-muted-foreground">Profitable</div>
-					<div
+		<div className={cn("space-y-3", className)}>
+			{/* Summary stats - compact row */}
+			<div className="flex items-center gap-4 font-mono text-xs">
+				<div className="flex items-center gap-2">
+					<span className="text-muted-foreground">Profitable:</span>
+					<span
 						className={
 							stats.profitableMonths > stats.totalMonths / 2
 								? "text-profit"
 								: "text-loss"
 						}
 					>
-						{stats.profitableMonths} / {stats.totalMonths}
-					</div>
+						{stats.profitableMonths}/{stats.totalMonths}
+					</span>
 				</div>
-				<div className="rounded border border-border bg-secondary/30 p-2">
-					<div className="text-muted-foreground">Avg Monthly</div>
-					<div
+				<div className="flex items-center gap-2">
+					<span className="text-muted-foreground">Avg:</span>
+					<span
 						className={stats.avgMonthlyPnl >= 0 ? "text-profit" : "text-loss"}
 					>
 						{formatCurrency(stats.avgMonthlyPnl)}
-					</div>
+					</span>
 				</div>
-				{stats.bestMonth && (
-					<div className="rounded border border-profit/30 bg-profit/5 p-2">
-						<div className="text-muted-foreground">Best</div>
-						<div className="text-profit">
-							{formatMonth(stats.bestMonth.month)}
-						</div>
-					</div>
-				)}
-				{stats.worstMonth && (
-					<div className="rounded border border-loss/30 bg-loss/5 p-2">
-						<div className="text-muted-foreground">Worst</div>
-						<div className="text-loss">
-							{formatMonth(stats.worstMonth.month)}
-						</div>
-					</div>
-				)}
+				<div className="flex items-center gap-2">
+					<span className="text-muted-foreground">Trades:</span>
+					<span className="text-foreground">{stats.totalTrades}</span>
+				</div>
 			</div>
 
-			{/* Chart area */}
-			<div className="relative h-[200px] rounded border border-border bg-secondary/20 p-4">
-				{/* Zero line */}
-				<div
-					className="absolute right-4 left-4 border-muted-foreground/20 border-t border-dashed"
-					style={{ top: `${100 - getCumulativeY(0)}%` }}
+			{/* Chart */}
+			<div className="relative">
+				<AgCharts
+					// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
+					options={chartOptions as any}
+					style={{ height: CHART_DIMENSIONS.monthly.height }}
 				/>
 
-				{/* Cumulative area */}
-				<svg
-					aria-labelledby="cumulative-pnl-title"
-					className="absolute inset-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)]"
-					preserveAspectRatio="none"
-					role="img"
-				>
-					<title id="cumulative-pnl-title">Cumulative P&L chart</title>
-					{/* Area fill */}
-					<defs>
-						<linearGradient
-							id="cumulativeGradient"
-							x1="0%"
-							x2="0%"
-							y1="0%"
-							y2="100%"
-						>
-							<stop
-								offset="0%"
-								stopColor={stats.totalPnl >= 0 ? "#00ff88" : "#ff3b3b"}
-								stopOpacity="0.3"
-							/>
-							<stop
-								offset="100%"
-								stopColor={stats.totalPnl >= 0 ? "#00ff88" : "#ff3b3b"}
-								stopOpacity="0.05"
-							/>
-						</linearGradient>
-					</defs>
-
-					{/* Area path */}
-					<path
-						d={`
-							M 0 ${100 - getCumulativeY(0)}
-							${chartData
-								.map((d, i) => {
-									const x = (i / (chartData.length - 1 || 1)) * 100;
-									const y = 100 - getCumulativeY(d.cumulative);
-									return `L ${x} ${y}`;
-								})
-								.join(" ")}
-							L 100 ${100 - getCumulativeY(0)}
-							Z
-						`}
-						fill="url(#cumulativeGradient)"
-					/>
-
-					{/* Line path */}
-					<path
-						d={chartData
-							.map((d, i) => {
-								const x = (i / (chartData.length - 1 || 1)) * 100;
-								const y = 100 - getCumulativeY(d.cumulative);
-								return `${i === 0 ? "M" : "L"} ${x} ${y}`;
-							})
-							.join(" ")}
-						fill="none"
-						stroke={stats.totalPnl >= 0 ? "#00ff88" : "#ff3b3b"}
-						strokeWidth="2"
-						vectorEffect="non-scaling-stroke"
-					/>
-
-					{/* Data points */}
-					{chartData.map((d, i) => {
-						const x = (i / (chartData.length - 1 || 1)) * 100;
-						const y = 100 - getCumulativeY(d.cumulative);
-						return (
-							<circle
-								className="drop-shadow-sm"
-								cx={`${x}%`}
-								cy={`${y}%`}
-								fill={d.pnl >= 0 ? "#00ff88" : "#ff3b3b"}
-								key={d.month}
-								r="3"
-							/>
-						);
-					})}
-				</svg>
-
-				{/* Current total label */}
-				<div className="absolute top-4 right-4">
-					<div className="font-mono text-[10px] text-muted-foreground">
-						Cumulative
-					</div>
+				{/* Cumulative P&L label */}
+				<div className="absolute top-0 right-2 text-right">
 					<div
 						className={cn(
-							"font-bold font-mono text-lg",
+							"font-bold font-mono text-xl",
 							stats.totalPnl >= 0 ? "text-profit" : "text-loss",
 						)}
 					>
 						{formatCurrency(stats.totalPnl)}
 					</div>
+					<div className="font-mono text-[10px] text-muted-foreground">
+						cumulative
+					</div>
 				</div>
-			</div>
-
-			{/* Month bars */}
-			<div className="flex items-end gap-1">
-				{chartData.map((month) => {
-					const barHeight = (Math.abs(month.pnl) / maxAbsPnl) * 100;
-					const isProfit = month.pnl >= 0;
-
-					return (
-						<div
-							className="group flex flex-1 flex-col items-center gap-1"
-							key={month.month}
-						>
-							{/* Bar */}
-							<div className="relative h-16 w-full">
-								<div
-									className={cn(
-										"absolute right-0 bottom-0 left-0 rounded-t transition-all",
-										isProfit
-											? "bg-profit/60 group-hover:bg-profit"
-											: "bg-loss/60 group-hover:bg-loss",
-									)}
-									style={{ height: `${Math.max(barHeight, 4)}%` }}
-								/>
-							</div>
-
-							{/* Label */}
-							<div className="font-mono text-[9px] text-muted-foreground">
-								{formatMonth(month.month).split(" ")[0]}
-							</div>
-						</div>
-					);
-				})}
 			</div>
 		</div>
 	);

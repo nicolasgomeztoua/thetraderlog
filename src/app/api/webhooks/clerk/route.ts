@@ -65,8 +65,6 @@ export async function POST(req: Request) {
 			imageUrl: image_url,
 			role: "user",
 		});
-
-		console.log(`User created: ${id}`);
 	}
 
 	if (eventType === "user.updated") {
@@ -83,8 +81,6 @@ export async function POST(req: Request) {
 				updatedAt: new Date(),
 			})
 			.where(eq(users.clerkId, id));
-
-		console.log(`User updated: ${id}`);
 	}
 
 	if (eventType === "user.deleted") {
@@ -92,7 +88,6 @@ export async function POST(req: Request) {
 
 		if (id) {
 			await db.delete(users).where(eq(users.clerkId, id));
-			console.log(`User deleted: ${id}`);
 		}
 	}
 

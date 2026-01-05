@@ -11,18 +11,8 @@ import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useTimezone } from "@/hooks/use-timezone";
-import type { ChartInterval } from "@/lib/candle-aggregation";
-import { cn } from "@/lib/utils";
+import { type ChartInterval, cn, INTERVAL_SECONDS } from "@/lib/shared";
 import type { ReplaySpeed } from "@/stores/replay-preferences-store";
-
-// Interval to seconds mapping for jump buttons
-const INTERVAL_SECONDS: Record<ChartInterval, number> = {
-	"1min": 60,
-	"5min": 300,
-	"15min": 900,
-	"30min": 1800,
-	"1h": 3600,
-};
 
 // =============================================================================
 // TYPES

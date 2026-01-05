@@ -12,7 +12,8 @@ import {
 	sql,
 } from "drizzle-orm";
 import { z } from "zod";
-import { calculateAndStoreMAEMFE } from "@/lib/maemfe-service";
+import { calculateAggregateStats } from "@/lib/analytics";
+import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -20,9 +21,8 @@ import {
 	exitReasonEnum,
 	instrumentTypeEnum,
 	tradeStatusEnum,
-} from "@/lib/schemas";
-import { calculateAggregateStats } from "@/lib/stats-calculations";
-import { computeTradeHash } from "@/lib/trade-hash";
+} from "@/lib/shared";
+import { computeTradeHash } from "@/lib/trades/hash";
 import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
@@ -1245,7 +1245,6 @@ export const tradesRouter = createTRPCRouter({
 			// Use the shared service for calculation
 			const result = await calculateAndStoreMAEMFE(input.tradeId, {
 				skipAlreadyProcessed: false, // User explicitly requested recalculation
-				logTag: "[MAE/MFE:tRPC]",
 			});
 
 			if (!result.success && result.message !== "Already processed") {
@@ -1314,7 +1313,6 @@ export const tradesRouter = createTRPCRouter({
 				// Use the shared service for calculation
 				const result = await calculateAndStoreMAEMFE(tradeId, {
 					skipAlreadyProcessed: true,
-					logTag: "[MAE/MFE:bulk]",
 				});
 
 				if (result.success) {

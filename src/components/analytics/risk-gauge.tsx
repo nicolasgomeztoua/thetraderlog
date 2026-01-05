@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn, RISK_COLORS } from "@/lib/shared";
 
 interface RiskGaugeProps {
 	/** Risk of Ruin percentage (0-100) */
@@ -18,10 +18,10 @@ interface RiskGaugeProps {
  * Get color based on RoR percentage
  */
 function getRiskColor(ror: number): string {
-	if (ror <= 1) return "#00ff88"; // Low - green
-	if (ror <= 5) return "#00d4ff"; // Moderate - blue
-	if (ror <= 20) return "#fbbf24"; // Elevated - yellow
-	return "#ff3b3b"; // Critical - red
+	if (ror <= 1) return RISK_COLORS.low;
+	if (ror <= 5) return RISK_COLORS.moderate;
+	if (ror <= 20) return RISK_COLORS.elevated;
+	return RISK_COLORS.critical;
 }
 
 /**
@@ -97,7 +97,7 @@ export function RiskGauge({
 			>
 				<svg
 					aria-label={`Risk of Ruin: ${displayValue}`}
-					className="rotate-[-90deg]"
+					className="-rotate-90"
 					height={size}
 					role="img"
 					width={size}

@@ -13,9 +13,14 @@ import {
 import { memo, useEffect, useMemo, useRef } from "react";
 import { useTheme } from "@/contexts/theme-context";
 import { useTimezone } from "@/hooks/use-timezone";
-import type { ChartBar, ChartInterval } from "@/lib/candle-aggregation";
-import { getThemeById } from "@/lib/themes";
-import { cn } from "@/lib/utils";
+import type { ChartBar } from "@/lib/market-data";
+import {
+	type ChartInterval,
+	cn,
+	INTERVAL_MS,
+	roundToCandle,
+} from "@/lib/shared";
+import { getThemeById } from "@/lib/ui";
 import type { ReplayExecution } from "./use-replay-engine";
 
 // =============================================================================
@@ -38,15 +43,6 @@ interface ReplayChartProps {
 
 type CandleDataPoint = CandlestickData<UTCTimestamp>;
 
-// Interval durations in milliseconds
-const INTERVAL_MS: Record<ChartInterval, number> = {
-	"1min": 60 * 1000,
-	"5min": 5 * 60 * 1000,
-	"15min": 15 * 60 * 1000,
-	"30min": 30 * 60 * 1000,
-	"1h": 60 * 60 * 1000,
-};
-
 // =============================================================================
 // THEME COLORS
 // =============================================================================
@@ -67,16 +63,6 @@ function getChartColors(themeConfig: ReturnType<typeof getThemeById>) {
 		crosshair: isDark ? `${preview.primary}50` : `${preview.primary}40`,
 		crosshairLabel: preview.primary,
 	};
-}
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-function roundToCandle(time: Date | string, intervalMs: number): UTCTimestamp {
-	const timestamp = new Date(time).getTime();
-	const rounded = Math.floor(timestamp / intervalMs) * intervalMs;
-	return Math.floor(rounded / 1000) as UTCTimestamp;
 }
 
 // =============================================================================
@@ -213,7 +199,10 @@ function ReplayChartInner({
 		const intervalMs = INTERVAL_MS[interval];
 
 		for (const execution of visibleExecutions) {
-			const execTs = roundToCandle(execution.executedAt, intervalMs);
+			const execTs = roundToCandle(
+				execution.executedAt,
+				intervalMs,
+			) as UTCTimestamp;
 
 			if (execution.executionType === "entry") {
 				markers.push({

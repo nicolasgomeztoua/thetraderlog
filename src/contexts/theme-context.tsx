@@ -7,7 +7,7 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import { DEFAULT_THEME, getThemeById, getThemeClass } from "@/lib/themes";
+import { DEFAULT_THEME, getThemeById, getThemeClass } from "@/lib/ui";
 import { api } from "@/trpc/react";
 
 interface ThemeContextValue {
@@ -93,6 +93,8 @@ export const themeScript = `
     if (stored) {
       document.documentElement.classList.add('theme-' + stored);
     }
-  } catch (e) {}
+  } catch {
+    // localStorage may be unavailable in SSR or private browsing
+  }
 })();
 `;

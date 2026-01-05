@@ -1,6 +1,11 @@
 import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
-import { cn, formatCurrency } from "@/lib/utils";
+import {
+	ANALYTICS_COLORS,
+	CHART_AXIS_STYLE,
+	CHART_DIMENSIONS,
+} from "@/lib/analytics";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface EquityPoint {
 	date: string;
@@ -93,8 +98,8 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 					xKey: "tradeIndex",
 					yKey: "peak",
 					yName: "Peak",
-					fill: "#ff3b3b20",
-					stroke: "#64748b",
+					fill: ANALYTICS_COLORS.lossFill,
+					stroke: ANALYTICS_COLORS.muted,
 					strokeWidth: 1,
 					strokeOpacity: 0.3,
 					lineDash: [4, 4],
@@ -107,14 +112,23 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 					xKey: "tradeIndex",
 					yKey: "equity",
 					yName: "Cumulative P&L",
-					fill: stats.totalPnl >= 0 ? "#00ff8820" : "#ff3b3b20",
-					stroke: stats.totalPnl >= 0 ? "#00ff88" : "#ff3b3b",
-					strokeWidth: 2,
+					fill:
+						stats.totalPnl >= 0
+							? ANALYTICS_COLORS.profitFill
+							: ANALYTICS_COLORS.lossFill,
+					stroke:
+						stats.totalPnl >= 0
+							? ANALYTICS_COLORS.profit
+							: ANALYTICS_COLORS.loss,
+					strokeWidth: CHART_DIMENSIONS.equityCurve.strokeWidth,
 					marker: {
 						enabled: true,
-						size: 5,
-						fill: stats.totalPnl >= 0 ? "#00ff88" : "#ff3b3b",
-						stroke: "#050505",
+						size: CHART_DIMENSIONS.equityCurve.markerSize,
+						fill:
+							stats.totalPnl >= 0
+								? ANALYTICS_COLORS.profit
+								: ANALYTICS_COLORS.loss,
+						stroke: ANALYTICS_COLORS.background,
 						strokeWidth: 1,
 					},
 					tooltip: {
@@ -130,17 +144,19 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 						}) => {
 							const d = params.datum;
 							// Values are already rounded in chartData transformation
-							const pnlColor = d.pnl >= 0 ? "#00ff88" : "#ff3b3b";
-							const cumulativeColor = d.equity >= 0 ? "#00ff88" : "#ff3b3b";
+							const pnlColor =
+								d.pnl >= 0 ? ANALYTICS_COLORS.profit : ANALYTICS_COLORS.loss;
+							const cumulativeColor =
+								d.equity >= 0 ? ANALYTICS_COLORS.profit : ANALYTICS_COLORS.loss;
 							const ddText =
 								d.drawdown > 0
-									? `<div style="color: #ff3b3b; margin-top: 4px;">Drawdown: <b>-${formatCurrency(d.drawdown)}</b></div>`
+									? `<div style="color: ${ANALYTICS_COLORS.loss}; margin-top: 4px;">Drawdown: <b>-${formatCurrency(d.drawdown)}</b></div>`
 									: "";
 
 							return {
 								title: `${d.displayDate} · Trade #${d.tradeIndex}`,
 								content: `
-									${d.symbol ? `<div style="color: #d4ff00; font-weight: bold;">${d.symbol}</div>` : ""}
+									${d.symbol ? `<div style="color: ${ANALYTICS_COLORS.primary}; font-weight: bold;">${d.symbol}</div>` : ""}
 									<div style="margin-top: 4px;">Cumulative P&L: <b style="color: ${cumulativeColor}">${formatCurrency(d.equity)}</b></div>
 									<div>Trade P&L: <b style="color: ${pnlColor}">${formatCurrency(d.pnl)}</b></div>
 									${ddText}
@@ -155,20 +171,20 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 					type: "number" as const,
 					position: "bottom" as const,
 					label: {
-						color: "#64748b",
+						color: CHART_AXIS_STYLE.label.fill,
 						fontFamily: "JetBrains Mono, monospace",
 						fontSize: 9,
 						formatter: (params: { value: number }) => `#${params.value}`,
 					},
-					line: { color: "#1e293b" },
-					tick: { color: "#1e293b" },
+					line: { color: CHART_AXIS_STYLE.line.stroke },
+					tick: { color: CHART_AXIS_STYLE.tick.stroke },
 					gridLine: { enabled: false },
 				},
 				{
 					type: "number" as const,
 					position: "left" as const,
 					label: {
-						color: "#64748b",
+						color: CHART_AXIS_STYLE.label.fill,
 						fontFamily: "JetBrains Mono, monospace",
 						fontSize: 9,
 						formatter: (params: { value: number }) => {
@@ -179,9 +195,9 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 							return `$${v.toFixed(0)}`;
 						},
 					},
-					line: { color: "#1e293b" },
-					tick: { color: "#1e293b" },
-					gridLine: { style: [{ stroke: "#ffffff08" }] },
+					line: { color: CHART_AXIS_STYLE.line.stroke },
+					tick: { color: CHART_AXIS_STYLE.tick.stroke },
+					gridLine: { style: [{ stroke: ANALYTICS_COLORS.gridLight }] },
 				},
 			],
 			legend: { enabled: false },
@@ -242,7 +258,10 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 			{/* Chart */}
 			<div className="relative">
 				{/* biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing */}
-				<AgCharts options={chartOptions as any} style={{ height: 280 }} />
+				<AgCharts
+					options={chartOptions as any}
+					style={{ height: CHART_DIMENSIONS.equityCurve.height }}
+				/>
 
 				{/* Legend overlay */}
 				<div className="absolute right-4 bottom-8 flex items-center gap-4 font-mono text-[10px]">

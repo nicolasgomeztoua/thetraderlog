@@ -65,7 +65,7 @@ import {
 } from "@/hooks/use-debounced-mutation";
 import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
-import { cn, formatCurrency, getPnLColorClass } from "@/lib/utils";
+import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 export default function JournalPage() {
@@ -711,7 +711,7 @@ export default function JournalPage() {
 				<TabsContent className="space-y-4" value="trades">
 					{/* Search */}
 					<div className="relative">
-						<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							className="pl-9 font-mono text-xs"
 							onChange={(e) => setSearch(e.target.value)}

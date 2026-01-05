@@ -6,7 +6,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/shared";
 import { type TradingSession, useSettingsStore } from "@/stores/settings-store";
 
 interface SessionData {
@@ -132,7 +132,7 @@ export function SessionChart({ data, className }: SessionChartProps) {
 						>
 							{/* Glow effect for best session */}
 							{isBest && (
-								<div className="absolute inset-0 bg-gradient-to-r from-profit/5 to-transparent" />
+								<div className="absolute inset-0 bg-linear-to-r from-profit/5 to-transparent" />
 							)}
 
 							<div className="relative flex items-start justify-between">

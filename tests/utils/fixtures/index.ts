@@ -10,6 +10,7 @@ export {
 export {
 	setupPropChallenge,
 	setupTrader,
+	setupTraderWithAnalyticsData,
 	setupTraderWithMixedTrades,
 	setupTraderWithMultipleAccounts,
 	setupTraderWithTrades,

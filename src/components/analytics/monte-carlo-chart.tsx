@@ -4,7 +4,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatCurrency, formatPercent } from "@/lib/utils";
+import { cn, formatCurrency, formatPercent } from "@/lib/shared";
 
 interface MonteCarloResult {
 	hasEnoughData: boolean;
@@ -193,7 +193,7 @@ export function MonteCarloChart({ data, className }: MonteCarloChartProps) {
 							{/* Actual outcome marker */}
 							<div
 								className={cn(
-									"-top-1 absolute h-6 w-1 rounded-sm",
+									"absolute -top-1 h-6 w-1 rounded-sm",
 									actualOutcome >= 0 ? "bg-profit" : "bg-loss",
 								)}
 								style={{

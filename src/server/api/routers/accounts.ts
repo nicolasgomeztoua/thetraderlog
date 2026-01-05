@@ -7,7 +7,7 @@ import {
 	payoutFrequencyEnum,
 	propFieldsSchema,
 	tradingPlatformEnum,
-} from "@/lib/schemas";
+} from "@/lib/shared";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { accountGroups, accounts, trades } from "@/server/db/schema";
 

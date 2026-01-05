@@ -2,8 +2,13 @@
 
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
-import { cn } from "@/lib/utils";
+import { aggregateBars } from "@/lib/market-data";
+import {
+	type ChartInterval,
+	cn,
+	INTERVAL_LABELS,
+	STALE_TIME_MEDIUM,
+} from "@/lib/shared";
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
 import { useReplayPreferencesStore } from "@/stores/replay-preferences-store";
 import { api } from "@/trpc/react";
@@ -37,15 +42,6 @@ interface TradeReplayProps {
 	}>;
 	className?: string;
 }
-
-// Interval labels for the selector
-const INTERVAL_LABELS: Record<ChartInterval, string> = {
-	"1min": "1m",
-	"5min": "5m",
-	"15min": "15m",
-	"30min": "30m",
-	"1h": "1h",
-};
 
 // =============================================================================
 // COMPONENT
@@ -83,7 +79,7 @@ export function TradeReplay({
 			},
 			{
 				enabled: !!entryTime,
-				staleTime: 1000 * 60 * 5, // 5 minutes
+				staleTime: STALE_TIME_MEDIUM,
 				refetchOnWindowFocus: false,
 			},
 		);

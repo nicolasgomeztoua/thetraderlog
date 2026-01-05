@@ -120,7 +120,7 @@ export function Footer() {
 
 			{/* Large background text */}
 			<div className="pointer-events-none absolute right-0 bottom-0 left-0 overflow-hidden">
-				<div className="translate-y-1/2 text-center font-bold text-[20vw] text-white/[0.02] leading-none">
+				<div className="translate-y-1/2 text-center font-bold text-[20vw] text-white/2 leading-none">
 					EDGE
 				</div>
 			</div>

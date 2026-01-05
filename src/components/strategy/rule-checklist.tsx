@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOptimisticState } from "@/hooks/use-debounced-mutation";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 interface Rule {
@@ -132,7 +132,7 @@ export function RuleChecklist({
 	return (
 		<div className="space-y-6">
 			{/* Compliance indicator */}
-			<div className="flex items-center justify-between rounded border border-white/10 bg-white/[0.02] p-4">
+			<div className="flex items-center justify-between rounded border border-white/10 bg-white/3 p-4">
 				<div>
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Rule Compliance
@@ -184,7 +184,7 @@ export function RuleChecklist({
 									return (
 										<div
 											className={cn(
-												"flex cursor-pointer items-start gap-3 rounded border border-white/5 bg-white/[0.01] p-3 transition-all hover:border-white/10",
+												"flex cursor-pointer items-start gap-3 rounded border border-white/5 bg-white/1 p-3 transition-all hover:border-white/10",
 												checked && "border-profit/20 bg-profit/5",
 											)}
 											key={rule.id}

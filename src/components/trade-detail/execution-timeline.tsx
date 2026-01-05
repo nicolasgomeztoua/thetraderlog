@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useTimezone } from "@/hooks/use-timezone";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
 
 // =============================================================================
 // TYPES

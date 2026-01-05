@@ -1,5 +1,9 @@
 import { type CreateTestAccountOptions, createTestAccount } from "./accounts";
-import { type CreateTestTradeOptions, createTestTrades } from "./trades";
+import {
+	type CreateTestTradeOptions,
+	createTestTrade,
+	createTestTrades,
+} from "./trades";
 import { type CreateTestUserOptions, createTestUser } from "./users";
 
 /**
@@ -132,4 +136,179 @@ export async function setupTraderWithMixedTrades(options?: {
 		winningTrades,
 		losingTrades,
 	};
+}
+
+/**
+ * Creates a trader with diverse trade data optimized for analytics testing.
+ * Provides predictable data for verifying analytics calculations.
+ */
+export async function setupTraderWithAnalyticsData() {
+	const { user, account } = await setupTrader();
+
+	// Create dates for specific days/hours
+	const mondayMorning = new Date("2024-01-08T09:30:00Z"); // Monday
+	const mondayAfternoon = new Date("2024-01-08T14:00:00Z");
+	const tuesdayMorning = new Date("2024-01-09T10:00:00Z"); // Tuesday
+	const wednesdayMorning = new Date("2024-01-10T09:00:00Z"); // Wednesday
+	const thursdayAfternoon = new Date("2024-01-11T15:30:00Z"); // Thursday
+	const fridayMorning = new Date("2024-01-12T08:30:00Z"); // Friday
+
+	const trades = [];
+
+	// Monday trades (2 wins) - ES
+	trades.push(
+		await createTestTrade(user.id, account.id, {
+			symbol: "ES",
+			direction: "long",
+			status: "closed",
+			entryPrice: "5000",
+			exitPrice: "5020",
+			quantity: "1",
+			entryTime: mondayMorning,
+			exitTime: new Date(mondayMorning.getTime() + 30 * 60000), // 30 min later
+			realizedPnl: "1000", // 20 pts * $50/pt
+			netPnl: "995",
+			fees: "5",
+			stopLoss: "4980",
+			takeProfit: "5030",
+		}),
+	);
+
+	trades.push(
+		await createTestTrade(user.id, account.id, {
+			symbol: "ES",
+			direction: "long",
+			status: "closed",
+			entryPrice: "5025",
+			exitPrice: "5040",
+			quantity: "2",
+			entryTime: mondayAfternoon,
+			exitTime: new Date(mondayAfternoon.getTime() + 45 * 60000),
+			realizedPnl: "1500",
+			netPnl: "1490",
+			fees: "10",
+			stopLoss: "5010",
+		}),
+	);
+
+	// Tuesday trades (1 loss) - NQ
+	trades.push(
+		await createTestTrade(user.id, account.id, {
+			symbol: "NQ",
+			direction: "short",
+			status: "closed",
+			entryPrice: "17500",
+			exitPrice: "17550",
+			quantity: "1",
+			entryTime: tuesdayMorning,
+			exitTime: new Date(tuesdayMorning.getTime() + 60 * 60000),
+			realizedPnl: "-1000", // 50 pts * $20/pt loss
+			netPnl: "-1005",
+			fees: "5",
+			stopLoss: "17550",
+		}),
+	);
+
+	// Wednesday trades (1 win, 1 loss) - ES and EURUSD
+	trades.push(
+		await createTestTrade(user.id, account.id, {
+			symbol: "ES",
+			direction: "short",
+			status: "closed",
+			entryPrice: "5050",
+			exitPrice: "5030",
+			quantity: "1",
+			entryTime: wednesdayMorning,
+			exitTime: new Date(wednesdayMorning.getTime() + 20 * 60000),
+			realizedPnl: "1000",
+			netPnl: "995",
+			fees: "5",
+			stopLoss: "5070",
+			takeProfit: "5020",
+		}),
+	);
+
+	trades.push(
+		await createTestTrade(user.id, account.id, {
+			symbol: "EURUSD",
+			instrumentType: "forex",
+			direction: "long",
+			status: "closed",
+			entryPrice: "1.0800",
+			exitPrice: "1.0780",
+			quantity: "100000",
+			entryTime: new Date(wednesdayMorning.getTime() + 2 * 60 * 60000),
+			exitTime: new Date(wednesdayMorning.getTime() + 4 * 60 * 60000),
+			realizedPnl: "-200",
+			netPnl: "-202",
+			fees: "2",
+			stopLoss: "1.0770",
+		}),
+	);
+
+	// Thursday trade (1 win) - NQ
+	trades.push(
+		await createTestTrade(user.id, account.id, {
+			symbol: "NQ",
+			direction: "long",
+			status: "closed",
+			entryPrice: "17400",
+			exitPrice: "17500",
+			quantity: "1",
+			entryTime: thursdayAfternoon,
+			exitTime: new Date(thursdayAfternoon.getTime() + 90 * 60000),
+			realizedPnl: "2000",
+			netPnl: "1995",
+			fees: "5",
+			stopLoss: "17350",
+			takeProfit: "17550",
+		}),
+	);
+
+	// Friday trade (1 breakeven) - ES
+	trades.push(
+		await createTestTrade(user.id, account.id, {
+			symbol: "ES",
+			direction: "long",
+			status: "closed",
+			entryPrice: "5060",
+			exitPrice: "5060",
+			quantity: "1",
+			entryTime: fridayMorning,
+			exitTime: new Date(fridayMorning.getTime() + 15 * 60000),
+			realizedPnl: "0",
+			netPnl: "-5", // Just fees
+			fees: "5",
+			stopLoss: "5040",
+		}),
+	);
+
+	// Expected metrics for validation:
+	// Total trades: 7
+	// Wins: 4 (Monday x2, Wednesday ES, Thursday)
+	// Losses: 2 (Tuesday, Wednesday EURUSD)
+	// Breakeven: 1 (Friday)
+	// Win rate: 4/6 = 66.67% (excluding breakeven) or 4/7 = 57.14%
+	// Total P&L: 995 + 1490 - 1005 + 995 - 202 + 1995 - 5 = 4263
+	// Gross profit: 995 + 1490 + 995 + 1995 = 5475
+	// Gross loss: 1005 + 202 = 1207
+	// Profit factor: 5475 / 1207 = 4.53
+
+	const expectedMetrics = {
+		totalTrades: 7,
+		wins: 4,
+		losses: 2,
+		breakevens: 1,
+		totalPnl: 4263,
+		grossProfit: 5475,
+		grossLoss: 1207,
+		profitFactor: 4.53,
+		winRate: 66.67, // wins / (wins + losses)
+		symbols: ["ES", "NQ", "EURUSD"],
+		esTrades: 4,
+		nqTrades: 2,
+		eurusdTrades: 1,
+	};
+
+	return { user, account, trades, expectedMetrics };
 }

@@ -1,5 +1,9 @@
-import type { OHLCBar } from "./market-data-service";
-import { FOREX_SPECS, getForexPipSize, getFuturesSpec } from "./symbols";
+import {
+	FOREX_SPECS,
+	getForexPipSize,
+	getFuturesSpec,
+} from "@/lib/market-data";
+import type { OHLCBar } from "@/lib/market-data/service";
 
 // =============================================================================
 // TRADE CALCULATIONS

@@ -15,20 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PRESET_COLORS } from "@/lib/shared";
 import { api } from "@/trpc/react";
-
-const PRESET_COLORS = [
-	"#d4ff00", // Electric Chartreuse (primary)
-	"#00d4ff", // Ice Blue (accent)
-	"#00ff88", // Profit green
-	"#ff3b3b", // Loss red
-	"#6366f1", // Indigo
-	"#f59e0b", // Amber
-	"#ec4899", // Pink
-	"#8b5cf6", // Violet
-	"#14b8a6", // Teal
-	"#f97316", // Orange
-];
 
 export function TagManager() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -127,7 +115,7 @@ export function TagManager() {
 					<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
 				</div>
 			) : !tags || tags.length === 0 ? (
-				<div className="rounded border border-white/5 bg-white/[0.01] py-8 text-center">
+				<div className="rounded border border-white/5 bg-white/1 py-8 text-center">
 					<p className="font-mono text-muted-foreground text-xs">
 						No tags yet. Create your first tag to organize trades.
 					</p>
@@ -136,7 +124,7 @@ export function TagManager() {
 				<div className="space-y-2">
 					{tags.map((tag) => (
 						<div
-							className="flex items-center justify-between rounded border border-white/5 bg-white/[0.01] px-4 py-3"
+							className="flex items-center justify-between rounded border border-white/5 bg-white/1 px-4 py-3"
 							key={tag.id}
 						>
 							<div className="flex items-center gap-3">
