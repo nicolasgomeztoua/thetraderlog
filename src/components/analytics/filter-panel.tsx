@@ -273,7 +273,7 @@ function DateRangeInput({
 	return (
 		<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
 			<div className="relative flex-1">
-				<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
+				<CalendarIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					className="h-8 pl-9 font-mono text-xs"
 					onChange={(e) =>
@@ -285,7 +285,7 @@ function DateRangeInput({
 			</div>
 			<span className="hidden text-muted-foreground sm:block">to</span>
 			<div className="relative flex-1">
-				<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
+				<CalendarIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					className="h-8 pl-9 font-mono text-xs"
 					onChange={(e) =>

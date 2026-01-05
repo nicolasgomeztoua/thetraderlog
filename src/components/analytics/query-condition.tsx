@@ -185,7 +185,7 @@ function DateValueInput({
 
 	return (
 		<div className="relative">
-			<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
+			<CalendarIcon className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 			<Input
 				className="h-8 w-36 pl-9 font-mono text-xs"
 				onChange={(e) =>
@@ -218,7 +218,7 @@ function DateBetweenValueInput({
 	return (
 		<div className="flex items-center gap-2">
 			<div className="relative">
-				<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2.5 size-3 text-muted-foreground" />
+				<CalendarIcon className="absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					className="h-8 w-32 pl-8 font-mono text-xs"
 					onChange={(e) =>
@@ -233,7 +233,7 @@ function DateBetweenValueInput({
 			</div>
 			<span className="font-mono text-muted-foreground text-xs">and</span>
 			<div className="relative">
-				<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2.5 size-3 text-muted-foreground" />
+				<CalendarIcon className="absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					className="h-8 w-32 pl-8 font-mono text-xs"
 					onChange={(e) =>

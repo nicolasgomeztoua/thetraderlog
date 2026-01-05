@@ -433,7 +433,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 
 			{/* Advanced Filters Panel */}
 			{isExpanded && (
-				<div className="space-y-4 rounded border border-white/5 bg-white/[0.01] p-4">
+				<div className="space-y-4 rounded border border-white/5 bg-white/1 p-4">
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						{/* Date Range */}
 						<div className="space-y-2">

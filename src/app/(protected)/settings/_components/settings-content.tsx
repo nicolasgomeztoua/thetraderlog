@@ -56,12 +56,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
-import {
-	ACCOUNT_TYPE_COLORS,
-	CHALLENGE_STATUS_COLORS,
-	cn,
-	PRESET_COLORS,
-} from "@/lib/shared";
+import { ACCOUNT_TYPE_COLORS, cn, PRESET_COLORS } from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
 
@@ -1113,7 +1108,11 @@ export function SettingsContent() {
 														width: `${Math.min(width, 100 - start)}%`,
 														backgroundColor: session.color,
 													}}
-													title={`${session.name}: ${session.startHour.toString().padStart(2, "0")}:00 - ${session.endHour.toString().padStart(2, "0")}:00`}
+													title={`${session.name}: ${session.startHour
+														.toString()
+														.padStart(2, "0")}:00 - ${session.endHour
+														.toString()
+														.padStart(2, "0")}:00`}
 												/>
 											);
 										})}
@@ -1843,7 +1842,9 @@ export function SettingsContent() {
 														{PLATFORM_LABELS[account.platform ?? "other"]}
 														{account.broker && ` • ${account.broker}`} •{" "}
 														{account.initialBalance
-															? `$${parseFloat(account.initialBalance).toLocaleString()}`
+															? `$${parseFloat(
+																	account.initialBalance,
+																).toLocaleString()}`
 															: "$0"}{" "}
 														{account.currency}
 														{account.maxDrawdown &&

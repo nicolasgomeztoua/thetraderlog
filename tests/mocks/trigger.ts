@@ -53,7 +53,7 @@ export const processTradeMAEMFE = {
 		triggerMock.batchTriggerCalls.push(items);
 
 		// Return mock BatchTriggerResult array matching Trigger.dev SDK
-		return items.map((item, index) => ({
+		return items.map((_item, index) => ({
 			id: `mock-run-${Date.now()}-${index}`,
 			taskIdentifier: "process-trade-maemfe",
 			ok: true as const,

@@ -93,6 +93,8 @@ export const themeScript = `
     if (stored) {
       document.documentElement.classList.add('theme-' + stored);
     }
-  } catch (e) {}
+  } catch {
+    // localStorage may be unavailable in SSR or private browsing
+  }
 })();
 `;

@@ -274,7 +274,7 @@ export function StrategyForm({
 					</div>
 
 					{formData.rules.length === 0 ? (
-						<div className="rounded border border-white/5 bg-white/[0.02] py-8 text-center">
+						<div className="rounded border border-white/5 bg-white/2 py-8 text-center">
 							<p className="font-mono text-muted-foreground text-sm">
 								No rules defined yet
 							</p>
@@ -292,7 +292,7 @@ export function StrategyForm({
 						<div className="space-y-2">
 							{formData.rules.map((rule, idx) => (
 								<div
-									className="flex items-center gap-3 rounded border border-white/5 bg-white/[0.02] p-3"
+									className="flex items-center gap-3 rounded border border-white/5 bg-white/2 p-3"
 									key={rule.id ?? `new-${rule.order}`}
 								>
 									<GripVertical className="h-4 w-4 cursor-grab text-muted-foreground/50" />

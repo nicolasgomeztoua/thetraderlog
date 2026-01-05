@@ -15,7 +15,7 @@ export function CTA() {
 			<div className="grid-bg absolute inset-0 opacity-30" />
 
 			{/* Glow effect */}
-			<div className="-translate-x-1/2 absolute bottom-0 left-1/2 h-[400px] w-[600px] rounded-full bg-primary/10 blur-[150px]" />
+			<div className="absolute bottom-0 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-primary/10 blur-[150px]" />
 
 			<div className="relative mx-auto max-w-4xl px-6 text-center">
 				{/* Main content */}

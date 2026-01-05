@@ -201,7 +201,7 @@ describe("Analytics Filter Presets", () => {
 
 		it("should order default preset first", async () => {
 			// Create a non-default preset first
-			const nonDefault = await freshCaller.analytics.createFilterPreset({
+			const _nonDefault = await freshCaller.analytics.createFilterPreset({
 				name: "Non-Default First",
 				filters: JSON.stringify({}),
 				isDefault: false,
@@ -295,7 +295,7 @@ describe("Analytics Filter Presets", () => {
 
 		it("should return only the current user's default preset", async () => {
 			// Create default preset for main test user
-			const mainDefault = await caller.analytics.createFilterPreset({
+			const _mainDefault = await caller.analytics.createFilterPreset({
 				name: "Main User Default",
 				filters: JSON.stringify({}),
 				isDefault: true,

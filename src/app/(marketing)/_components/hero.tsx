@@ -255,8 +255,8 @@ export function Hero() {
 			<div className="scanlines pointer-events-none absolute inset-0" />
 
 			{/* Gradient orbs */}
-			<div className="-left-32 absolute top-1/4 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
-			<div className="-right-32 absolute bottom-1/4 h-[400px] w-[400px] rounded-full bg-accent/5 blur-[120px]" />
+			<div className="absolute top-1/4 -left-32 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]" />
+			<div className="absolute -right-32 bottom-1/4 h-[400px] w-[400px] rounded-full bg-accent/5 blur-[120px]" />
 
 			{/* Content */}
 			<div className="relative flex min-h-screen flex-col pt-16">

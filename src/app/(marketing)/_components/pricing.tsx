@@ -110,7 +110,7 @@ export function Pricing() {
 						>
 							{/* Popular badge */}
 							{plan.highlighted && (
-								<div className="-top-3 absolute left-6 flex items-center gap-1 rounded bg-primary px-3 py-1">
+								<div className="absolute -top-3 left-6 flex items-center gap-1 rounded bg-primary px-3 py-1">
 									<Sparkles className="h-3 w-3 text-primary-foreground" />
 									<span className="font-medium font-mono text-primary-foreground text-xs uppercase tracking-wider">
 										Popular
