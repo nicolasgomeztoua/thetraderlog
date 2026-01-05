@@ -903,10 +903,7 @@ describe("Analytics Time", () => {
 
 				for (const session of result) {
 					if (session.trades > 0) {
-						expect(session.avgPnl).toBeCloseTo(
-							session.pnl / session.trades,
-							8,
-						);
+						expect(session.avgPnl).toBeCloseTo(session.pnl / session.trades, 8);
 					} else {
 						expect(session.avgPnl).toBe(0);
 					}
@@ -1137,15 +1134,17 @@ describe("Analytics Time", () => {
 					recentTradesData.user.clerkId,
 					recentTradesData.user,
 				);
-				const result6Months = await recentCaller.analytics.getPerformanceByMonth({
-					accountId: recentTradesData.account.id,
-					months: 6,
-				});
+				const result6Months =
+					await recentCaller.analytics.getPerformanceByMonth({
+						accountId: recentTradesData.account.id,
+						months: 6,
+					});
 
-				const result12Months = await recentCaller.analytics.getPerformanceByMonth({
-					accountId: recentTradesData.account.id,
-					months: 12,
-				});
+				const result12Months =
+					await recentCaller.analytics.getPerformanceByMonth({
+						accountId: recentTradesData.account.id,
+						months: 12,
+					});
 
 				// Both should work without error and return same data for recent trades
 				expect(Array.isArray(result6Months)).toBe(true);
@@ -1319,7 +1318,9 @@ describe("Analytics Time", () => {
 
 			// Session may have overlap, so trades could be >= total
 			const sessionTrades = session.reduce((sum, s) => sum + s.trades, 0);
-			expect(sessionTrades).toBeGreaterThanOrEqual(testData.expectedMetrics.totalTrades);
+			expect(sessionTrades).toBeGreaterThanOrEqual(
+				testData.expectedMetrics.totalTrades,
+			);
 		});
 
 		it("should have consistent total P&L across non-time-filtered procedures", async () => {

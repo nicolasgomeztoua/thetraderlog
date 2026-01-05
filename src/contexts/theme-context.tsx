@@ -7,7 +7,7 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import { DEFAULT_THEME, getThemeById, getThemeClass } from "@/lib/themes";
+import { DEFAULT_THEME, getThemeById, getThemeClass } from "@/lib/ui";
 import { api } from "@/trpc/react";
 
 interface ThemeContextValue {

@@ -12,25 +12,13 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PRESET_COLORS } from "@/lib/shared";
 import type { RiskParameters } from "./risk-config";
 import { RiskConfig } from "./risk-config";
 import type { ScalingRules } from "./scaling-config";
 import { ScalingConfig } from "./scaling-config";
 import type { TrailingRules } from "./trailing-config";
 import { TrailingConfig } from "./trailing-config";
-
-// Preset colors following the design system
-const PRESET_COLORS = [
-	"#d4ff00", // Primary chartreuse
-	"#00d4ff", // Accent ice blue
-	"#00ff88", // Profit green
-	"#f59e0b", // Amber
-	"#ec4899", // Pink
-	"#8b5cf6", // Purple
-	"#14b8a6", // Teal
-	"#f97316", // Orange
-	"#6366f1", // Indigo
-];
 
 export interface StrategyRule {
 	id?: string;

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOptimisticState } from "@/hooks/use-debounced-mutation";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 interface Rule {

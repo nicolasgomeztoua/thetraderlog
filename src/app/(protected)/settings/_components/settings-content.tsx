@@ -56,7 +56,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
-import { cn } from "@/lib/utils";
+import {
+	ACCOUNT_TYPE_COLORS,
+	CHALLENGE_STATUS_COLORS,
+	cn,
+	PRESET_COLORS,
+} from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
 
@@ -155,24 +160,7 @@ const DEFAULT_SESSIONS: TradingSession[] = [
 	{ name: "New York", startHour: 13, endHour: 21, color: "#00ff88" },
 ];
 
-const SESSION_COLORS = [
-	"#00d4ff", // Ice blue
-	"#d4ff00", // Chartreuse
-	"#00ff88", // Profit green
-	"#f59e0b", // Amber
-	"#ec4899", // Pink
-	"#8b5cf6", // Purple
-	"#14b8a6", // Teal
-	"#f97316", // Orange
-];
-
-// Updated account type colors and labels
-const ACCOUNT_TYPE_COLORS: Record<string, string> = {
-	prop_challenge: "bg-amber-500",
-	prop_funded: "bg-purple-500",
-	live: "bg-green-500",
-	demo: "bg-blue-500",
-};
+// Use PRESET_COLORS from shared for session colors
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 	prop_challenge: "Prop Challenge",
@@ -181,12 +169,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 	demo: "Demo",
 };
 
-// Challenge status colors used inline in account badges
-const _CHALLENGE_STATUS_COLORS: Record<string, string> = {
-	active: "bg-amber-500",
-	passed: "bg-green-500",
-	failed: "bg-red-500",
-};
+// CHALLENGE_STATUS_COLORS imported from shared
 
 const CHALLENGE_STATUS_LABELS: Record<string, string> = {
 	active: "Active",
@@ -698,9 +681,8 @@ export function SettingsContent() {
 			startHour: 0,
 			endHour: 8,
 			color:
-				SESSION_COLORS[
-					settings.tradingSessions.length % SESSION_COLORS.length
-				] ?? "#00d4ff",
+				PRESET_COLORS[settings.tradingSessions.length % PRESET_COLORS.length] ??
+				"#00d4ff",
 		};
 		setSettings({
 			...settings,
@@ -1081,7 +1063,7 @@ export function SettingsContent() {
 													/>
 												</SelectTrigger>
 												<SelectContent>
-													{SESSION_COLORS.map((color) => (
+													{PRESET_COLORS.map((color) => (
 														<SelectItem key={color} value={color}>
 															<div className="flex items-center gap-2">
 																<div

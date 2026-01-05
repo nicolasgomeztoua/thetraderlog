@@ -42,8 +42,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
 import { useImportProgress } from "@/hooks/use-import-progress";
-import type { ParsedTrade, TradingPlatform } from "@/lib/csv-parsers";
-import { getParser, TRADING_PLATFORMS } from "@/lib/csv-parsers";
+import type { ParsedTrade, TradingPlatform } from "@/lib/trades";
+import { getParser, TRADING_PLATFORMS } from "@/lib/trades";
 import { api } from "@/trpc/react";
 
 type Step = "select-account" | "upload" | "mapping" | "preview" | "complete";

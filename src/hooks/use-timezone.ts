@@ -4,7 +4,7 @@ import {
 	formatDateTimeInTimezone,
 	formatTimeInTimezone,
 	getTimezoneAbbreviation,
-} from "@/lib/timezone";
+} from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 
 /**

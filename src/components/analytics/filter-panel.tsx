@@ -17,6 +17,12 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import {
+	DAYS_OF_WEEK,
+	KEY_HOURS,
+	OUTCOME_OPTIONS,
+	REVIEW_STATUS_OPTIONS,
+} from "@/lib/analytics";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import type {
 	AnalyticsFilters,
@@ -31,48 +37,6 @@ import {
 } from "@/types/query-builder";
 import { QueryBuilder } from "./query-builder";
 import { SavePresetDialog } from "./save-preset-dialog";
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const DAYS_OF_WEEK = [
-	{ value: 0, label: "Sun" },
-	{ value: 1, label: "Mon" },
-	{ value: 2, label: "Tue" },
-	{ value: 3, label: "Wed" },
-	{ value: 4, label: "Thu" },
-	{ value: 5, label: "Fri" },
-	{ value: 6, label: "Sat" },
-];
-
-const KEY_HOURS = [
-	{ value: 0, label: "00:00" },
-	{ value: 4, label: "04:00" },
-	{ value: 8, label: "08:00" },
-	{ value: 9, label: "09:00" },
-	{ value: 10, label: "10:00" },
-	{ value: 11, label: "11:00" },
-	{ value: 12, label: "12:00" },
-	{ value: 13, label: "13:00" },
-	{ value: 14, label: "14:00" },
-	{ value: 15, label: "15:00" },
-	{ value: 16, label: "16:00" },
-	{ value: 20, label: "20:00" },
-];
-
-const OUTCOME_OPTIONS: { value: OutcomeFilter; label: string }[] = [
-	{ value: "all", label: "All trades" },
-	{ value: "win", label: "Winners" },
-	{ value: "loss", label: "Losers" },
-	{ value: "breakeven", label: "Breakeven" },
-];
-
-const REVIEW_OPTIONS: { value: ReviewedFilter; label: string }[] = [
-	{ value: "all", label: "All trades" },
-	{ value: "reviewed", label: "Reviewed" },
-	{ value: "unreviewed", label: "Unreviewed" },
-];
 
 // =============================================================================
 // TYPES
@@ -554,7 +518,7 @@ export function FilterPanel({
 									onChange={(days) =>
 										updateLocal("daysOfWeek", days as number[])
 									}
-									options={DAYS_OF_WEEK}
+									options={[...DAYS_OF_WEEK]}
 									selected={localFilters.daysOfWeek}
 								/>
 							</FilterSection>
@@ -565,7 +529,7 @@ export function FilterPanel({
 							<FilterSection title="Hour of Day">
 								<CheckboxGroup
 									onChange={(hours) => updateLocal("hours", hours as number[])}
-									options={KEY_HOURS}
+									options={[...KEY_HOURS]}
 									selected={localFilters.hours}
 								/>
 							</FilterSection>
@@ -703,7 +667,7 @@ export function FilterPanel({
 							<FilterSection title="Trade Outcome">
 								<RadioGroup
 									onChange={(v) => updateLocal("outcome", v as OutcomeFilter)}
-									options={OUTCOME_OPTIONS}
+									options={[...OUTCOME_OPTIONS]}
 									value={localFilters.outcome}
 								/>
 							</FilterSection>
@@ -714,7 +678,7 @@ export function FilterPanel({
 							<FilterSection title="Review Status">
 								<RadioGroup
 									onChange={(v) => updateLocal("reviewed", v as ReviewedFilter)}
-									options={REVIEW_OPTIONS}
+									options={[...REVIEW_STATUS_OPTIONS]}
 									value={localFilters.reviewed}
 								/>
 							</FilterSection>

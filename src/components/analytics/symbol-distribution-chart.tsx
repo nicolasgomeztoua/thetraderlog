@@ -2,7 +2,8 @@
 
 import { AgCharts } from "ag-charts-react";
 import { useMemo, useState } from "react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { ANALYTICS_COLORS, getPaletteColor } from "@/lib/analytics";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface SymbolData {
 	symbol: string;
@@ -21,20 +22,6 @@ interface SymbolDistributionChartProps {
 }
 
 type ViewMode = "trades" | "pnl";
-
-// Terminal-themed color palette for symbols
-const SYMBOL_COLORS = [
-	"#d4ff00", // Primary chartreuse
-	"#00d4ff", // Ice blue
-	"#00ff88", // Profit green
-	"#ff3b3b", // Loss red
-	"#fbbf24", // Amber
-	"#a78bfa", // Purple
-	"#f472b6", // Pink
-	"#38bdf8", // Sky blue
-	"#34d399", // Emerald
-	"#fb923c", // Orange
-];
 
 /**
  * Donut chart showing trade distribution by symbol
@@ -58,9 +45,9 @@ export function SymbolDistributionChart({
 			color:
 				viewMode === "pnl"
 					? d.pnl >= 0
-						? "#00ff88"
-						: "#ff3b3b"
-					: SYMBOL_COLORS[i % SYMBOL_COLORS.length],
+						? ANALYTICS_COLORS.profit
+						: ANALYTICS_COLORS.loss
+					: getPaletteColor(i),
 		}));
 
 		// Sort by value descending for better visualization
@@ -79,7 +66,7 @@ export function SymbolDistributionChart({
 					innerRadiusRatio: 0.6,
 					calloutLabel: {
 						enabled: chartData.length <= 8,
-						color: "#94a3b8",
+						color: ANALYTICS_COLORS.mutedLight,
 						fontFamily: "JetBrains Mono, monospace",
 						fontSize: 10,
 					},
@@ -115,7 +102,7 @@ export function SymbolDistributionChart({
 				position: "right" as const,
 				item: {
 					label: {
-						color: "#94a3b8",
+						color: ANALYTICS_COLORS.mutedLight,
 						fontFamily: "JetBrains Mono, monospace",
 						fontSize: 10,
 					},

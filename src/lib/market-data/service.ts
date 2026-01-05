@@ -15,13 +15,13 @@
 
 import { and, eq } from "drizzle-orm";
 import { env } from "@/env";
+import { db } from "@/server/db";
+import { candleCache } from "@/server/db/schema";
 import {
 	getDatabentSymbol,
 	isFuturesSymbol,
 	TWELVE_DATA_SYMBOL_MAP,
-} from "@/lib/symbols";
-import { db } from "@/server/db";
-import { candleCache } from "@/server/db/schema";
+} from "./symbols";
 
 // =============================================================================
 // TYPES

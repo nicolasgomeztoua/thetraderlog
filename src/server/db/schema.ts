@@ -11,7 +11,7 @@ import {
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { ids } from "@/lib/id";
+import { ids } from "@/lib/shared";
 
 export const createTable = pgTableCreator((name) => name);
 

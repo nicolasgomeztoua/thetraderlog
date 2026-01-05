@@ -65,7 +65,7 @@ import {
 } from "@/hooks/use-debounced-mutation";
 import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
-import { cn, formatCurrency, getPnLColorClass } from "@/lib/utils";
+import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 export default function JournalPage() {

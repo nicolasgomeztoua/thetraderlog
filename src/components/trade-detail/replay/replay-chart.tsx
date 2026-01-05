@@ -13,9 +13,9 @@ import {
 import { memo, useEffect, useMemo, useRef } from "react";
 import { useTheme } from "@/contexts/theme-context";
 import { useTimezone } from "@/hooks/use-timezone";
-import type { ChartBar, ChartInterval } from "@/lib/candle-aggregation";
-import { getThemeById } from "@/lib/themes";
-import { cn } from "@/lib/utils";
+import type { ChartBar, ChartInterval } from "@/lib/market-data";
+import { cn } from "@/lib/shared";
+import { getThemeById } from "@/lib/ui";
 import type { ReplayExecution } from "./use-replay-engine";
 
 // =============================================================================

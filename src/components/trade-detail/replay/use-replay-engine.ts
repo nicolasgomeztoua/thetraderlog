@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChartBar } from "@/lib/candle-aggregation";
-import { calculateForexPnL, calculateFuturesPnL } from "@/lib/symbols";
+import type { ChartBar } from "@/lib/market-data";
+import { calculateForexPnL, calculateFuturesPnL } from "@/lib/market-data";
 import type { ReplaySpeed } from "@/stores/replay-preferences-store";
 
 // =============================================================================

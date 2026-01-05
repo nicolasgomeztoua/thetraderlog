@@ -375,7 +375,10 @@ describe("Analytics Filter Presets", () => {
 				filters: JSON.stringify({ symbols: ["ES"] }),
 			});
 
-			const newFilters = JSON.stringify({ symbols: ["NQ", "ES"], outcome: "loss" });
+			const newFilters = JSON.stringify({
+				symbols: ["NQ", "ES"],
+				outcome: "loss",
+			});
 			const updated = await caller.analytics.updateFilterPreset({
 				id: created?.id ?? "",
 				filters: newFilters,

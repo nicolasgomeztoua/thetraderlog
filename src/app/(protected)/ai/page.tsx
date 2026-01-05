@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import { formatCurrency, formatPercent } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 interface Message {

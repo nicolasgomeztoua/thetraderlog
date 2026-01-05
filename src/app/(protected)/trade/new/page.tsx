@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAccount } from "@/contexts/account-context";
-import { FOREX_SYMBOLS, FUTURES_SYMBOLS } from "@/lib/symbols";
+import { FOREX_SYMBOLS, FUTURES_SYMBOLS } from "@/lib/market-data";
 import { api } from "@/trpc/react";
 
 const SETUP_TYPES = [

@@ -41,7 +41,7 @@ import {
 	formatDate,
 	formatPercent,
 	getPnLColorClass,
-} from "@/lib/utils";
+} from "@/lib/shared";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import { api } from "@/trpc/react";
 import type { AnalyticsFilters } from "@/types/analytics-filters";

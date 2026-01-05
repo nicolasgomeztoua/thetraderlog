@@ -12,7 +12,8 @@ import {
 	sql,
 } from "drizzle-orm";
 import { z } from "zod";
-import { calculateAndStoreMAEMFE } from "@/lib/maemfe-service";
+import { calculateAggregateStats } from "@/lib/analytics";
+import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -20,9 +21,8 @@ import {
 	exitReasonEnum,
 	instrumentTypeEnum,
 	tradeStatusEnum,
-} from "@/lib/schemas";
-import { calculateAggregateStats } from "@/lib/stats-calculations";
-import { computeTradeHash } from "@/lib/trade-hash";
+} from "@/lib/shared";
+import { computeTradeHash } from "@/lib/trades/hash";
 import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,

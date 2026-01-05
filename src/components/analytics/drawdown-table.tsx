@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface DrawdownPeriod {
 	startDate: string;

@@ -8,7 +8,7 @@ import {
 	TrendingUp,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { cn, formatCurrency, formatPercent } from "@/lib/utils";
+import { cn, formatCurrency, formatPercent } from "@/lib/shared";
 
 interface SymbolData {
 	symbol: string;

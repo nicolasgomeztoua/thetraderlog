@@ -29,7 +29,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 export interface FilterState {

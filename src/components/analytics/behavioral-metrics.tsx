@@ -1,7 +1,13 @@
 "use client";
 
 import { AlertTriangle, CheckCircle, TrendingDown, Zap } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import {
+	EMOTIONAL_STATES,
+	getDisciplineScoreLevel,
+	getOvertradingLevel,
+	getTiltScoreLevel,
+} from "@/lib/analytics";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface EmotionalStateData {
 	state: string;
@@ -32,41 +38,19 @@ export function BehavioralMetrics({
 	totalTrades,
 	className,
 }: BehavioralMetricsProps) {
-	// Score color helpers
-	const getTiltColor = (score: number) => {
-		if (score < 30) return "text-profit";
-		if (score < 50) return "text-breakeven";
-		if (score < 70) return "text-amber-400";
-		return "text-loss";
-	};
-
-	const getDisciplineColor = (score: number) => {
-		if (score >= 80) return "text-profit";
-		if (score >= 60) return "text-breakeven";
-		if (score >= 40) return "text-amber-400";
-		return "text-loss";
-	};
-
-	const getOvertradingColor = (score: number) => {
-		if (score < 10) return "text-profit";
-		if (score < 20) return "text-breakeven";
-		if (score < 30) return "text-amber-400";
-		return "text-loss";
-	};
+	// Get levels from centralized thresholds
+	const tiltLevel = getTiltScoreLevel(tiltScore);
+	const disciplineLevel = getDisciplineScoreLevel(disciplineScore);
+	const overtradingLevel = getOvertradingLevel(overtradingTendency);
 
 	// Emotional state display name and color
 	const getEmotionalStateDisplay = (state: string) => {
-		const displays: Record<string, { label: string; color: string }> = {
-			confident: { label: "Confident", color: "text-profit" },
-			fearful: { label: "Fearful", color: "text-amber-400" },
-			greedy: { label: "Greedy", color: "text-loss" },
-			neutral: { label: "Neutral", color: "text-muted-foreground" },
-			frustrated: { label: "Frustrated", color: "text-loss" },
-			excited: { label: "Excited", color: "text-amber-400" },
-			anxious: { label: "Anxious", color: "text-amber-400" },
-			untracked: { label: "Untracked", color: "text-muted-foreground/60" },
-		};
-		return displays[state] || { label: state, color: "text-muted-foreground" };
+		const emotionalState =
+			EMOTIONAL_STATES[state as keyof typeof EMOTIONAL_STATES];
+		if (emotionalState) {
+			return { label: emotionalState.label, color: emotionalState.colorClass };
+		}
+		return { label: state, color: "text-muted-foreground" };
 	};
 
 	if (totalTrades === 0) {
@@ -97,19 +81,13 @@ export function BehavioralMetrics({
 					<div
 						className={cn(
 							"mt-2 font-bold font-mono text-2xl",
-							getTiltColor(tiltScore),
+							tiltLevel.colorClass,
 						)}
 					>
 						{tiltScore}%
 					</div>
 					<div className="mt-1 font-mono text-[10px] text-muted-foreground">
-						{tiltScore < 30
-							? "Excellent composure"
-							: tiltScore < 50
-								? "Generally stable"
-								: tiltScore < 70
-									? "Some tilt patterns"
-									: "High tilt risk"}
+						{tiltLevel.description}
 					</div>
 
 					{/* Visual gauge */}
@@ -117,13 +95,7 @@ export function BehavioralMetrics({
 						<div
 							className={cn(
 								"h-full rounded-full transition-all",
-								tiltScore < 30
-									? "bg-profit"
-									: tiltScore < 50
-										? "bg-breakeven"
-										: tiltScore < 70
-											? "bg-amber-400"
-											: "bg-loss",
+								tiltLevel.colorClass.replace("text-", "bg-"),
 							)}
 							style={{ width: `${tiltScore}%` }}
 						/>
@@ -141,19 +113,13 @@ export function BehavioralMetrics({
 					<div
 						className={cn(
 							"mt-2 font-bold font-mono text-2xl",
-							getDisciplineColor(disciplineScore),
+							disciplineLevel.colorClass,
 						)}
 					>
 						{disciplineScore}%
 					</div>
 					<div className="mt-1 font-mono text-[10px] text-muted-foreground">
-						{disciplineScore >= 80
-							? "Highly disciplined"
-							: disciplineScore >= 60
-								? "Good discipline"
-								: disciplineScore >= 40
-									? "Room for improvement"
-									: "Low strategy adherence"}
+						{disciplineLevel.label}
 					</div>
 
 					{/* Visual gauge */}
@@ -161,13 +127,7 @@ export function BehavioralMetrics({
 						<div
 							className={cn(
 								"h-full rounded-full transition-all",
-								disciplineScore >= 80
-									? "bg-profit"
-									: disciplineScore >= 60
-										? "bg-breakeven"
-										: disciplineScore >= 40
-											? "bg-amber-400"
-											: "bg-loss",
+								disciplineLevel.colorClass.replace("text-", "bg-"),
 							)}
 							style={{ width: `${disciplineScore}%` }}
 						/>
@@ -185,19 +145,13 @@ export function BehavioralMetrics({
 					<div
 						className={cn(
 							"mt-2 font-bold font-mono text-2xl",
-							getOvertradingColor(overtradingTendency),
+							overtradingLevel.colorClass,
 						)}
 					>
 						{overtradingTendency}%
 					</div>
 					<div className="mt-1 font-mono text-[10px] text-muted-foreground">
-						{overtradingTendency < 10
-							? "Consistent volume"
-							: overtradingTendency < 20
-								? "Occasional spikes"
-								: overtradingTendency < 30
-									? "Frequent overtrading"
-									: "High overtrading risk"}
+						{overtradingLevel.label}
 					</div>
 
 					{/* Visual gauge */}
@@ -205,13 +159,7 @@ export function BehavioralMetrics({
 						<div
 							className={cn(
 								"h-full rounded-full transition-all",
-								overtradingTendency < 10
-									? "bg-profit"
-									: overtradingTendency < 20
-										? "bg-breakeven"
-										: overtradingTendency < 30
-											? "bg-amber-400"
-											: "bg-loss",
+								overtradingLevel.colorClass.replace("text-", "bg-"),
 							)}
 							style={{ width: `${Math.min(100, overtradingTendency * 2)}%` }}
 						/>

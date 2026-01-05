@@ -10,7 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAccount } from "@/contexts/account-context";
-import { type ExportableTrade, exportTradesToCSV } from "@/lib/csv-export";
+import { type ExportableTrade, exportTradesToCSV } from "@/lib/ui";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import { api } from "@/trpc/react";
 

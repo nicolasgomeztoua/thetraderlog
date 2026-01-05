@@ -1,5 +1,5 @@
 import { task } from "@trigger.dev/sdk/v3";
-import { calculateAndStoreMAEMFE } from "@/lib/maemfe-service";
+import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 
 const LOG_TAG = "[Trigger:MAE/MFE]";
 

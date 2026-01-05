@@ -2,7 +2,7 @@
 
 import { AgCharts } from "ag-charts-react";
 import { useMemo, useState } from "react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface MonthData {
 	month: string;

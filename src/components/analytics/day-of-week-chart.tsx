@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface DayData {
 	day: string;

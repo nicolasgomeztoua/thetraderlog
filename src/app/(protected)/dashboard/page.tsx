@@ -3,7 +3,7 @@
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
-import { cn, formatCurrency, getPnLColorClass } from "@/lib/utils";
+import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // Circular progress component for gauges

@@ -812,10 +812,7 @@ describe("Analytics Filters", () => {
 				status: "closed",
 				netPnl: "1000",
 			});
-			const otherCaller = await createTestCaller(
-				otherUser.clerkId,
-				otherUser,
-			);
+			const otherCaller = await createTestCaller(otherUser.clerkId, otherUser);
 
 			// Query original user's account with ES filter
 			const result = await otherCaller.analytics.getOverview({
@@ -835,10 +832,7 @@ describe("Analytics Filters", () => {
 				status: "closed",
 				netPnl: "5000",
 			});
-			const otherCaller = await createTestCaller(
-				otherUser.clerkId,
-				otherUser,
-			);
+			const otherCaller = await createTestCaller(otherUser.clerkId, otherUser);
 
 			// Query other user's own account with ES filter
 			const result = await otherCaller.analytics.getOverview({

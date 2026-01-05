@@ -2,8 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
-import { cn } from "@/lib/utils";
+import { aggregateBars, type ChartInterval } from "@/lib/market-data";
+import { cn } from "@/lib/shared";
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
 import { useReplayPreferencesStore } from "@/stores/replay-preferences-store";
 import { api } from "@/trpc/react";

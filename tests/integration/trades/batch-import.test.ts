@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Account, User } from "@/server/db/schema";
+import { triggerMock } from "../../mocks/trigger";
 import {
 	createTestAccount,
 	createTestCaller,
@@ -7,7 +8,6 @@ import {
 	type TestCaller,
 	truncateAllTables,
 } from "../../utils";
-import { triggerMock } from "../../mocks/trigger";
 
 /**
  * Helper to create a valid batch import trade object.

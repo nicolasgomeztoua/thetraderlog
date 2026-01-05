@@ -15,20 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PRESET_COLORS } from "@/lib/shared";
 import { api } from "@/trpc/react";
-
-const PRESET_COLORS = [
-	"#d4ff00", // Electric Chartreuse (primary)
-	"#00d4ff", // Ice Blue (accent)
-	"#00ff88", // Profit green
-	"#ff3b3b", // Loss red
-	"#6366f1", // Indigo
-	"#f59e0b", // Amber
-	"#ec4899", // Pink
-	"#8b5cf6", // Violet
-	"#14b8a6", // Teal
-	"#f97316", // Orange
-];
 
 export function TagManager() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);

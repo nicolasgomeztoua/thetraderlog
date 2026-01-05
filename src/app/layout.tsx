@@ -5,6 +5,7 @@ import { dark } from "@clerk/themes";
 import type { Metadata } from "next";
 import { JetBrains_Mono, Manrope } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { CLERK_THEME } from "@/lib/shared";
 import { TRPCReactProvider } from "@/trpc/react";
 
 export const metadata: Metadata = {
@@ -32,10 +33,7 @@ export default function RootLayout({
 			appearance={{
 				baseTheme: dark,
 				variables: {
-					colorPrimary: "#d4ff00",
-					colorBackground: "#050505",
-					colorInputBackground: "#141414",
-					colorInputText: "#fafafa",
+					...CLERK_THEME,
 					borderRadius: "4px",
 				},
 			}}

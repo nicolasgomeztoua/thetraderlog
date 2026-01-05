@@ -4,7 +4,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatPercent } from "@/lib/utils";
+import { cn, formatPercent } from "@/lib/shared";
 
 interface KellyDisplayProps {
 	/** Full Kelly percentage (0-100) */

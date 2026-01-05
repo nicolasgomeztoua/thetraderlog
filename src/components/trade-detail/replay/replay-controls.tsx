@@ -11,8 +11,8 @@ import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useTimezone } from "@/hooks/use-timezone";
-import type { ChartInterval } from "@/lib/candle-aggregation";
-import { cn } from "@/lib/utils";
+import type { ChartInterval } from "@/lib/market-data";
+import { cn } from "@/lib/shared";
 import type { ReplaySpeed } from "@/stores/replay-preferences-store";
 
 // Interval to seconds mapping for jump buttons

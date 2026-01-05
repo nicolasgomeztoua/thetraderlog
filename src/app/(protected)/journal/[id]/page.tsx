@@ -38,8 +38,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 import { useTimezone } from "@/hooks/use-timezone";
-import { calculateAllStats } from "@/lib/trade-calculations";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/shared";
+import { calculateAllStats } from "@/lib/trades";
 import { api } from "@/trpc/react";
 
 // =============================================================================

@@ -41,7 +41,7 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAccount } from "@/contexts/account-context";
-import { cn } from "@/lib/utils";
+import { ACCOUNT_TYPE_COLORS, cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 const mainNavItems = [
@@ -72,13 +72,7 @@ const mainNavItems = [
 	},
 ];
 
-// Updated account type colors for new types
-const ACCOUNT_TYPE_COLORS: Record<string, string> = {
-	prop_challenge: "bg-amber-500",
-	prop_funded: "bg-purple-500",
-	live: "bg-profit",
-	demo: "bg-accent",
-};
+// ACCOUNT_TYPE_COLORS imported from shared
 
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 	prop_challenge: "Challenge",

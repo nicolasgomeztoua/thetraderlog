@@ -80,15 +80,15 @@ describe("Analytics Behavior", () => {
 					"duringLossStreak",
 					"noStreak",
 				] as const) {
-					expect(
-						result.performanceDuringStreaks[category],
-					).toHaveProperty("trades");
+					expect(result.performanceDuringStreaks[category]).toHaveProperty(
+						"trades",
+					);
 					expect(result.performanceDuringStreaks[category]).toHaveProperty(
 						"pnl",
 					);
-					expect(
-						result.performanceDuringStreaks[category],
-					).toHaveProperty("avgPnl");
+					expect(result.performanceDuringStreaks[category]).toHaveProperty(
+						"avgPnl",
+					);
 				}
 			});
 		});
@@ -241,7 +241,9 @@ describe("Analytics Behavior", () => {
 
 				expect(result.afterConsecutiveLosses).toHaveProperty("after1Loss");
 				expect(result.afterConsecutiveLosses).toHaveProperty("after2Losses");
-				expect(result.afterConsecutiveLosses).toHaveProperty("after3PlusLosses");
+				expect(result.afterConsecutiveLosses).toHaveProperty(
+					"after3PlusLosses",
+				);
 
 				// Each level should have trades, wins, winRate, avgPnl
 				for (const level of [
@@ -251,7 +253,9 @@ describe("Analytics Behavior", () => {
 				] as const) {
 					expect(result.afterConsecutiveLosses[level]).toHaveProperty("trades");
 					expect(result.afterConsecutiveLosses[level]).toHaveProperty("wins");
-					expect(result.afterConsecutiveLosses[level]).toHaveProperty("winRate");
+					expect(result.afterConsecutiveLosses[level]).toHaveProperty(
+						"winRate",
+					);
 					expect(result.afterConsecutiveLosses[level]).toHaveProperty("avgPnl");
 				}
 			});
@@ -293,9 +297,9 @@ describe("Analytics Behavior", () => {
 				});
 
 				// wins + losses should be <= trades (breakevens don't count)
-				expect(result.afterWin.wins + result.afterWin.losses).toBeLessThanOrEqual(
-					result.afterWin.trades,
-				);
+				expect(
+					result.afterWin.wins + result.afterWin.losses,
+				).toBeLessThanOrEqual(result.afterWin.trades);
 				expect(
 					result.afterLoss.wins + result.afterLoss.losses,
 				).toBeLessThanOrEqual(result.afterLoss.trades);

@@ -104,7 +104,7 @@ export function QueryGroup({
 	}, [group, onChange]);
 
 	return (
-		<div className="rounded border border-white/10 bg-white/[0.01]">
+		<div className="rounded border border-white/10 bg-white/1">
 			{/* Group header */}
 			<div className="flex items-center justify-between border-border border-b px-4 py-2">
 				<div className="flex items-center gap-2">

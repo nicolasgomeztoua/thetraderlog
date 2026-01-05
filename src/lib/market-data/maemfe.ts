@@ -13,8 +13,8 @@ import { eq } from "drizzle-orm";
 import {
 	type DataQuality,
 	getOHLCForTimeRange,
-} from "@/lib/market-data-service";
-import { calculateMAEMFE, type MAEMFEResult } from "@/lib/trade-calculations";
+} from "@/lib/market-data/service";
+import { calculateMAEMFE, type MAEMFEResult } from "@/lib/trades";
 import { db } from "@/server/db";
 import { type Trade, trades } from "@/server/db/schema";
 

@@ -28,8 +28,8 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTimezone } from "@/hooks/use-timezone";
-import type { TradeStats } from "@/lib/trade-calculations";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/shared";
+import type { TradeStats } from "@/lib/trades";
 import { api } from "@/trpc/react";
 import type { TradeForStatsPanel } from "@/types";
 import { EditableField } from "./editable-field";

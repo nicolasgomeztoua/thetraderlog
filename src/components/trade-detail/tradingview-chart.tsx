@@ -13,10 +13,13 @@ import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useTheme } from "@/contexts/theme-context";
-import { aggregateBars, type ChartInterval } from "@/lib/candle-aggregation";
-import { getTradingViewSymbol } from "@/lib/symbols";
-import { getThemeById } from "@/lib/themes";
-import { cn } from "@/lib/utils";
+import {
+	aggregateBars,
+	type ChartInterval,
+	getTradingViewSymbol,
+} from "@/lib/market-data";
+import { cn } from "@/lib/shared";
+import { getThemeById } from "@/lib/ui";
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
 import { api } from "@/trpc/react";
 

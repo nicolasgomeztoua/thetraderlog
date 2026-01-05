@@ -1003,7 +1003,9 @@ describe("Analytics Risk", () => {
 				});
 
 				for (const bucket of result.buckets) {
-					expect(bucket.wins + bucket.losses).toBeLessThanOrEqual(bucket.trades);
+					expect(bucket.wins + bucket.losses).toBeLessThanOrEqual(
+						bucket.trades,
+					);
 				}
 			});
 		});

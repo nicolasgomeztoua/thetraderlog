@@ -1,6 +1,12 @@
 import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
-import { cn, formatCurrency } from "@/lib/utils";
+import {
+	ANALYTICS_COLORS,
+	CHART_AXIS_STYLE,
+	CHART_DIMENSIONS,
+	formatMonth as formatMonthIndex,
+} from "@/lib/analytics";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface MonthData {
 	month: string; // YYYY-MM format
@@ -24,22 +30,8 @@ function formatMonth(monthStr: string): string {
 	const [year, month] = monthStr.split("-");
 	if (!year || !month) return monthStr;
 
-	const monthNames = [
-		"Jan",
-		"Feb",
-		"Mar",
-		"Apr",
-		"May",
-		"Jun",
-		"Jul",
-		"Aug",
-		"Sep",
-		"Oct",
-		"Nov",
-		"Dec",
-	];
 	const monthIndex = parseInt(month, 10) - 1;
-	const monthName = monthNames[monthIndex] ?? month;
+	const monthName = formatMonthIndex(monthIndex) || month;
 
 	return `${monthName} '${year.slice(-2)}`;
 }
@@ -93,14 +85,23 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 					xKey: "monthLabel",
 					yKey: "cumulative",
 					yName: "Cumulative P&L",
-					fill: stats.totalPnl >= 0 ? "#00ff8820" : "#ff3b3b20",
-					stroke: stats.totalPnl >= 0 ? "#00ff88" : "#ff3b3b",
-					strokeWidth: 2,
+					fill:
+						stats.totalPnl >= 0
+							? ANALYTICS_COLORS.profitFill
+							: ANALYTICS_COLORS.lossFill,
+					stroke:
+						stats.totalPnl >= 0
+							? ANALYTICS_COLORS.profit
+							: ANALYTICS_COLORS.loss,
+					strokeWidth: CHART_DIMENSIONS.monthly.strokeWidth,
 					marker: {
 						enabled: true,
-						size: 6,
-						fill: stats.totalPnl >= 0 ? "#00ff88" : "#ff3b3b",
-						stroke: "#050505",
+						size: CHART_DIMENSIONS.monthly.markerSize,
+						fill:
+							stats.totalPnl >= 0
+								? ANALYTICS_COLORS.profit
+								: ANALYTICS_COLORS.loss,
+						stroke: ANALYTICS_COLORS.background,
 						strokeWidth: 1,
 					},
 					tooltip: {
@@ -114,15 +115,21 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 							};
 						}) => {
 							const d = params.datum;
-							const pnlColor = d.pnlRounded >= 0 ? "#00ff88" : "#ff3b3b";
-							const cumulativeColor = d.cumulative >= 0 ? "#00ff88" : "#ff3b3b";
+							const pnlColor =
+								d.pnlRounded >= 0
+									? ANALYTICS_COLORS.profit
+									: ANALYTICS_COLORS.loss;
+							const cumulativeColor =
+								d.cumulative >= 0
+									? ANALYTICS_COLORS.profit
+									: ANALYTICS_COLORS.loss;
 
 							return {
 								title: d.monthLabel,
 								content: `
 									<div style="margin-bottom: 4px;">Cumulative: <b style="color: ${cumulativeColor}">${formatCurrency(d.cumulative)}</b></div>
 									<div style="margin-bottom: 4px;">Monthly P&L: <b style="color: ${pnlColor}">${formatCurrency(d.pnlRounded)}</b></div>
-									<div style="color: #94a3b8;">${d.trades} trades · ${d.winRate.toFixed(0)}% win rate</div>
+									<div style="color: ${ANALYTICS_COLORS.mutedLight};">${d.trades} trades · ${d.winRate.toFixed(0)}% win rate</div>
 								`,
 							};
 						},
@@ -134,12 +141,12 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 					type: "category" as const,
 					position: "bottom" as const,
 					label: {
-						color: "#64748b",
+						color: CHART_AXIS_STYLE.label.fill,
 						fontFamily: "JetBrains Mono, monospace",
 						fontSize: 10,
 					},
-					line: { color: "#1e293b" },
-					tick: { color: "#1e293b" },
+					line: { color: CHART_AXIS_STYLE.line.stroke },
+					tick: { color: CHART_AXIS_STYLE.tick.stroke },
 					gridLine: { enabled: false },
 					paddingInner: 0.2,
 				},
@@ -147,7 +154,7 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 					type: "number" as const,
 					position: "left" as const,
 					label: {
-						color: "#64748b",
+						color: CHART_AXIS_STYLE.label.fill,
 						fontFamily: "JetBrains Mono, monospace",
 						fontSize: 10,
 						formatter: (params: { value: number }) => {
@@ -158,9 +165,9 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 							return `$${v.toFixed(0)}`;
 						},
 					},
-					line: { color: "#1e293b" },
-					tick: { color: "#1e293b" },
-					gridLine: { style: [{ stroke: "#ffffff10" }] },
+					line: { color: CHART_AXIS_STYLE.line.stroke },
+					tick: { color: CHART_AXIS_STYLE.tick.stroke },
+					gridLine: { style: [{ stroke: ANALYTICS_COLORS.gridMedium }] },
 				},
 			],
 			legend: { enabled: false },
@@ -221,8 +228,11 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 
 			{/* Chart */}
 			<div className="relative">
-				{/* biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing */}
-				<AgCharts options={chartOptions as any} style={{ height: 240 }} />
+				<AgCharts
+					// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
+					options={chartOptions as any}
+					style={{ height: CHART_DIMENSIONS.monthly.height }}
+				/>
 
 				{/* Cumulative P&L label */}
 				<div className="absolute top-0 right-2 text-right">

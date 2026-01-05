@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ChartInterval } from "@/lib/candle-aggregation";
+import type { ChartInterval } from "@/lib/market-data";
 
 interface ChartPreferencesState {
 	interval: ChartInterval;

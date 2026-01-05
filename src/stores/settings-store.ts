@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getTimezoneAbbreviation } from "@/lib/timezone";
+import { getTimezoneAbbreviation } from "@/lib/shared";
 
 // Trading session configuration
 export interface TradingSession {
