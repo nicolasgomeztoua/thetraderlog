@@ -7,7 +7,7 @@ import {
 	createTestUser,
 	type TestCaller,
 	truncateAllTables,
-} from "../utils";
+} from "../../utils";
 
 describe("accounts router", () => {
 	let user: User;

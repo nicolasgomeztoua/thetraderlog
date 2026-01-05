@@ -1,4 +1,15 @@
-import { and, eq, gte, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import {
+	and,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNotNull,
+	isNull,
+	lte,
+	type SQL,
+	sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import {
 	buildEquityCurve,
@@ -19,7 +30,256 @@ import {
 	getUserTimezone,
 } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { accounts, trades, userSettings } from "@/server/db/schema";
+import {
+	accounts,
+	filterPresets,
+	trades,
+	userSettings,
+} from "@/server/db/schema";
+
+// =============================================================================
+// ANALYTICS FILTER INPUT SCHEMA
+// Shared input schema for filtering analytics queries
+// =============================================================================
+
+const analyticsFilterInput = z.object({
+	symbols: z.array(z.string()).optional(),
+	dateRange: z
+		.object({
+			start: z.string().datetime().nullable(),
+			end: z.string().datetime().nullable(),
+		})
+		.optional(),
+	daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+	hours: z.array(z.number().min(0).max(23)).optional(),
+	sessions: z.array(z.string()).optional(),
+	strategies: z.array(z.string()).optional(),
+	tags: z.array(z.string()).optional(),
+	rMultipleRange: z
+		.object({
+			min: z.number().nullable(),
+			max: z.number().nullable(),
+		})
+		.optional(),
+	positionSizeRange: z
+		.object({
+			min: z.number().nullable(),
+			max: z.number().nullable(),
+		})
+		.optional(),
+	outcome: z.enum(["all", "win", "loss", "breakeven"]).optional(),
+	reviewed: z.enum(["all", "reviewed", "unreviewed"]).optional(),
+});
+
+type AnalyticsFilterInput = z.infer<typeof analyticsFilterInput>;
+
+// =============================================================================
+// FILTER BUILDER HELPER
+// Builds WHERE conditions from filter input
+// =============================================================================
+
+/**
+ * Build SQL conditions from analytics filters
+ * Returns an array of conditions to be combined with AND
+ * Note: Some filters (daysOfWeek, hours, sessions, outcome, rMultiple, positionSize)
+ * require post-query filtering as they depend on computed values
+ */
+function buildFilterConditions(
+	filters: AnalyticsFilterInput | undefined,
+	tradesTable: typeof trades,
+): SQL[] {
+	const conditions: SQL[] = [];
+
+	if (!filters) return conditions;
+
+	// Symbol filter
+	if (filters.symbols && filters.symbols.length > 0) {
+		conditions.push(inArray(tradesTable.symbol, filters.symbols));
+	}
+
+	// Date range filter (on entry time for consistency)
+	if (filters.dateRange?.start) {
+		conditions.push(
+			gte(tradesTable.entryTime, new Date(filters.dateRange.start)),
+		);
+	}
+	if (filters.dateRange?.end) {
+		conditions.push(
+			lte(tradesTable.entryTime, new Date(filters.dateRange.end)),
+		);
+	}
+
+	// Strategy filter
+	if (filters.strategies && filters.strategies.length > 0) {
+		conditions.push(inArray(tradesTable.strategyId, filters.strategies));
+	}
+
+	// Reviewed filter
+	if (filters.reviewed && filters.reviewed !== "all") {
+		conditions.push(
+			eq(tradesTable.isReviewed, filters.reviewed === "reviewed"),
+		);
+	}
+
+	// Position size range filter (can be done in SQL)
+	if (
+		filters.positionSizeRange?.min !== null &&
+		filters.positionSizeRange?.min !== undefined
+	) {
+		conditions.push(
+			gte(tradesTable.quantity, filters.positionSizeRange.min.toString()),
+		);
+	}
+	if (
+		filters.positionSizeRange?.max !== null &&
+		filters.positionSizeRange?.max !== undefined
+	) {
+		conditions.push(
+			lte(tradesTable.quantity, filters.positionSizeRange.max.toString()),
+		);
+	}
+
+	return conditions;
+}
+
+/**
+ * Apply post-query filters that require computed values
+ * These filters cannot be done in SQL and must be applied to fetched data
+ */
+interface TradeWithComputedFields {
+	netPnl: string | null;
+	entryTime: Date;
+	exitTime?: Date | null;
+	entryPrice?: string;
+	stopLoss?: string | null;
+	quantity?: string;
+	symbol?: string;
+	instrumentType?: string | null;
+	direction?: string;
+}
+
+function applyPostQueryFilters<T extends TradeWithComputedFields>(
+	trades: T[],
+	filters: AnalyticsFilterInput | undefined,
+	options: {
+		beThreshold: number;
+		userTimezone: string;
+		getPointValueFn?: typeof getPointValue;
+	},
+): T[] {
+	if (!filters) return trades;
+
+	let filtered = trades;
+
+	// Days of week filter
+	if (filters.daysOfWeek && filters.daysOfWeek.length > 0) {
+		filtered = filtered.filter((trade) => {
+			const dayOfWeek = getDayOfWeekInTimezone(
+				trade.entryTime,
+				options.userTimezone,
+			);
+			return filters.daysOfWeek?.includes(dayOfWeek);
+		});
+	}
+
+	// Hours filter
+	if (filters.hours && filters.hours.length > 0) {
+		filtered = filtered.filter((trade) => {
+			const hour = getHourInTimezone(trade.entryTime, options.userTimezone);
+			return filters.hours?.includes(hour);
+		});
+	}
+
+	// Sessions filter (based on UTC hours)
+	if (filters.sessions && filters.sessions.length > 0) {
+		// Default session definitions (UTC hours)
+		const sessionDefs: Record<string, { start: number; end: number }> = {
+			asia: { start: 0, end: 8 },
+			london: { start: 8, end: 16 },
+			"new york": { start: 13, end: 21 },
+			new_york: { start: 13, end: 21 },
+		};
+
+		filtered = filtered.filter((trade) => {
+			const utcHour = trade.entryTime.getUTCHours();
+			return filters.sessions?.some((sessionName) => {
+				const session = sessionDefs[sessionName.toLowerCase()];
+				if (!session) return false;
+				if (session.start <= session.end) {
+					return utcHour >= session.start && utcHour < session.end;
+				}
+				// Handle wrap-around sessions
+				return utcHour >= session.start || utcHour < session.end;
+			});
+		});
+	}
+
+	// Outcome filter (win/loss/breakeven)
+	if (filters.outcome && filters.outcome !== "all") {
+		filtered = filtered.filter((trade) => {
+			const pnl = parsePnl(trade.netPnl);
+			switch (filters.outcome) {
+				case "win":
+					return pnl > options.beThreshold;
+				case "loss":
+					return pnl < -options.beThreshold;
+				case "breakeven":
+					return pnl >= -options.beThreshold && pnl <= options.beThreshold;
+				default:
+					return true;
+			}
+		});
+	}
+
+	// R-Multiple range filter
+	const getPointValueFn = options.getPointValueFn;
+	if (
+		filters.rMultipleRange &&
+		(filters.rMultipleRange.min !== null ||
+			filters.rMultipleRange.max !== null) &&
+		getPointValueFn
+	) {
+		filtered = filtered.filter((trade) => {
+			if (!trade.stopLoss || !trade.entryPrice || !trade.quantity) return true;
+
+			const entryPrice = parseFloat(trade.entryPrice);
+			const stopLoss = parseFloat(trade.stopLoss);
+			const quantity = parseFloat(trade.quantity);
+			const netPnl = parsePnl(trade.netPnl);
+
+			const riskPerUnit = Math.abs(entryPrice - stopLoss);
+			if (riskPerUnit === 0 || quantity === 0) return true;
+
+			const pointValue = getPointValueFn(
+				trade.symbol ?? "",
+				(trade.instrumentType as "futures" | "forex") ?? "futures",
+			);
+			const plannedRisk = riskPerUnit * pointValue * quantity;
+			const rMultiple = netPnl / plannedRisk;
+
+			if (
+				filters.rMultipleRange?.min !== null &&
+				filters.rMultipleRange?.min !== undefined &&
+				rMultiple < filters.rMultipleRange.min
+			) {
+				return false;
+			}
+			if (
+				filters.rMultipleRange?.max !== null &&
+				filters.rMultipleRange?.max !== undefined &&
+				rMultiple > filters.rMultipleRange.max
+			) {
+				return false;
+			}
+			return true;
+		});
+	}
+
+	// Tags filter - requires join, handled separately in procedures that support it
+	// For now, we skip tag filtering in the generic helper
+
+	return filtered;
+}
 
 // =============================================================================
 // ANALYTICS ROUTER
@@ -36,14 +296,13 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
-					startDate: z.string().datetime().nullish(),
-					endDate: z.string().datetime().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
 			// Build conditions for the query
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -58,30 +317,42 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			// Date range filters
-			if (input?.startDate) {
-				conditions.push(gte(trades.exitTime, new Date(input.startDate)));
-			}
-			if (input?.endDate) {
-				conditions.push(lte(trades.exitTime, new Date(input.endDate)));
-			}
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
 
 			// Fetch all closed trades with P&L
-			const closedTrades = await ctx.db
+			const closedTradesRaw = await ctx.db
 				.select({
 					id: trades.id,
 					netPnl: trades.netPnl,
 					entryPrice: trades.entryPrice,
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
+					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
 				.orderBy(trades.exitTime);
 
-			// Get user's breakeven threshold
-			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Calculate aggregate stats using existing function
 			const stats = calculateAggregateStats(closedTrades, beThreshold);
@@ -186,6 +457,7 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
@@ -194,7 +466,7 @@ export const analyticsRouter = createTRPCRouter({
 			const oneYearAgo = new Date();
 			oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -209,10 +481,19 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -223,6 +504,17 @@ export const analyticsRouter = createTRPCRouter({
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
 			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Aggregate by date in user's timezone
 			const dailyData = new Map<
@@ -268,11 +560,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -286,10 +579,19 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -299,6 +601,17 @@ export const analyticsRouter = createTRPCRouter({
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
 			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Initialize days (0 = Sunday, 6 = Saturday)
 			const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -341,11 +654,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -359,10 +673,19 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
 					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -372,6 +695,17 @@ export const analyticsRouter = createTRPCRouter({
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
 			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Initialize 24 hours
 			const hourData = Array.from({ length: 24 }, (_, i) => ({
@@ -413,11 +747,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -431,15 +766,38 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
 					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
 
-			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Get user's custom sessions from settings
 			const userSettingsRow = await ctx.db.query.userSettings.findFirst({
@@ -556,6 +914,7 @@ export const analyticsRouter = createTRPCRouter({
 				.object({
 					accountId: z.string().nullish(),
 					months: z.number().min(1).max(24).default(12),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
@@ -566,7 +925,7 @@ export const analyticsRouter = createTRPCRouter({
 			startDate.setDate(1);
 			startDate.setHours(0, 0, 0, 0);
 
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -581,10 +940,19 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -595,6 +963,17 @@ export const analyticsRouter = createTRPCRouter({
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
 			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Aggregate by month in user's timezone
 			const monthData = new Map<
@@ -653,11 +1032,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -699,18 +1079,43 @@ export const analyticsRouter = createTRPCRouter({
 				// Future: could aggregate account drawdown limits
 			}
 
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
 			// Fetch trades sorted by exit time for equity curve
-			const closedTrades = await ctx.db
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
 				.orderBy(trades.exitTime);
 
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
 			// Also get aggregate stats for Kelly/RoR calculations
-			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
 			const stats = calculateAggregateStats(closedTrades, beThreshold);
 
 			// Calculate actual risk per trade from trading data
@@ -791,11 +1196,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -810,16 +1216,41 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					id: trades.id,
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
 					symbol: trades.symbol,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
 				.orderBy(trades.exitTime);
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Build cumulative P&L curve (starts at $0)
 			const curve = buildEquityCurve(
@@ -850,11 +1281,12 @@ export const analyticsRouter = createTRPCRouter({
 				.object({
 					accountId: z.string().nullish(),
 					limit: z.number().min(1).max(20).default(10),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -869,14 +1301,40 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
 				.orderBy(trades.exitTime);
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Build cumulative P&L curve (starts at $0)
 			const curve = buildEquityCurve(
@@ -887,10 +1345,10 @@ export const analyticsRouter = createTRPCRouter({
 			);
 
 			const periods = findDrawdownPeriods(curve, 1);
-			const limit = input?.limit ?? 10;
+			const resultLimit = input?.limit ?? 10;
 
 			// Format dates for JSON serialization
-			return periods.slice(0, limit).map((period) => ({
+			return periods.slice(0, resultLimit).map((period) => ({
 				...period,
 				startDate: period.startDate.toISOString(),
 				troughDate: period.troughDate.toISOString(),
@@ -911,11 +1369,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -930,9 +1389,14 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
 					entryPrice: trades.entryPrice,
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
@@ -942,6 +1406,23 @@ export const analyticsRouter = createTRPCRouter({
 				})
 				.from(trades)
 				.where(and(...conditions));
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Define R-Multiple buckets
 			const buckets = [
@@ -1049,11 +1530,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -1067,9 +1549,14 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
 					entryPrice: trades.entryPrice,
 					exitPrice: trades.exitPrice,
 					stopLoss: trades.stopLoss,
@@ -1082,7 +1569,22 @@ export const analyticsRouter = createTRPCRouter({
 				.from(trades)
 				.where(and(...conditions));
 
-			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			// Trades with stop loss (can calculate R-multiple)
 			const tradesWithSL = closedTrades.filter((t) => t.stopLoss);
@@ -1217,11 +1719,12 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -1235,16 +1738,39 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
 
-			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			if (closedTrades.length === 0) {
 				return {
@@ -1343,17 +1869,25 @@ export const analyticsRouter = createTRPCRouter({
 	 * Run Monte Carlo simulation on trade history
 	 * Randomizes trade order to show range of possible outcomes
 	 */
-	getMonteCarloSimulation: protectedProcedure
+	// =========================================================================
+	// SYMBOL ANALYSIS PROCEDURES
+	// =========================================================================
+
+	/**
+	 * Get performance breakdown by symbol
+	 * Returns P&L, trade count, win rate, profit factor, and avg trade per symbol
+	 */
+	getPerformanceBySymbol: protectedProcedure
 		.input(
 			z
 				.object({
 					accountId: z.string().nullish(),
-					iterations: z.number().min(100).max(10000).default(1000),
+					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
-			const conditions = [
+			const conditions: SQL[] = [
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
@@ -1367,12 +1901,1308 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			const closedTrades = await ctx.db
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
 				.select({
+					symbol: trades.symbol,
 					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			// Aggregate by symbol
+			const symbolData = new Map<
+				string,
+				{
+					pnl: number;
+					trades: number;
+					wins: number;
+					losses: number;
+					grossProfit: number;
+					grossLoss: number;
+					pnls: number[];
+				}
+			>();
+
+			for (const trade of closedTrades) {
+				const symbol = trade.symbol;
+				const pnl = parsePnl(trade.netPnl);
+
+				const existing = symbolData.get(symbol) || {
+					pnl: 0,
+					trades: 0,
+					wins: 0,
+					losses: 0,
+					grossProfit: 0,
+					grossLoss: 0,
+					pnls: [],
+				};
+
+				existing.pnl += pnl;
+				existing.trades += 1;
+				existing.pnls.push(pnl);
+
+				if (pnl > beThreshold) {
+					existing.wins += 1;
+					existing.grossProfit += pnl;
+				} else if (pnl < -beThreshold) {
+					existing.losses += 1;
+					existing.grossLoss += Math.abs(pnl);
+				}
+
+				symbolData.set(symbol, existing);
+			}
+
+			// Convert to array with calculated metrics
+			return Array.from(symbolData.entries())
+				.map(([symbol, data]) => ({
+					symbol,
+					pnl: data.pnl,
+					trades: data.trades,
+					wins: data.wins,
+					losses: data.losses,
+					winRate:
+						data.wins + data.losses > 0
+							? (data.wins / (data.wins + data.losses)) * 100
+							: 0,
+					profitFactor:
+						data.grossLoss > 0
+							? data.grossProfit / data.grossLoss
+							: data.grossProfit > 0
+								? Infinity
+								: 0,
+					avgTrade: data.trades > 0 ? data.pnl / data.trades : 0,
+					avgWin: data.wins > 0 ? data.grossProfit / data.wins : 0,
+					avgLoss: data.losses > 0 ? data.grossLoss / data.losses : 0,
+				}))
+				.sort((a, b) => b.pnl - a.pnl); // Sort by P&L descending
+		}),
+
+	/**
+	 * Get symbol performance trends over time (monthly breakdown)
+	 * Returns monthly P&L per symbol for trend analysis
+	 */
+	getSymbolTrend: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					months: z.number().min(1).max(24).default(12),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const monthsBack = input?.months ?? 12;
+			const startDate = new Date();
+			startDate.setMonth(startDate.getMonth() - monthsBack);
+			startDate.setDate(1);
+			startDate.setHours(0, 0, 0, 0);
+
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				gte(trades.exitTime, startDate),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
+				.select({
+					symbol: trades.symbol,
+					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			// Aggregate by symbol and month
+			const trendData = new Map<string, Map<string, number>>();
+			const allMonths = new Set<string>();
+			const allSymbols = new Set<string>();
+
+			for (const trade of closedTrades) {
+				if (!trade.exitTime) continue;
+
+				const symbol = trade.symbol;
+				const monthKey = getMonthStringInTimezone(trade.exitTime, userTimezone);
+				const pnl = parsePnl(trade.netPnl);
+
+				allSymbols.add(symbol);
+				allMonths.add(monthKey);
+
+				if (!trendData.has(symbol)) {
+					trendData.set(symbol, new Map());
+				}
+
+				const symbolMonthData = trendData.get(symbol);
+				if (symbolMonthData) {
+					const existing = symbolMonthData.get(monthKey) ?? 0;
+					symbolMonthData.set(monthKey, existing + pnl);
+				}
+			}
+
+			// Convert to structured output
+			// Sort months chronologically
+			const sortedMonths = Array.from(allMonths).sort();
+
+			// Create series data for each symbol
+			const symbols = Array.from(allSymbols).map((symbol) => {
+				const symbolData = trendData.get(symbol);
+				const monthlyPnl = sortedMonths.map((month) => ({
+					month,
+					pnl: symbolData?.get(month) ?? 0,
+				}));
+
+				// Calculate cumulative P&L
+				let cumulative = 0;
+				const cumulativePnl = monthlyPnl.map((m) => {
+					cumulative += m.pnl;
+					return {
+						month: m.month,
+						pnl: m.pnl,
+						cumulative,
+					};
+				});
+
+				return {
+					symbol,
+					data: cumulativePnl,
+					totalPnl: cumulative,
+				};
+			});
+
+			// Sort symbols by total P&L
+			symbols.sort((a, b) => b.totalPnl - a.totalPnl);
+
+			return {
+				months: sortedMonths,
+				symbols,
+			};
+		}),
+
+	// =========================================================================
+	// MONTE CARLO SIMULATION
+	// =========================================================================
+
+	// =========================================================================
+	// BEHAVIORAL ANALYSIS PROCEDURES
+	// =========================================================================
+
+	/**
+	 * Get streak analysis - win/loss streak patterns
+	 * Analyzes consecutive wins/losses and performance during streaks
+	 */
+	getStreakAnalysis: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			if (closedTrades.length === 0) {
+				return {
+					currentStreak: { type: "none" as const, count: 0 },
+					maxWinStreak: 0,
+					maxLossStreak: 0,
+					streakDistribution: {
+						wins: [] as {
+							streakLength: number;
+							count: number;
+							totalPnl: number;
+						}[],
+						losses: [] as {
+							streakLength: number;
+							count: number;
+							totalPnl: number;
+						}[],
+					},
+					performanceDuringStreaks: {
+						duringWinStreak: { trades: 0, pnl: 0, avgPnl: 0 },
+						duringLossStreak: { trades: 0, pnl: 0, avgPnl: 0 },
+						noStreak: { trades: 0, pnl: 0, avgPnl: 0 },
+					},
+				};
+			}
+
+			// Classify trades as win/loss/breakeven
+			const classified = closedTrades.map((t) => {
+				const pnl = parsePnl(t.netPnl);
+				let type: "win" | "loss" | "breakeven";
+				if (pnl > beThreshold) type = "win";
+				else if (pnl < -beThreshold) type = "loss";
+				else type = "breakeven";
+				return { pnl, type };
+			});
+
+			// Find all streaks
+			const allStreaks: {
+				type: "win" | "loss";
+				length: number;
+				totalPnl: number;
+			}[] = [];
+			let currentStreakType: "win" | "loss" | null = null;
+			let currentStreakLength = 0;
+			let currentStreakPnl = 0;
+
+			for (const trade of classified) {
+				if (trade.type === "breakeven") {
+					// Breakeven breaks the streak
+					if (currentStreakType && currentStreakLength > 0) {
+						allStreaks.push({
+							type: currentStreakType,
+							length: currentStreakLength,
+							totalPnl: currentStreakPnl,
+						});
+					}
+					currentStreakType = null;
+					currentStreakLength = 0;
+					currentStreakPnl = 0;
+				} else if (trade.type === currentStreakType) {
+					// Continue streak
+					currentStreakLength++;
+					currentStreakPnl += trade.pnl;
+				} else {
+					// New streak type
+					if (currentStreakType && currentStreakLength > 0) {
+						allStreaks.push({
+							type: currentStreakType,
+							length: currentStreakLength,
+							totalPnl: currentStreakPnl,
+						});
+					}
+					currentStreakType = trade.type;
+					currentStreakLength = 1;
+					currentStreakPnl = trade.pnl;
+				}
+			}
+
+			// Don't forget the last streak
+			if (currentStreakType && currentStreakLength > 0) {
+				allStreaks.push({
+					type: currentStreakType,
+					length: currentStreakLength,
+					totalPnl: currentStreakPnl,
+				});
+			}
+
+			// Calculate max streaks
+			const maxWinStreak = Math.max(
+				0,
+				...allStreaks.filter((s) => s.type === "win").map((s) => s.length),
+			);
+			const maxLossStreak = Math.max(
+				0,
+				...allStreaks.filter((s) => s.type === "loss").map((s) => s.length),
+			);
+
+			// Current streak (from the end)
+			const lastStreak = allStreaks[allStreaks.length - 1];
+			const currentStreak = lastStreak
+				? { type: lastStreak.type, count: lastStreak.length }
+				: { type: "none" as const, count: 0 };
+
+			// Streak distribution - group by streak length
+			const winStreakCounts = new Map<
+				number,
+				{ count: number; totalPnl: number }
+			>();
+			const lossStreakCounts = new Map<
+				number,
+				{ count: number; totalPnl: number }
+			>();
+
+			for (const streak of allStreaks) {
+				const map = streak.type === "win" ? winStreakCounts : lossStreakCounts;
+				const existing = map.get(streak.length) || { count: 0, totalPnl: 0 };
+				map.set(streak.length, {
+					count: existing.count + 1,
+					totalPnl: existing.totalPnl + streak.totalPnl,
+				});
+			}
+
+			const winDistribution = Array.from(winStreakCounts.entries())
+				.map(([streakLength, data]) => ({ streakLength, ...data }))
+				.sort((a, b) => a.streakLength - b.streakLength);
+
+			const lossDistribution = Array.from(lossStreakCounts.entries())
+				.map(([streakLength, data]) => ({ streakLength, ...data }))
+				.sort((a, b) => a.streakLength - b.streakLength);
+
+			// Performance during streaks vs no streak
+			// A trade is "during a streak" if it's part of a streak of 2+
+			const duringWinStreak = { trades: 0, pnl: 0 };
+			const duringLossStreak = { trades: 0, pnl: 0 };
+			const noStreak = { trades: 0, pnl: 0 };
+
+			for (const streak of allStreaks) {
+				if (streak.length >= 2) {
+					if (streak.type === "win") {
+						duringWinStreak.trades += streak.length;
+						duringWinStreak.pnl += streak.totalPnl;
+					} else {
+						duringLossStreak.trades += streak.length;
+						duringLossStreak.pnl += streak.totalPnl;
+					}
+				} else {
+					noStreak.trades += streak.length;
+					noStreak.pnl += streak.totalPnl;
+				}
+			}
+
+			return {
+				currentStreak,
+				maxWinStreak,
+				maxLossStreak,
+				streakDistribution: {
+					wins: winDistribution,
+					losses: lossDistribution,
+				},
+				performanceDuringStreaks: {
+					duringWinStreak: {
+						...duringWinStreak,
+						avgPnl:
+							duringWinStreak.trades > 0
+								? duringWinStreak.pnl / duringWinStreak.trades
+								: 0,
+					},
+					duringLossStreak: {
+						...duringLossStreak,
+						avgPnl:
+							duringLossStreak.trades > 0
+								? duringLossStreak.pnl / duringLossStreak.trades
+								: 0,
+					},
+					noStreak: {
+						...noStreak,
+						avgPnl: noStreak.trades > 0 ? noStreak.pnl / noStreak.trades : 0,
+					},
+				},
+			};
+		}),
+
+	/**
+	 * Get revenge trading analysis
+	 * Analyzes performance after wins vs after losses
+	 */
+	getRevengeTrading: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			if (closedTrades.length < 2) {
+				return {
+					afterWin: {
+						trades: 0,
+						wins: 0,
+						losses: 0,
+						winRate: 0,
+						pnl: 0,
+						avgPnl: 0,
+					},
+					afterLoss: {
+						trades: 0,
+						wins: 0,
+						losses: 0,
+						winRate: 0,
+						pnl: 0,
+						avgPnl: 0,
+					},
+					afterConsecutiveLosses: {
+						after1Loss: { trades: 0, wins: 0, winRate: 0, avgPnl: 0 },
+						after2Losses: { trades: 0, wins: 0, winRate: 0, avgPnl: 0 },
+						after3PlusLosses: { trades: 0, wins: 0, winRate: 0, avgPnl: 0 },
+					},
+					revengeIndicator: 0, // 0-100, higher = more revenge trading tendency
+				};
+			}
+
+			// Classify trades
+			const classified = closedTrades.map((t) => {
+				const pnl = parsePnl(t.netPnl);
+				let type: "win" | "loss" | "breakeven";
+				if (pnl > beThreshold) type = "win";
+				else if (pnl < -beThreshold) type = "loss";
+				else type = "breakeven";
+				return { pnl, type };
+			});
+
+			// Analyze performance after wins vs losses
+			const afterWin = { trades: 0, wins: 0, losses: 0, pnl: 0 };
+			const afterLoss = { trades: 0, wins: 0, losses: 0, pnl: 0 };
+			const after1Loss = { trades: 0, wins: 0, pnl: 0 };
+			const after2Losses = { trades: 0, wins: 0, pnl: 0 };
+			const after3PlusLosses = { trades: 0, wins: 0, pnl: 0 };
+
+			let consecutiveLosses = 0;
+
+			for (let i = 1; i < classified.length; i++) {
+				const prevTrade = classified[i - 1];
+				const currentTrade = classified[i];
+				if (!prevTrade || !currentTrade) continue;
+
+				if (prevTrade.type === "win") {
+					afterWin.trades++;
+					afterWin.pnl += currentTrade.pnl;
+					if (currentTrade.type === "win") afterWin.wins++;
+					else if (currentTrade.type === "loss") afterWin.losses++;
+					consecutiveLosses = 0;
+				} else if (prevTrade.type === "loss") {
+					afterLoss.trades++;
+					afterLoss.pnl += currentTrade.pnl;
+					if (currentTrade.type === "win") afterLoss.wins++;
+					else if (currentTrade.type === "loss") afterLoss.losses++;
+
+					// Track consecutive losses
+					consecutiveLosses++;
+					if (consecutiveLosses === 1) {
+						after1Loss.trades++;
+						after1Loss.pnl += currentTrade.pnl;
+						if (currentTrade.type === "win") after1Loss.wins++;
+					} else if (consecutiveLosses === 2) {
+						after2Losses.trades++;
+						after2Losses.pnl += currentTrade.pnl;
+						if (currentTrade.type === "win") after2Losses.wins++;
+					} else {
+						after3PlusLosses.trades++;
+						after3PlusLosses.pnl += currentTrade.pnl;
+						if (currentTrade.type === "win") after3PlusLosses.wins++;
+					}
+				} else {
+					// Breakeven - reset consecutive losses
+					consecutiveLosses = 0;
+				}
+
+				// Update consecutive losses for current trade
+				if (currentTrade.type === "loss") {
+					if (prevTrade.type === "loss") {
+						// Already incremented above
+					} else {
+						consecutiveLosses = 1;
+					}
+				} else if (currentTrade.type !== "breakeven") {
+					consecutiveLosses = 0;
+				}
+			}
+
+			// Calculate revenge indicator (0-100)
+			// Based on: win rate after losses vs after wins
+			// If win rate drops significantly after losses, indicates revenge trading
+			const winRateAfterWin =
+				afterWin.wins + afterWin.losses > 0
+					? (afterWin.wins / (afterWin.wins + afterWin.losses)) * 100
+					: 0;
+			const winRateAfterLoss =
+				afterLoss.wins + afterLoss.losses > 0
+					? (afterLoss.wins / (afterLoss.wins + afterLoss.losses)) * 100
+					: 0;
+
+			// Revenge indicator: how much worse performance is after losses
+			// 0 = no difference or better after losses
+			// 100 = complete collapse after losses
+			const winRateDrop = Math.max(0, winRateAfterWin - winRateAfterLoss);
+			const revengeIndicator = Math.min(100, winRateDrop * 2); // Scale 0-50% drop to 0-100
+
+			return {
+				afterWin: {
+					...afterWin,
+					winRate:
+						afterWin.wins + afterWin.losses > 0
+							? (afterWin.wins / (afterWin.wins + afterWin.losses)) * 100
+							: 0,
+					avgPnl: afterWin.trades > 0 ? afterWin.pnl / afterWin.trades : 0,
+				},
+				afterLoss: {
+					...afterLoss,
+					winRate:
+						afterLoss.wins + afterLoss.losses > 0
+							? (afterLoss.wins / (afterLoss.wins + afterLoss.losses)) * 100
+							: 0,
+					avgPnl: afterLoss.trades > 0 ? afterLoss.pnl / afterLoss.trades : 0,
+				},
+				afterConsecutiveLosses: {
+					after1Loss: {
+						...after1Loss,
+						winRate:
+							after1Loss.trades > 0
+								? (after1Loss.wins / after1Loss.trades) * 100
+								: 0,
+						avgPnl:
+							after1Loss.trades > 0 ? after1Loss.pnl / after1Loss.trades : 0,
+					},
+					after2Losses: {
+						...after2Losses,
+						winRate:
+							after2Losses.trades > 0
+								? (after2Losses.wins / after2Losses.trades) * 100
+								: 0,
+						avgPnl:
+							after2Losses.trades > 0
+								? after2Losses.pnl / after2Losses.trades
+								: 0,
+					},
+					after3PlusLosses: {
+						...after3PlusLosses,
+						winRate:
+							after3PlusLosses.trades > 0
+								? (after3PlusLosses.wins / after3PlusLosses.trades) * 100
+								: 0,
+						avgPnl:
+							after3PlusLosses.trades > 0
+								? after3PlusLosses.pnl / after3PlusLosses.trades
+								: 0,
+					},
+				},
+				revengeIndicator,
+			};
+		}),
+
+	/**
+	 * Get overtrading analysis
+	 * Analyzes performance by number of trades per day
+	 */
+	getOvertradingAnalysis: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			if (closedTrades.length === 0) {
+				return {
+					byTradeCount: [],
+					optimalRange: { min: 1, max: 3 },
+					overtradingThreshold: 5,
+					correlationScore: 0, // -1 to 1, negative = more trades = worse
+				};
+			}
+
+			// Group trades by day
+			const dailyTrades = new Map<
+				string,
+				{ pnl: number; wins: number; losses: number }[]
+			>();
+
+			for (const trade of closedTrades) {
+				if (!trade.exitTime) continue;
+				const dateKey = getDateStringInTimezone(trade.exitTime, userTimezone);
+				const pnl = parsePnl(trade.netPnl);
+				const isWin = pnl > beThreshold;
+				const isLoss = pnl < -beThreshold;
+
+				if (!dailyTrades.has(dateKey)) {
+					dailyTrades.set(dateKey, []);
+				}
+				dailyTrades.get(dateKey)?.push({
+					pnl,
+					wins: isWin ? 1 : 0,
+					losses: isLoss ? 1 : 0,
+				});
+			}
+
+			// Aggregate by trade count per day
+			const byTradeCountMap = new Map<
+				number,
+				{
+					days: number;
+					totalPnl: number;
+					wins: number;
+					losses: number;
+				}
+			>();
+
+			for (const [, dayTrades] of dailyTrades) {
+				const tradeCount = dayTrades.length;
+				const dayPnl = dayTrades.reduce((sum, t) => sum + t.pnl, 0);
+				const dayWins = dayTrades.reduce((sum, t) => sum + t.wins, 0);
+				const dayLosses = dayTrades.reduce((sum, t) => sum + t.losses, 0);
+
+				const existing = byTradeCountMap.get(tradeCount) || {
+					days: 0,
+					totalPnl: 0,
+					wins: 0,
+					losses: 0,
+				};
+				byTradeCountMap.set(tradeCount, {
+					days: existing.days + 1,
+					totalPnl: existing.totalPnl + dayPnl,
+					wins: existing.wins + dayWins,
+					losses: existing.losses + dayLosses,
+				});
+			}
+
+			// Convert to array and calculate stats
+			const byTradeCount = Array.from(byTradeCountMap.entries())
+				.map(([tradeCount, data]) => ({
+					tradeCount,
+					days: data.days,
+					totalPnl: data.totalPnl,
+					avgDailyPnl: data.totalPnl / data.days,
+					wins: data.wins,
+					losses: data.losses,
+					winRate:
+						data.wins + data.losses > 0
+							? (data.wins / (data.wins + data.losses)) * 100
+							: 0,
+				}))
+				.sort((a, b) => a.tradeCount - b.tradeCount);
+
+			// Find optimal range (trade count with best avg P&L)
+			let bestAvgPnl = -Infinity;
+			let optimalTradeCount = 1;
+			for (const bucket of byTradeCount) {
+				if (bucket.avgDailyPnl > bestAvgPnl && bucket.days >= 3) {
+					bestAvgPnl = bucket.avgDailyPnl;
+					optimalTradeCount = bucket.tradeCount;
+				}
+			}
+
+			// Calculate correlation between trade count and daily P&L
+			// Negative correlation = more trades = worse performance (overtrading)
+			const dailyData: { tradeCount: number; pnl: number }[] = [];
+			for (const [, dayTrades] of dailyTrades) {
+				dailyData.push({
+					tradeCount: dayTrades.length,
+					pnl: dayTrades.reduce((sum, t) => sum + t.pnl, 0),
+				});
+			}
+
+			let correlationScore = 0;
+			if (dailyData.length >= 5) {
+				const n = dailyData.length;
+				const sumX = dailyData.reduce((s, d) => s + d.tradeCount, 0);
+				const sumY = dailyData.reduce((s, d) => s + d.pnl, 0);
+				const sumXY = dailyData.reduce((s, d) => s + d.tradeCount * d.pnl, 0);
+				const sumX2 = dailyData.reduce(
+					(s, d) => s + d.tradeCount * d.tradeCount,
+					0,
+				);
+				const sumY2 = dailyData.reduce((s, d) => s + d.pnl * d.pnl, 0);
+
+				const numerator = n * sumXY - sumX * sumY;
+				const denominator = Math.sqrt(
+					(n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY),
+				);
+				correlationScore = denominator !== 0 ? numerator / denominator : 0;
+			}
+
+			// Determine overtrading threshold (where performance drops significantly)
+			const sortedByAvg = [...byTradeCount].sort(
+				(a, b) => b.avgDailyPnl - a.avgDailyPnl,
+			);
+			const avgPnlThreshold = sortedByAvg[0]?.avgDailyPnl ?? 0;
+			let overtradingThreshold = 5;
+			for (const bucket of byTradeCount) {
+				if (
+					bucket.avgDailyPnl < avgPnlThreshold * 0.5 &&
+					bucket.tradeCount > optimalTradeCount
+				) {
+					overtradingThreshold = bucket.tradeCount;
+					break;
+				}
+			}
+
+			return {
+				byTradeCount,
+				optimalRange: {
+					min: Math.max(1, optimalTradeCount - 1),
+					max: optimalTradeCount + 1,
+				},
+				overtradingThreshold,
+				correlationScore, // Negative = overtrading tendency
+			};
+		}),
+
+	/**
+	 * Get holding time analysis
+	 * Analyzes performance by trade duration
+	 */
+	getHoldingTimeAnalysis: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions));
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			// Duration buckets in minutes
+			const buckets = [
+				{ label: "0-5min", minMinutes: 0, maxMinutes: 5 },
+				{ label: "5-15min", minMinutes: 5, maxMinutes: 15 },
+				{ label: "15-30min", minMinutes: 15, maxMinutes: 30 },
+				{ label: "30min-1h", minMinutes: 30, maxMinutes: 60 },
+				{ label: "1h-2h", minMinutes: 60, maxMinutes: 120 },
+				{ label: "2h+", minMinutes: 120, maxMinutes: Infinity },
+			];
+
+			const bucketData = buckets.map((b) => ({
+				...b,
+				trades: 0,
+				wins: 0,
+				losses: 0,
+				totalPnl: 0,
+			}));
+
+			for (const trade of closedTrades) {
+				if (!trade.exitTime) continue;
+
+				const durationMs = trade.exitTime.getTime() - trade.entryTime.getTime();
+				const durationMinutes = durationMs / (1000 * 60);
+				const pnl = parsePnl(trade.netPnl);
+				const isWin = pnl > beThreshold;
+				const isLoss = pnl < -beThreshold;
+
+				for (const bucket of bucketData) {
+					if (
+						durationMinutes >= bucket.minMinutes &&
+						durationMinutes < bucket.maxMinutes
+					) {
+						bucket.trades++;
+						bucket.totalPnl += pnl;
+						if (isWin) bucket.wins++;
+						else if (isLoss) bucket.losses++;
+						break;
+					}
+				}
+			}
+
+			// Calculate stats per bucket
+			const resultBuckets = bucketData.map((b) => ({
+				label: b.label,
+				minMinutes: b.minMinutes,
+				maxMinutes: b.maxMinutes,
+				trades: b.trades,
+				wins: b.wins,
+				losses: b.losses,
+				totalPnl: b.totalPnl,
+				avgPnl: b.trades > 0 ? b.totalPnl / b.trades : 0,
+				winRate:
+					b.wins + b.losses > 0 ? (b.wins / (b.wins + b.losses)) * 100 : 0,
+			}));
+
+			// Find optimal holding time (best avg P&L with meaningful sample)
+			let bestBucket = resultBuckets[0];
+			let bestAvgPnl = -Infinity;
+			for (const bucket of resultBuckets) {
+				if (bucket.trades >= 5 && bucket.avgPnl > bestAvgPnl) {
+					bestAvgPnl = bucket.avgPnl;
+					bestBucket = bucket;
+				}
+			}
+
+			return {
+				buckets: resultBuckets,
+				optimalDuration: bestBucket
+					? { label: bestBucket.label, avgPnl: bestBucket.avgPnl }
+					: null,
+				totalTrades: closedTrades.length,
+			};
+		}),
+
+	/**
+	 * Get behavioral patterns summary
+	 * Aggregates various behavioral metrics into scores
+	 */
+	getBehavioralPatterns: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+				isNotNull(trades.exitTime),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					emotionalState: trades.emotionalState,
+					strategyId: trades.strategyId,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(trades.exitTime);
+
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			if (closedTrades.length === 0) {
+				return {
+					tiltScore: 0,
+					disciplineScore: 100,
+					overtradingTendency: 0,
+					emotionalStateBreakdown: [],
+					totalTrades: 0,
+				};
+			}
+
+			// Calculate Tilt Score (0-100, based on losses after losses)
+			let lossesAfterLoss = 0;
+			let tradesAfterLoss = 0;
+			const classified = closedTrades.map((t) => {
+				const pnl = parsePnl(t.netPnl);
+				return {
+					pnl,
+					isLoss: pnl < -beThreshold,
+					emotionalState: t.emotionalState,
+					hasStrategy: !!t.strategyId,
+				};
+			});
+
+			for (let i = 1; i < classified.length; i++) {
+				const prev = classified[i - 1];
+				const curr = classified[i];
+				if (prev?.isLoss) {
+					tradesAfterLoss++;
+					if (curr?.isLoss) lossesAfterLoss++;
+				}
+			}
+
+			// Tilt score: how often losses lead to more losses
+			// Higher = more tilted
+			const tiltScore =
+				tradesAfterLoss > 0
+					? Math.round((lossesAfterLoss / tradesAfterLoss) * 100)
+					: 0;
+
+			// Discipline Score (0-100, based on strategy assignment)
+			const tradesWithStrategy = classified.filter((t) => t.hasStrategy).length;
+			const disciplineScore =
+				closedTrades.length > 0
+					? Math.round((tradesWithStrategy / closedTrades.length) * 100)
+					: 100;
+
+			// Overtrading Tendency (based on daily trade count variance)
+			const dailyTrades = new Map<string, number>();
+			for (const trade of closedTrades) {
+				if (!trade.exitTime) continue;
+				const dateKey = getDateStringInTimezone(trade.exitTime, userTimezone);
+				dailyTrades.set(dateKey, (dailyTrades.get(dateKey) || 0) + 1);
+			}
+
+			const tradeCounts = Array.from(dailyTrades.values());
+			const avgDailyTrades =
+				tradeCounts.length > 0
+					? tradeCounts.reduce((s, c) => s + c, 0) / tradeCounts.length
+					: 0;
+
+			// Days with >2x average = overtrading days
+			const overtradingDays = tradeCounts.filter(
+				(c) => c > avgDailyTrades * 2,
+			).length;
+			const overtradingTendency =
+				tradeCounts.length > 0
+					? Math.round((overtradingDays / tradeCounts.length) * 100)
+					: 0;
+
+			// Emotional State Breakdown
+			const emotionalCounts = new Map<
+				string,
+				{ count: number; pnl: number; wins: number; losses: number }
+			>();
+			for (const trade of classified) {
+				const state = trade.emotionalState || "untracked";
+				const existing = emotionalCounts.get(state) || {
+					count: 0,
+					pnl: 0,
+					wins: 0,
+					losses: 0,
+				};
+				emotionalCounts.set(state, {
+					count: existing.count + 1,
+					pnl: existing.pnl + trade.pnl,
+					wins: existing.wins + (trade.pnl > beThreshold ? 1 : 0),
+					losses: existing.losses + (trade.isLoss ? 1 : 0),
+				});
+			}
+
+			const emotionalStateBreakdown = Array.from(emotionalCounts.entries())
+				.map(([state, data]) => ({
+					state,
+					trades: data.count,
+					pnl: data.pnl,
+					avgPnl: data.count > 0 ? data.pnl / data.count : 0,
+					winRate:
+						data.wins + data.losses > 0
+							? (data.wins / (data.wins + data.losses)) * 100
+							: 0,
+				}))
+				.sort((a, b) => b.trades - a.trades);
+
+			return {
+				tiltScore,
+				disciplineScore,
+				overtradingTendency,
+				emotionalStateBreakdown,
+				totalTrades: closedTrades.length,
+			};
+		}),
+
+	getMonteCarloSimulation: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					iterations: z.number().min(100).max(10000).default(1000),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			const closedTradesRaw = await ctx.db
+				.select({
+					netPnl: trades.netPnl,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions));
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
 
 			const iterations = input?.iterations ?? 1000;
 
@@ -1486,5 +3316,378 @@ export const analyticsRouter = createTRPCRouter({
 				worstDrawdown,
 				bestPeak,
 			};
+		}),
+
+	// =========================================================================
+	// FILTER PRESET PROCEDURES
+	// =========================================================================
+
+	/**
+	 * Get all filter presets for the current user
+	 * Ordered by creation date, with default preset first
+	 */
+	getFilterPresets: protectedProcedure.query(async ({ ctx }) => {
+		const presets = await ctx.db
+			.select()
+			.from(filterPresets)
+			.where(eq(filterPresets.userId, ctx.user.id))
+			.orderBy(desc(filterPresets.isDefault), desc(filterPresets.createdAt));
+
+		return presets;
+	}),
+
+	/**
+	 * Get the user's default preset if one exists
+	 */
+	getDefaultPreset: protectedProcedure.query(async ({ ctx }) => {
+		const preset = await ctx.db
+			.select()
+			.from(filterPresets)
+			.where(
+				and(
+					eq(filterPresets.userId, ctx.user.id),
+					eq(filterPresets.isDefault, true),
+				),
+			)
+			.limit(1);
+
+		return preset[0] ?? null;
+	}),
+
+	/**
+	 * Create a new filter preset
+	 */
+	createFilterPreset: protectedProcedure
+		.input(
+			z.object({
+				name: z.string().min(1).max(100),
+				description: z.string().max(500).optional(),
+				filters: z.string(), // JSON string of AnalyticsFilters
+				isDefault: z.boolean().default(false),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// If this preset should be the default, unset any existing default first
+			if (input.isDefault) {
+				await ctx.db
+					.update(filterPresets)
+					.set({ isDefault: false })
+					.where(
+						and(
+							eq(filterPresets.userId, ctx.user.id),
+							eq(filterPresets.isDefault, true),
+						),
+					);
+			}
+
+			const [preset] = await ctx.db
+				.insert(filterPresets)
+				.values({
+					userId: ctx.user.id,
+					name: input.name,
+					description: input.description ?? null,
+					filters: input.filters,
+					isDefault: input.isDefault,
+				})
+				.returning();
+
+			return preset;
+		}),
+
+	/**
+	 * Update an existing filter preset
+	 */
+	updateFilterPreset: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				name: z.string().min(1).max(100).optional(),
+				description: z.string().max(500).nullable().optional(),
+				filters: z.string().optional(), // JSON string of AnalyticsFilters
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify ownership
+			const existing = await ctx.db
+				.select({ id: filterPresets.id })
+				.from(filterPresets)
+				.where(
+					and(
+						eq(filterPresets.id, input.id),
+						eq(filterPresets.userId, ctx.user.id),
+					),
+				)
+				.limit(1);
+
+			if (!existing[0]) {
+				throw new Error("Preset not found or access denied");
+			}
+
+			const updateData: Record<string, unknown> = {};
+			if (input.name !== undefined) updateData.name = input.name;
+			if (input.description !== undefined)
+				updateData.description = input.description;
+			if (input.filters !== undefined) updateData.filters = input.filters;
+
+			if (Object.keys(updateData).length === 0) {
+				// Nothing to update
+				const [preset] = await ctx.db
+					.select()
+					.from(filterPresets)
+					.where(eq(filterPresets.id, input.id));
+				return preset;
+			}
+
+			const [preset] = await ctx.db
+				.update(filterPresets)
+				.set(updateData)
+				.where(eq(filterPresets.id, input.id))
+				.returning();
+
+			return preset;
+		}),
+
+	/**
+	 * Delete a filter preset
+	 */
+	deleteFilterPreset: protectedProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Verify ownership and delete
+			const [deleted] = await ctx.db
+				.delete(filterPresets)
+				.where(
+					and(
+						eq(filterPresets.id, input.id),
+						eq(filterPresets.userId, ctx.user.id),
+					),
+				)
+				.returning();
+
+			if (!deleted) {
+				throw new Error("Preset not found or access denied");
+			}
+
+			return { success: true };
+		}),
+
+	/**
+	 * Set a preset as the default (auto-loads on page visit)
+	 * Pass null id to clear the default
+	 */
+	setDefaultPreset: protectedProcedure
+		.input(z.object({ id: z.string().nullable() }))
+		.mutation(async ({ ctx, input }) => {
+			// First, unset any existing default
+			await ctx.db
+				.update(filterPresets)
+				.set({ isDefault: false })
+				.where(
+					and(
+						eq(filterPresets.userId, ctx.user.id),
+						eq(filterPresets.isDefault, true),
+					),
+				);
+
+			// If an id was provided, set that preset as the new default
+			if (input.id) {
+				const [updated] = await ctx.db
+					.update(filterPresets)
+					.set({ isDefault: true })
+					.where(
+						and(
+							eq(filterPresets.id, input.id),
+							eq(filterPresets.userId, ctx.user.id),
+						),
+					)
+					.returning();
+
+				if (!updated) {
+					throw new Error("Preset not found or access denied");
+				}
+
+				return updated;
+			}
+
+			return null;
+		}),
+
+	// =========================================================================
+	// EXPORT PROCEDURES
+	// =========================================================================
+
+	/**
+	 * Export filtered trades for CSV download
+	 * Returns trades matching filters with all relevant fields for export
+	 */
+	exportFilteredTrades: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			// Fetch trades with strategy info
+			const closedTradesRaw = await ctx.db
+				.select({
+					id: trades.id,
+					symbol: trades.symbol,
+					direction: trades.direction,
+					quantity: trades.quantity,
+					entryPrice: trades.entryPrice,
+					exitPrice: trades.exitPrice,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					realizedPnl: trades.realizedPnl,
+					netPnl: trades.netPnl,
+					fees: trades.fees,
+					stopLoss: trades.stopLoss,
+					instrumentType: trades.instrumentType,
+					strategyId: trades.strategyId,
+					rating: trades.rating,
+					isReviewed: trades.isReviewed,
+					notes: trades.notes,
+				})
+				.from(trades)
+				.where(and(...conditions))
+				.orderBy(desc(trades.exitTime));
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			const closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			// Fetch strategies for name lookup
+			const strategyIds = [
+				...new Set(
+					closedTrades
+						.map((t) => t.strategyId)
+						.filter((id): id is string => id !== null),
+				),
+			];
+
+			let strategyMap = new Map<string, string>();
+			if (strategyIds.length > 0) {
+				const { strategies } = await import("@/server/db/schema");
+				const strategiesData = await ctx.db
+					.select({ id: strategies.id, name: strategies.name })
+					.from(strategies)
+					.where(inArray(strategies.id, strategyIds));
+				strategyMap = new Map(strategiesData.map((s) => [s.id, s.name]));
+			}
+
+			// Fetch tags for each trade
+			const tradeIds = closedTrades.map((t) => t.id);
+			const tradeTagsMap = new Map<string, string[]>();
+			if (tradeIds.length > 0) {
+				const { tradeTags: tradeTagsTable, tags: tagsTable } = await import(
+					"@/server/db/schema"
+				);
+				const tagsData = await ctx.db
+					.select({
+						tradeId: tradeTagsTable.tradeId,
+						tagName: tagsTable.name,
+					})
+					.from(tradeTagsTable)
+					.innerJoin(tagsTable, eq(tradeTagsTable.tagId, tagsTable.id))
+					.where(inArray(tradeTagsTable.tradeId, tradeIds));
+
+				for (const tag of tagsData) {
+					const existing = tradeTagsMap.get(tag.tradeId) ?? [];
+					existing.push(tag.tagName);
+					tradeTagsMap.set(tag.tradeId, existing);
+				}
+			}
+
+			// Calculate R-Multiple and duration for each trade
+			const exportData = closedTrades.map((trade) => {
+				// Calculate R-Multiple
+				let rMultiple: number | null = null;
+				if (
+					trade.stopLoss &&
+					trade.entryPrice &&
+					trade.quantity &&
+					trade.netPnl
+				) {
+					const entryPrice = parseFloat(trade.entryPrice);
+					const stopLoss = parseFloat(trade.stopLoss);
+					const quantity = parseFloat(trade.quantity);
+					const netPnl = parsePnl(trade.netPnl);
+
+					const riskPerUnit = Math.abs(entryPrice - stopLoss);
+					if (riskPerUnit > 0 && quantity > 0) {
+						const pointValue = getPointValue(
+							trade.symbol,
+							(trade.instrumentType as "futures" | "forex") ?? "futures",
+						);
+						const plannedRisk = riskPerUnit * pointValue * quantity;
+						rMultiple = netPnl / plannedRisk;
+					}
+				}
+
+				// Calculate duration in minutes
+				let durationMinutes: number | null = null;
+				if (trade.entryTime && trade.exitTime) {
+					const entryMs = new Date(trade.entryTime).getTime();
+					const exitMs = new Date(trade.exitTime).getTime();
+					durationMinutes = (exitMs - entryMs) / (1000 * 60);
+				}
+
+				return {
+					exitTime: trade.exitTime,
+					entryTime: trade.entryTime,
+					symbol: trade.symbol,
+					direction: trade.direction,
+					quantity: trade.quantity,
+					entryPrice: trade.entryPrice,
+					exitPrice: trade.exitPrice,
+					realizedPnl: trade.realizedPnl,
+					netPnl: trade.netPnl,
+					fees: trade.fees,
+					rMultiple,
+					durationMinutes,
+					strategyName: trade.strategyId
+						? (strategyMap.get(trade.strategyId) ?? null)
+						: null,
+					tags: tradeTagsMap.get(trade.id) ?? [],
+					rating: trade.rating,
+					isReviewed: trade.isReviewed ?? false,
+					notes: trade.notes,
+				};
+			});
+
+			return exportData;
 		}),
 });

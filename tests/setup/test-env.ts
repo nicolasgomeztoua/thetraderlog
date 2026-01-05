@@ -1,7 +1,25 @@
 // This file runs before each test file
 // It ensures the test environment variables are set up correctly
 
-import { afterAll, beforeAll } from "vitest";
+import { afterAll, beforeAll, vi } from "vitest";
+import { triggerMock } from "../mocks/trigger";
+
+// Mock Trigger.dev tasks BEFORE any imports resolve
+// This prevents tests from trying to connect to Trigger.dev
+vi.mock("@/trigger/process-trade-maemfe", () => ({
+	processTradeMAEMFE: {
+		batchTrigger: async (
+			items: Array<{ payload: { tradeId: string; userId: string } }>,
+		) => {
+			triggerMock.batchTriggerCalls.push(items);
+			return items.map((_, i) => ({
+				id: `mock-run-${Date.now()}-${i}`,
+				taskIdentifier: "process-trade-maemfe",
+				ok: true as const,
+			}));
+		},
+	},
+}));
 
 // Skip t3-env validation during tests
 process.env.SKIP_ENV_VALIDATION = "true";

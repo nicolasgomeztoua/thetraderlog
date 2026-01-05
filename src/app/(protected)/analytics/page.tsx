@@ -1,23 +1,36 @@
 "use client";
 
 import { AgCharts } from "ag-charts-react";
-import { Clock } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+	BehavioralMetrics,
 	CalendarHeatmap,
 	DayOfWeekChart,
 	DrawdownTable,
 	EquityCurve,
+	ExportButton,
+	FilterChips,
+	FilterPanel,
+	FilterToggle,
+	HoldingTimeChart,
 	HourHeatmap,
 	KellyDisplay,
+	ManagePresetsDialog,
 	METRIC_TOOLTIPS,
 	MetricCard,
 	MonthlyChart,
+	OvertradingChart,
 	PositionSizeChart,
+	PresetSelector,
+	RevengeTradingPanel,
 	RiskGauge,
 	RiskRewardPanel,
 	RMultipleChart,
 	SessionChart,
+	StreakChart,
+	SymbolDistributionChart,
+	SymbolTable,
+	SymbolTrendChart,
 } from "@/components/analytics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,7 +42,51 @@ import {
 	formatPercent,
 	getPnLColorClass,
 } from "@/lib/utils";
+import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import { api } from "@/trpc/react";
+import type { AnalyticsFilters } from "@/types/analytics-filters";
+
+// =============================================================================
+// FILTER CONVERSION HELPER
+// Converts Zustand store filters to API input format
+// =============================================================================
+
+function useApiFilters() {
+	const { filters } = useAnalyticsFilterStore();
+
+	return useMemo(() => {
+		// Convert store filters to API format
+		return {
+			symbols: filters.symbols.length > 0 ? filters.symbols : undefined,
+			dateRange:
+				filters.dateRange.start || filters.dateRange.end
+					? {
+							start: filters.dateRange.start?.toISOString() ?? null,
+							end: filters.dateRange.end?.toISOString() ?? null,
+						}
+					: undefined,
+			daysOfWeek:
+				filters.daysOfWeek.length > 0 ? filters.daysOfWeek : undefined,
+			hours: filters.hours.length > 0 ? filters.hours : undefined,
+			sessions: filters.sessions.length > 0 ? filters.sessions : undefined,
+			strategies:
+				filters.strategies.length > 0 ? filters.strategies : undefined,
+			tags: filters.tags.length > 0 ? filters.tags : undefined,
+			rMultipleRange:
+				filters.rMultipleRange.min !== null ||
+				filters.rMultipleRange.max !== null
+					? filters.rMultipleRange
+					: undefined,
+			positionSizeRange:
+				filters.positionSizeRange.min !== null ||
+				filters.positionSizeRange.max !== null
+					? filters.positionSizeRange
+					: undefined,
+			outcome: filters.outcome !== "all" ? filters.outcome : undefined,
+			reviewed: filters.reviewed !== "all" ? filters.reviewed : undefined,
+		};
+	}, [filters]);
+}
 
 // =============================================================================
 // OVERVIEW TAB
@@ -37,8 +94,10 @@ import { api } from "@/trpc/react";
 
 function StatsOverview() {
 	const { selectedAccountId } = useAccount();
+	const apiFilters = useApiFilters();
 	const { data: overview, isLoading } = api.analytics.getOverview.useQuery({
 		accountId: selectedAccountId,
+		filters: apiFilters,
 	});
 
 	if (isLoading) {
@@ -161,8 +220,10 @@ function StatsOverview() {
 
 function WinLossChart() {
 	const { selectedAccountId } = useAccount();
+	const apiFilters = useApiFilters();
 	const { data: overview, isLoading } = api.analytics.getOverview.useQuery({
 		accountId: selectedAccountId,
+		filters: apiFilters,
 	});
 
 	const chartOptions = useMemo(() => {
@@ -421,24 +482,32 @@ function ChartTerminal({
 function TimeTab() {
 	const { timezoneAbbr } = useTimezone();
 	const { selectedAccountId } = useAccount();
+	const apiFilters = useApiFilters();
 
 	const { data: calendarData, isLoading: calendarLoading } =
-		api.analytics.getCalendarData.useQuery({ accountId: selectedAccountId });
+		api.analytics.getCalendarData.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
 	const { data: dayOfWeekData, isLoading: dowLoading } =
 		api.analytics.getPerformanceByDayOfWeek.useQuery({
 			accountId: selectedAccountId,
+			filters: apiFilters,
 		});
 	const { data: hourData, isLoading: hourLoading } =
 		api.analytics.getPerformanceByHour.useQuery({
 			accountId: selectedAccountId,
+			filters: apiFilters,
 		});
 	const { data: sessionData, isLoading: sessionLoading } =
 		api.analytics.getPerformanceBySession.useQuery({
 			accountId: selectedAccountId,
+			filters: apiFilters,
 		});
 	const { data: monthlyData, isLoading: monthlyLoading } =
 		api.analytics.getPerformanceByMonth.useQuery({
 			accountId: selectedAccountId,
+			filters: apiFilters,
 		});
 
 	const isLoading =
@@ -513,24 +582,37 @@ function TimeTab() {
 
 function RiskTab() {
 	const { selectedAccountId } = useAccount();
+	const apiFilters = useApiFilters();
 
 	const { data: riskMetrics, isLoading: riskLoading } =
-		api.analytics.getRiskMetrics.useQuery({ accountId: selectedAccountId });
+		api.analytics.getRiskMetrics.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
 	const { data: equityCurve, isLoading: equityLoading } =
-		api.analytics.getEquityCurve.useQuery({ accountId: selectedAccountId });
+		api.analytics.getEquityCurve.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
 	const { data: drawdowns, isLoading: drawdownsLoading } =
-		api.analytics.getDrawdownHistory.useQuery({ accountId: selectedAccountId });
+		api.analytics.getDrawdownHistory.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
 	const { data: rMultipleData, isLoading: rMultipleLoading } =
 		api.analytics.getRMultipleDistribution.useQuery({
 			accountId: selectedAccountId,
+			filters: apiFilters,
 		});
 	const { data: riskRewardData, isLoading: riskRewardLoading } =
 		api.analytics.getRiskRewardAnalysis.useQuery({
 			accountId: selectedAccountId,
+			filters: apiFilters,
 		});
 	const { data: positionSizeData, isLoading: positionSizeLoading } =
 		api.analytics.getPositionSizeAnalysis.useQuery({
 			accountId: selectedAccountId,
+			filters: apiFilters,
 		});
 
 	const isLoading =
@@ -798,18 +880,236 @@ function RiskTab() {
 }
 
 // =============================================================================
-// PLACEHOLDER TABS
+// SYMBOLS TAB
 // =============================================================================
 
-function PlaceholderTab({ title }: { title: string }) {
+function SymbolsTab() {
+	const { selectedAccountId } = useAccount();
+	const apiFilters = useApiFilters();
+
+	const { data: symbolData, isLoading: symbolLoading } =
+		api.analytics.getPerformanceBySymbol.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
+	const { data: trendData, isLoading: trendLoading } =
+		api.analytics.getSymbolTrend.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
+
+	const isLoading = symbolLoading || trendLoading;
+
+	if (isLoading) {
+		return (
+			<div className="space-y-6">
+				<div className="grid gap-6 lg:grid-cols-2">
+					<Skeleton className="h-[400px] w-full" />
+					<Skeleton className="h-[400px] w-full" />
+				</div>
+				<Skeleton className="h-[400px] w-full" />
+			</div>
+		);
+	}
+
 	return (
-		<div className="flex h-[400px] flex-col items-center justify-center gap-4 rounded border border-border border-dashed bg-card/50">
-			<Clock className="h-12 w-12 text-muted-foreground/30" />
-			<div className="text-center">
-				<h3 className="font-medium text-muted-foreground">{title} Analysis</h3>
-				<p className="font-mono text-muted-foreground/60 text-xs">
-					Coming in Sprint 4.4+
-				</p>
+		<div className="space-y-6">
+			{/* Top row: Table and Distribution */}
+			<div className="grid gap-6 lg:grid-cols-2">
+				<ChartTerminal
+					description="Performance metrics for each traded symbol"
+					title="Symbol Performance"
+				>
+					<SymbolTable data={symbolData ?? []} />
+				</ChartTerminal>
+
+				<ChartTerminal
+					description="Trade distribution across symbols"
+					title="Symbol Distribution"
+				>
+					<SymbolDistributionChart data={symbolData ?? []} />
+				</ChartTerminal>
+			</div>
+
+			{/* Trend Chart - full width */}
+			<ChartTerminal
+				description="P&L trends by symbol over time"
+				title="Symbol Trends"
+			>
+				<SymbolTrendChart
+					months={trendData?.months ?? []}
+					symbols={trendData?.symbols ?? []}
+				/>
+			</ChartTerminal>
+		</div>
+	);
+}
+
+// =============================================================================
+// BEHAVIOR TAB
+// =============================================================================
+
+function BehaviorTab() {
+	const { selectedAccountId } = useAccount();
+	const apiFilters = useApiFilters();
+
+	const { data: streakData, isLoading: streakLoading } =
+		api.analytics.getStreakAnalysis.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
+	const { data: revengeData, isLoading: revengeLoading } =
+		api.analytics.getRevengeTrading.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
+	const { data: overtradingData, isLoading: overtradingLoading } =
+		api.analytics.getOvertradingAnalysis.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
+	const { data: holdingTimeData, isLoading: holdingTimeLoading } =
+		api.analytics.getHoldingTimeAnalysis.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
+	const { data: behavioralData, isLoading: behavioralLoading } =
+		api.analytics.getBehavioralPatterns.useQuery({
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		});
+
+	const isLoading =
+		streakLoading ||
+		revengeLoading ||
+		overtradingLoading ||
+		holdingTimeLoading ||
+		behavioralLoading;
+
+	if (isLoading) {
+		return (
+			<div className="space-y-6">
+				<div className="grid gap-3 sm:grid-cols-3">
+					{[...Array(3)].map((_, i) => (
+						<div
+							className="rounded border border-border bg-secondary p-4"
+							key={`skeleton-behavior-${i.toString()}`}
+						>
+							<Skeleton className="mb-3 h-3 w-16" />
+							<Skeleton className="mb-2 h-6 w-24" />
+							<Skeleton className="h-2 w-14" />
+						</div>
+					))}
+				</div>
+				<div className="grid gap-6 lg:grid-cols-2">
+					<Skeleton className="h-[400px] w-full" />
+					<Skeleton className="h-[400px] w-full" />
+				</div>
+				<div className="grid gap-6 lg:grid-cols-2">
+					<Skeleton className="h-[400px] w-full" />
+					<Skeleton className="h-[400px] w-full" />
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			{/* Behavioral Metrics Summary */}
+			<BehavioralMetrics
+				disciplineScore={behavioralData?.disciplineScore ?? 100}
+				emotionalStateBreakdown={behavioralData?.emotionalStateBreakdown ?? []}
+				overtradingTendency={behavioralData?.overtradingTendency ?? 0}
+				tiltScore={behavioralData?.tiltScore ?? 0}
+				totalTrades={behavioralData?.totalTrades ?? 0}
+			/>
+
+			{/* Streak and Revenge Trading Analysis */}
+			<div className="grid gap-6 lg:grid-cols-2">
+				<ChartTerminal
+					description="Win/loss streak patterns and distribution"
+					title="Streak Analysis"
+				>
+					<StreakChart
+						currentStreak={
+							streakData?.currentStreak ?? { type: "none", count: 0 }
+						}
+						maxLossStreak={streakData?.maxLossStreak ?? 0}
+						maxWinStreak={streakData?.maxWinStreak ?? 0}
+						performanceDuringStreaks={
+							streakData?.performanceDuringStreaks ?? {
+								duringWinStreak: { trades: 0, pnl: 0, avgPnl: 0 },
+								duringLossStreak: { trades: 0, pnl: 0, avgPnl: 0 },
+								noStreak: { trades: 0, pnl: 0, avgPnl: 0 },
+							}
+						}
+						streakDistribution={
+							streakData?.streakDistribution ?? { wins: [], losses: [] }
+						}
+					/>
+				</ChartTerminal>
+
+				<ChartTerminal
+					description="Performance after wins vs after losses"
+					title="Revenge Trading Analysis"
+				>
+					<RevengeTradingPanel
+						afterConsecutiveLosses={
+							revengeData?.afterConsecutiveLosses ?? {
+								after1Loss: { trades: 0, wins: 0, winRate: 0, avgPnl: 0 },
+								after2Losses: { trades: 0, wins: 0, winRate: 0, avgPnl: 0 },
+								after3PlusLosses: { trades: 0, wins: 0, winRate: 0, avgPnl: 0 },
+							}
+						}
+						afterLoss={
+							revengeData?.afterLoss ?? {
+								trades: 0,
+								wins: 0,
+								losses: 0,
+								winRate: 0,
+								pnl: 0,
+								avgPnl: 0,
+							}
+						}
+						afterWin={
+							revengeData?.afterWin ?? {
+								trades: 0,
+								wins: 0,
+								losses: 0,
+								winRate: 0,
+								pnl: 0,
+								avgPnl: 0,
+							}
+						}
+						revengeIndicator={revengeData?.revengeIndicator ?? 0}
+					/>
+				</ChartTerminal>
+			</div>
+
+			{/* Overtrading and Holding Time Analysis */}
+			<div className="grid gap-6 lg:grid-cols-2">
+				<ChartTerminal
+					description="Performance by daily trade count"
+					title="Overtrading Analysis"
+				>
+					<OvertradingChart
+						byTradeCount={overtradingData?.byTradeCount ?? []}
+						correlationScore={overtradingData?.correlationScore ?? 0}
+						optimalRange={overtradingData?.optimalRange ?? { min: 1, max: 3 }}
+						overtradingThreshold={overtradingData?.overtradingThreshold ?? 5}
+					/>
+				</ChartTerminal>
+
+				<ChartTerminal
+					description="Performance by trade duration"
+					title="Holding Time Analysis"
+				>
+					<HoldingTimeChart
+						buckets={holdingTimeData?.buckets ?? []}
+						optimalDuration={holdingTimeData?.optimalDuration ?? null}
+						totalTrades={holdingTimeData?.totalTrades ?? 0}
+					/>
+				</ChartTerminal>
 			</div>
 		</div>
 	);
@@ -819,19 +1119,182 @@ function PlaceholderTab({ title }: { title: string }) {
 // MAIN PAGE
 // =============================================================================
 
+// =============================================================================
+// HELPER: Parse filters from preset JSON
+// =============================================================================
+
+function parseFiltersFromJson(filtersJson: string): Partial<AnalyticsFilters> {
+	try {
+		const parsed = JSON.parse(filtersJson);
+		return {
+			symbols: parsed.symbols ?? [],
+			dateRange: {
+				start: parsed.dateRange?.start
+					? new Date(parsed.dateRange.start)
+					: null,
+				end: parsed.dateRange?.end ? new Date(parsed.dateRange.end) : null,
+			},
+			daysOfWeek: parsed.daysOfWeek ?? [],
+			hours: parsed.hours ?? [],
+			sessions: parsed.sessions ?? [],
+			strategies: parsed.strategies ?? [],
+			tags: parsed.tags ?? [],
+			rMultipleRange: parsed.rMultipleRange ?? { min: null, max: null },
+			positionSizeRange: parsed.positionSizeRange ?? { min: null, max: null },
+			outcome: parsed.outcome ?? "all",
+			reviewed: parsed.reviewed ?? "all",
+			advancedQuery: parsed.advancedQuery ?? null,
+		};
+	} catch {
+		return {};
+	}
+}
+
 export default function AnalyticsPage() {
+	// Filter panel state
+	const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+
+	// Manage presets dialog state
+	const [managePresetsOpen, setManagePresetsOpen] = useState(false);
+
+	// Track if we've already auto-loaded a preset (to prevent re-applying on every render)
+	const hasAutoLoadedPreset = useRef(false);
+
+	// Get store functions
+	const { activePresetId, setActivePresetId, setFilters } =
+		useAnalyticsFilterStore();
+
+	// Fetch default preset for auto-load
+	const { data: defaultPreset } = api.analytics.getDefaultPreset.useQuery();
+
+	// Auto-load default preset on mount (only once)
+	useEffect(() => {
+		if (
+			defaultPreset &&
+			!hasAutoLoadedPreset.current &&
+			activePresetId === null
+		) {
+			const filters = parseFiltersFromJson(defaultPreset.filters);
+			setFilters(filters);
+			setActivePresetId(defaultPreset.id);
+			hasAutoLoadedPreset.current = true;
+		}
+	}, [defaultPreset, activePresetId, setFilters, setActivePresetId]);
+
+	// Handle preset selection
+	const handlePresetSelect = useCallback(
+		(presetId: string | null) => {
+			setActivePresetId(presetId);
+		},
+		[setActivePresetId],
+	);
+
+	// Handle preset deletion (clear active preset if it was deleted)
+	const handlePresetDeleted = useCallback(
+		(presetId: string) => {
+			if (activePresetId === presetId) {
+				setActivePresetId(null);
+			}
+		},
+		[activePresetId, setActivePresetId],
+	);
+
+	// Fetch filter options data
+	const { data: strategies, isLoading: strategiesLoading } =
+		api.strategies.getSimpleList.useQuery();
+	const { data: tags, isLoading: tagsLoading } = api.tags.getAll.useQuery();
+	const { data: symbolData } = api.analytics.getPerformanceBySymbol.useQuery({
+		accountId: null,
+	});
+
+	// Extract unique symbols from symbol performance data
+	const uniqueSymbols = useMemo(() => {
+		if (!symbolData) return [];
+		return symbolData.map((s) => s.symbol);
+	}, [symbolData]);
+
+	// Transform data for filter panel
+	const strategyOptions = useMemo(() => {
+		if (!strategies) return [];
+		return strategies.map((s) => ({
+			id: s.id,
+			name: s.name,
+			color: s.color ?? undefined,
+		}));
+	}, [strategies]);
+
+	const tagOptions = useMemo(() => {
+		if (!tags) return [];
+		return tags.map((t) => ({
+			id: t.id,
+			name: t.name,
+			color: t.color ?? undefined,
+		}));
+	}, [tags]);
+
+	// Build name maps for filter chips display
+	const strategyNames = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const s of strategies ?? []) {
+			map.set(s.id, s.name);
+		}
+		return map;
+	}, [strategies]);
+
+	const tagNames = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const t of tags ?? []) {
+			map.set(t.id, t.name);
+		}
+		return map;
+	}, [tags]);
+
+	const isFilterDataLoading = strategiesLoading || tagsLoading;
+
 	return (
 		<div className="space-y-6">
 			{/* Header */}
-			<div>
-				<span className="mb-2 block font-mono text-primary text-xs uppercase tracking-wider">
-					Performance
-				</span>
-				<h1 className="font-bold text-3xl tracking-tight">Analytics</h1>
-				<p className="mt-1 font-mono text-muted-foreground text-sm">
-					Analyze your trading performance with professional metrics
-				</p>
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+				<div>
+					<span className="mb-2 block font-mono text-primary text-xs uppercase tracking-wider">
+						Performance
+					</span>
+					<h1 className="font-bold text-3xl tracking-tight">Analytics</h1>
+					<p className="mt-1 font-mono text-muted-foreground text-sm">
+						Analyze your trading performance with professional metrics
+					</p>
+				</div>
+				<div className="flex items-center gap-2">
+					<PresetSelector
+						activePresetId={activePresetId}
+						onManageClick={() => setManagePresetsOpen(true)}
+						onPresetSelect={handlePresetSelect}
+					/>
+					<FilterToggle onClick={() => setFilterPanelOpen(true)} />
+					<ExportButton />
+				</div>
 			</div>
+
+			{/* Active Filter Chips */}
+			<FilterChips strategyNames={strategyNames} tagNames={tagNames} />
+
+			{/* Filter Panel (Sheet) */}
+			<FilterPanel
+				isLoading={isFilterDataLoading}
+				onOpenChange={setFilterPanelOpen}
+				open={filterPanelOpen}
+				strategies={strategyOptions}
+				symbols={uniqueSymbols}
+				tags={tagOptions}
+			/>
+
+			{/* Manage Presets Dialog */}
+			<ManagePresetsDialog
+				activePresetId={activePresetId}
+				onOpenChange={setManagePresetsOpen}
+				onPresetDeleted={handlePresetDeleted}
+				open={managePresetsOpen}
+			/>
 
 			{/* Tab Navigation */}
 			<Tabs className="space-y-6" defaultValue="overview">
@@ -911,13 +1374,13 @@ export default function AnalyticsPage() {
 				</TabsContent>
 
 				{/* Symbols Tab */}
-				<TabsContent value="symbols">
-					<PlaceholderTab title="Symbol & Setup" />
+				<TabsContent className="space-y-6" value="symbols">
+					<SymbolsTab />
 				</TabsContent>
 
 				{/* Behavior Tab */}
-				<TabsContent value="behavior">
-					<PlaceholderTab title="Behavioral" />
+				<TabsContent className="space-y-6" value="behavior">
+					<BehaviorTab />
 				</TabsContent>
 			</Tabs>
 		</div>

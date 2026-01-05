@@ -479,7 +479,7 @@ export const userSettings = createTable("user_settings", {
 });
 
 // ============================================================================
-// FILTER PRESETS TABLE (for saved journal filters)
+// FILTER PRESETS TABLE (for saved analytics filters)
 // ============================================================================
 
 export const filterPresets = createTable(
@@ -492,12 +492,20 @@ export const filterPresets = createTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		name: text("name").notNull(),
-		filters: text("filters").notNull(), // JSON string of filter config
+		description: text("description"),
+		filters: text("filters").notNull(), // JSON string of AnalyticsFilters
+		isDefault: boolean("is_default").default(false),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
 	},
-	(t) => [index("filter_preset_user_id_idx").on(t.userId)],
+	(t) => [
+		index("filter_preset_user_id_idx").on(t.userId),
+		index("filter_preset_is_default_idx").on(t.isDefault),
+	],
 );
 
 // ============================================================================

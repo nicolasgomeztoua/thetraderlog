@@ -18,7 +18,7 @@
 		"start": "bun run --bun next start",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:integration": "vitest run --dir tests/integration",
+		"test:integration": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"typecheck": "tsc --noEmit"
 	},
