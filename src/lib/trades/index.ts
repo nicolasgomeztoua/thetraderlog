@@ -7,3 +7,4 @@
 
 export * from "./calculations";
 export * from "./csv-parsers";
+export * from "./sort";
