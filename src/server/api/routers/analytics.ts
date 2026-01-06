@@ -107,8 +107,16 @@ function buildFilterConditions(
 	}
 	if (filters.dateRange?.end) {
 		const endDate = new Date(filters.dateRange.end);
-		// Include the full end day by setting time to 23:59:59.999
-		endDate.setUTCHours(23, 59, 59, 999);
+		// Only extend to end of day if time is midnight (date-only filter)
+		// This preserves exact datetime filtering for specific timestamps
+		if (
+			endDate.getUTCHours() === 0 &&
+			endDate.getUTCMinutes() === 0 &&
+			endDate.getUTCSeconds() === 0 &&
+			endDate.getUTCMilliseconds() === 0
+		) {
+			endDate.setUTCHours(23, 59, 59, 999);
+		}
 		conditions.push(lte(tradesTable.entryTime, endDate));
 	}
 
