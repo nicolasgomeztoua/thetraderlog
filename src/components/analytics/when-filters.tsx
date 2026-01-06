@@ -178,7 +178,7 @@ export function WhenFilters({
 							{/* Date inputs */}
 							<div className="flex items-center gap-2">
 								<div className="relative flex-1">
-									<CalendarIcon className="absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground" />
+									<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2 size-3 text-muted-foreground" />
 									<Input
 										className="h-8 pl-7 font-mono text-xs"
 										onChange={(e) =>
@@ -195,7 +195,7 @@ export function WhenFilters({
 									→
 								</span>
 								<div className="relative flex-1">
-									<CalendarIcon className="absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground" />
+									<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2 size-3 text-muted-foreground" />
 									<Input
 										className="h-8 pl-7 font-mono text-xs"
 										onChange={(e) =>

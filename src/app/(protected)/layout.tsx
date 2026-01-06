@@ -28,7 +28,7 @@ export default async function ProtectedLayout({
 						<header className="relative flex h-12 shrink-0 items-center gap-2 border-border bg-secondary/50 px-4">
 							{/* Subtle grid pattern */}
 							<div className="grid-bg pointer-events-none absolute inset-0 opacity-30" />
-							<SidebarTrigger className="relative -ml-1 text-muted-foreground hover:text-foreground" />
+							<SidebarTrigger className="-ml-1 relative text-muted-foreground hover:text-foreground" />
 							<Separator
 								className="relative mr-2 h-4 bg-border"
 								orientation="vertical"

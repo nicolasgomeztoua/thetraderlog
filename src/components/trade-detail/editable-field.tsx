@@ -121,7 +121,7 @@ export function EditableField({
 			)}
 			<div className="relative">
 				{prefix && (
-					<span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 font-mono text-muted-foreground/60 text-sm">
+					<span className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 font-mono text-muted-foreground/60 text-sm">
 						{prefix}
 					</span>
 				)}
@@ -151,7 +151,7 @@ export function EditableField({
 					value={localValue}
 				/>
 				{suffix && (
-					<span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-muted-foreground/60 text-sm">
+					<span className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-3 font-mono text-muted-foreground/60 text-sm">
 						{suffix}
 					</span>
 				)}

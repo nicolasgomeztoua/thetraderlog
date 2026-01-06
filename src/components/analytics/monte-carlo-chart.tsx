@@ -193,7 +193,7 @@ export function MonteCarloChart({ data, className }: MonteCarloChartProps) {
 							{/* Actual outcome marker */}
 							<div
 								className={cn(
-									"absolute -top-1 h-6 w-1 rounded-sm",
+									"-top-1 absolute h-6 w-1 rounded-sm",
 									actualOutcome >= 0 ? "bg-profit" : "bg-loss",
 								)}
 								style={{
