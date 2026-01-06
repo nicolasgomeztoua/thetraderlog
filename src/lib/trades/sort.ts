@@ -1,11 +1,31 @@
 import { TRADE_SORT_FIELDS, type TradeSort } from "@/lib/constants";
 
+/** Calculate R-Multiple for a trade (returns null if can't be calculated) */
+function calculateRMultiple(trade: SortableTrade): number | null {
+	if (!trade.entryPrice || !trade.exitPrice || !trade.stopLoss) {
+		return null;
+	}
+
+	const entry = parseFloat(trade.entryPrice);
+	const exit = parseFloat(trade.exitPrice);
+	const stop = parseFloat(trade.stopLoss);
+	const risk = Math.abs(entry - stop);
+
+	if (risk === 0) return null;
+
+	const pnlMovement = trade.direction === "long" ? exit - entry : entry - exit;
+	return pnlMovement / risk;
+}
+
 interface SortableTrade {
 	id: string;
 	symbol: string;
 	direction: "long" | "short";
 	entryTime: Date;
 	exitTime: Date | null;
+	entryPrice: string;
+	exitPrice: string | null;
+	stopLoss: string | null;
 	quantity: string;
 	netPnl: string | null;
 	exitReason: string | null;
@@ -49,6 +69,10 @@ export function sortTrades<T extends SortableTrade>(
 			case "_strategyName":
 				aVal = a.strategy?.name ?? null;
 				bVal = b.strategy?.name ?? null;
+				break;
+			case "_rMultiple":
+				aVal = calculateRMultiple(a);
+				bVal = calculateRMultiple(b);
 				break;
 			default:
 				aVal = a[sortKey as keyof SortableTrade] as

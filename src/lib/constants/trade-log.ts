@@ -18,6 +18,7 @@ export const TRADE_SORT_FIELDS = {
 	duration: "_duration",
 	account: "_accountName",
 	strategy: "_strategyName",
+	rMultiple: "_rMultiple",
 } as const;
 
 export type SortField = keyof typeof TRADE_SORT_FIELDS;
@@ -35,9 +36,4 @@ export const DEFAULT_TRADE_SORT: TradeSort = {
 };
 
 /** Columns that cannot be sorted */
-export const NON_SORTABLE_COLUMNS = [
-	"checkbox",
-	"actions",
-	"tags",
-	"rMultiple",
-];
+export const NON_SORTABLE_COLUMNS = ["checkbox", "actions", "tags"];
