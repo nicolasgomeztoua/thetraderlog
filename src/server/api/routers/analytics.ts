@@ -35,6 +35,7 @@ import {
 	accounts,
 	filterPresets,
 	trades,
+	tradeTags,
 	userSettings,
 } from "@/server/db/schema";
 
@@ -3690,5 +3691,117 @@ export const analyticsRouter = createTRPCRouter({
 			});
 
 			return exportData;
+		}),
+
+	/**
+	 * Get filtered trade count for live preview
+	 * Efficient count-only query for real-time filter feedback
+	 */
+	getFilteredTradeCount: protectedProcedure
+		.input(
+			z
+				.object({
+					accountId: z.string().nullish(),
+					filters: analyticsFilterInput.optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			// Build conditions for the query
+			const conditions: SQL[] = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				isNotNull(trades.netPnl),
+			];
+
+			// Filter by account if specified, otherwise use active accounts
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			// Apply SQL-compatible filters
+			conditions.push(...buildFilterConditions(input?.filters, trades));
+
+			// For simple filters that can be done in SQL, use COUNT(*)
+			const hasPostQueryFilters =
+				(input?.filters?.daysOfWeek && input.filters.daysOfWeek.length > 0) ||
+				(input?.filters?.hours && input.filters.hours.length > 0) ||
+				(input?.filters?.sessions && input.filters.sessions.length > 0) ||
+				(input?.filters?.outcome && input.filters.outcome !== "all") ||
+				(input?.filters?.tags && input.filters.tags.length > 0) ||
+				(input?.filters?.rMultipleRange &&
+					(input.filters.rMultipleRange.min !== null ||
+						input.filters.rMultipleRange.max !== null));
+
+			if (!hasPostQueryFilters) {
+				// Fast path: SQL count only
+				const result = await ctx.db
+					.select({ count: sql<number>`count(*)::int` })
+					.from(trades)
+					.where(and(...conditions));
+
+				return { count: result[0]?.count ?? 0 };
+			}
+
+			// Slow path: need to fetch trades for post-query filtering
+			const closedTradesRaw = await ctx.db
+				.select({
+					id: trades.id,
+					netPnl: trades.netPnl,
+					entryPrice: trades.entryPrice,
+					stopLoss: trades.stopLoss,
+					quantity: trades.quantity,
+					entryTime: trades.entryTime,
+					exitTime: trades.exitTime,
+					symbol: trades.symbol,
+					instrumentType: trades.instrumentType,
+				})
+				.from(trades)
+				.where(and(...conditions));
+
+			// Get user settings
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Apply post-query filters
+			let closedTrades = applyPostQueryFilters(
+				closedTradesRaw,
+				input?.filters,
+				{
+					beThreshold,
+					userTimezone,
+					getPointValueFn: getPointValue,
+				},
+			);
+
+			// Apply tags filter (requires join with trade_tags table)
+			if (input?.filters?.tags && input.filters.tags.length > 0) {
+				const tradeIds = closedTrades.map((t) => t.id);
+				if (tradeIds.length > 0) {
+					// Get trade IDs that have at least one of the selected tags
+					const matchingTradeTags = await ctx.db
+						.select({ tradeId: tradeTags.tradeId })
+						.from(tradeTags)
+						.where(
+							and(
+								inArray(tradeTags.tradeId, tradeIds),
+								inArray(tradeTags.tagId, input.filters.tags),
+							),
+						);
+
+					const matchingTradeIds = new Set(
+						matchingTradeTags.map((tt) => tt.tradeId),
+					);
+					closedTrades = closedTrades.filter((t) => matchingTradeIds.has(t.id));
+				}
+			}
+
+			return { count: closedTrades.length };
 		}),
 });
