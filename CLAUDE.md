@@ -60,7 +60,14 @@ User (Clerk-synced)
 - **Biome** for linting/formatting (`bun run check`)
 - No non-null assertions (`!`) - use nullish coalescing with safe defaults
 - Prefer `const` over `let`, avoid `var`
-- Use absolute imports from `~/` (maps to `src/`)
+- Use absolute imports from `@/` (maps to `src/`)
+
+### Constants
+- **NEVER hardcode constants** in UI components or backend routers
+- All shared constants belong in `src/lib/constants/` (create domain-specific files)
+- Examples: trading sessions, day labels, hour ranges, filter options, preset values
+- Export as named constants with clear naming: `TRADING_SESSIONS`, `DAY_LABELS`, `QUICK_DATE_PRESETS`
+- This ensures single source of truth and easy updates across the codebase
 
 ### Database
 - Schema changes: Edit `src/server/db/schema.ts`, then `bun run db:push`
