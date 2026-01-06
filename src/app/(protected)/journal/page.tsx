@@ -148,14 +148,20 @@ export default function JournalPage() {
 	}, [filters, selectedAccountId, debouncedSearch, sort]);
 
 	// Main trades query
-	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-		api.trades.getAll.useInfiniteQuery(
-			queryParams as Parameters<typeof api.trades.getAll.useInfiniteQuery>[0],
-			{
-				getNextPageParam: (lastPage) => lastPage?.nextCursor,
-				enabled: tab === "trades",
-			},
-		);
+	const {
+		data,
+		isLoading,
+		isFetching,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+	} = api.trades.getAll.useInfiniteQuery(
+		queryParams as Parameters<typeof api.trades.getAll.useInfiniteQuery>[0],
+		{
+			getNextPageParam: (lastPage) => lastPage?.nextCursor,
+			enabled: tab === "trades",
+		},
+	);
 
 	// Infinite scroll hook
 	const { sentinelRef } = useInfiniteScroll({
@@ -802,7 +808,7 @@ export default function JournalPage() {
 
 					{/* Trades Table */}
 					<div className="overflow-hidden rounded border border-border bg-card">
-						{isLoading || columnsLoading ? (
+						{isLoading || isFetching || columnsLoading ? (
 							<div className="space-y-3 p-6">
 								{[...Array(5)].map((_, i) => (
 									<Skeleton
