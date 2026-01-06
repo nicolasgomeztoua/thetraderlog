@@ -106,11 +106,9 @@ export function extractSortValue(
 			const entry = Number.parseFloat(trade.entryPrice);
 			const exit = Number.parseFloat(trade.exitPrice);
 			const stop = Number.parseFloat(trade.stopLoss);
-			const risk =
-				trade.direction === "long" ? entry - stop : stop - entry;
+			const risk = trade.direction === "long" ? entry - stop : stop - entry;
 			if (risk === 0) return null;
-			const profit =
-				trade.direction === "long" ? exit - entry : entry - exit;
+			const profit = trade.direction === "long" ? exit - entry : entry - exit;
 			return profit / risk;
 		}
 

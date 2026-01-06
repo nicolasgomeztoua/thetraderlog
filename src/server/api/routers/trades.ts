@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
+import type { SortField } from "@/lib/constants/trade-log";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 import {
 	directionEnum,
@@ -28,15 +29,14 @@ import {
 	getUserBreakevenThreshold,
 } from "@/server/api/helpers";
 import {
-	buildCursorCondition,
-	buildOrderByClause,
-} from "@/server/api/helpers/sort-builder";
-import {
 	decodeCursor,
 	encodeCursor,
 	extractSortValue,
 } from "@/server/api/helpers/cursor";
-import { type SortField } from "@/lib/constants/trade-log";
+import {
+	buildCursorCondition,
+	buildOrderByClause,
+} from "@/server/api/helpers/sort-builder";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { tradeExecutions, trades, tradeTags } from "@/server/db/schema";
 import { processTradeMAEMFE } from "@/trigger/process-trade-maemfe";
@@ -171,11 +171,25 @@ export const tradesRouter = createTRPCRouter({
 					minRMultiple: z.number().nullish(),
 					maxRMultiple: z.number().nullish(),
 					// Server-side sorting
-					sortField: z.enum([
-						"symbol", "side", "entry", "exit", "size", "pnl",
-						"result", "rating", "reviewed", "setup", "fees",
-						"duration", "account", "strategy", "rMultiple"
-					]).default("entry"),
+					sortField: z
+						.enum([
+							"symbol",
+							"side",
+							"entry",
+							"exit",
+							"size",
+							"pnl",
+							"result",
+							"rating",
+							"reviewed",
+							"setup",
+							"fees",
+							"duration",
+							"account",
+							"strategy",
+							"rMultiple",
+						])
+						.default("entry"),
 					sortDirection: z.enum(["asc", "desc"]).default("desc"),
 				})
 				.optional(),
@@ -272,7 +286,12 @@ export const tradesRouter = createTRPCRouter({
 				try {
 					const cursor = decodeCursor(input.cursor);
 					conditions.push(
-						buildCursorCondition(cursor.sortValue, cursor.id, sortField, sortDirection)
+						buildCursorCondition(
+							cursor.sortValue,
+							cursor.id,
+							sortField,
+							sortDirection,
+						),
 					);
 				} catch {
 					// Invalid cursor, ignore and start from beginning

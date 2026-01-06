@@ -3,7 +3,7 @@
  * Triggers onLoadMore when sentinel element becomes visible
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface UseInfiniteScrollOptions {
 	/** Callback to load more items */

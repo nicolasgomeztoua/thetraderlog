@@ -65,9 +65,9 @@ import {
 	useDebouncedMutation,
 	useOptimisticState,
 } from "@/hooks/use-debounced-mutation";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
-import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { useTradeSort } from "@/hooks/use-trade-sort";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { api } from "@/trpc/react";
@@ -911,7 +911,7 @@ export default function JournalPage() {
 								</Table>
 
 								{/* Infinite scroll sentinel */}
-								<div ref={sentinelRef} className="h-1" />
+								<div className="h-1" ref={sentinelRef} />
 
 								{/* Loading indicator */}
 								{isFetchingNextPage && (

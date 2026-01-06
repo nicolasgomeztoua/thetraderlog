@@ -4,8 +4,8 @@
  */
 
 import { type SQL, sql } from "drizzle-orm";
-import { trades, accounts, strategies } from "@/server/db/schema";
-import type { SortField, SortDirection } from "@/lib/constants/trade-log";
+import type { SortDirection, SortField } from "@/lib/constants/trade-log";
+import { accounts, strategies, trades } from "@/server/db/schema";
 
 /**
  * Get the SQL expression for a sort field
