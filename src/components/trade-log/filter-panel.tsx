@@ -587,7 +587,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 							{DAY_LABELS.map((day) => (
 								<Button
 									className={cn(
-										"h-8 w-12 font-mono text-xs border-white/10",
+										"h-8 w-12 border-white/10 font-mono text-xs",
 										filters.dayOfWeek.includes(day.value) &&
 											"border-primary/40 bg-primary/10 text-primary",
 									)}

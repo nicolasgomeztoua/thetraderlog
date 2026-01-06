@@ -65,11 +65,11 @@ import {
 	useDebouncedMutation,
 	useOptimisticState,
 } from "@/hooks/use-debounced-mutation";
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
 import { useTradeSort } from "@/hooks/use-trade-sort";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
-import { sortTrades } from "@/lib/trades";
 import { api } from "@/trpc/react";
 
 export default function JournalPage() {
@@ -114,6 +114,9 @@ export default function JournalPage() {
 			limit: 30,
 			accountId: selectedAccountId ?? undefined,
 			search: debouncedSearch || undefined,
+			// Server-side sorting
+			sortField: sort.field,
+			sortDirection: sort.direction,
 		};
 
 		if (filters.status !== "all") params.status = filters.status;
@@ -142,7 +145,7 @@ export default function JournalPage() {
 			params.maxRMultiple = parseFloat(filters.maxRMultiple);
 
 		return params;
-	}, [filters, selectedAccountId, debouncedSearch]);
+	}, [filters, selectedAccountId, debouncedSearch, sort]);
 
 	// Main trades query
 	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -153,6 +156,13 @@ export default function JournalPage() {
 				enabled: tab === "trades",
 			},
 		);
+
+	// Infinite scroll hook
+	const { sentinelRef } = useInfiniteScroll({
+		onLoadMore: () => fetchNextPage(),
+		hasMore: !!hasNextPage,
+		isLoading: isFetchingNextPage,
+	});
 
 	// Deleted trades query
 	const { data: deletedTrades, isLoading: loadingDeleted } =
@@ -316,12 +326,11 @@ export default function JournalPage() {
 
 	const [emptyTrashDialogOpen, setEmptyTrashDialogOpen] = useState(false);
 
-	// Merge server data with optimistic updates, then apply sorting
+	// Merge server data with optimistic updates (data comes pre-sorted from server)
 	const allTrades = useMemo(() => {
 		const trades = data?.pages.flatMap((page) => page.items) ?? [];
-		const merged = mergeWithData(trades);
-		return sortTrades(merged, sort);
-	}, [data, mergeWithData, sort]);
+		return mergeWithData(trades);
+	}, [data, mergeWithData]);
 
 	const handleSelectAll = (checked: boolean) => {
 		if (checked) {
@@ -901,17 +910,20 @@ export default function JournalPage() {
 									</TableBody>
 								</Table>
 
-								{hasNextPage && (
+								{/* Infinite scroll sentinel */}
+								<div className="h-1" ref={sentinelRef} />
+
+								{/* Loading indicator */}
+								{isFetchingNextPage && (
 									<div className="flex justify-center border-border border-t p-4">
-										<Button
-											className="font-mono text-xs uppercase tracking-wider"
-											disabled={isFetchingNextPage}
-											onClick={() => fetchNextPage()}
-											size="sm"
-											variant="outline"
-										>
-											{isFetchingNextPage ? "Loading..." : "Load More"}
-										</Button>
+										<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+									</div>
+								)}
+
+								{/* End of list indicator */}
+								{!hasNextPage && allTrades.length > 0 && (
+									<div className="py-4 text-center font-mono text-muted-foreground text-xs">
+										End of trades
 									</div>
 								)}
 							</>
