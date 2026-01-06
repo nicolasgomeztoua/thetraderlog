@@ -158,6 +158,8 @@ export const tradesRouter = createTRPCRouter({
 					tagIds: z.array(z.string()).nullish(),
 					exitReason: exitReasonEnum.nullish(),
 					strategyId: z.string().nullish(),
+					minRMultiple: z.number().nullish(),
+					maxRMultiple: z.number().nullish(),
 				})
 				.optional(),
 		)
@@ -282,6 +284,35 @@ export const tradesRouter = createTRPCRouter({
 					if (input.result === "win") return pnl > beThreshold;
 					if (input.result === "loss") return pnl < -beThreshold;
 					return Math.abs(pnl) <= beThreshold;
+				});
+			}
+
+			// Filter by R-Multiple post-query (requires entryPrice, exitPrice, stopLoss)
+			if (input?.minRMultiple != null || input?.maxRMultiple != null) {
+				items = items.filter((trade) => {
+					// R-Multiple requires closed trade with stop loss
+					if (!trade.entryPrice || !trade.exitPrice || !trade.stopLoss) {
+						return false;
+					}
+
+					const entry = parseFloat(trade.entryPrice);
+					const exit = parseFloat(trade.exitPrice);
+					const stop = parseFloat(trade.stopLoss);
+					const risk = Math.abs(entry - stop);
+
+					if (risk === 0) return false;
+
+					const pnlMovement =
+						trade.direction === "long" ? exit - entry : entry - exit;
+					const rMultiple = pnlMovement / risk;
+
+					if (input.minRMultiple != null && rMultiple < input.minRMultiple) {
+						return false;
+					}
+					if (input.maxRMultiple != null && rMultiple > input.maxRMultiple) {
+						return false;
+					}
+					return true;
 				});
 			}
 

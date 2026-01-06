@@ -136,6 +136,10 @@ export default function JournalPage() {
 		if (filters.exitReason) params.exitReason = filters.exitReason;
 		if (filters.tagIds.length > 0) params.tagIds = filters.tagIds;
 		if (filters.strategyId) params.strategyId = filters.strategyId;
+		if (filters.minRMultiple)
+			params.minRMultiple = parseFloat(filters.minRMultiple);
+		if (filters.maxRMultiple)
+			params.maxRMultiple = parseFloat(filters.maxRMultiple);
 
 		return params;
 	}, [filters, selectedAccountId, debouncedSearch]);
@@ -687,14 +691,6 @@ export default function JournalPage() {
 					>
 						<Trash2 className="h-3.5 w-3.5" />
 						Trash
-						{deletedTrades && deletedTrades.length > 0 && (
-							<Badge
-								className="ml-1 h-4 px-1 font-mono text-[10px]"
-								variant="secondary"
-							>
-								{deletedTrades.length}
-							</Badge>
-						)}
 					</TabsTrigger>
 				</TabsList>
 
