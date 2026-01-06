@@ -53,10 +53,12 @@ describe("Analytics Export", () => {
 			for (let i = 1; i < result.length; i++) {
 				const prevTrade = result[i - 1];
 				const currTrade = result[i];
-				const prevExitTime =
-					prevTrade?.exitTime ? new Date(prevTrade.exitTime).getTime() : 0;
-				const currExitTime =
-					currTrade?.exitTime ? new Date(currTrade.exitTime).getTime() : 0;
+				const prevExitTime = prevTrade?.exitTime
+					? new Date(prevTrade.exitTime).getTime()
+					: 0;
+				const currExitTime = currTrade?.exitTime
+					? new Date(currTrade.exitTime).getTime()
+					: 0;
 				expect(prevExitTime).toBeGreaterThanOrEqual(currExitTime);
 			}
 		});
