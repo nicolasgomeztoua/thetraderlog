@@ -755,6 +755,16 @@
 	}
 }
 
+/* Number input spinners - make visible on dark theme */
+@layer base {
+	input[type="number"]::-webkit-inner-spin-button,
+	input[type="number"]::-webkit-outer-spin-button {
+		opacity: 1;
+		background: transparent;
+		cursor: pointer;
+	}
+}
+
 /* Counter animation - for stats */
 @keyframes count-up {
 	from {
