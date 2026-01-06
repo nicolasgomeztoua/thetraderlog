@@ -2,6 +2,7 @@ import { format, startOfYear, subDays } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
+import { DAY_LABELS, HOURS, QUICK_DATE_PRESETS } from "@/lib/constants";
 import { cn } from "@/lib/shared";
 import { FilterField, FilterPill, FilterSection } from "./filter-section";
 
@@ -39,33 +40,6 @@ interface WhenFiltersProps {
 	/** Hours change handler */
 	onHoursChange: (hours: number[]) => void;
 }
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const DAY_LABELS = [
-	{ value: 0, short: "S", full: "Sun" },
-	{ value: 1, short: "M", full: "Mon" },
-	{ value: 2, short: "T", full: "Tue" },
-	{ value: 3, short: "W", full: "Wed" },
-	{ value: 4, short: "T", full: "Thu" },
-	{ value: 5, short: "F", full: "Fri" },
-	{ value: 6, short: "S", full: "Sat" },
-];
-
-const QUICK_DATE_PRESETS = [
-	{ label: "7D", days: 7 },
-	{ label: "30D", days: 30 },
-	{ label: "90D", days: 90 },
-	{ label: "YTD", days: -1 }, // Special case
-	{ label: "ALL", days: 0 }, // Special case - clear dates
-];
-
-const HOURS = [
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-	22, 23,
-];
 
 // =============================================================================
 // COMPONENT
@@ -204,7 +178,7 @@ export function WhenFilters({
 							{/* Date inputs */}
 							<div className="flex items-center gap-2">
 								<div className="relative flex-1">
-									<CalendarIcon className="absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground" />
+									<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2 size-3 text-muted-foreground" />
 									<Input
 										className="h-8 pl-7 font-mono text-xs"
 										onChange={(e) =>
@@ -221,7 +195,7 @@ export function WhenFilters({
 									→
 								</span>
 								<div className="relative flex-1">
-									<CalendarIcon className="absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground" />
+									<CalendarIcon className="-translate-y-1/2 absolute top-1/2 left-2 size-3 text-muted-foreground" />
 									<Input
 										className="h-8 pl-7 font-mono text-xs"
 										onChange={(e) =>

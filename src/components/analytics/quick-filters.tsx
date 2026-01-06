@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { ChevronDown, X } from "lucide-react";
 import { useMemo } from "react";
+import { QUICK_OUTCOME_OPTIONS } from "@/lib/constants";
 import { cn } from "@/lib/shared";
 import type {
 	AnalyticsFilters,
@@ -119,7 +120,7 @@ export function QuickFilters({
 
 			{/* Outcome Quick Toggles */}
 			<div className="flex gap-1">
-				{(["all", "win", "loss"] as const).map((outcome) => (
+				{QUICK_OUTCOME_OPTIONS.map((outcome) => (
 					<button
 						className={cn(
 							"rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-all",

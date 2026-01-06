@@ -1,3 +1,4 @@
+import { OUTCOME_OPTIONS, REVIEW_OPTIONS } from "@/lib/constants";
 import type { OutcomeFilter, ReviewedFilter } from "@/types/analytics-filters";
 import { FilterField, FilterSection, FilterToggle } from "./filter-section";
 
@@ -15,27 +16,6 @@ interface ResultFiltersProps {
 	/** Review status change handler */
 	onReviewedChange: (reviewed: ReviewedFilter) => void;
 }
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const OUTCOME_OPTIONS: {
-	value: OutcomeFilter;
-	label: string;
-	variant: "default" | "profit" | "loss" | "neutral";
-}[] = [
-	{ value: "all", label: "All", variant: "default" },
-	{ value: "win", label: "Winners", variant: "profit" },
-	{ value: "loss", label: "Losers", variant: "loss" },
-	{ value: "breakeven", label: "Breakeven", variant: "neutral" },
-];
-
-const REVIEW_OPTIONS: { value: ReviewedFilter; label: string }[] = [
-	{ value: "all", label: "All" },
-	{ value: "reviewed", label: "Reviewed" },
-	{ value: "unreviewed", label: "Unreviewed" },
-];
 
 // =============================================================================
 // COMPONENT
