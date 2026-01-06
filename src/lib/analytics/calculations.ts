@@ -28,6 +28,7 @@ const DEFAULT_BEHAVIORAL_LEVEL = {
 	label: "Unknown",
 	description: "Unable to determine level",
 	colorClass: "text-muted-foreground",
+	bgClass: "bg-muted-foreground",
 } as const;
 
 const DEFAULT_MIN_LEVEL = {
@@ -35,6 +36,7 @@ const DEFAULT_MIN_LEVEL = {
 	label: "Unknown",
 	description: "Unable to determine level",
 	colorClass: "text-muted-foreground",
+	bgClass: "bg-muted-foreground",
 } as const;
 
 const DEFAULT_RISK_LEVEL = {
@@ -48,6 +50,7 @@ const DEFAULT_DRAWDOWN_LEVEL = {
 	ratio: 0,
 	label: "Unknown",
 	colorClass: "text-muted-foreground",
+	bgClass: "bg-muted-foreground",
 } as const;
 
 /**
@@ -115,6 +118,7 @@ export function getMonteCarloProbabilityLevel(probability: number) {
 			min: 0,
 			label: "Unknown",
 			colorClass: "text-muted-foreground",
+			bgClass: "bg-muted-foreground",
 		}
 	);
 }

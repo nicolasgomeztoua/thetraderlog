@@ -42,30 +42,35 @@ export const KELLY_THRESHOLDS = [
 		label: "No Edge",
 		description: "Strategy has negative expectancy",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 	{
 		max: 5,
 		label: "Conservative",
 		description: "Small edge detected - consider paper trading",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		max: 15,
 		label: "Moderate Edge",
 		description: "Solid positive expectancy",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		max: 30,
 		label: "Strong Edge",
 		description: "Significant advantage detected",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		max: Number.POSITIVE_INFINITY,
 		label: "Very High",
 		description: "Consider half-Kelly for safety",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 ] as const;
 
@@ -79,24 +84,28 @@ export const TILT_SCORE_THRESHOLDS = [
 		label: "Excellent",
 		description: "Consistent emotional control",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		max: 50,
 		label: "Stable",
 		description: "Generally stable performance",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		max: 70,
 		label: "Some Tilt",
 		description: "Occasional tilt patterns detected",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		max: Number.POSITIVE_INFINITY,
 		label: "High Risk",
 		description: "Significant tilt detected",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 ] as const;
 
@@ -106,24 +115,28 @@ export const DISCIPLINE_SCORE_THRESHOLDS = [
 		label: "Highly Disciplined",
 		description: "Excellent rule adherence",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		min: 60,
 		label: "Good Discipline",
 		description: "Generally follows trading plan",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		min: 40,
 		label: "Room for Improvement",
 		description: "Inconsistent rule following",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		min: 0,
 		label: "Low Adherence",
 		description: "Significant discipline issues",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 ] as const;
 
@@ -133,24 +146,28 @@ export const OVERTRADING_THRESHOLDS = [
 		label: "Controlled",
 		description: "Trading frequency is well managed",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		max: 20,
 		label: "Active",
 		description: "Moderate trading activity",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		max: 30,
 		label: "High Frequency",
 		description: "Consider reducing trade count",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		max: Number.POSITIVE_INFINITY,
 		label: "Overtrading",
 		description: "Excessive trading detected",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 ] as const;
 
@@ -160,24 +177,28 @@ export const REVENGE_TRADING_THRESHOLDS = [
 		label: "Low Risk",
 		description: "Good emotional control after losses",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		max: 40,
 		label: "Moderate",
 		description: "Some reactive trading patterns",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		max: 60,
 		label: "Elevated",
 		description: "Notable revenge trading tendency",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		max: Number.POSITIVE_INFINITY,
 		label: "High Risk",
 		description: "Significant revenge trading detected",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 ] as const;
 
@@ -191,24 +212,28 @@ export const EFFICIENCY_RATING_THRESHOLDS = [
 		label: "Excellent",
 		description: "Highly efficient risk-reward capture",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		min: 60,
 		label: "Good",
 		description: "Solid risk-reward execution",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		min: 40,
 		label: "Fair",
 		description: "Room for improvement",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		min: 0,
 		label: "Poor",
 		description: "Significant efficiency issues",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 ] as const;
 
@@ -217,16 +242,19 @@ export const MONTE_CARLO_PROBABILITY_THRESHOLDS = [
 		min: 70,
 		label: "High Probability",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		min: 50,
 		label: "Moderate Probability",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		min: 0,
 		label: "Low Probability",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 ] as const;
 
@@ -236,18 +264,21 @@ export const CORRELATION_THRESHOLDS = [
 		label: "Negative Correlation",
 		description: "More trades correlate with worse performance",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 	{
 		max: 0.1,
 		label: "No Correlation",
 		description: "Trade count does not affect performance",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		max: Number.POSITIVE_INFINITY,
 		label: "Positive Correlation",
 		description: "More trades may indicate overtrading",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 ] as const;
 
@@ -256,21 +287,25 @@ export const DRAWDOWN_SEVERITY_THRESHOLDS = [
 		ratio: 0.8,
 		label: "Severe",
 		colorClass: "text-loss",
+		bgClass: "bg-loss",
 	},
 	{
 		ratio: 0.5,
 		label: "Moderate",
 		colorClass: "text-amber-400",
+		bgClass: "bg-amber-400",
 	},
 	{
 		ratio: 0.25,
 		label: "Minor",
-		colorClass: "text-secondary",
+		colorClass: "text-accent",
+		bgClass: "bg-accent",
 	},
 	{
 		ratio: 0,
 		label: "Minimal",
 		colorClass: "text-profit",
+		bgClass: "bg-profit",
 	},
 ] as const;
 

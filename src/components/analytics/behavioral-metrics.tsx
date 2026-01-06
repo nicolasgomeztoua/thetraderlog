@@ -95,7 +95,7 @@ export function BehavioralMetrics({
 						<div
 							className={cn(
 								"h-full rounded-full transition-all",
-								tiltLevel.colorClass.replace("text-", "bg-"),
+								tiltLevel.bgClass,
 							)}
 							style={{ width: `${tiltScore}%` }}
 						/>
@@ -127,7 +127,7 @@ export function BehavioralMetrics({
 						<div
 							className={cn(
 								"h-full rounded-full transition-all",
-								disciplineLevel.colorClass.replace("text-", "bg-"),
+								disciplineLevel.bgClass,
 							)}
 							style={{ width: `${disciplineScore}%` }}
 						/>
@@ -159,7 +159,7 @@ export function BehavioralMetrics({
 						<div
 							className={cn(
 								"h-full rounded-full transition-all",
-								overtradingLevel.colorClass.replace("text-", "bg-"),
+								overtradingLevel.bgClass,
 							)}
 							style={{ width: `${Math.min(100, overtradingTendency * 2)}%` }}
 						/>
