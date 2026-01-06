@@ -1,8 +1,11 @@
 {
 	"mcpServers": {
 		"trigger": {
+			"command": "npx",
 			"args": ["trigger.dev@4.3.1", "mcp", "--dev-only"],
-			"command": "npx"
+			"env": {
+				"TRIGGER_SECRET_KEY": "${TRIGGER_SECRET_KEY}"
+			}
 		}
 	}
 }

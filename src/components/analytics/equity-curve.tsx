@@ -257,7 +257,6 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 
 			{/* Chart */}
 			<div className="relative">
-				{/* biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing */}
 				<AgCharts
 					options={chartOptions as any}
 					style={{ height: CHART_DIMENSIONS.equityCurve.height }}
