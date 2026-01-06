@@ -106,9 +106,10 @@ function buildFilterConditions(
 		);
 	}
 	if (filters.dateRange?.end) {
-		conditions.push(
-			lte(tradesTable.entryTime, new Date(filters.dateRange.end)),
-		);
+		const endDate = new Date(filters.dateRange.end);
+		// Include the full end day by setting time to 23:59:59.999
+		endDate.setUTCHours(23, 59, 59, 999);
+		conditions.push(lte(tradesTable.entryTime, endDate));
 	}
 
 	// Strategy filter
@@ -192,9 +193,9 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 		});
 	}
 
-	// Sessions filter (based on UTC hours)
+	// Sessions filter (uses user timezone)
 	if (filters.sessions && filters.sessions.length > 0) {
-		// Default session definitions (UTC hours)
+		// Default session definitions (hours in user's local timezone)
 		const sessionDefs: Record<string, { start: number; end: number }> = {
 			asia: { start: 0, end: 8 },
 			london: { start: 8, end: 16 },
@@ -203,15 +204,15 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 		};
 
 		filtered = filtered.filter((trade) => {
-			const utcHour = trade.entryTime.getUTCHours();
+			const hour = getHourInTimezone(trade.entryTime, options.userTimezone);
 			return filters.sessions?.some((sessionName) => {
 				const session = sessionDefs[sessionName.toLowerCase()];
 				if (!session) return false;
 				if (session.start <= session.end) {
-					return utcHour >= session.start && utcHour < session.end;
+					return hour >= session.start && hour < session.end;
 				}
 				// Handle wrap-around sessions
-				return utcHour >= session.start || utcHour < session.end;
+				return hour >= session.start || hour < session.end;
 			});
 		});
 	}
@@ -525,9 +526,8 @@ export const analyticsRouter = createTRPCRouter({
 			>();
 
 			for (const trade of closedTrades) {
-				if (!trade.exitTime) continue;
-				// Use timezone-aware date grouping
-				const dateKey = getDateStringInTimezone(trade.exitTime, userTimezone);
+				// Use timezone-aware date grouping based on entry time
+				const dateKey = getDateStringInTimezone(trade.entryTime, userTimezone);
 
 				const existing = dailyData.get(dateKey) || {
 					pnl: 0,
@@ -626,9 +626,8 @@ export const analyticsRouter = createTRPCRouter({
 			}));
 
 			for (const trade of closedTrades) {
-				if (!trade.exitTime) continue;
-				// Use timezone-aware day calculation
-				const dayIndex = getDayOfWeekInTimezone(trade.exitTime, userTimezone);
+				// Use timezone-aware day calculation based on entry time
+				const dayIndex = getDayOfWeekInTimezone(trade.entryTime, userTimezone);
 				const pnl = parsePnl(trade.netPnl);
 				const dayEntry = dayData[dayIndex];
 				if (!dayEntry) continue;
@@ -742,7 +741,7 @@ export const analyticsRouter = createTRPCRouter({
 	/**
 	 * Get performance breakdown by trading session
 	 * Uses user-configured sessions from settings (defaults to Asia/London/New York if not configured)
-	 * All times are in UTC
+	 * Session hours are interpreted in user's timezone
 	 */
 	getPerformanceBySession: protectedProcedure
 		.input(
@@ -855,7 +854,7 @@ export const analyticsRouter = createTRPCRouter({
 				};
 			}
 
-			// Helper to determine which sessions an hour belongs to (based on UTC hours)
+			// Helper to determine which sessions an hour belongs to (based on user timezone)
 			const getSessionsForHour = (hour: number): string[] => {
 				const result: string[] = [];
 				for (const [key, session] of Object.entries(sessions)) {
@@ -876,8 +875,8 @@ export const analyticsRouter = createTRPCRouter({
 			};
 
 			for (const trade of closedTrades) {
-				// Sessions use UTC hours
-				const hour = trade.entryTime.getUTCHours();
+				// Sessions use user's timezone
+				const hour = getHourInTimezone(trade.entryTime, userTimezone);
 				const pnl = parsePnl(trade.netPnl);
 				const tradesSessions = getSessionsForHour(hour);
 
@@ -984,9 +983,11 @@ export const analyticsRouter = createTRPCRouter({
 			>();
 
 			for (const trade of closedTrades) {
-				if (!trade.exitTime) continue;
-				// Use timezone-aware month extraction
-				const monthKey = getMonthStringInTimezone(trade.exitTime, userTimezone);
+				// Use timezone-aware month extraction based on entry time
+				const monthKey = getMonthStringInTimezone(
+					trade.entryTime,
+					userTimezone,
+				);
 
 				const existing = monthData.get(monthKey) || {
 					pnl: 0,
