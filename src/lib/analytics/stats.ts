@@ -58,8 +58,8 @@ export function parsePnl(netPnl: string | null): number {
  */
 export function classifyTrade(pnl: number, beThreshold: number): TradeResult {
 	if (pnl > beThreshold) return "win";
-	if (pnl < -beThreshold) return "breakeven";
-	return "loss";
+	if (pnl < -beThreshold) return "loss";
+	return "breakeven";
 }
 
 /**
