@@ -83,7 +83,7 @@ export function CTA() {
 				</SignedIn>
 
 				{/* Decorative terminal line */}
-				<div className="mx-auto mt-16 max-w-lg rounded border border-white/5 bg-white/[0.01] p-4">
+				<div className="mx-auto mt-16 max-w-lg rounded border border-white/5 bg-white/1 p-4">
 					<div className="flex items-center gap-3 font-mono text-sm">
 						<span className="text-primary">$</span>
 						<span className="text-muted-foreground">
