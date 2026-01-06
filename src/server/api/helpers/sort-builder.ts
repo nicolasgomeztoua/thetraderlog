@@ -110,18 +110,17 @@ export function buildCursorCondition(
 	}
 
 	// Compound comparison for non-null values:
-	// For DESC: (sortField < cursorValue) OR (sortField = cursorValue AND id < cursorId) OR (sortField IS NULL)
-	// For ASC: (sortField > cursorValue) OR (sortField = cursorValue AND id > cursorId) OR (sortField IS NULL)
+	// For DESC: (sortField < cursorValue) OR (sortField = cursorValue AND id < cursorId)
+	// For ASC: (sortField > cursorValue) OR (sortField = cursorValue AND id > cursorId)
+	// Note: NULL values are handled by NULLS LAST in ORDER BY - they come after all non-null values
 	if (direction === "asc") {
 		return sql`(
 			${sortExpr} > ${sortValue}
 			OR (${sortExpr} = ${sortValue} AND ${trades.id} > ${cursorId})
-			OR ${sortExpr} IS NULL
 		)`;
 	}
 	return sql`(
 		${sortExpr} < ${sortValue}
 		OR (${sortExpr} = ${sortValue} AND ${trades.id} < ${cursorId})
-		OR ${sortExpr} IS NULL
 	)`;
 }
