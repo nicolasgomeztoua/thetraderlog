@@ -75,6 +75,12 @@ export function AnalyticsQueryBar({
 	// Expanded panel state
 	const [isExpanded, setIsExpanded] = useState(false);
 
+	// Hydration state - prevents mismatch between server (default filters) and client (persisted filters)
+	const [hasMounted, setHasMounted] = useState(false);
+	useEffect(() => {
+		setHasMounted(true);
+	}, []);
+
 	// Query builder modal state
 	const [queryBuilderOpen, setQueryBuilderOpen] = useState(false);
 
@@ -143,7 +149,7 @@ export function AnalyticsQueryBar({
 			{/* Quick Filters Bar (Always Visible) */}
 			<QuickFilters
 				filters={filters}
-				hasActiveFilters={hasActiveFilters()}
+				hasActiveFilters={hasMounted && hasActiveFilters()}
 				isExpanded={isExpanded}
 				onClearAll={handleClearAll}
 				onOutcomeChange={handleQuickOutcomeChange}

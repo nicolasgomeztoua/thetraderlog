@@ -6,6 +6,7 @@ import {
 	Filter,
 	Save,
 	Star,
+	TrendingUp,
 	X,
 } from "lucide-react";
 import { useState } from "react";
@@ -29,6 +30,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { DAY_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -50,6 +52,8 @@ export interface FilterState {
 	tagIds: string[];
 	exitReason: string;
 	strategyId: string;
+	minRMultiple: string;
+	maxRMultiple: string;
 }
 
 export const DEFAULT_FILTERS: FilterState = {
@@ -70,17 +74,9 @@ export const DEFAULT_FILTERS: FilterState = {
 	tagIds: [] as string[],
 	exitReason: "",
 	strategyId: "",
+	minRMultiple: "",
+	maxRMultiple: "",
 };
-
-const DAYS_OF_WEEK = [
-	{ value: 0, label: "Sun" },
-	{ value: 1, label: "Mon" },
-	{ value: 2, label: "Tue" },
-	{ value: 3, label: "Wed" },
-	{ value: 4, label: "Thu" },
-	{ value: 5, label: "Fri" },
-	{ value: 6, label: "Sat" },
-];
 
 interface FilterPanelProps {
 	filters: FilterState;
@@ -433,7 +429,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 
 			{/* Advanced Filters Panel */}
 			{isExpanded && (
-				<div className="space-y-4 rounded border border-white/5 bg-white/1 p-4">
+				<div className="space-y-4 rounded border border-white/10 bg-white/2 p-4">
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						{/* Date Range */}
 						<div className="space-y-2">
@@ -490,6 +486,36 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 							</div>
 						</div>
 
+						{/* R-Multiple Range */}
+						<div className="space-y-2">
+							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+								<TrendingUp className="mr-1 inline-block h-3 w-3" />
+								R-Multiple
+							</Label>
+							<div className="flex gap-2">
+								<Input
+									className="h-8 font-mono text-xs"
+									onChange={(e) =>
+										onChange({ ...filters, minRMultiple: e.target.value })
+									}
+									placeholder="Min"
+									step="0.1"
+									type="number"
+									value={filters.minRMultiple}
+								/>
+								<Input
+									className="h-8 font-mono text-xs"
+									onChange={(e) =>
+										onChange({ ...filters, maxRMultiple: e.target.value })
+									}
+									placeholder="Max"
+									step="0.1"
+									type="number"
+									value={filters.maxRMultiple}
+								/>
+							</div>
+						</div>
+
 						{/* Rating Range */}
 						<div className="space-y-2">
 							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -498,14 +524,16 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 							</Label>
 							<div className="flex gap-2">
 								<Select
-									onValueChange={(v) => onChange({ ...filters, minRating: v })}
-									value={filters.minRating}
+									onValueChange={(v) =>
+										onChange({ ...filters, minRating: v === "any" ? "" : v })
+									}
+									value={filters.minRating || "any"}
 								>
 									<SelectTrigger className="h-8 font-mono text-xs">
 										<SelectValue placeholder="Min" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="">Any</SelectItem>
+										<SelectItem value="any">Any</SelectItem>
 										{[1, 2, 3, 4, 5].map((r) => (
 											<SelectItem key={r} value={r.toString()}>
 												{r}+ stars
@@ -514,14 +542,16 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 									</SelectContent>
 								</Select>
 								<Select
-									onValueChange={(v) => onChange({ ...filters, maxRating: v })}
-									value={filters.maxRating}
+									onValueChange={(v) =>
+										onChange({ ...filters, maxRating: v === "any" ? "" : v })
+									}
+									value={filters.maxRating || "any"}
 								>
 									<SelectTrigger className="h-8 font-mono text-xs">
 										<SelectValue placeholder="Max" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="">Any</SelectItem>
+										<SelectItem value="any">Any</SelectItem>
 										{[1, 2, 3, 4, 5].map((r) => (
 											<SelectItem key={r} value={r.toString()}>
 												{r} stars
@@ -554,23 +584,19 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 							Day of Week
 						</Label>
 						<div className="flex flex-wrap gap-2">
-							{DAYS_OF_WEEK.map((day) => (
+							{DAY_LABELS.map((day) => (
 								<Button
 									className={cn(
-										"h-8 w-12 font-mono text-xs",
+										"h-8 w-12 font-mono text-xs border-white/10",
 										filters.dayOfWeek.includes(day.value) &&
-											"bg-primary text-primary-foreground",
+											"border-primary/40 bg-primary/10 text-primary",
 									)}
 									key={day.value}
 									onClick={() => toggleDay(day.value)}
 									size="sm"
-									variant={
-										filters.dayOfWeek.includes(day.value)
-											? "default"
-											: "outline"
-									}
+									variant="outline"
 								>
-									{day.label}
+									{day.full}
 								</Button>
 							))}
 						</div>
@@ -582,14 +608,16 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 							Exit Reason
 						</Label>
 						<Select
-							onValueChange={(v) => onChange({ ...filters, exitReason: v })}
-							value={filters.exitReason}
+							onValueChange={(v) =>
+								onChange({ ...filters, exitReason: v === "any" ? "" : v })
+							}
+							value={filters.exitReason || "any"}
 						>
 							<SelectTrigger className="h-8 w-[200px] font-mono text-xs">
 								<SelectValue placeholder="Any" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="">Any</SelectItem>
+								<SelectItem value="any">Any</SelectItem>
 								<SelectItem value="take_profit">Take Profit</SelectItem>
 								<SelectItem value="stop_loss">Stop Loss</SelectItem>
 								<SelectItem value="trailing_stop">Trailing Stop</SelectItem>
