@@ -27,6 +27,16 @@ import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
 } from "@/server/api/helpers";
+import {
+	buildCursorCondition,
+	buildOrderByClause,
+} from "@/server/api/helpers/sort-builder";
+import {
+	decodeCursor,
+	encodeCursor,
+	extractSortValue,
+} from "@/server/api/helpers/cursor";
+import { type SortField } from "@/lib/constants/trade-log";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { tradeExecutions, trades, tradeTags } from "@/server/db/schema";
 import { processTradeMAEMFE } from "@/trigger/process-trade-maemfe";
@@ -160,11 +170,20 @@ export const tradesRouter = createTRPCRouter({
 					strategyId: z.string().nullish(),
 					minRMultiple: z.number().nullish(),
 					maxRMultiple: z.number().nullish(),
+					// Server-side sorting
+					sortField: z.enum([
+						"symbol", "side", "entry", "exit", "size", "pnl",
+						"result", "rating", "reviewed", "setup", "fees",
+						"duration", "account", "strategy", "rMultiple"
+					]).default("entry"),
+					sortDirection: z.enum(["asc", "desc"]).default("desc"),
 				})
 				.optional(),
 		)
 		.query(async ({ ctx, input }) => {
 			const limit = input?.limit ?? 50;
+			const sortField = (input?.sortField ?? "entry") as SortField;
+			const sortDirection = input?.sortDirection ?? "desc";
 
 			const conditions = [eq(trades.userId, ctx.user.id)];
 
@@ -248,13 +267,24 @@ export const tradesRouter = createTRPCRouter({
 				}
 			}
 
+			// Handle compound cursor for sorted pagination
 			if (input?.cursor) {
-				conditions.push(sql`${trades.id} < ${input.cursor}`);
+				try {
+					const cursor = decodeCursor(input.cursor);
+					conditions.push(
+						buildCursorCondition(cursor.sortValue, cursor.id, sortField, sortDirection)
+					);
+				} catch {
+					// Invalid cursor, ignore and start from beginning
+				}
 			}
+
+			// Build dynamic ORDER BY clause
+			const orderByClause = buildOrderByClause(sortField, sortDirection);
 
 			let items = await ctx.db.query.trades.findMany({
 				where: and(...conditions),
-				orderBy: [desc(trades.id)],
+				orderBy: orderByClause,
 				limit: limit + 1,
 				with: {
 					tradeTags: {
@@ -319,7 +349,11 @@ export const tradesRouter = createTRPCRouter({
 			let nextCursor: string | undefined;
 			if (items.length > limit) {
 				const nextItem = items.pop();
-				nextCursor = nextItem?.id;
+				if (nextItem) {
+					// Create compound cursor with sort value for deterministic pagination
+					const sortValue = extractSortValue(nextItem, sortField);
+					nextCursor = encodeCursor({ sortValue, id: nextItem.id });
+				}
 			}
 
 			return {
