@@ -123,6 +123,7 @@ Reference documentation is organized in `.claude/skills/` for AI-assisted develo
 | Architecture | `.claude/skills/architecture/SKILL.md` | `.claude/skills/architecture/MARKET_DATA_REFERENCE.md` |
 | Testing | `.claude/skills/testing/SKILL.md` | `.claude/skills/testing/TESTING_REFERENCE.md` |
 | Planning | `.claude/skills/planning/SKILL.md` | - |
+| Code Quality | `.claude/skills/consistency-audit/SKILL.md` | - |
 
 Other documentation:
 - [Testing README](./tests/README.md) - Quick testing overview
@@ -139,5 +140,6 @@ Claude Code skills provide contextual guidance when invoked:
 | `architecture` | System architecture, data flow, market data caching |
 | `testing` | Testing patterns, fixtures, database testing |
 | `planning` | Interview-based planning to collaboratively design features through Q&A |
+| `consistency-audit` | Detect duplicated calculations, repeated utilities, AI slop |
 
 Skills are automatically suggested based on the type of work you're doing.

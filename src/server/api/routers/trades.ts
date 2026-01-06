@@ -15,6 +15,7 @@ import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
 import type { SortField } from "@/lib/constants/trade-log";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
+import { getPointValue } from "@/lib/market-data/symbols";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -336,24 +337,31 @@ export const tradesRouter = createTRPCRouter({
 				});
 			}
 
-			// Filter by R-Multiple post-query (requires entryPrice, exitPrice, stopLoss)
+			// Filter by R-Multiple post-query (requires entryPrice, stopLoss, netPnl, quantity)
 			if (input?.minRMultiple != null || input?.maxRMultiple != null) {
 				items = items.filter((trade) => {
-					// R-Multiple requires closed trade with stop loss
-					if (!trade.entryPrice || !trade.exitPrice || !trade.stopLoss) {
+					// R-Multiple requires stop loss, net P&L, and quantity
+					if (!trade.stopLoss || !trade.netPnl || !trade.quantity) {
 						return false;
 					}
 
 					const entry = parseFloat(trade.entryPrice);
-					const exit = parseFloat(trade.exitPrice);
 					const stop = parseFloat(trade.stopLoss);
-					const risk = Math.abs(entry - stop);
+					const netPnl = parseFloat(trade.netPnl);
+					const quantity = parseFloat(trade.quantity);
 
-					if (risk === 0) return false;
+					const riskPerUnit = Math.abs(entry - stop);
+					if (riskPerUnit === 0 || quantity === 0) return false;
 
-					const pnlMovement =
-						trade.direction === "long" ? exit - entry : entry - exit;
-					const rMultiple = pnlMovement / risk;
+					// Use actual R-multiple: netPnl / (riskPerUnit * pointValue * quantity)
+					const pointValue = getPointValue(
+						trade.symbol,
+						trade.instrumentType,
+					);
+					const plannedRisk = riskPerUnit * pointValue * quantity;
+					if (plannedRisk === 0) return false;
+
+					const rMultiple = netPnl / plannedRisk;
 
 					if (input.minRMultiple != null && rMultiple < input.minRMultiple) {
 						return false;

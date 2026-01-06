@@ -70,6 +70,7 @@ import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
 import { useTradeSort } from "@/hooks/use-trade-sort";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
+import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import { api } from "@/trpc/react";
 
 export default function JournalPage() {
@@ -529,21 +530,20 @@ export default function JournalPage() {
 				return <span className="font-mono text-xs">{minutes}m</span>;
 			}
 			case "rMultiple": {
-				// Calculate R-Multiple if SL is set
-				if (!trade.stopLoss || !trade.netPnl) {
+				// Calculate R-Multiple using actual P&L and proper risk calculation
+				const rMultiple = calculateActualRMultiple(
+					trade.netPnl ? parseFloat(trade.netPnl) : null,
+					parseFloat(trade.entryPrice),
+					trade.stopLoss ? parseFloat(trade.stopLoss) : null,
+					parseFloat(trade.quantity),
+					trade.symbol,
+					trade.instrumentType,
+				);
+				if (rMultiple === null) {
 					return (
 						<span className="font-mono text-muted-foreground text-xs">—</span>
 					);
 				}
-				const riskPerUnit = Math.abs(
-					parseFloat(trade.entryPrice) - parseFloat(trade.stopLoss),
-				);
-				if (riskPerUnit === 0)
-					return (
-						<span className="font-mono text-muted-foreground text-xs">—</span>
-					);
-				const rMultiple =
-					parseFloat(trade.netPnl) / (riskPerUnit * parseFloat(trade.quantity));
 				return (
 					<span
 						className={cn(

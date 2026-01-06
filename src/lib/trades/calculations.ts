@@ -1,7 +1,7 @@
 import {
-	FOREX_SPECS,
 	getForexPipSize,
 	getFuturesSpec,
+	getPointValue,
 } from "@/lib/market-data";
 import type { OHLCBar } from "@/lib/market-data/service";
 
@@ -61,7 +61,8 @@ export function calculateTicksPerContract(
 }
 
 /**
- * Calculate R-Multiple: P&L relative to risk
+ * Calculate R-Multiple: P&L relative to risk (theoretical, price-based)
+ * @deprecated Use calculateActualRMultiple for accurate R-multiple including point values
  */
 export function calculateRMultiple(
 	entryPrice: number,
@@ -77,6 +78,36 @@ export function calculateRMultiple(
 	const pnl =
 		direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
 	return pnl / risk;
+}
+
+/**
+ * Calculate actual R-Multiple using real P&L and proper risk calculation
+ * Formula: netPnl / (riskPerUnit * pointValue * quantity)
+ *
+ * This accounts for:
+ * - Actual dollar P&L (including fees/commissions)
+ * - Instrument point values (ES = $50/point, NQ = $20/point, etc.)
+ * - Position size (quantity)
+ */
+export function calculateActualRMultiple(
+	netPnl: number | null,
+	entryPrice: number,
+	stopLoss: number | null,
+	quantity: number,
+	symbol: string,
+	instrumentType: "futures" | "forex",
+): number | null {
+	if (netPnl === null || stopLoss === null || quantity === 0) return null;
+
+	const riskPerUnit = Math.abs(entryPrice - stopLoss);
+	if (riskPerUnit === 0) return null;
+
+	const pointValue = getPointValue(symbol, instrumentType);
+	const plannedRisk = riskPerUnit * pointValue * quantity;
+
+	if (plannedRisk === 0) return null;
+
+	return netPnl / plannedRisk;
 }
 
 /**
@@ -211,7 +242,14 @@ export function calculateAllStats(trade: {
 		grossPnl: calculateGrossPnl(netPnl, fees),
 		roi: calculateROI(netPnl, entry, qty, trade.symbol, trade.instrumentType),
 		duration: calculateDuration(trade.entryTime, trade.exitTime),
-		rMultiple: calculateRMultiple(entry, exit, sl, trade.direction),
+		rMultiple: calculateActualRMultiple(
+			netPnl,
+			entry,
+			sl,
+			qty,
+			trade.symbol,
+			trade.instrumentType,
+		),
 		plannedRR: calculatePlannedRR(entry, sl, tp),
 	};
 }
@@ -321,23 +359,6 @@ export function calculateMAEMFE(
 	};
 }
 
-/**
- * Get point value for a symbol
- * For futures: uses contract specs (pointValue per full point)
- * For forex: uses pip value per standard lot from FOREX_SPECS
- */
-function getPointValue(
-	symbol: string,
-	instrumentType: "futures" | "forex",
-): number {
-	if (instrumentType === "futures") {
-		const spec = getFuturesSpec(symbol);
-		return spec?.pointValue ?? 1;
-	}
-	// Use the pip value per lot from FOREX_SPECS
-	// This gives accurate per-pair pip values (e.g., $10 for EUR/USD, ~$9.10 for USD/JPY)
-	return FOREX_SPECS[symbol]?.pipValuePerLot ?? 10;
-}
 
 /**
  * Analyze price action after trade exit

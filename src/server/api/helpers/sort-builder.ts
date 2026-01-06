@@ -43,7 +43,9 @@ export function getSortExpression(field: SortField): SQL {
 		case "duration":
 			return sql`EXTRACT(EPOCH FROM (${trades.exitTime} - ${trades.entryTime}))`;
 
-		// Computed: R-Multiple = profit / risk
+		// Computed: R-Multiple (theoretical, price-based for SQL sorting)
+		// Note: Uses simplified formula without point values for SQL performance.
+		// Actual R-multiple display/filtering uses netPnl / (risk * pointValue * qty).
 		// For long: (exitPrice - entryPrice) / (entryPrice - stopLoss)
 		// For short: (entryPrice - exitPrice) / (stopLoss - entryPrice)
 		case "rMultiple":
