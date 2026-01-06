@@ -47,4 +47,5 @@ yarn-error.log*
 
 # trigger.dev
 .trigger/
+.mcp.json
 
