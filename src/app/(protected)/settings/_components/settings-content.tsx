@@ -2178,7 +2178,7 @@ export function SettingsContent() {
 											}
 										/>
 										<Button
-											className="-translate-y-1/2 absolute top-1/2 right-1 h-8 w-8"
+											className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2"
 											onClick={() => toggleShowKey(provider.id)}
 											size="icon"
 											type="button"
