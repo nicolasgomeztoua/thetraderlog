@@ -18,6 +18,21 @@ interface AnalyticsFilterStore {
 	filters: AnalyticsFilters;
 	activePresetId: string | null;
 
+	// Preview state for live editing before Apply
+	previewFilters: AnalyticsFilters;
+	isPreviewMode: boolean;
+
+	// Preview mode operations
+	enterPreviewMode: () => void;
+	exitPreviewMode: () => void;
+	setPreviewFilter: <K extends keyof AnalyticsFilters>(
+		key: K,
+		value: AnalyticsFilters[K],
+	) => void;
+	applyPreviewFilters: () => void;
+	discardPreviewFilters: () => void;
+	resetPreviewFilters: () => void;
+
 	// Individual setters
 	setSymbols: (symbols: string[]) => void;
 	setDateRange: (start: Date | null, end: Date | null) => void;
@@ -82,6 +97,43 @@ export const useAnalyticsFilterStore = create<AnalyticsFilterStore>()(
 		(set, get) => ({
 			filters: { ...DEFAULT_ANALYTICS_FILTERS },
 			activePresetId: null,
+			previewFilters: { ...DEFAULT_ANALYTICS_FILTERS },
+			isPreviewMode: false,
+
+			// Preview mode operations
+			enterPreviewMode: () =>
+				set((state) => ({
+					isPreviewMode: true,
+					previewFilters: { ...state.filters },
+				})),
+
+			exitPreviewMode: () =>
+				set({
+					isPreviewMode: false,
+				}),
+
+			setPreviewFilter: (key, value) =>
+				set((state) => ({
+					previewFilters: { ...state.previewFilters, [key]: value },
+				})),
+
+			applyPreviewFilters: () =>
+				set((state) => ({
+					filters: { ...state.previewFilters },
+					isPreviewMode: false,
+					activePresetId: null, // Clear preset when manually changing filters
+				})),
+
+			discardPreviewFilters: () =>
+				set((state) => ({
+					previewFilters: { ...state.filters },
+					isPreviewMode: false,
+				})),
+
+			resetPreviewFilters: () =>
+				set({
+					previewFilters: { ...DEFAULT_ANALYTICS_FILTERS },
+				}),
 
 			// Individual setters
 			setSymbols: (symbols) =>
