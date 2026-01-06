@@ -51,12 +51,12 @@ describe("Analytics Export", () => {
 
 			// Verify descending order
 			for (let i = 1; i < result.length; i++) {
-				const prevExitTime = result[i - 1].exitTime
-					? new Date(result[i - 1].exitTime).getTime()
-					: 0;
-				const currExitTime = result[i].exitTime
-					? new Date(result[i].exitTime).getTime()
-					: 0;
+				const prevTrade = result[i - 1];
+				const currTrade = result[i];
+				const prevExitTime =
+					prevTrade?.exitTime ? new Date(prevTrade.exitTime).getTime() : 0;
+				const currExitTime =
+					currTrade?.exitTime ? new Date(currTrade.exitTime).getTime() : 0;
 				expect(prevExitTime).toBeGreaterThanOrEqual(currExitTime);
 			}
 		});
@@ -143,6 +143,8 @@ describe("Analytics Export", () => {
 
 			expect(result.length).toBeGreaterThan(0);
 			const trade = result[0];
+			expect(trade).toBeDefined();
+			if (!trade) return;
 
 			// String fields
 			expect(typeof trade.symbol).toBe("string");
@@ -201,7 +203,10 @@ describe("Analytics Export", () => {
 
 			// Trade without stop loss should have null rMultiple
 			expect(result.length).toBe(1);
-			expect(result[0].rMultiple).toBeNull();
+			const trade = result[0];
+			expect(trade).toBeDefined();
+			if (!trade) return;
+			expect(trade.rMultiple).toBeNull();
 		});
 
 		it("should calculate durationMinutes correctly", async () => {
@@ -582,7 +587,10 @@ describe("Analytics Export", () => {
 			});
 
 			expect(result.length).toBe(1);
-			expect(result[0].symbol).toBe("EURUSD");
+			const trade = result[0];
+			expect(trade).toBeDefined();
+			if (!trade) return;
+			expect(trade.symbol).toBe("EURUSD");
 		});
 	});
 
