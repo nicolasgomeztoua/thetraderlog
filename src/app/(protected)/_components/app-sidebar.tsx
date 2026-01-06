@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
 import {
@@ -85,6 +86,12 @@ export function AppSidebar() {
 	const pathname = usePathname();
 	const { accounts, selectedAccount, setSelectedAccountId, isLoading } =
 		useAccount();
+	const [mounted, setMounted] = useState(false);
+
+	// Prevent hydration mismatch with Clerk UserButton
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
 	// Fetch groups for group selector
 	const { data: groups = [] } = api.accounts.getGroups.useQuery();
@@ -382,14 +389,18 @@ export function AppSidebar() {
 					</SidebarMenuItem>
 					<SidebarMenuItem>
 						<div className="flex items-center gap-3 px-2 py-2">
-							<UserButton
-								afterSignOutUrl="/"
-								appearance={{
-									elements: {
-										avatarBox: "h-8 w-8",
-									},
-								}}
-							/>
+							{mounted ? (
+								<UserButton
+									afterSignOutUrl="/"
+									appearance={{
+										elements: {
+											avatarBox: "h-8 w-8",
+										},
+									}}
+								/>
+							) : (
+								<div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+							)}
 							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 								Account
 							</span>
