@@ -14,6 +14,8 @@ interface ThemeContextValue {
 	theme: string;
 	setTheme: (themeId: string) => void;
 	isLoading: boolean;
+	pendingTheme: string | null;
+	clearPending: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -23,15 +25,13 @@ interface ThemeProviderProps {
 	initialTheme?: string;
 }
 
+/**
+ * ThemeProvider - Pure React state context (no tRPC dependency)
+ * Handles theme state and DOM updates without requiring tRPC context
+ */
 export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
 	const [theme, setThemeState] = useState(initialTheme ?? DEFAULT_THEME);
-	const utils = api.useUtils();
-
-	const { mutate: updateSettings } = api.settings.update.useMutation({
-		onSuccess: () => {
-			utils.settings.get.invalidate();
-		},
-	});
+	const [pendingTheme, setPendingTheme] = useState<string | null>(null);
 
 	// Apply theme class to document
 	useEffect(() => {
@@ -53,27 +53,52 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
 		localStorage.setItem("edgejournal-theme", theme);
 	}, [theme]);
 
-	const setTheme = useCallback(
-		(themeId: string) => {
-			// Validate theme exists
-			if (!getThemeById(themeId)) {
-				console.warn(`Theme "${themeId}" not found, using default`);
-				themeId = DEFAULT_THEME;
-			}
+	const setTheme = useCallback((themeId: string) => {
+		// Validate theme exists
+		if (!getThemeById(themeId)) {
+			console.warn(`Theme "${themeId}" not found, using default`);
+			themeId = DEFAULT_THEME;
+		}
 
-			setThemeState(themeId);
+		setThemeState(themeId);
+		setPendingTheme(themeId); // Signal for persistence
+	}, []);
 
-			// Persist to database
-			updateSettings({ theme: themeId });
-		},
-		[updateSettings],
-	);
+	const clearPending = useCallback(() => {
+		setPendingTheme(null);
+	}, []);
 
 	return (
-		<ThemeContext.Provider value={{ theme, setTheme, isLoading: false }}>
+		<ThemeContext.Provider
+			value={{ theme, setTheme, isLoading: false, pendingTheme, clearPending }}
+		>
 			{children}
 		</ThemeContext.Provider>
 	);
+}
+
+/**
+ * ThemePersistence - Syncs theme changes to the database via tRPC
+ * Must be rendered inside TRPCReactProvider and ThemeProvider
+ */
+export function ThemePersistence() {
+	const { pendingTheme, clearPending } = useTheme();
+	const utils = api.useUtils();
+
+	const { mutate: updateSettings } = api.settings.update.useMutation({
+		onSuccess: () => {
+			utils.settings.get.invalidate();
+			clearPending();
+		},
+	});
+
+	useEffect(() => {
+		if (pendingTheme) {
+			updateSettings({ theme: pendingTheme });
+		}
+	}, [pendingTheme, updateSettings]);
+
+	return null; // Render nothing, just handles side effects
 }
 
 export function useTheme() {

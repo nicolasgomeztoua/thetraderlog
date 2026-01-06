@@ -5,7 +5,7 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AccountProvider } from "@/contexts/account-context";
-import { ThemeProvider } from "@/contexts/theme-context";
+import { ThemePersistence, ThemeProvider } from "@/contexts/theme-context";
 import { SettingsHydration } from "@/hooks/use-settings-hydration";
 import { api } from "@/trpc/server";
 import { AppSidebar } from "./_components/app-sidebar";
@@ -21,6 +21,7 @@ export default async function ProtectedLayout({
 
 	return (
 		<ThemeProvider initialTheme={initialTheme}>
+			<ThemePersistence />
 			<AccountProvider>
 				<SidebarProvider>
 					<AppSidebar />
