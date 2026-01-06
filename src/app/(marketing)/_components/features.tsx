@@ -236,7 +236,7 @@ export function Features() {
 
 							{/* Hover glow effect for highlighted cards */}
 							{feature.highlight && (
-								<div className="absolute -inset-px rounded opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+								<div className="-inset-px absolute rounded opacity-0 transition-opacity duration-300 group-hover:opacity-100">
 									<div className="absolute inset-0 rounded bg-linear-to-r from-primary/10 via-transparent to-transparent" />
 								</div>
 							)}

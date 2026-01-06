@@ -3,15 +3,13 @@
 import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+	AnalyticsQueryBar,
 	BehavioralMetrics,
 	CalendarHeatmap,
 	DayOfWeekChart,
 	DrawdownTable,
 	EquityCurve,
 	ExportButton,
-	FilterChips,
-	FilterPanel,
-	FilterToggle,
 	HoldingTimeChart,
 	HourHeatmap,
 	KellyDisplay,
@@ -21,7 +19,6 @@ import {
 	MonthlyChart,
 	OvertradingChart,
 	PositionSizeChart,
-	PresetSelector,
 	RevengeTradingPanel,
 	RiskGauge,
 	RiskRewardPanel,
@@ -1150,12 +1147,19 @@ function parseFiltersFromJson(filtersJson: string): Partial<AnalyticsFilters> {
 	}
 }
 
-export default function AnalyticsPage() {
-	// Filter panel state
-	const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+// Default trading sessions
+const DEFAULT_SESSIONS = [
+	{ id: "asia", name: "Asia" },
+	{ id: "london", name: "London" },
+	{ id: "new_york", name: "New York" },
+];
 
+export default function AnalyticsPage() {
 	// Manage presets dialog state
 	const [managePresetsOpen, setManagePresetsOpen] = useState(false);
+
+	// Get selected account
+	const { selectedAccountId } = useAccount();
 
 	// Track if we've already auto-loaded a preset (to prevent re-applying on every render)
 	const hasAutoLoadedPreset = useRef(false);
@@ -1180,14 +1184,6 @@ export default function AnalyticsPage() {
 			hasAutoLoadedPreset.current = true;
 		}
 	}, [defaultPreset, activePresetId, setFilters, setActivePresetId]);
-
-	// Handle preset selection
-	const handlePresetSelect = useCallback(
-		(presetId: string | null) => {
-			setActivePresetId(presetId);
-		},
-		[setActivePresetId],
-	);
 
 	// Handle preset deletion (clear active preset if it was deleted)
 	const handlePresetDeleted = useCallback(
@@ -1232,23 +1228,6 @@ export default function AnalyticsPage() {
 		}));
 	}, [tags]);
 
-	// Build name maps for filter chips display
-	const strategyNames = useMemo(() => {
-		const map = new Map<string, string>();
-		for (const s of strategies ?? []) {
-			map.set(s.id, s.name);
-		}
-		return map;
-	}, [strategies]);
-
-	const tagNames = useMemo(() => {
-		const map = new Map<string, string>();
-		for (const t of tags ?? []) {
-			map.set(t.id, t.name);
-		}
-		return map;
-	}, [tags]);
-
 	const isFilterDataLoading = strategiesLoading || tagsLoading;
 
 	return (
@@ -1264,25 +1243,14 @@ export default function AnalyticsPage() {
 						Analyze your trading performance with professional metrics
 					</p>
 				</div>
-				<div className="flex items-center gap-2">
-					<PresetSelector
-						activePresetId={activePresetId}
-						onManageClick={() => setManagePresetsOpen(true)}
-						onPresetSelect={handlePresetSelect}
-					/>
-					<FilterToggle onClick={() => setFilterPanelOpen(true)} />
-					<ExportButton />
-				</div>
+				<ExportButton />
 			</div>
 
-			{/* Active Filter Chips */}
-			<FilterChips strategyNames={strategyNames} tagNames={tagNames} />
-
-			{/* Filter Panel (Sheet) */}
-			<FilterPanel
+			{/* Analytics Query Terminal */}
+			<AnalyticsQueryBar
+				accountId={selectedAccountId}
 				isLoading={isFilterDataLoading}
-				onOpenChange={setFilterPanelOpen}
-				open={filterPanelOpen}
+				sessions={DEFAULT_SESSIONS}
 				strategies={strategyOptions}
 				symbols={uniqueSymbols}
 				tags={tagOptions}
