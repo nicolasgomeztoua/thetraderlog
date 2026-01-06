@@ -11,6 +11,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ColumnConfig } from "@/components/trade-log/column-config";
@@ -19,6 +20,7 @@ import {
 	FilterPanel,
 	type FilterState,
 } from "@/components/trade-log/filter-panel";
+import { SortableHeader } from "@/components/trade-log/sortable-header";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -65,7 +67,9 @@ import {
 } from "@/hooks/use-debounced-mutation";
 import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
+import { useTradeSort } from "@/hooks/use-trade-sort";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
+import { sortTrades } from "@/lib/trades";
 import { api } from "@/trpc/react";
 
 export default function JournalPage() {
@@ -86,6 +90,10 @@ export default function JournalPage() {
 		resetColumns,
 		isLoading: columnsLoading,
 	} = useTradeColumns();
+
+	// Sort configuration
+	const { sort, toggleSort } = useTradeSort();
+	const router = useRouter();
 
 	// Selection for bulk actions
 	const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set());
@@ -304,12 +312,12 @@ export default function JournalPage() {
 
 	const [emptyTrashDialogOpen, setEmptyTrashDialogOpen] = useState(false);
 
-	// Merge server data with optimistic updates for instant UI
-	// Merge server data with optimistic updates
+	// Merge server data with optimistic updates, then apply sorting
 	const allTrades = useMemo(() => {
 		const trades = data?.pages.flatMap((page) => page.items) ?? [];
-		return mergeWithData(trades);
-	}, [data, mergeWithData]);
+		const merged = mergeWithData(trades);
+		return sortTrades(merged, sort);
+	}, [data, mergeWithData, sort]);
 
 	const handleSelectAll = (checked: boolean) => {
 		if (checked) {
@@ -363,94 +371,76 @@ export default function JournalPage() {
 					/>
 				);
 			case "symbol":
-				return (
-					<Link className="font-bold font-mono" href={`/journal/${trade.id}`}>
-						{trade.symbol}
-					</Link>
-				);
+				return <span className="font-bold font-mono">{trade.symbol}</span>;
 			case "side":
 				return (
-					<Link href={`/journal/${trade.id}`}>
-						<span
-							className={cn(
-								"font-mono text-xs uppercase",
-								trade.direction === "long" ? "text-profit" : "text-loss",
-							)}
-						>
-							{trade.direction === "long" ? "Long" : "Short"}
-						</span>
-					</Link>
+					<span
+						className={cn(
+							"font-mono text-xs uppercase",
+							trade.direction === "long" ? "text-profit" : "text-loss",
+						)}
+					>
+						{trade.direction === "long" ? "Long" : "Short"}
+					</span>
 				);
 			case "entry":
 				return (
-					<Link href={`/journal/${trade.id}`}>
+					<div>
 						<div className="font-mono text-sm">
 							{parseFloat(trade.entryPrice).toFixed(2)}
 						</div>
 						<div className="font-mono text-[10px] text-muted-foreground">
 							{formatDateTime(trade.entryTime)}
 						</div>
-					</Link>
+					</div>
 				);
 			case "exit":
-				return (
-					<Link href={`/journal/${trade.id}`}>
-						{trade.exitPrice ? (
-							<>
-								<div className="font-mono text-sm">
-									{parseFloat(trade.exitPrice).toFixed(2)}
-								</div>
-								<div className="font-mono text-[10px] text-muted-foreground">
-									{formatDateTime(trade.exitTime)}
-								</div>
-							</>
-						) : (
-							<span className="font-mono text-muted-foreground text-xs">—</span>
-						)}
-					</Link>
+				return trade.exitPrice ? (
+					<div>
+						<div className="font-mono text-sm">
+							{parseFloat(trade.exitPrice).toFixed(2)}
+						</div>
+						<div className="font-mono text-[10px] text-muted-foreground">
+							{formatDateTime(trade.exitTime)}
+						</div>
+					</div>
+				) : (
+					<span className="font-mono text-muted-foreground text-xs">—</span>
 				);
 			case "size":
 				return (
-					<Link className="font-mono text-sm" href={`/journal/${trade.id}`}>
+					<span className="font-mono text-sm">
 						{parseFloat(trade.quantity).toFixed(2)}
-					</Link>
+					</span>
 				);
 			case "pnl":
 				return (
-					<Link href={`/journal/${trade.id}`}>
-						<span
-							className={cn(
-								"font-bold font-mono",
-								trade.netPnl
-									? getPnLColorClass(trade.netPnl)
-									: "text-muted-foreground",
-							)}
-						>
-							{trade.netPnl ? formatCurrency(parseFloat(trade.netPnl)) : "—"}
-						</span>
-					</Link>
+					<span
+						className={cn(
+							"font-bold font-mono",
+							trade.netPnl
+								? getPnLColorClass(trade.netPnl)
+								: "text-muted-foreground",
+						)}
+					>
+						{trade.netPnl ? formatCurrency(parseFloat(trade.netPnl)) : "—"}
+					</span>
 				);
 			case "result":
-				return (
-					<Link href={`/journal/${trade.id}`}>
-						{trade.status === "open" ? (
-							<span className="font-mono text-muted-foreground text-xs">
-								Open
-							</span>
-						) : trade.exitReason === "take_profit" || trade.takeProfitHit ? (
-							<span className="font-mono text-profit text-xs">TP</span>
-						) : trade.exitReason === "stop_loss" || trade.stopLossHit ? (
-							<span className="font-mono text-loss text-xs">SL</span>
-						) : trade.exitReason === "trailing_stop" ? (
-							<span className="font-mono text-accent text-xs">Trail</span>
-						) : trade.exitReason === "breakeven" ? (
-							<span className="font-mono text-breakeven text-xs">BE</span>
-						) : (
-							<span className="font-mono text-muted-foreground text-xs">
-								Manual
-							</span>
-						)}
-					</Link>
+				return trade.status === "open" ? (
+					<span className="font-mono text-muted-foreground text-xs">Open</span>
+				) : trade.exitReason === "take_profit" || trade.takeProfitHit ? (
+					<span className="font-mono text-profit text-xs">TP</span>
+				) : trade.exitReason === "stop_loss" || trade.stopLossHit ? (
+					<span className="font-mono text-loss text-xs">SL</span>
+				) : trade.exitReason === "trailing_stop" ? (
+					<span className="font-mono text-accent text-xs">Trail</span>
+				) : trade.exitReason === "breakeven" ? (
+					<span className="font-mono text-breakeven text-xs">BE</span>
+				) : (
+					<span className="font-mono text-muted-foreground text-xs">
+						Manual
+					</span>
 				);
 			case "rating":
 				return (
@@ -871,7 +861,12 @@ export default function JournalPage() {
 															onCheckedChange={handleSelectAll}
 														/>
 													) : (
-														col.label
+														<SortableHeader
+															columnId={col.id}
+															label={col.label}
+															onSort={toggleSort}
+															sort={sort}
+														/>
 													)}
 												</TableHead>
 											))}
@@ -885,6 +880,7 @@ export default function JournalPage() {
 													selectedTrades.has(trade.id) && "bg-accent",
 												)}
 												key={trade.id}
+												onClick={() => router.push(`/journal/${trade.id}`)}
 											>
 												{visibleColumns.map((col) => (
 													<TableCell
@@ -894,7 +890,8 @@ export default function JournalPage() {
 																col.id === "checkbox" ||
 																col.id === "actions" ||
 																col.id === "rating" ||
-																col.id === "reviewed"
+																col.id === "reviewed" ||
+																col.id === "strategy"
 															) {
 																e.stopPropagation();
 															}

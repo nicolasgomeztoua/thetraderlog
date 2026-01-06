@@ -465,6 +465,7 @@ export const userSettings = createTable("user_settings", {
 
 	// Trade log column preferences (JSON array of column configs)
 	tradeLogColumns: text("trade_log_columns"), // JSON string of column visibility/order
+	tradeLogSort: text("trade_log_sort"), // JSON string of { field, direction }
 
 	// Trading sessions (JSON array of session configs)
 	// [{ name: "Asia", startHour: 0, endHour: 8, color: "#00d4ff" }, ...]
