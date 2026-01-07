@@ -1,5 +1,29 @@
 "use client";
 
+import type {
+	AgCartesianChartOptions,
+	AgPolarChartOptions,
+} from "ag-charts-community";
+
+/** Chart data types */
+interface WinLossChartData {
+	category: string;
+	value: number;
+	color: string;
+}
+
+interface PnLDistributionChartData {
+	trade: number;
+	pnl: number;
+	color: string;
+}
+
+interface CumulativePnLChartData {
+	trade: number;
+	pnl: number;
+	date: string;
+}
+
 import { AgCharts } from "ag-charts-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -223,8 +247,8 @@ function WinLossChart() {
 		filters: apiFilters,
 	});
 
-	const chartOptions = useMemo(() => {
-		if (!overview) return {};
+	const chartOptions: AgPolarChartOptions<WinLossChartData> = useMemo(() => {
+		if (!overview) return { data: [] };
 
 		return {
 			background: { fill: "transparent" },
@@ -268,8 +292,7 @@ function WinLossChart() {
 		);
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
-	return <AgCharts options={chartOptions as any} style={{ height: 300 }} />;
+	return <AgCharts options={chartOptions} style={{ height: 300 }} />;
 }
 
 function PnLDistributionChart() {
@@ -280,58 +303,59 @@ function PnLDistributionChart() {
 		limit: 100,
 	});
 
-	const chartOptions = useMemo(() => {
-		if (!data?.items) return {};
+	const chartOptions: AgCartesianChartOptions<PnLDistributionChartData> =
+		useMemo(() => {
+			if (!data?.items) return { data: [] };
 
-		const trades = data.items
-			.filter((t) => t.netPnl)
-			.map((t, i) => ({
-				trade: i + 1,
-				pnl: parseFloat(t.netPnl ?? "0"),
-				color: parseFloat(t.netPnl ?? "0") >= 0 ? "#00ff88" : "#ff3b3b",
-			}));
+			const trades = data.items
+				.filter((t) => t.netPnl)
+				.map((t, i) => ({
+					trade: i + 1,
+					pnl: parseFloat(t.netPnl ?? "0"),
+					color: parseFloat(t.netPnl ?? "0") >= 0 ? "#00ff88" : "#ff3b3b",
+				}));
 
-		return {
-			background: { fill: "transparent" },
-			data: trades.slice(0, 50),
-			series: [
-				{
-					type: "bar" as const,
-					xKey: "trade",
-					yKey: "pnl",
-					fill: "#00ff88",
-					cornerRadius: 2,
-					formatter: (params: { datum: { pnl: number } }) => ({
-						fill: params.datum.pnl >= 0 ? "#00ff88" : "#ff3b3b",
-					}),
-				},
-			],
-			axes: [
-				{
-					type: "category" as const,
-					position: "bottom" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
+			return {
+				background: { fill: "transparent" },
+				data: trades.slice(0, 50),
+				series: [
+					{
+						type: "bar" as const,
+						xKey: "trade",
+						yKey: "pnl",
+						fill: "#00ff88",
+						cornerRadius: 2,
+						formatter: (params: { datum: { pnl: number } }) => ({
+							fill: params.datum.pnl >= 0 ? "#00ff88" : "#ff3b3b",
+						}),
 					},
-					line: { color: "#1e293b" },
-				},
-				{
-					type: "number" as const,
-					position: "left" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
-						formatter: (params: { value: number }) => `$${params.value}`,
+				],
+				axes: [
+					{
+						type: "category" as const,
+						position: "bottom" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+						},
+						line: { stroke: "#1e293b" },
 					},
-					line: { color: "#1e293b" },
-					gridLine: { style: [{ stroke: "#ffffff08" }] },
-				},
-			],
-		};
-	}, [data]);
+					{
+						type: "number" as const,
+						position: "left" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+							formatter: (params: { value: number }) => `$${params.value}`,
+						},
+						line: { stroke: "#1e293b" },
+						gridLine: { style: [{ stroke: "#ffffff08" }] },
+					},
+				],
+			};
+		}, [data]);
 
 	if (isLoading) {
 		return <Skeleton className="h-[300px] w-full" />;
@@ -345,8 +369,7 @@ function PnLDistributionChart() {
 		);
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
-	return <AgCharts options={chartOptions as any} style={{ height: 300 }} />;
+	return <AgCharts options={chartOptions} style={{ height: 300 }} />;
 }
 
 function CumulativePnLChart() {
@@ -357,62 +380,63 @@ function CumulativePnLChart() {
 		limit: 100,
 	});
 
-	const chartOptions = useMemo(() => {
-		if (!data?.items) return {};
+	const chartOptions: AgCartesianChartOptions<CumulativePnLChartData> =
+		useMemo(() => {
+			if (!data?.items) return { data: [] };
 
-		let cumulative = 0;
-		const trades = data.items
-			.filter((t) => t.netPnl)
-			.reverse()
-			.map((t, i) => {
-				cumulative += parseFloat(t.netPnl ?? "0");
-				return {
-					trade: i + 1,
-					pnl: cumulative,
-					date: t.exitTime ? formatDate(t.exitTime) : "",
-				};
-			});
+			let cumulative = 0;
+			const trades = data.items
+				.filter((t) => t.netPnl)
+				.reverse()
+				.map((t, i) => {
+					cumulative += parseFloat(t.netPnl ?? "0");
+					return {
+						trade: i + 1,
+						pnl: cumulative,
+						date: t.exitTime ? formatDate(t.exitTime) : "",
+					};
+				});
 
-		return {
-			background: { fill: "transparent" },
-			data: trades,
-			series: [
-				{
-					type: "area" as const,
-					xKey: "trade",
-					yKey: "pnl",
-					fill: "#00ff8820",
-					stroke: "#00ff88",
-					strokeWidth: 2,
-					marker: { enabled: false },
-				},
-			],
-			axes: [
-				{
-					type: "category" as const,
-					position: "bottom" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
+			return {
+				background: { fill: "transparent" },
+				data: trades,
+				series: [
+					{
+						type: "area" as const,
+						xKey: "trade",
+						yKey: "pnl",
+						fill: "#00ff8820",
+						stroke: "#00ff88",
+						strokeWidth: 2,
+						marker: { enabled: false },
 					},
-					line: { color: "#1e293b" },
-				},
-				{
-					type: "number" as const,
-					position: "left" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
-						formatter: (params: { value: number }) => `$${params.value}`,
+				],
+				axes: [
+					{
+						type: "category" as const,
+						position: "bottom" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+						},
+						line: { stroke: "#1e293b" },
 					},
-					line: { color: "#1e293b" },
-					gridLine: { style: [{ stroke: "#ffffff08" }] },
-				},
-			],
-		};
-	}, [data]);
+					{
+						type: "number" as const,
+						position: "left" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+							formatter: (params: { value: number }) => `$${params.value}`,
+						},
+						line: { stroke: "#1e293b" },
+						gridLine: { style: [{ stroke: "#ffffff08" }] },
+					},
+				],
+			};
+		}, [data]);
 
 	if (isLoading) {
 		return <Skeleton className="h-[300px] w-full" />;
@@ -426,8 +450,7 @@ function CumulativePnLChart() {
 		);
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
-	return <AgCharts options={chartOptions as any} style={{ height: 300 }} />;
+	return <AgCharts options={chartOptions} style={{ height: 300 }} />;
 }
 
 // =============================================================================

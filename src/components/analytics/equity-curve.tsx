@@ -1,3 +1,4 @@
+import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
 import {
@@ -17,6 +18,12 @@ interface EquityPoint {
 	tradeIndex: number;
 	tradeId: string | null;
 	symbol: string | null;
+}
+
+/** Chart data point with transformed/computed fields */
+interface EquityCurveChartData extends EquityPoint {
+	dateObj: Date;
+	displayDate: string;
 }
 
 interface EquityCurveProps {
@@ -85,127 +92,127 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 	}, [data]);
 
 	// AG Charts configuration
-	const chartOptions = useMemo(() => {
-		if (chartData.length === 0) return {};
+	const chartOptions: AgCartesianChartOptions<EquityCurveChartData> =
+		useMemo(() => {
+			if (chartData.length === 0) return { data: [] };
 
-		return {
-			background: { fill: "transparent" },
-			data: chartData,
-			series: [
-				// Peak area (will show as "underwater" drawdown when below peak)
-				{
-					type: "area" as const,
-					xKey: "tradeIndex",
-					yKey: "peak",
-					yName: "Peak",
-					fill: ANALYTICS_COLORS.lossFill,
-					stroke: ANALYTICS_COLORS.muted,
-					strokeWidth: 1,
-					strokeOpacity: 0.3,
-					lineDash: [4, 4],
-					marker: { enabled: false },
-					tooltip: { enabled: false },
-				},
-				// Main cumulative P&L area (stacked on top, covers peak area where not in DD)
-				{
-					type: "area" as const,
-					xKey: "tradeIndex",
-					yKey: "equity",
-					yName: "Cumulative P&L",
-					fill:
-						stats.totalPnl >= 0
-							? ANALYTICS_COLORS.profitFill
-							: ANALYTICS_COLORS.lossFill,
-					stroke:
-						stats.totalPnl >= 0
-							? ANALYTICS_COLORS.profit
-							: ANALYTICS_COLORS.loss,
-					strokeWidth: CHART_DIMENSIONS.equityCurve.strokeWidth,
-					marker: {
-						enabled: true,
-						size: CHART_DIMENSIONS.equityCurve.markerSize,
+			return {
+				background: { fill: "transparent" },
+				data: chartData,
+				series: [
+					// Peak area (will show as "underwater" drawdown when below peak)
+					{
+						type: "area" as const,
+						xKey: "tradeIndex",
+						yKey: "peak",
+						yName: "Peak",
+						fill: ANALYTICS_COLORS.lossFill,
+						stroke: ANALYTICS_COLORS.muted,
+						strokeWidth: 1,
+						strokeOpacity: 0.3,
+						lineDash: [4, 4],
+						marker: { enabled: false },
+						tooltip: { enabled: false },
+					},
+					// Main cumulative P&L area (stacked on top, covers peak area where not in DD)
+					{
+						type: "area" as const,
+						xKey: "tradeIndex",
+						yKey: "equity",
+						yName: "Cumulative P&L",
 						fill:
+							stats.totalPnl >= 0
+								? ANALYTICS_COLORS.profitFill
+								: ANALYTICS_COLORS.lossFill,
+						stroke:
 							stats.totalPnl >= 0
 								? ANALYTICS_COLORS.profit
 								: ANALYTICS_COLORS.loss,
-						stroke: ANALYTICS_COLORS.background,
-						strokeWidth: 1,
-					},
-					tooltip: {
-						renderer: (params: {
-							datum: {
-								symbol: string | null;
-								displayDate: string;
-								tradeIndex: number;
-								equity: number;
-								pnl: number;
-								drawdown: number;
-							};
-						}) => {
-							const d = params.datum;
-							// Values are already rounded in chartData transformation
-							const pnlColor =
-								d.pnl >= 0 ? ANALYTICS_COLORS.profit : ANALYTICS_COLORS.loss;
-							const cumulativeColor =
-								d.equity >= 0 ? ANALYTICS_COLORS.profit : ANALYTICS_COLORS.loss;
-							const ddText =
-								d.drawdown > 0
-									? `<div style="color: ${ANALYTICS_COLORS.loss}; margin-top: 4px;">Drawdown: <b>-${formatCurrency(d.drawdown)}</b></div>`
-									: "";
+						strokeWidth: CHART_DIMENSIONS.equityCurve.strokeWidth,
+						marker: {
+							enabled: true,
+							size: CHART_DIMENSIONS.equityCurve.markerSize,
+							fill:
+								stats.totalPnl >= 0
+									? ANALYTICS_COLORS.profit
+									: ANALYTICS_COLORS.loss,
+							stroke: ANALYTICS_COLORS.background,
+							strokeWidth: 1,
+						},
+						tooltip: {
+							renderer: (params: {
+								datum: {
+									symbol: string | null;
+									displayDate: string;
+									tradeIndex: number;
+									equity: number;
+									pnl: number;
+									drawdown: number;
+								};
+							}) => {
+								const d = params.datum;
+								// Values are already rounded in chartData transformation
+								const pnlColor =
+									d.pnl >= 0 ? ANALYTICS_COLORS.profit : ANALYTICS_COLORS.loss;
+								const cumulativeColor =
+									d.equity >= 0
+										? ANALYTICS_COLORS.profit
+										: ANALYTICS_COLORS.loss;
+								const ddText =
+									d.drawdown > 0
+										? `<div style="color: ${ANALYTICS_COLORS.loss}; margin-top: 4px;">Drawdown: <b>-${formatCurrency(d.drawdown)}</b></div>`
+										: "";
 
-							return {
-								title: `${d.displayDate} · Trade #${d.tradeIndex}`,
-								content: `
+								return {
+									title: `${d.displayDate} · Trade #${d.tradeIndex}`,
+									content: `
 									${d.symbol ? `<div style="color: ${ANALYTICS_COLORS.primary}; font-weight: bold;">${d.symbol}</div>` : ""}
 									<div style="margin-top: 4px;">Cumulative P&L: <b style="color: ${cumulativeColor}">${formatCurrency(d.equity)}</b></div>
 									<div>Trade P&L: <b style="color: ${pnlColor}">${formatCurrency(d.pnl)}</b></div>
 									${ddText}
 								`,
-							};
+								};
+							},
 						},
 					},
-				},
-			],
-			axes: [
-				{
-					type: "number" as const,
-					position: "bottom" as const,
-					label: {
-						color: CHART_AXIS_STYLE.label.fill,
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
-						formatter: (params: { value: number }) => `#${params.value}`,
-					},
-					line: { color: CHART_AXIS_STYLE.line.stroke },
-					tick: { color: CHART_AXIS_STYLE.tick.stroke },
-					gridLine: { enabled: false },
-				},
-				{
-					type: "number" as const,
-					position: "left" as const,
-					label: {
-						color: CHART_AXIS_STYLE.label.fill,
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
-						formatter: (params: { value: number }) => {
-							const v = Math.round(params.value * 100) / 100;
-							if (Math.abs(v) >= 1000) {
-								return `$${(v / 1000).toFixed(1)}k`;
-							}
-							return `$${v.toFixed(0)}`;
+				],
+				axes: [
+					{
+						type: "number" as const,
+						position: "bottom" as const,
+						label: {
+							color: CHART_AXIS_STYLE.label.fill,
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+							formatter: (params: { value: number }) => `#${params.value}`,
 						},
+						line: { stroke: CHART_AXIS_STYLE.line.stroke },
+						tick: { stroke: CHART_AXIS_STYLE.tick.stroke },
+						gridLine: { enabled: false },
 					},
-					line: { color: CHART_AXIS_STYLE.line.stroke },
-					tick: { color: CHART_AXIS_STYLE.tick.stroke },
-					gridLine: { style: [{ stroke: ANALYTICS_COLORS.gridLight }] },
-				},
-			],
-			legend: { enabled: false },
-			tooltip: {
-				class: "ag-chart-tooltip-dark",
-			},
-		};
-	}, [chartData, stats.totalPnl]);
+					{
+						type: "number" as const,
+						position: "left" as const,
+						label: {
+							color: CHART_AXIS_STYLE.label.fill,
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+							formatter: (params: { value: number }) => {
+								const v = Math.round(params.value * 100) / 100;
+								if (Math.abs(v) >= 1000) {
+									return `$${(v / 1000).toFixed(1)}k`;
+								}
+								return `$${v.toFixed(0)}`;
+							},
+						},
+						line: { stroke: CHART_AXIS_STYLE.line.stroke },
+						tick: { stroke: CHART_AXIS_STYLE.tick.stroke },
+						gridLine: { style: [{ stroke: ANALYTICS_COLORS.gridLight }] },
+					},
+				],
+				legend: { enabled: false },
+			};
+		}, [chartData, stats.totalPnl]);
 
 	if (data.length === 0) {
 		return (
@@ -258,7 +265,7 @@ export function EquityCurve({ data, className }: EquityCurveProps) {
 			{/* Chart */}
 			<div className="relative">
 				<AgCharts
-					options={chartOptions as any}
+					options={chartOptions}
 					style={{ height: CHART_DIMENSIONS.equityCurve.height }}
 				/>
 

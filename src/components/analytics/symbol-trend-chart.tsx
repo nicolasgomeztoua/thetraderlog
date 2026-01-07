@@ -1,5 +1,6 @@
 "use client";
 
+import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useMemo, useState } from "react";
 import { cn, formatCurrency } from "@/lib/shared";
@@ -77,7 +78,9 @@ export function SymbolTrendChart({
 		setSelectedSymbols(new Set(symbols.slice(0, n).map((s) => s.symbol)));
 	};
 
-	const chartOptions = useMemo(() => {
+	const chartOptions: AgCartesianChartOptions<
+		Record<string, string | number>
+	> | null = useMemo(() => {
 		if (!symbols || symbols.length === 0 || months.length === 0) return null;
 
 		// Filter to selected symbols
@@ -120,10 +123,8 @@ export function SymbolTrendChart({
 				}) => {
 					const value = params.datum[params.yKey];
 					return {
-						content: `<div style="font-family: JetBrains Mono, monospace; font-size: 11px;">
-							<strong>${params.yKey}</strong><br/>
-							${params.datum.month}: ${formatCurrency(Number(value))}
-						</div>`,
+						title: String(params.yKey),
+						content: `${params.datum.month}: ${formatCurrency(Number(value))}`,
 					};
 				},
 			},
@@ -143,7 +144,7 @@ export function SymbolTrendChart({
 						fontSize: 9,
 						rotation: months.length > 6 ? 45 : 0,
 					},
-					line: { color: "#1e293b" },
+					line: { stroke: "#1e293b" },
 				},
 				{
 					type: "number" as const,
@@ -155,7 +156,7 @@ export function SymbolTrendChart({
 						formatter: (params: { value: number }) =>
 							`$${(params.value / 1000).toFixed(params.value >= 1000 ? 0 : 1)}k`,
 					},
-					line: { color: "#1e293b" },
+					line: { stroke: "#1e293b" },
 					gridLine: { style: [{ stroke: "#ffffff08" }] },
 				},
 			],
@@ -284,8 +285,7 @@ export function SymbolTrendChart({
 
 			{/* Chart */}
 			{chartOptions && (
-				// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
-				<AgCharts options={chartOptions as any} style={{ height: 300 }} />
+				<AgCharts options={chartOptions} style={{ height: 300 }} />
 			)}
 		</div>
 	);
