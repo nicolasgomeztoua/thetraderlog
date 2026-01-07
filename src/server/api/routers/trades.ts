@@ -328,7 +328,10 @@ export const tradesRouter = createTRPCRouter({
 
 			// Filter by result (win/loss/breakeven) post-query
 			if (input?.result) {
-				const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+				const beThreshold = await getUserBreakevenThreshold(
+					ctx.db,
+					ctx.user.id,
+				);
 				items = items.filter((trade) => {
 					const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
 					if (input.result === "win") return pnl > beThreshold;

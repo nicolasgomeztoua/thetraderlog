@@ -339,7 +339,6 @@ export function calculateMAEMFE(
 	};
 }
 
-
 /**
  * Analyze price action after trade exit
  * Useful for "what if" analysis

@@ -18,13 +18,13 @@ import {
 	findDrawdownPeriods,
 	parsePnl,
 } from "@/lib/analytics";
-import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import {
 	getDateStringInTimezone,
 	getDayOfWeekInTimezone,
 	getHourInTimezone,
 	getMonthStringInTimezone,
 } from "@/lib/shared";
+import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
@@ -244,8 +244,7 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 	// R-Multiple range filter
 	if (
 		filters.rMultipleRange &&
-		(filters.rMultipleRange.min !== null ||
-			filters.rMultipleRange.max !== null)
+		(filters.rMultipleRange.min !== null || filters.rMultipleRange.max !== null)
 	) {
 		filtered = filtered.filter((trade) => {
 			if (!trade.stopLoss || !trade.entryPrice || !trade.quantity) return true;
