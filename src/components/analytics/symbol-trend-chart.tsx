@@ -122,10 +122,10 @@ export function SymbolTrendChart({
 					yKey: string;
 				}) => {
 					const value = params.datum[params.yKey];
-					return `<div style="font-family: JetBrains Mono, monospace; font-size: 11px;">
-						<strong>${params.yKey}</strong><br/>
-						${params.datum.month}: ${formatCurrency(Number(value))}
-					</div>`;
+					return {
+						title: String(params.yKey),
+						content: `${params.datum.month}: ${formatCurrency(Number(value))}`,
+					};
 				},
 			},
 		}));

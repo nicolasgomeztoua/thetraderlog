@@ -92,10 +92,10 @@ export function SymbolDistributionChart({
 									viewMode === "trades"
 										? `${d.value} trades`
 										: formatCurrency(d.actualValue);
-								return `<div style="font-family: JetBrains Mono, monospace; font-size: 11px;">
-								<strong>${d.symbol}</strong><br/>
-								${displayValue}
-							</div>`;
+								return {
+									title: d.symbol,
+									content: displayValue,
+								};
 							},
 						},
 						highlightStyle: {
