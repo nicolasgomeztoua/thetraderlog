@@ -1,7 +1,15 @@
 import { TRADE_SORT_FIELDS, type TradeSort } from "@/lib/constants";
 
-/** Calculate R-Multiple for a trade (returns null if can't be calculated) */
-function calculateRMultiple(trade: SortableTrade): number | null {
+/**
+ * Calculate simplified R-Multiple for sorting purposes.
+ * Uses price-based calculation without point values.
+ *
+ * Note: This simplified version is acceptable for sorting because point values
+ * are constant multipliers that don't affect relative sort order within a symbol.
+ * For actual R-multiple display/filtering, use calculateActualRMultiple from
+ * @/lib/trades/calculations which includes point values.
+ */
+function calculateRMultipleForSort(trade: SortableTrade): number | null {
 	if (!trade.entryPrice || !trade.exitPrice || !trade.stopLoss) {
 		return null;
 	}
@@ -71,8 +79,8 @@ export function sortTrades<T extends SortableTrade>(
 				bVal = b.strategy?.name ?? null;
 				break;
 			case "_rMultiple":
-				aVal = calculateRMultiple(a);
-				bVal = calculateRMultiple(b);
+				aVal = calculateRMultipleForSort(a);
+				bVal = calculateRMultipleForSort(b);
 				break;
 			default:
 				aVal = a[sortKey as keyof SortableTrade] as

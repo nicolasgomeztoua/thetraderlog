@@ -18,7 +18,7 @@ import {
 	findDrawdownPeriods,
 	parsePnl,
 } from "@/lib/analytics";
-import { getPointValue } from "@/lib/market-data";
+import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import {
 	getDateStringInTimezone,
 	getDayOfWeekInTimezone,
@@ -175,7 +175,6 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 	options: {
 		beThreshold: number;
 		userTimezone: string;
-		getPointValueFn?: typeof getPointValue;
 	},
 ): T[] {
 	if (!filters) return trades;
@@ -243,30 +242,25 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 	}
 
 	// R-Multiple range filter
-	const getPointValueFn = options.getPointValueFn;
 	if (
 		filters.rMultipleRange &&
 		(filters.rMultipleRange.min !== null ||
-			filters.rMultipleRange.max !== null) &&
-		getPointValueFn
+			filters.rMultipleRange.max !== null)
 	) {
 		filtered = filtered.filter((trade) => {
 			if (!trade.stopLoss || !trade.entryPrice || !trade.quantity) return true;
 
-			const entryPrice = parseFloat(trade.entryPrice);
-			const stopLoss = parseFloat(trade.stopLoss);
-			const quantity = parseFloat(trade.quantity);
-			const netPnl = parsePnl(trade.netPnl);
-
-			const riskPerUnit = Math.abs(entryPrice - stopLoss);
-			if (riskPerUnit === 0 || quantity === 0) return true;
-
-			const pointValue = getPointValueFn(
+			// Use shared utility for consistent R-multiple calculation
+			const rMultiple = calculateActualRMultiple(
+				parsePnl(trade.netPnl),
+				parseFloat(trade.entryPrice),
+				parseFloat(trade.stopLoss),
+				parseFloat(trade.quantity),
 				trade.symbol ?? "",
 				(trade.instrumentType as "futures" | "forex") ?? "futures",
 			);
-			const plannedRisk = riskPerUnit * pointValue * quantity;
-			const rMultiple = netPnl / plannedRisk;
+
+			if (rMultiple === null) return true;
 
 			if (
 				filters.rMultipleRange?.min !== null &&
@@ -361,7 +355,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -523,7 +516,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -619,7 +611,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -712,7 +703,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -804,7 +794,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -980,7 +969,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -1122,7 +1110,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -1259,7 +1246,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -1343,7 +1329,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -1431,7 +1416,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -1461,25 +1445,19 @@ export const analyticsRouter = createTRPCRouter({
 			for (const trade of closedTrades) {
 				if (!trade.stopLoss || !trade.entryPrice) continue;
 
-				const entryPrice = parseFloat(trade.entryPrice);
-				const stopLoss = parseFloat(trade.stopLoss);
-				const quantity = parseFloat(trade.quantity);
 				const netPnl = parsePnl(trade.netPnl);
 
-				// Calculate risk per unit based on direction
-				const riskPerUnit = Math.abs(entryPrice - stopLoss);
-				if (riskPerUnit === 0 || quantity === 0) continue;
-
-				// Get point value for this instrument to convert to dollars
-				const pointValue = getPointValue(
+				// Use shared utility for consistent R-multiple calculation
+				const rMultiple = calculateActualRMultiple(
+					netPnl,
+					parseFloat(trade.entryPrice),
+					parseFloat(trade.stopLoss),
+					parseFloat(trade.quantity),
 					trade.symbol,
 					trade.instrumentType as "futures" | "forex",
 				);
 
-				// Total planned risk in dollars
-				const plannedRisk = riskPerUnit * pointValue * quantity;
-				// R-Multiple = actual P&L / planned risk
-				const rMultiple = netPnl / plannedRisk;
+				if (rMultiple === null) continue;
 
 				totalWithR++;
 				allRMultiples.push(rMultiple);
@@ -1593,7 +1571,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -1627,21 +1604,19 @@ export const analyticsRouter = createTRPCRouter({
 
 				const entryPrice = parseFloat(trade.entryPrice);
 				const stopLoss = parseFloat(trade.stopLoss);
-				const quantity = parseFloat(trade.quantity);
 				const netPnl = parsePnl(trade.netPnl);
 
-				const riskPerUnit = Math.abs(entryPrice - stopLoss);
-				if (riskPerUnit === 0 || quantity === 0) continue;
-
-				// Get point value for this instrument to convert to dollars
-				const pointValue = getPointValue(
+				// Use shared utility for consistent R-multiple calculation
+				const rMultiple = calculateActualRMultiple(
+					netPnl,
+					entryPrice,
+					stopLoss,
+					parseFloat(trade.quantity),
 					trade.symbol,
 					trade.instrumentType as "futures" | "forex",
 				);
 
-				// Calculate planned risk in dollars
-				const plannedRisk = riskPerUnit * pointValue * quantity;
-				const rMultiple = netPnl / plannedRisk;
+				if (rMultiple === null) continue;
 				rMultiples.push(rMultiple);
 
 				if (netPnl > beThreshold) wins++;
@@ -1650,8 +1625,9 @@ export const analyticsRouter = createTRPCRouter({
 				// If we have TP, calculate planned R:R and efficiency
 				if (trade.takeProfit) {
 					const takeProfit = parseFloat(trade.takeProfit);
+					const riskPerUnit = Math.abs(entryPrice - stopLoss);
 					const rewardPerUnit = Math.abs(takeProfit - entryPrice);
-					const plannedRR = rewardPerUnit / riskPerUnit;
+					const plannedRR = riskPerUnit > 0 ? rewardPerUnit / riskPerUnit : 0;
 					plannedRRs.push(plannedRR);
 
 					// Trade efficiency: how much of planned R was captured
@@ -1779,7 +1755,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -1942,7 +1917,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -2081,7 +2055,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -2218,7 +2191,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -2463,7 +2435,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -2693,7 +2664,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -2901,7 +2871,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -3040,7 +3009,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -3211,7 +3179,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -3596,7 +3563,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 
@@ -3644,29 +3610,18 @@ export const analyticsRouter = createTRPCRouter({
 
 			// Calculate R-Multiple and duration for each trade
 			const exportData = closedTrades.map((trade) => {
-				// Calculate R-Multiple
-				let rMultiple: number | null = null;
-				if (
-					trade.stopLoss &&
-					trade.entryPrice &&
-					trade.quantity &&
-					trade.netPnl
-				) {
-					const entryPrice = parseFloat(trade.entryPrice);
-					const stopLoss = parseFloat(trade.stopLoss);
-					const quantity = parseFloat(trade.quantity);
-					const netPnl = parsePnl(trade.netPnl);
-
-					const riskPerUnit = Math.abs(entryPrice - stopLoss);
-					if (riskPerUnit > 0 && quantity > 0) {
-						const pointValue = getPointValue(
-							trade.symbol,
-							(trade.instrumentType as "futures" | "forex") ?? "futures",
-						);
-						const plannedRisk = riskPerUnit * pointValue * quantity;
-						rMultiple = netPnl / plannedRisk;
-					}
-				}
+				// Calculate R-Multiple using shared utility
+				const rMultiple =
+					trade.stopLoss && trade.entryPrice && trade.quantity && trade.netPnl
+						? calculateActualRMultiple(
+								parsePnl(trade.netPnl),
+								parseFloat(trade.entryPrice),
+								parseFloat(trade.stopLoss),
+								parseFloat(trade.quantity),
+								trade.symbol,
+								(trade.instrumentType as "futures" | "forex") ?? "futures",
+							)
+						: null;
 
 				// Calculate duration in minutes
 				let durationMinutes: number | null = null;
@@ -3785,7 +3740,6 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
-					getPointValueFn: getPointValue,
 				},
 			);
 

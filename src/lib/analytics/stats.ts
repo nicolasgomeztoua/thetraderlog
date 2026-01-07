@@ -3,6 +3,8 @@
 // Shared module for calculating win rate, profit factor, avg win/loss, etc.
 // =============================================================================
 
+import { getPointValue } from "@/lib/market-data/symbols";
+
 /**
  * Minimal trade interface for stats calculations
  */
@@ -11,6 +13,8 @@ export interface TradeForStats {
 	entryPrice?: string;
 	stopLoss?: string | null;
 	quantity?: string;
+	symbol?: string;
+	instrumentType?: "futures" | "forex";
 }
 
 /**
@@ -86,17 +90,31 @@ export function calculateProfitFactor(
 
 /**
  * Calculate R-Multiple for a single trade
- * R = PnL / Risk, where Risk = |entry - stopLoss| * quantity
+ * R = PnL / Risk, where Risk = |entry - stopLoss| * pointValue * quantity
+ *
+ * This accounts for:
+ * - Actual dollar P&L (including fees/commissions)
+ * - Instrument point values (ES = $50/point, NQ = $20/point, etc.)
+ * - Position size (quantity)
  */
 export function calculateRMultipleFromTrade(
 	netPnl: number,
 	entryPrice: number,
 	stopLoss: number,
 	quantity: number,
+	symbol?: string,
+	instrumentType?: "futures" | "forex",
 ): number | null {
 	const riskPerUnit = Math.abs(entryPrice - stopLoss);
 	if (riskPerUnit === 0 || quantity === 0) return null;
-	return netPnl / (riskPerUnit * quantity);
+
+	// Get point value for proper risk calculation
+	const pointValue =
+		symbol && instrumentType ? getPointValue(symbol, instrumentType) : 1;
+	const plannedRisk = riskPerUnit * pointValue * quantity;
+
+	if (plannedRisk === 0) return null;
+	return netPnl / plannedRisk;
 }
 
 // =============================================================================
@@ -276,11 +294,20 @@ export function calculateAggregateStats(
 	// Calculate average R-Multiple for trades with stop losses
 	let avgRMultiple: number | null = null;
 	const tradesWithSL = trades.filter(
-		(t): t is TradeForStats & { stopLoss: string; entryPrice: string } =>
+		(
+			t,
+		): t is TradeForStats & {
+			stopLoss: string;
+			entryPrice: string;
+			symbol: string;
+			instrumentType: "futures" | "forex";
+		} =>
 			t.stopLoss !== null &&
 			t.stopLoss !== undefined &&
 			t.entryPrice !== undefined &&
-			t.netPnl !== null,
+			t.netPnl !== null &&
+			t.symbol !== undefined &&
+			t.instrumentType !== undefined,
 	);
 
 	if (tradesWithSL.length > 0) {
@@ -291,7 +318,14 @@ export function calculateAggregateStats(
 			const qty = t.quantity ? parseFloat(t.quantity) : 1;
 			const pnl = parsePnl(t.netPnl);
 
-			const rMultiple = calculateRMultipleFromTrade(pnl, entry, sl, qty);
+			const rMultiple = calculateRMultipleFromTrade(
+				pnl,
+				entry,
+				sl,
+				qty,
+				t.symbol,
+				t.instrumentType,
+			);
 			if (rMultiple !== null) {
 				rMultiples.push(rMultiple);
 			}

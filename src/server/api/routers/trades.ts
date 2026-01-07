@@ -15,7 +15,6 @@ import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
 import type { SortField } from "@/lib/constants/trade-log";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
-import { getPointValue } from "@/lib/market-data/symbols";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -24,6 +23,7 @@ import {
 	instrumentTypeEnum,
 	tradeStatusEnum,
 } from "@/lib/shared";
+import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import { computeTradeHash } from "@/lib/trades/hash";
 import {
 	getActiveAccountsSubquery,
@@ -328,7 +328,7 @@ export const tradesRouter = createTRPCRouter({
 
 			// Filter by result (win/loss/breakeven) post-query
 			if (input?.result) {
-				const beThreshold = 3.0; // Default, could fetch from user settings
+				const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
 				items = items.filter((trade) => {
 					const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
 					if (input.result === "win") return pnl > beThreshold;
@@ -345,23 +345,17 @@ export const tradesRouter = createTRPCRouter({
 						return false;
 					}
 
-					const entry = parseFloat(trade.entryPrice);
-					const stop = parseFloat(trade.stopLoss);
-					const netPnl = parseFloat(trade.netPnl);
-					const quantity = parseFloat(trade.quantity);
-
-					const riskPerUnit = Math.abs(entry - stop);
-					if (riskPerUnit === 0 || quantity === 0) return false;
-
-					// Use actual R-multiple: netPnl / (riskPerUnit * pointValue * quantity)
-					const pointValue = getPointValue(
+					// Use shared utility for consistent R-multiple calculation
+					const rMultiple = calculateActualRMultiple(
+						parseFloat(trade.netPnl),
+						parseFloat(trade.entryPrice),
+						parseFloat(trade.stopLoss),
+						parseFloat(trade.quantity),
 						trade.symbol,
 						trade.instrumentType,
 					);
-					const plannedRisk = riskPerUnit * pointValue * quantity;
-					if (plannedRisk === 0) return false;
 
-					const rMultiple = netPnl / plannedRisk;
+					if (rMultiple === null) return false;
 
 					if (input.minRMultiple != null && rMultiple < input.minRMultiple) {
 						return false;

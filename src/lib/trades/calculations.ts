@@ -61,26 +61,6 @@ export function calculateTicksPerContract(
 }
 
 /**
- * Calculate R-Multiple: P&L relative to risk (theoretical, price-based)
- * @deprecated Use calculateActualRMultiple for accurate R-multiple including point values
- */
-export function calculateRMultiple(
-	entryPrice: number,
-	exitPrice: number | null,
-	stopLoss: number | null,
-	direction: "long" | "short",
-): number | null {
-	if (exitPrice === null || stopLoss === null) return null;
-
-	const risk = Math.abs(entryPrice - stopLoss);
-	if (risk === 0) return null;
-
-	const pnl =
-		direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
-	return pnl / risk;
-}
-
-/**
  * Calculate actual R-Multiple using real P&L and proper risk calculation
  * Formula: netPnl / (riskPerUnit * pointValue * quantity)
  *
