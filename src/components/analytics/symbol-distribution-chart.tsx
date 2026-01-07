@@ -1,5 +1,6 @@
 "use client";
 
+import type { AgPolarChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useMemo, useState } from "react";
 import { ANALYTICS_COLORS, getPaletteColor } from "@/lib/analytics";
@@ -23,6 +24,14 @@ interface SymbolDistributionChartProps {
 
 type ViewMode = "trades" | "pnl";
 
+/** Chart data point for donut chart */
+interface DistributionChartData {
+	symbol: string;
+	value: number;
+	actualValue: number;
+	color: string;
+}
+
 /**
  * Donut chart showing trade distribution by symbol
  * Supports toggle between trade count and P&L views
@@ -33,87 +42,86 @@ export function SymbolDistributionChart({
 }: SymbolDistributionChartProps) {
 	const [viewMode, setViewMode] = useState<ViewMode>("trades");
 
-	const chartOptions = useMemo(() => {
-		if (!data || data.length === 0) return null;
+	const chartOptions: AgPolarChartOptions<DistributionChartData> | null =
+		useMemo(() => {
+			if (!data || data.length === 0) return null;
 
-		// For P&L view, we need to handle negative values
-		// Show absolute values but indicate profit/loss with color
-		const chartData = data.map((d, i) => ({
-			symbol: d.symbol,
-			value: viewMode === "trades" ? d.trades : Math.abs(d.pnl),
-			actualValue: viewMode === "trades" ? d.trades : d.pnl,
-			color:
-				viewMode === "pnl"
-					? d.pnl >= 0
-						? ANALYTICS_COLORS.profit
-						: ANALYTICS_COLORS.loss
-					: getPaletteColor(i),
-		}));
+			// For P&L view, we need to handle negative values
+			// Show absolute values but indicate profit/loss with color
+			const chartData = data.map((d, i) => ({
+				symbol: d.symbol,
+				value: viewMode === "trades" ? d.trades : Math.abs(d.pnl),
+				actualValue: viewMode === "trades" ? d.trades : d.pnl,
+				color:
+					viewMode === "pnl"
+						? d.pnl >= 0
+							? ANALYTICS_COLORS.profit
+							: ANALYTICS_COLORS.loss
+						: getPaletteColor(i),
+			}));
 
-		// Sort by value descending for better visualization
-		chartData.sort((a, b) => b.value - a.value);
+			// Sort by value descending for better visualization
+			chartData.sort((a, b) => b.value - a.value);
 
-		return {
-			background: { fill: "transparent" },
-			data: chartData,
-			series: [
-				{
-					type: "donut" as const,
-					angleKey: "value",
-					calloutLabelKey: "symbol",
-					sectorLabelKey: "value",
-					fills: chartData.map((d) => d.color),
-					innerRadiusRatio: 0.6,
-					calloutLabel: {
-						enabled: chartData.length <= 8,
-						color: ANALYTICS_COLORS.mutedLight,
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 10,
-					},
-					sectorLabel: {
-						enabled: false,
-					},
-					tooltip: {
-						renderer: (params: {
-							datum: { symbol: string; actualValue: number; value: number };
-						}) => {
-							const d = params.datum;
-							const displayValue =
-								viewMode === "trades"
-									? `${d.value} trades`
-									: formatCurrency(d.actualValue);
-							return {
-								content: `<div style="font-family: JetBrains Mono, monospace; font-size: 11px;">
-									<strong>${d.symbol}</strong><br/>
-									${displayValue}
-								</div>`,
-							};
+			return {
+				background: { fill: "transparent" },
+				data: chartData,
+				series: [
+					{
+						type: "donut" as const,
+						angleKey: "value",
+						calloutLabelKey: "symbol",
+						sectorLabelKey: "value",
+						fills: chartData.map((d) => d.color),
+						innerRadiusRatio: 0.6,
+						calloutLabel: {
+							enabled: chartData.length <= 8,
+							color: ANALYTICS_COLORS.mutedLight,
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 10,
+						},
+						sectorLabel: {
+							enabled: false,
+						},
+						tooltip: {
+							renderer: (params: {
+								datum: { symbol: string; actualValue: number; value: number };
+							}) => {
+								const d = params.datum;
+								const displayValue =
+									viewMode === "trades"
+										? `${d.value} trades`
+										: formatCurrency(d.actualValue);
+								return `<div style="font-family: JetBrains Mono, monospace; font-size: 11px;">
+								<strong>${d.symbol}</strong><br/>
+								${displayValue}
+							</div>`;
+							},
+						},
+						highlightStyle: {
+							item: {
+								fillOpacity: 0.8,
+								strokeWidth: 2,
+							},
 						},
 					},
-					highlightStyle: {
-						item: {
-							fillOpacity: 0.8,
-							strokeWidth: 2,
+				],
+				legend: {
+					position: "right" as const,
+					item: {
+						label: {
+							color: ANALYTICS_COLORS.mutedLight,
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 10,
+						},
+						marker: {
+							size: 10,
 						},
 					},
+					spacing: 8,
 				},
-			],
-			legend: {
-				position: "right" as const,
-				item: {
-					label: {
-						color: ANALYTICS_COLORS.mutedLight,
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 10,
-					},
-					marker: {
-						size: 10,
-					},
-				},
-				spacing: 8,
-			},
-		};
-	}, [data, viewMode]);
+			};
+		}, [data, viewMode]);
 
 	// Calculate summary stats
 	const summary = useMemo(() => {
@@ -197,8 +205,7 @@ export function SymbolDistributionChart({
 
 			{/* Chart */}
 			{chartOptions && (
-				// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
-				<AgCharts options={chartOptions as any} style={{ height: 280 }} />
+				<AgCharts options={chartOptions} style={{ height: 280 }} />
 			)}
 
 			{/* Bottom stats row */}

@@ -1,3 +1,4 @@
+import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { useMemo } from "react";
 import {
@@ -16,6 +17,13 @@ interface MonthData {
 	losses: number;
 	winRate: number;
 	avgPnl: number;
+}
+
+/** Chart data point with computed fields */
+interface MonthlyChartData extends MonthData {
+	cumulative: number;
+	pnlRounded: number;
+	monthLabel: string;
 }
 
 interface MonthlyChartProps {
@@ -73,115 +81,113 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 	}, [data]);
 
 	// AG Charts configuration
-	const chartOptions = useMemo(() => {
-		if (chartData.length === 0) return {};
+	const chartOptions: AgCartesianChartOptions<MonthlyChartData> =
+		useMemo(() => {
+			if (chartData.length === 0) return {};
 
-		return {
-			background: { fill: "transparent" },
-			data: chartData,
-			series: [
-				{
-					type: "area" as const,
-					xKey: "monthLabel",
-					yKey: "cumulative",
-					yName: "Cumulative P&L",
-					fill:
-						stats.totalPnl >= 0
-							? ANALYTICS_COLORS.profitFill
-							: ANALYTICS_COLORS.lossFill,
-					stroke:
-						stats.totalPnl >= 0
-							? ANALYTICS_COLORS.profit
-							: ANALYTICS_COLORS.loss,
-					strokeWidth: CHART_DIMENSIONS.monthly.strokeWidth,
-					marker: {
-						enabled: true,
-						size: CHART_DIMENSIONS.monthly.markerSize,
+			return {
+				background: { fill: "transparent" },
+				data: chartData,
+				series: [
+					{
+						type: "area" as const,
+						xKey: "monthLabel",
+						yKey: "cumulative",
+						yName: "Cumulative P&L",
 						fill:
+							stats.totalPnl >= 0
+								? ANALYTICS_COLORS.profitFill
+								: ANALYTICS_COLORS.lossFill,
+						stroke:
 							stats.totalPnl >= 0
 								? ANALYTICS_COLORS.profit
 								: ANALYTICS_COLORS.loss,
-						stroke: ANALYTICS_COLORS.background,
-						strokeWidth: 1,
-					},
-					tooltip: {
-						renderer: (params: {
-							datum: {
-								monthLabel: string;
-								pnlRounded: number;
-								cumulative: number;
-								trades: number;
-								winRate: number;
-							};
-						}) => {
-							const d = params.datum;
-							const pnlColor =
-								d.pnlRounded >= 0
+						strokeWidth: CHART_DIMENSIONS.monthly.strokeWidth,
+						marker: {
+							enabled: true,
+							size: CHART_DIMENSIONS.monthly.markerSize,
+							fill:
+								stats.totalPnl >= 0
 									? ANALYTICS_COLORS.profit
-									: ANALYTICS_COLORS.loss;
-							const cumulativeColor =
-								d.cumulative >= 0
-									? ANALYTICS_COLORS.profit
-									: ANALYTICS_COLORS.loss;
+									: ANALYTICS_COLORS.loss,
+							stroke: ANALYTICS_COLORS.background,
+							strokeWidth: 1,
+						},
+						tooltip: {
+							renderer: (params: {
+								datum: {
+									monthLabel: string;
+									pnlRounded: number;
+									cumulative: number;
+									trades: number;
+									winRate: number;
+								};
+							}) => {
+								const d = params.datum;
+								const pnlColor =
+									d.pnlRounded >= 0
+										? ANALYTICS_COLORS.profit
+										: ANALYTICS_COLORS.loss;
+								const cumulativeColor =
+									d.cumulative >= 0
+										? ANALYTICS_COLORS.profit
+										: ANALYTICS_COLORS.loss;
 
-							return {
-								title: d.monthLabel,
-								content: `
+								return {
+									title: d.monthLabel,
+									content: `
 									<div style="margin-bottom: 4px;">Cumulative: <b style="color: ${cumulativeColor}">${formatCurrency(d.cumulative)}</b></div>
 									<div style="margin-bottom: 4px;">Monthly P&L: <b style="color: ${pnlColor}">${formatCurrency(d.pnlRounded)}</b></div>
 									<div style="color: ${ANALYTICS_COLORS.mutedLight};">${d.trades} trades · ${d.winRate.toFixed(0)}% win rate</div>
 								`,
-							};
+								};
+							},
 						},
 					},
-				},
-			],
-			axes: [
-				{
-					type: "category" as const,
-					position: "bottom" as const,
-					label: {
-						color: CHART_AXIS_STYLE.label.fill,
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 10,
-					},
-					line: { color: CHART_AXIS_STYLE.line.stroke },
-					tick: { color: CHART_AXIS_STYLE.tick.stroke },
-					gridLine: { enabled: false },
-					paddingInner: 0.2,
-				},
-				{
-					type: "number" as const,
-					position: "left" as const,
-					label: {
-						color: CHART_AXIS_STYLE.label.fill,
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 10,
-						formatter: (params: { value: number }) => {
-							const v = params.value;
-							if (Math.abs(v) >= 1000) {
-								return `$${(v / 1000).toFixed(1)}k`;
-							}
-							return `$${v.toFixed(0)}`;
+				],
+				axes: [
+					{
+						type: "category" as const,
+						position: "bottom" as const,
+						label: {
+							color: CHART_AXIS_STYLE.label.fill,
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 10,
 						},
+						line: { stroke: CHART_AXIS_STYLE.line.stroke },
+						tick: { stroke: CHART_AXIS_STYLE.tick.stroke },
+						gridLine: { enabled: false },
+						paddingInner: 0.2,
 					},
-					line: { color: CHART_AXIS_STYLE.line.stroke },
-					tick: { color: CHART_AXIS_STYLE.tick.stroke },
-					gridLine: { style: [{ stroke: ANALYTICS_COLORS.gridMedium }] },
+					{
+						type: "number" as const,
+						position: "left" as const,
+						label: {
+							color: CHART_AXIS_STYLE.label.fill,
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 10,
+							formatter: (params: { value: number }) => {
+								const v = params.value;
+								if (Math.abs(v) >= 1000) {
+									return `$${(v / 1000).toFixed(1)}k`;
+								}
+								return `$${v.toFixed(0)}`;
+							},
+						},
+						line: { stroke: CHART_AXIS_STYLE.line.stroke },
+						tick: { stroke: CHART_AXIS_STYLE.tick.stroke },
+						gridLine: { style: [{ stroke: ANALYTICS_COLORS.gridMedium }] },
+					},
+				],
+				legend: { enabled: false },
+				padding: {
+					top: 40,
+					right: 20,
+					bottom: 20,
+					left: 10,
 				},
-			],
-			legend: { enabled: false },
-			tooltip: {
-				class: "ag-chart-tooltip-dark",
-			},
-			padding: {
-				top: 40,
-				right: 20,
-				bottom: 20,
-				left: 10,
-			},
-		};
-	}, [chartData, stats.totalPnl]);
+			};
+		}, [chartData, stats.totalPnl]);
 
 	if (data.length === 0) {
 		return (
@@ -229,8 +235,7 @@ export function MonthlyChart({ data, className }: MonthlyChartProps) {
 			{/* Chart */}
 			<div className="relative">
 				<AgCharts
-					// biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing
-					options={chartOptions as any}
+					options={chartOptions}
 					style={{ height: CHART_DIMENSIONS.monthly.height }}
 				/>
 

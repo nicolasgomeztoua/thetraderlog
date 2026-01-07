@@ -1,3 +1,4 @@
+import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { Info, Layers } from "lucide-react";
 import { useMemo } from "react";
@@ -17,6 +18,11 @@ interface PositionSizeBucket {
 	totalPnl: number;
 	avgPnl: number;
 	winRate: number;
+}
+
+/** Chart data point with fill color */
+interface PositionSizeChartData extends PositionSizeBucket {
+	fill: string;
 }
 
 interface PositionSizeStats {
@@ -41,66 +47,67 @@ export function PositionSizeChart({
 	stats,
 	className,
 }: PositionSizeChartProps) {
-	const chartOptions = useMemo(() => {
-		// Prepare data with colors based on P&L
-		const dataWithColors = buckets.map((bucket) => ({
-			...bucket,
-			fill: bucket.avgPnl >= 0 ? "#00ff88" : "#ff3b3b",
-		}));
+	const chartOptions: AgCartesianChartOptions<PositionSizeChartData> =
+		useMemo(() => {
+			// Prepare data with colors based on P&L
+			const dataWithColors = buckets.map((bucket) => ({
+				...bucket,
+				fill: bucket.avgPnl >= 0 ? "#00ff88" : "#ff3b3b",
+			}));
 
-		return {
-			background: { fill: "transparent" },
-			data: dataWithColors,
-			series: [
-				{
-					type: "bar" as const,
-					xKey: "label",
-					yKey: "avgPnl",
-					fill: "#00ff88",
-					cornerRadius: 2,
-					formatter: (params: { datum: { avgPnl: number } }) => ({
-						fill: params.datum.avgPnl >= 0 ? "#00ff88" : "#ff3b3b",
-					}),
-				},
-			],
-			axes: [
-				{
-					type: "category" as const,
-					position: "bottom" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
+			return {
+				background: { fill: "transparent" },
+				data: dataWithColors,
+				series: [
+					{
+						type: "bar" as const,
+						xKey: "label",
+						yKey: "avgPnl",
+						fill: "#00ff88",
+						cornerRadius: 2,
+						formatter: (params: { datum: { avgPnl: number } }) => ({
+							fill: params.datum.avgPnl >= 0 ? "#00ff88" : "#ff3b3b",
+						}),
 					},
-					line: { color: "#1e293b" },
-					title: {
-						text: "Percentile",
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 10,
+				],
+				axes: [
+					{
+						type: "category" as const,
+						position: "bottom" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+						},
+						line: { stroke: "#1e293b" },
+						title: {
+							text: "Percentile",
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 10,
+						},
 					},
-				},
-				{
-					type: "number" as const,
-					position: "left" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
-						formatter: (params: { value: number }) => `$${params.value}`,
+					{
+						type: "number" as const,
+						position: "left" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+							formatter: (params: { value: number }) => `$${params.value}`,
+						},
+						line: { stroke: "#1e293b" },
+						gridLine: { style: [{ stroke: "#ffffff08" }] },
+						title: {
+							text: "Avg P&L",
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 10,
+						},
 					},
-					line: { color: "#1e293b" },
-					gridLine: { style: [{ stroke: "#ffffff08" }] },
-					title: {
-						text: "Avg P&L",
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 10,
-					},
-				},
-			],
-		};
-	}, [buckets]);
+				],
+			};
+		}, [buckets]);
 
 	const hasData = stats.totalTrades > 0;
 
@@ -174,8 +181,7 @@ export function PositionSizeChart({
 			{/* Chart */}
 			{hasData ? (
 				<div className="h-[180px]">
-					{/* biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing */}
-					<AgCharts options={chartOptions as any} style={{ height: "100%" }} />
+					<AgCharts options={chartOptions} style={{ height: "100%" }} />
 				</div>
 			) : (
 				<div className="flex h-[180px] items-center justify-center rounded border border-border border-dashed bg-secondary/20">

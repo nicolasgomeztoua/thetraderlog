@@ -1,3 +1,4 @@
+import type { AgCartesianChartOptions } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
 import { BarChart3, Info, TrendingDown, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
@@ -13,6 +14,11 @@ interface RMultipleBucket {
 	count: number;
 	totalPnl: number;
 	avgR: number;
+}
+
+/** Chart data point with fill color */
+interface RMultipleChartData extends RMultipleBucket {
+	fill: string;
 }
 
 interface RMultipleStats {
@@ -40,60 +46,61 @@ export function RMultipleChart({
 	stats,
 	className,
 }: RMultipleChartProps) {
-	const chartOptions = useMemo(() => {
-		// Add colors to buckets based on R value
-		const dataWithColors = buckets.map((bucket) => ({
-			...bucket,
-			fill: bucket.avgR >= 0 ? "#00ff88" : "#ff3b3b",
-		}));
+	const chartOptions: AgCartesianChartOptions<RMultipleChartData> =
+		useMemo(() => {
+			// Add colors to buckets based on R value
+			const dataWithColors = buckets.map((bucket) => ({
+				...bucket,
+				fill: bucket.avgR >= 0 ? "#00ff88" : "#ff3b3b",
+			}));
 
-		return {
-			background: { fill: "transparent" },
-			data: dataWithColors,
-			series: [
-				{
-					type: "bar" as const,
-					xKey: "label",
-					yKey: "count",
-					fill: "#00ff88",
-					cornerRadius: 2,
-					formatter: (params: { datum: { avgR: number } }) => ({
-						fill: params.datum.avgR >= 0 ? "#00ff88" : "#ff3b3b",
-					}),
-				},
-			],
-			axes: [
-				{
-					type: "category" as const,
-					position: "bottom" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
-						rotation: -45,
+			return {
+				background: { fill: "transparent" },
+				data: dataWithColors,
+				series: [
+					{
+						type: "bar" as const,
+						xKey: "label",
+						yKey: "count",
+						fill: "#00ff88",
+						cornerRadius: 2,
+						formatter: (params: { datum: { avgR: number } }) => ({
+							fill: params.datum.avgR >= 0 ? "#00ff88" : "#ff3b3b",
+						}),
 					},
-					line: { color: "#1e293b" },
-				},
-				{
-					type: "number" as const,
-					position: "left" as const,
-					label: {
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 9,
+				],
+				axes: [
+					{
+						type: "category" as const,
+						position: "bottom" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+							rotation: -45,
+						},
+						line: { stroke: "#1e293b" },
 					},
-					line: { color: "#1e293b" },
-					gridLine: { style: [{ stroke: "#ffffff08" }] },
-					title: {
-						text: "Trades",
-						color: "#64748b",
-						fontFamily: "JetBrains Mono, monospace",
-						fontSize: 10,
+					{
+						type: "number" as const,
+						position: "left" as const,
+						label: {
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 9,
+						},
+						line: { stroke: "#1e293b" },
+						gridLine: { style: [{ stroke: "#ffffff08" }] },
+						title: {
+							text: "Trades",
+							color: "#64748b",
+							fontFamily: "JetBrains Mono, monospace",
+							fontSize: 10,
+						},
 					},
-				},
-			],
-		};
-	}, [buckets]);
+				],
+			};
+		}, [buckets]);
 
 	const hasData = stats.tradesWithR > 0;
 	const coverage =
@@ -190,8 +197,7 @@ export function RMultipleChart({
 			{/* Chart */}
 			{hasData ? (
 				<div className="h-[200px]">
-					{/* biome-ignore lint/suspicious/noExplicitAny: ag-charts has complex typing */}
-					<AgCharts options={chartOptions as any} style={{ height: "100%" }} />
+					<AgCharts options={chartOptions} style={{ height: "100%" }} />
 				</div>
 			) : (
 				<div className="flex h-[200px] items-center justify-center rounded border border-border border-dashed bg-secondary/20">
