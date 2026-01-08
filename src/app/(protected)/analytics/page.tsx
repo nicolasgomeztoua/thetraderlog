@@ -76,6 +76,12 @@ function useApiFilters() {
 	const { filters } = useAnalyticsFilterStore();
 
 	return useMemo(() => {
+		// Check if advanced query has any conditions
+		const hasAdvancedConditions =
+			filters.advancedQuery &&
+			filters.advancedQuery.groups.length > 0 &&
+			filters.advancedQuery.groups.some((g) => g.conditions.length > 0);
+
 		// Convert store filters to API format
 		return {
 			symbols: filters.symbols.length > 0 ? filters.symbols : undefined,
@@ -105,6 +111,8 @@ function useApiFilters() {
 					: undefined,
 			outcome: filters.outcome !== "all" ? filters.outcome : undefined,
 			reviewed: filters.reviewed !== "all" ? filters.reviewed : undefined,
+			// Include advanced query if it has conditions
+			advancedQuery: hasAdvancedConditions ? filters.advancedQuery : undefined,
 		};
 	}, [filters]);
 }
