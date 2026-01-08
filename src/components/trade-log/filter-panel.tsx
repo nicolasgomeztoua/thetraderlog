@@ -449,207 +449,207 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 
 					{/* Filter Content */}
 					<div className="space-y-4 bg-white/2 p-4">
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-						{/* Date Range */}
-						<div className="space-y-2">
-							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								<CalendarDays className="mr-1 inline-block h-3 w-3" />
-								Date Range
-							</Label>
-							<div className="flex gap-2">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+							{/* Date Range */}
+							<div className="space-y-2">
+								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									<CalendarDays className="mr-1 inline-block h-3 w-3" />
+									Date Range
+								</Label>
+								<div className="flex gap-2">
+									<Input
+										className="h-8 font-mono text-xs"
+										onChange={(e) =>
+											onChange({ ...filters, startDate: e.target.value })
+										}
+										placeholder="From"
+										type="date"
+										value={filters.startDate}
+									/>
+									<Input
+										className="h-8 font-mono text-xs"
+										onChange={(e) =>
+											onChange({ ...filters, endDate: e.target.value })
+										}
+										placeholder="To"
+										type="date"
+										value={filters.endDate}
+									/>
+								</div>
+							</div>
+
+							{/* P&L Range */}
+							<div className="space-y-2">
+								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									P&L Range
+								</Label>
+								<div className="flex gap-2">
+									<Input
+										className="h-8 font-mono text-xs"
+										onChange={(e) =>
+											onChange({ ...filters, minPnl: e.target.value })
+										}
+										placeholder="Min"
+										type="number"
+										value={filters.minPnl}
+									/>
+									<Input
+										className="h-8 font-mono text-xs"
+										onChange={(e) =>
+											onChange({ ...filters, maxPnl: e.target.value })
+										}
+										placeholder="Max"
+										type="number"
+										value={filters.maxPnl}
+									/>
+								</div>
+							</div>
+
+							{/* R-Multiple Range */}
+							<div className="space-y-2">
+								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									<TrendingUp className="mr-1 inline-block h-3 w-3" />
+									R-Multiple
+								</Label>
+								<div className="flex gap-2">
+									<Input
+										className="h-8 font-mono text-xs"
+										onChange={(e) =>
+											onChange({ ...filters, minRMultiple: e.target.value })
+										}
+										placeholder="Min"
+										step="0.1"
+										type="number"
+										value={filters.minRMultiple}
+									/>
+									<Input
+										className="h-8 font-mono text-xs"
+										onChange={(e) =>
+											onChange({ ...filters, maxRMultiple: e.target.value })
+										}
+										placeholder="Max"
+										step="0.1"
+										type="number"
+										value={filters.maxRMultiple}
+									/>
+								</div>
+							</div>
+
+							{/* Rating Range */}
+							<div className="space-y-2">
+								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									<Star className="mr-1 inline-block h-3 w-3" />
+									Rating
+								</Label>
+								<div className="flex gap-2">
+									<Select
+										onValueChange={(v) =>
+											onChange({ ...filters, minRating: v === "any" ? "" : v })
+										}
+										value={filters.minRating || "any"}
+									>
+										<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-white/20">
+											<SelectValue placeholder="Min" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="any">Any</SelectItem>
+											{[1, 2, 3, 4, 5].map((r) => (
+												<SelectItem key={r} value={r.toString()}>
+													{r}+ stars
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<Select
+										onValueChange={(v) =>
+											onChange({ ...filters, maxRating: v === "any" ? "" : v })
+										}
+										value={filters.maxRating || "any"}
+									>
+										<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-white/20">
+											<SelectValue placeholder="Max" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="any">Any</SelectItem>
+											{[1, 2, 3, 4, 5].map((r) => (
+												<SelectItem key={r} value={r.toString()}>
+													{r} stars
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+
+							{/* Setup Type */}
+							<div className="space-y-2">
+								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Setup Type
+								</Label>
 								<Input
 									className="h-8 font-mono text-xs"
 									onChange={(e) =>
-										onChange({ ...filters, startDate: e.target.value })
+										onChange({ ...filters, setupType: e.target.value })
 									}
-									placeholder="From"
-									type="date"
-									value={filters.startDate}
-								/>
-								<Input
-									className="h-8 font-mono text-xs"
-									onChange={(e) =>
-										onChange({ ...filters, endDate: e.target.value })
-									}
-									placeholder="To"
-									type="date"
-									value={filters.endDate}
+									placeholder="e.g., breakout, reversal"
+									value={filters.setupType}
 								/>
 							</div>
 						</div>
 
-						{/* P&L Range */}
+						{/* Divider */}
+						<div className="h-px bg-white/5" />
+
+						{/* Day of Week */}
 						<div className="space-y-2">
 							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								P&L Range
+								Day of Week
 							</Label>
-							<div className="flex gap-2">
-								<Input
-									className="h-8 font-mono text-xs"
-									onChange={(e) =>
-										onChange({ ...filters, minPnl: e.target.value })
-									}
-									placeholder="Min"
-									type="number"
-									value={filters.minPnl}
-								/>
-								<Input
-									className="h-8 font-mono text-xs"
-									onChange={(e) =>
-										onChange({ ...filters, maxPnl: e.target.value })
-									}
-									placeholder="Max"
-									type="number"
-									value={filters.maxPnl}
-								/>
+							<div className="flex flex-wrap gap-2">
+								{DAY_LABELS.map((day) => (
+									<Button
+										className={cn(
+											"h-8 w-12 border-white/10 font-mono text-xs transition-colors hover:border-white/20 hover:text-foreground",
+											filters.dayOfWeek.includes(day.value) &&
+												"border-primary/40 bg-primary/10 text-primary hover:border-primary/50",
+										)}
+										key={day.value}
+										onClick={() => toggleDay(day.value)}
+										size="sm"
+										variant="outline"
+									>
+										{day.full}
+									</Button>
+								))}
 							</div>
 						</div>
 
-						{/* R-Multiple Range */}
+						{/* Exit Reason */}
 						<div className="space-y-2">
 							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								<TrendingUp className="mr-1 inline-block h-3 w-3" />
-								R-Multiple
+								Exit Reason
 							</Label>
-							<div className="flex gap-2">
-								<Input
-									className="h-8 font-mono text-xs"
-									onChange={(e) =>
-										onChange({ ...filters, minRMultiple: e.target.value })
-									}
-									placeholder="Min"
-									step="0.1"
-									type="number"
-									value={filters.minRMultiple}
-								/>
-								<Input
-									className="h-8 font-mono text-xs"
-									onChange={(e) =>
-										onChange({ ...filters, maxRMultiple: e.target.value })
-									}
-									placeholder="Max"
-									step="0.1"
-									type="number"
-									value={filters.maxRMultiple}
-								/>
-							</div>
-						</div>
-
-						{/* Rating Range */}
-						<div className="space-y-2">
-							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								<Star className="mr-1 inline-block h-3 w-3" />
-								Rating
-							</Label>
-							<div className="flex gap-2">
-								<Select
-									onValueChange={(v) =>
-										onChange({ ...filters, minRating: v === "any" ? "" : v })
-									}
-									value={filters.minRating || "any"}
-								>
-									<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-white/20">
-										<SelectValue placeholder="Min" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="any">Any</SelectItem>
-										{[1, 2, 3, 4, 5].map((r) => (
-											<SelectItem key={r} value={r.toString()}>
-												{r}+ stars
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<Select
-									onValueChange={(v) =>
-										onChange({ ...filters, maxRating: v === "any" ? "" : v })
-									}
-									value={filters.maxRating || "any"}
-								>
-									<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-white/20">
-										<SelectValue placeholder="Max" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="any">Any</SelectItem>
-										{[1, 2, 3, 4, 5].map((r) => (
-											<SelectItem key={r} value={r.toString()}>
-												{r} stars
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-
-						{/* Setup Type */}
-						<div className="space-y-2">
-							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Setup Type
-							</Label>
-							<Input
-								className="h-8 font-mono text-xs"
-								onChange={(e) =>
-									onChange({ ...filters, setupType: e.target.value })
+							<Select
+								onValueChange={(v) =>
+									onChange({ ...filters, exitReason: v === "any" ? "" : v })
 								}
-								placeholder="e.g., breakout, reversal"
-								value={filters.setupType}
-							/>
+								value={filters.exitReason || "any"}
+							>
+								<SelectTrigger className="h-8 w-[200px] font-mono text-xs transition-colors hover:border-white/20">
+									<SelectValue placeholder="Any" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="any">Any</SelectItem>
+									<SelectItem value="take_profit">Take Profit</SelectItem>
+									<SelectItem value="stop_loss">Stop Loss</SelectItem>
+									<SelectItem value="trailing_stop">Trailing Stop</SelectItem>
+									<SelectItem value="breakeven">Breakeven</SelectItem>
+									<SelectItem value="manual">Manual</SelectItem>
+									<SelectItem value="time_based">Time Based</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
 					</div>
-
-					{/* Divider */}
-					<div className="h-px bg-white/5" />
-
-					{/* Day of Week */}
-					<div className="space-y-2">
-						<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-							Day of Week
-						</Label>
-						<div className="flex flex-wrap gap-2">
-							{DAY_LABELS.map((day) => (
-								<Button
-									className={cn(
-										"h-8 w-12 border-white/10 font-mono text-xs transition-colors hover:border-white/20 hover:text-foreground",
-										filters.dayOfWeek.includes(day.value) &&
-											"border-primary/40 bg-primary/10 text-primary hover:border-primary/50",
-									)}
-									key={day.value}
-									onClick={() => toggleDay(day.value)}
-									size="sm"
-									variant="outline"
-								>
-									{day.full}
-								</Button>
-							))}
-						</div>
-					</div>
-
-					{/* Exit Reason */}
-					<div className="space-y-2">
-						<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-							Exit Reason
-						</Label>
-						<Select
-							onValueChange={(v) =>
-								onChange({ ...filters, exitReason: v === "any" ? "" : v })
-							}
-							value={filters.exitReason || "any"}
-						>
-							<SelectTrigger className="h-8 w-[200px] font-mono text-xs transition-colors hover:border-white/20">
-								<SelectValue placeholder="Any" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="any">Any</SelectItem>
-								<SelectItem value="take_profit">Take Profit</SelectItem>
-								<SelectItem value="stop_loss">Stop Loss</SelectItem>
-								<SelectItem value="trailing_stop">Trailing Stop</SelectItem>
-								<SelectItem value="breakeven">Breakeven</SelectItem>
-								<SelectItem value="manual">Manual</SelectItem>
-								<SelectItem value="time_based">Time Based</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-				</div>
 				</div>
 			</div>
 		</div>
