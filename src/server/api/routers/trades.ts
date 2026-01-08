@@ -228,7 +228,10 @@ export const tradesRouter = createTRPCRouter({
 				conditions.push(gte(trades.entryTime, new Date(input.startDate)));
 			}
 			if (input?.endDate) {
-				conditions.push(lte(trades.entryTime, new Date(input.endDate)));
+				// Set to end of day to make the end date inclusive
+				const endOfDay = new Date(input.endDate);
+				endOfDay.setHours(23, 59, 59, 999);
+				conditions.push(lte(trades.entryTime, endOfDay));
 			}
 			// Server-side search: symbol, setupType, or notes
 			if (input?.search) {
@@ -923,7 +926,10 @@ export const tradesRouter = createTRPCRouter({
 				conditions.push(gte(trades.entryTime, new Date(input.startDate)));
 			}
 			if (input?.endDate) {
-				conditions.push(lte(trades.entryTime, new Date(input.endDate)));
+				// Set to end of day to make the end date inclusive
+				const endOfDay = new Date(input.endDate);
+				endOfDay.setHours(23, 59, 59, 999);
+				conditions.push(lte(trades.entryTime, endOfDay));
 			}
 
 			const closedTrades = await ctx.db.query.trades.findMany({
