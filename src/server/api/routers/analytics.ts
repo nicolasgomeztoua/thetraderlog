@@ -2,11 +2,15 @@ import {
 	and,
 	desc,
 	eq,
+	gt,
 	gte,
 	inArray,
 	isNotNull,
 	isNull,
+	lt,
 	lte,
+	ne,
+	or,
 	type SQL,
 	sql,
 } from "drizzle-orm";
@@ -40,6 +44,57 @@ import {
 } from "@/server/db/schema";
 
 // =============================================================================
+// ADVANCED QUERY BUILDER SCHEMAS
+// Zod schemas for advanced filtering with AND/OR logic support
+// =============================================================================
+
+const queryConditionSchema = z.object({
+	id: z.string(),
+	field: z.enum([
+		"symbol",
+		"dayOfWeek",
+		"hour",
+		"session",
+		"strategy",
+		"tag",
+		"outcome",
+		"reviewed",
+		"rMultiple",
+		"positionSize",
+		"pnl",
+		"date",
+	]),
+	operator: z.enum([
+		"equals",
+		"not_equals",
+		"greater_than",
+		"less_than",
+		"between",
+		"is_one_of",
+		"has_any",
+		"has_all",
+		"after",
+		"before",
+	]),
+	value: z.unknown(),
+});
+
+const queryGroupSchema = z.object({
+	id: z.string(),
+	logic: z.enum(["AND", "OR"]),
+	conditions: z.array(queryConditionSchema),
+});
+
+const queryBuilderStateSchema = z.object({
+	logic: z.enum(["AND", "OR"]),
+	groups: z.array(queryGroupSchema),
+});
+
+type QueryCondition = z.infer<typeof queryConditionSchema>;
+type QueryGroup = z.infer<typeof queryGroupSchema>;
+type QueryBuilderState = z.infer<typeof queryBuilderStateSchema>;
+
+// =============================================================================
 // ANALYTICS FILTER INPUT SCHEMA
 // Shared input schema for filtering analytics queries
 // =============================================================================
@@ -71,6 +126,8 @@ const analyticsFilterInput = z.object({
 		.optional(),
 	outcome: z.enum(["all", "win", "loss", "breakeven"]).optional(),
 	reviewed: z.enum(["all", "reviewed", "unreviewed"]).optional(),
+	// Advanced query builder - when present, overrides simple filters
+	advancedQuery: queryBuilderStateSchema.nullable().optional(),
 });
 
 type AnalyticsFilterInput = z.infer<typeof analyticsFilterInput>;
@@ -283,6 +340,609 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 	// For now, we skip tag filtering in the generic helper
 
 	return filtered;
+}
+
+// =============================================================================
+// ADVANCED QUERY BUILDER FUNCTIONS
+// Processes QueryBuilderState into SQL conditions and post-query filters
+// =============================================================================
+
+/**
+ * Session definitions for session filtering (hours in user's local timezone)
+ */
+const SESSION_DEFINITIONS: Record<string, { start: number; end: number }> = {
+	asia: { start: 0, end: 8 },
+	london: { start: 8, end: 16 },
+	"new york": { start: 13, end: 21 },
+	new_york: { start: 13, end: 21 },
+};
+
+/**
+ * Build SQL condition for string fields (symbol, strategy)
+ */
+function buildStringCondition(
+	column: typeof trades.symbol | typeof trades.strategyId,
+	operator: string,
+	value: unknown,
+): SQL | null {
+	if (value === null || value === undefined) return null;
+
+	switch (operator) {
+		case "equals":
+			if (typeof value !== "string" || value === "") return null;
+			return eq(column, value);
+		case "not_equals":
+			if (typeof value !== "string" || value === "") return null;
+			return ne(column, value);
+		case "is_one_of":
+			if (!Array.isArray(value) || value.length === 0) return null;
+			return inArray(
+				column,
+				value.filter((v): v is string => typeof v === "string"),
+			);
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build SQL condition for numeric fields stored as decimals (positionSize)
+ */
+function buildNumericCondition(
+	column: typeof trades.quantity,
+	operator: string,
+	value: unknown,
+): SQL | null {
+	switch (operator) {
+		case "equals":
+			if (typeof value !== "number") return null;
+			return eq(column, value.toString());
+		case "not_equals":
+			if (typeof value !== "number") return null;
+			return ne(column, value.toString());
+		case "greater_than":
+			if (typeof value !== "number") return null;
+			return gt(column, value.toString());
+		case "less_than":
+			if (typeof value !== "number") return null;
+			return lt(column, value.toString());
+		case "between":
+			if (
+				!Array.isArray(value) ||
+				value.length !== 2 ||
+				typeof value[0] !== "number" ||
+				typeof value[1] !== "number"
+			)
+				return null;
+			return and(gte(column, value[0].toString()), lte(column, value[1].toString())) ?? null;
+		case "is_one_of":
+			if (!Array.isArray(value) || value.length === 0) return null;
+			return inArray(
+				column,
+				value
+					.filter((v): v is number => typeof v === "number")
+					.map((v) => v.toString()),
+			);
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build SQL condition for date fields
+ */
+function buildDateCondition(
+	column: typeof trades.entryTime,
+	operator: string,
+	value: unknown,
+): SQL | null {
+	switch (operator) {
+		case "equals": {
+			if (typeof value !== "string") return null;
+			const date = new Date(value);
+			if (Number.isNaN(date.getTime())) return null;
+			// For date equality, match the entire day
+			const startOfDay = new Date(date);
+			startOfDay.setUTCHours(0, 0, 0, 0);
+			const endOfDay = new Date(date);
+			endOfDay.setUTCHours(23, 59, 59, 999);
+			return and(gte(column, startOfDay), lte(column, endOfDay)) ?? null;
+		}
+		case "after": {
+			if (typeof value !== "string") return null;
+			const date = new Date(value);
+			if (Number.isNaN(date.getTime())) return null;
+			return gt(column, date);
+		}
+		case "before": {
+			if (typeof value !== "string") return null;
+			const date = new Date(value);
+			if (Number.isNaN(date.getTime())) return null;
+			return lt(column, date);
+		}
+		case "between": {
+			if (!Array.isArray(value) || value.length !== 2) return null;
+			const [startStr, endStr] = value;
+			if (typeof startStr !== "string" || typeof endStr !== "string")
+				return null;
+			const startDate = new Date(startStr);
+			const endDate = new Date(endStr);
+			if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()))
+				return null;
+			// Extend end date to end of day if it's at midnight
+			if (
+				endDate.getUTCHours() === 0 &&
+				endDate.getUTCMinutes() === 0 &&
+				endDate.getUTCSeconds() === 0
+			) {
+				endDate.setUTCHours(23, 59, 59, 999);
+			}
+			return and(gte(column, startDate), lte(column, endDate)) ?? null;
+		}
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build SQL condition for boolean fields (reviewed)
+ */
+function buildBooleanCondition(
+	column: typeof trades.isReviewed,
+	operator: string,
+	value: unknown,
+): SQL | null {
+	if (operator !== "equals") return null;
+	if (typeof value !== "boolean") return null;
+	return eq(column, value);
+}
+
+/**
+ * Post-query filter type for computed fields
+ */
+type PostQueryFilter = (trade: TradeWithComputedFields) => boolean;
+
+/**
+ * Build post-query filter for dayOfWeek
+ */
+function buildDayOfWeekFilter(
+	operator: string,
+	value: unknown,
+	userTimezone: string,
+): PostQueryFilter | null {
+	switch (operator) {
+		case "equals":
+			if (typeof value !== "number") return null;
+			return (trade) =>
+				getDayOfWeekInTimezone(trade.entryTime, userTimezone) === value;
+		case "is_one_of": {
+			if (!Array.isArray(value) || value.length === 0) return null;
+			const days = value.filter((v): v is number => typeof v === "number");
+			return (trade) =>
+				days.includes(getDayOfWeekInTimezone(trade.entryTime, userTimezone));
+		}
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build post-query filter for hour
+ */
+function buildHourFilter(
+	operator: string,
+	value: unknown,
+	userTimezone: string,
+): PostQueryFilter | null {
+	switch (operator) {
+		case "equals":
+			if (typeof value !== "number") return null;
+			return (trade) =>
+				getHourInTimezone(trade.entryTime, userTimezone) === value;
+		case "is_one_of": {
+			if (!Array.isArray(value) || value.length === 0) return null;
+			const hours = value.filter((v): v is number => typeof v === "number");
+			return (trade) =>
+				hours.includes(getHourInTimezone(trade.entryTime, userTimezone));
+		}
+		case "between": {
+			if (
+				!Array.isArray(value) ||
+				value.length !== 2 ||
+				typeof value[0] !== "number" ||
+				typeof value[1] !== "number"
+			)
+				return null;
+			const [minHour, maxHour] = value;
+			return (trade) => {
+				const hour = getHourInTimezone(trade.entryTime, userTimezone);
+				return hour >= minHour && hour <= maxHour;
+			};
+		}
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build post-query filter for session
+ */
+function buildSessionFilter(
+	operator: string,
+	value: unknown,
+	userTimezone: string,
+): PostQueryFilter | null {
+	const getSessionForHour = (hour: number): string[] => {
+		const result: string[] = [];
+		for (const [name, session] of Object.entries(SESSION_DEFINITIONS)) {
+			if (session.start <= session.end) {
+				if (hour >= session.start && hour < session.end) {
+					result.push(name);
+				}
+			} else {
+				if (hour >= session.start || hour < session.end) {
+					result.push(name);
+				}
+			}
+		}
+		return result;
+	};
+
+	switch (operator) {
+		case "equals": {
+			if (typeof value !== "string" || value === "") return null;
+			const sessionName = value.toLowerCase().replace(/\s+/g, "_");
+			return (trade) => {
+				const hour = getHourInTimezone(trade.entryTime, userTimezone);
+				return getSessionForHour(hour).includes(sessionName);
+			};
+		}
+		case "is_one_of": {
+			if (!Array.isArray(value) || value.length === 0) return null;
+			const sessions = value
+				.filter((v): v is string => typeof v === "string")
+				.map((s) => s.toLowerCase().replace(/\s+/g, "_"));
+			return (trade) => {
+				const hour = getHourInTimezone(trade.entryTime, userTimezone);
+				const tradeSessions = getSessionForHour(hour);
+				return sessions.some((s) => tradeSessions.includes(s));
+			};
+		}
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build post-query filter for outcome (win/loss/breakeven)
+ */
+function buildOutcomeFilter(
+	operator: string,
+	value: unknown,
+	beThreshold: number,
+): PostQueryFilter | null {
+	if (operator !== "equals") return null;
+	if (typeof value !== "string") return null;
+
+	switch (value) {
+		case "win":
+			return (trade) => parsePnl(trade.netPnl) > beThreshold;
+		case "loss":
+			return (trade) => parsePnl(trade.netPnl) < -beThreshold;
+		case "breakeven":
+			return (trade) => {
+				const pnl = parsePnl(trade.netPnl);
+				return pnl >= -beThreshold && pnl <= beThreshold;
+			};
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build post-query filter for P&L
+ */
+function buildPnlFilter(operator: string, value: unknown): PostQueryFilter | null {
+	switch (operator) {
+		case "greater_than":
+			if (typeof value !== "number") return null;
+			return (trade) => parsePnl(trade.netPnl) > value;
+		case "less_than":
+			if (typeof value !== "number") return null;
+			return (trade) => parsePnl(trade.netPnl) < value;
+		case "between":
+			if (
+				!Array.isArray(value) ||
+				value.length !== 2 ||
+				typeof value[0] !== "number" ||
+				typeof value[1] !== "number"
+			)
+				return null;
+			const [minPnl, maxPnl] = value;
+			return (trade) => {
+				const pnl = parsePnl(trade.netPnl);
+				return pnl >= minPnl && pnl <= maxPnl;
+			};
+		default:
+			return null;
+	}
+}
+
+/**
+ * Build post-query filter for R-Multiple
+ */
+function buildRMultipleFilter(
+	operator: string,
+	value: unknown,
+): PostQueryFilter | null {
+	const getRMultiple = (trade: TradeWithComputedFields): number | null => {
+		if (!trade.stopLoss || !trade.entryPrice || !trade.quantity) return null;
+		return calculateActualRMultiple(
+			parsePnl(trade.netPnl),
+			parseFloat(trade.entryPrice),
+			parseFloat(trade.stopLoss),
+			parseFloat(trade.quantity),
+			trade.symbol ?? "",
+			(trade.instrumentType as "futures" | "forex") ?? "futures",
+		);
+	};
+
+	switch (operator) {
+		case "equals":
+			if (typeof value !== "number") return null;
+			return (trade) => {
+				const r = getRMultiple(trade);
+				return r !== null && Math.abs(r - value) < 0.01;
+			};
+		case "greater_than":
+			if (typeof value !== "number") return null;
+			return (trade) => {
+				const r = getRMultiple(trade);
+				return r !== null && r > value;
+			};
+		case "less_than":
+			if (typeof value !== "number") return null;
+			return (trade) => {
+				const r = getRMultiple(trade);
+				return r !== null && r < value;
+			};
+		case "between":
+			if (
+				!Array.isArray(value) ||
+				value.length !== 2 ||
+				typeof value[0] !== "number" ||
+				typeof value[1] !== "number"
+			)
+				return null;
+			const [minR, maxR] = value;
+			return (trade) => {
+				const r = getRMultiple(trade);
+				return r !== null && r >= minR && r <= maxR;
+			};
+		default:
+			return null;
+	}
+}
+
+/**
+ * Result type for buildAdvancedQueryConditions
+ */
+interface AdvancedQueryResult {
+	sqlConditions: SQL[];
+	groupedPostFilters: Array<{
+		logic: "AND" | "OR";
+		filters: PostQueryFilter[];
+	}>;
+	topLevelLogic: "AND" | "OR";
+	tagConditions: Array<{
+		operator: "has_any" | "has_all";
+		tagIds: string[];
+		groupIndex: number;
+	}>;
+}
+
+/**
+ * Build advanced query conditions from QueryBuilderState
+ * Returns SQL conditions for database filtering and post-query filters for computed fields
+ */
+function buildAdvancedQueryConditions(
+	query: QueryBuilderState,
+	tradesTable: typeof trades,
+	options: {
+		userTimezone: string;
+		beThreshold: number;
+	},
+): AdvancedQueryResult {
+	const result: AdvancedQueryResult = {
+		sqlConditions: [],
+		groupedPostFilters: [],
+		topLevelLogic: query.logic,
+		tagConditions: [],
+	};
+
+	// Process each group
+	for (let groupIndex = 0; groupIndex < query.groups.length; groupIndex++) {
+		const group = query.groups[groupIndex];
+		if (!group || group.conditions.length === 0) continue;
+
+		const groupSqlConditions: SQL[] = [];
+		const groupPostFilters: PostQueryFilter[] = [];
+
+		// Process each condition in the group
+		for (const condition of group.conditions) {
+			const { field, operator, value } = condition;
+
+			// SQL-compatible fields
+			switch (field) {
+				case "symbol": {
+					const sqlCond = buildStringCondition(
+						tradesTable.symbol,
+						operator,
+						value,
+					);
+					if (sqlCond) groupSqlConditions.push(sqlCond);
+					break;
+				}
+				case "strategy": {
+					const sqlCond = buildStringCondition(
+						tradesTable.strategyId,
+						operator,
+						value,
+					);
+					if (sqlCond) groupSqlConditions.push(sqlCond);
+					break;
+				}
+				case "positionSize": {
+					const sqlCond = buildNumericCondition(
+						tradesTable.quantity,
+						operator,
+						value,
+					);
+					if (sqlCond) groupSqlConditions.push(sqlCond);
+					break;
+				}
+				case "date": {
+					const sqlCond = buildDateCondition(
+						tradesTable.entryTime,
+						operator,
+						value,
+					);
+					if (sqlCond) groupSqlConditions.push(sqlCond);
+					break;
+				}
+				case "reviewed": {
+					const sqlCond = buildBooleanCondition(
+						tradesTable.isReviewed,
+						operator,
+						value,
+					);
+					if (sqlCond) groupSqlConditions.push(sqlCond);
+					break;
+				}
+
+				// Post-query fields (computed)
+				case "dayOfWeek": {
+					const filter = buildDayOfWeekFilter(
+						operator,
+						value,
+						options.userTimezone,
+					);
+					if (filter) groupPostFilters.push(filter);
+					break;
+				}
+				case "hour": {
+					const filter = buildHourFilter(operator, value, options.userTimezone);
+					if (filter) groupPostFilters.push(filter);
+					break;
+				}
+				case "session": {
+					const filter = buildSessionFilter(
+						operator,
+						value,
+						options.userTimezone,
+					);
+					if (filter) groupPostFilters.push(filter);
+					break;
+				}
+				case "outcome": {
+					const filter = buildOutcomeFilter(
+						operator,
+						value,
+						options.beThreshold,
+					);
+					if (filter) groupPostFilters.push(filter);
+					break;
+				}
+				case "pnl": {
+					const filter = buildPnlFilter(operator, value);
+					if (filter) groupPostFilters.push(filter);
+					break;
+				}
+				case "rMultiple": {
+					const filter = buildRMultipleFilter(operator, value);
+					if (filter) groupPostFilters.push(filter);
+					break;
+				}
+				case "tag": {
+					// Tag filtering requires a join, handled separately
+					if (
+						(operator === "has_any" || operator === "has_all") &&
+						Array.isArray(value) &&
+						value.length > 0
+					) {
+						const tagIds = value.filter(
+							(v): v is string => typeof v === "string",
+						);
+						if (tagIds.length > 0) {
+							result.tagConditions.push({
+								operator,
+								tagIds,
+								groupIndex,
+							});
+						}
+					}
+					break;
+				}
+			}
+		}
+
+		// Combine SQL conditions for this group
+		if (groupSqlConditions.length > 0) {
+			const combinedSql =
+				group.logic === "AND"
+					? and(...groupSqlConditions)
+					: or(...groupSqlConditions);
+			if (combinedSql) result.sqlConditions.push(combinedSql);
+		}
+
+		// Store post filters with their logic for this group
+		if (groupPostFilters.length > 0) {
+			result.groupedPostFilters.push({
+				logic: group.logic,
+				filters: groupPostFilters,
+			});
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Apply advanced query post-filters to trades
+ * Respects AND/OR logic at both group and top levels
+ */
+function applyAdvancedPostFilters<T extends TradeWithComputedFields>(
+	trades: T[],
+	advancedResult: AdvancedQueryResult,
+): T[] {
+	if (advancedResult.groupedPostFilters.length === 0) {
+		return trades;
+	}
+
+	return trades.filter((trade) => {
+		const groupResults = advancedResult.groupedPostFilters.map((group) => {
+			if (group.filters.length === 0) return true;
+
+			return group.logic === "AND"
+				? group.filters.every((f) => f(trade))
+				: group.filters.some((f) => f(trade));
+		});
+
+		// If no groups have post filters, include all trades
+		if (groupResults.length === 0) return true;
+
+		return advancedResult.topLevelLogic === "AND"
+			? groupResults.every((r) => r)
+			: groupResults.some((r) => r);
+	});
+}
+
+/**
+ * Check if advanced query is active and has conditions
+ */
+function hasAdvancedQuery(filters: AnalyticsFilterInput | undefined): boolean {
+	if (!filters?.advancedQuery) return false;
+	return filters.advancedQuery.groups.some((g) => g.conditions.length > 0);
 }
 
 // =============================================================================
