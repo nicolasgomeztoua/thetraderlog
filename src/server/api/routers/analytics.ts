@@ -981,8 +981,28 @@ export const analyticsRouter = createTRPCRouter({
 				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
 			}
 
-			// Apply SQL-compatible filters
-			conditions.push(...buildFilterConditions(input?.filters, trades));
+			// Get user settings first (needed for both simple and advanced filtering)
+			const [beThreshold, userTimezone] = await Promise.all([
+				getUserBreakevenThreshold(ctx.db, ctx.user.id),
+				getUserTimezone(ctx.db, ctx.user.id),
+			]);
+
+			// Check if using advanced query
+			const useAdvancedQuery = hasAdvancedQuery(input?.filters);
+			let advancedQueryResult: AdvancedQueryResult | null = null;
+
+			if (useAdvancedQuery && input?.filters?.advancedQuery) {
+				// Build advanced query conditions
+				advancedQueryResult = buildAdvancedQueryConditions(
+					input.filters.advancedQuery,
+					trades,
+					{ userTimezone, beThreshold },
+				);
+				conditions.push(...advancedQueryResult.sqlConditions);
+			} else {
+				// Apply simple SQL-compatible filters
+				conditions.push(...buildFilterConditions(input?.filters, trades));
+			}
 
 			// Fetch all closed trades with P&L
 			const closedTradesRaw = await ctx.db
@@ -1001,21 +1021,51 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions))
 				.orderBy(trades.exitTime);
 
-			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
-				getUserBreakevenThreshold(ctx.db, ctx.user.id),
-				getUserTimezone(ctx.db, ctx.user.id),
-			]);
-
 			// Apply post-query filters
-			const closedTrades = applyPostQueryFilters(
-				closedTradesRaw,
-				input?.filters,
-				{
+			let closedTrades: typeof closedTradesRaw;
+
+			if (useAdvancedQuery && advancedQueryResult) {
+				// Apply advanced query post-filters with AND/OR logic
+				closedTrades = applyAdvancedPostFilters(closedTradesRaw, advancedQueryResult);
+
+				// Handle tag filtering for advanced query
+				if (advancedQueryResult.tagConditions.length > 0) {
+					const tradeIds = closedTrades.map((t) => t.id);
+					if (tradeIds.length > 0) {
+						for (const tagCond of advancedQueryResult.tagConditions) {
+							const matchingTradeTags = await ctx.db
+								.select({ tradeId: tradeTags.tradeId })
+								.from(tradeTags)
+								.where(
+									and(
+										inArray(tradeTags.tradeId, tradeIds),
+										inArray(tradeTags.tagId, tagCond.tagIds),
+									),
+								);
+
+							if (tagCond.operator === "has_any") {
+								const matchingIds = new Set(matchingTradeTags.map((t) => t.tradeId));
+								closedTrades = closedTrades.filter((t) => matchingIds.has(t.id));
+							} else if (tagCond.operator === "has_all") {
+								// For has_all, need to check each trade has ALL tags
+								const tradeTagCounts = new Map<string, number>();
+								for (const tt of matchingTradeTags) {
+									tradeTagCounts.set(tt.tradeId, (tradeTagCounts.get(tt.tradeId) ?? 0) + 1);
+								}
+								closedTrades = closedTrades.filter(
+									(t) => (tradeTagCounts.get(t.id) ?? 0) >= tagCond.tagIds.length,
+								);
+							}
+						}
+					}
+				}
+			} else {
+				// Apply simple post-query filters
+				closedTrades = applyPostQueryFilters(closedTradesRaw, input?.filters, {
 					beThreshold,
 					userTimezone,
-				},
-			);
+				});
+			}
 
 			// Calculate aggregate stats using existing function
 			const stats = calculateAggregateStats(closedTrades, beThreshold);
