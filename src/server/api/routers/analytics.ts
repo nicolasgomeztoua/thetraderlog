@@ -90,8 +90,6 @@ const queryBuilderStateSchema = z.object({
 	groups: z.array(queryGroupSchema),
 });
 
-type QueryCondition = z.infer<typeof queryConditionSchema>;
-type QueryGroup = z.infer<typeof queryGroupSchema>;
 type QueryBuilderState = z.infer<typeof queryBuilderStateSchema>;
 
 // =============================================================================
