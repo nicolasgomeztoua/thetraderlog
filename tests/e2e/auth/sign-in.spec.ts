@@ -17,8 +17,7 @@ import { test as authenticatedTest } from "../fixtures/auth";
  * - authenticatedTest (from fixtures/auth): for authenticated scenarios
  *
  * Environment requirements:
- * - E2E_CLERK_USER_EMAIL: Test user email
- * - E2E_CLERK_USER_PASSWORD: Test user password
+ * - E2E_CLERK_USER_EMAIL: Test user email (must exist in Clerk)
  */
 
 // ============================================================================
@@ -97,10 +96,9 @@ base.describe("Sign-In Flow", () => {
 		"should successfully sign in and redirect to dashboard",
 		async ({ page }) => {
 			const email = process.env.E2E_CLERK_USER_EMAIL;
-			const password = process.env.E2E_CLERK_USER_PASSWORD;
 
-			// Skip test if credentials not configured
-			if (!email || !password) {
+			// Skip test if email not configured
+			if (!email) {
 				base.skip();
 				return;
 			}
@@ -109,14 +107,10 @@ base.describe("Sign-In Flow", () => {
 			await page.goto("/");
 			await page.waitForLoadState("networkidle");
 
-			// Sign in using Clerk testing helper
+			// Sign in using Clerk testing helper with direct email lookup
 			await clerk.signIn({
 				page,
-				signInParams: {
-					strategy: "password",
-					identifier: email,
-					password: password,
-				},
+				emailAddress: email,
 			});
 
 			// Navigate to dashboard after sign-in

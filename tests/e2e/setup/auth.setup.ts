@@ -11,15 +11,14 @@ import { expect, test as setup } from "@playwright/test";
  * IMPORTANT:
  * - clerkSetup() is called in global-setup.ts and must complete before this runs
  * - You MUST navigate to a page that loads Clerk BEFORE calling clerk.signIn()
- * - Test user credentials come from environment variables (not hardcoded)
+ * - Test user must exist in your Clerk instance
  *
  * Required environment variables:
  * - E2E_CLERK_USER_EMAIL: Email of the test user in Clerk
- * - E2E_CLERK_USER_PASSWORD: Password for the test user
  *
  * The test user must:
  * - Exist in your Clerk development/test instance
- * - Have password authentication enabled
+ * - No password required - uses Clerk's direct email sign-in for testing
  */
 
 const AUTH_STATE_PATH = ".auth/user.json";
@@ -27,12 +26,11 @@ const AUTH_STATE_PATH = ".auth/user.json";
 setup("authenticate", async ({ page }) => {
 	// Validate required environment variables
 	const email = process.env.E2E_CLERK_USER_EMAIL;
-	const password = process.env.E2E_CLERK_USER_PASSWORD;
 
-	if (!email || !password) {
+	if (!email) {
 		throw new Error(
 			"E2E test credentials not configured. " +
-				"Please set E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD environment variables.",
+				"Please set E2E_CLERK_USER_EMAIL environment variable.",
 		);
 	}
 
@@ -43,14 +41,11 @@ setup("authenticate", async ({ page }) => {
 	// Wait for Clerk to be fully loaded
 	await page.waitForLoadState("networkidle");
 
-	// Sign in using Clerk's testing helper
+	// Sign in using Clerk's testing helper with direct email lookup
+	// This bypasses password auth - uses CLERK_SECRET_KEY to create session
 	await clerk.signIn({
 		page,
-		signInParams: {
-			strategy: "password",
-			identifier: email,
-			password: password,
-		},
+		emailAddress: email,
 	});
 
 	// Verify authentication worked by navigating to a protected route
