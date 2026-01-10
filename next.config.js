@@ -5,6 +5,11 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+	// Disable ESLint during builds - this project uses Biome for linting instead
+	eslint: {
+		ignoreDuringBuilds: true,
+	},
+};
 
 export default config;
