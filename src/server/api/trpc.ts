@@ -42,14 +42,27 @@ export interface TRPCContextOverrides {
  *
  * @see https://trpc.io/docs/server/context
  */
+// E2E test mode - bypasses Clerk auth with a fixed test user ID
+const isE2ETestMode =
+	process.env.E2E_TEST_MODE === "true" && process.env.NODE_ENV !== "production";
+const E2E_TEST_USER_ID = "e2e-test-user";
+
 export const createTRPCContext = async (
 	opts: { headers: Headers },
 	overrides?: TRPCContextOverrides,
 ) => {
 	// Use overrides for testing, or fetch from Clerk for production
 	const resolvedDb = overrides?.db ?? db;
-	const resolvedUserId =
-		overrides?.userId !== undefined ? overrides.userId : (await auth()).userId;
+
+	// Determine userId: overrides > E2E test mode > Clerk auth
+	let resolvedUserId: string | null;
+	if (overrides?.userId !== undefined) {
+		resolvedUserId = overrides.userId;
+	} else if (isE2ETestMode) {
+		resolvedUserId = E2E_TEST_USER_ID;
+	} else {
+		resolvedUserId = (await auth()).userId;
+	}
 
 	return {
 		db: resolvedDb,
@@ -144,19 +157,28 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
 
 	// If user doesn't exist, create them (auto-sync on first login)
 	if (!user) {
-		// In test environment, create a simple test user without Clerk
-		if (process.env.NODE_ENV === "test") {
+		// In test/E2E environment, create a simple test user without Clerk
+		if (process.env.NODE_ENV === "test" || isE2ETestMode) {
+			// Use upsert to handle race conditions when multiple tests run in parallel
 			const [newUser] = await ctx.db
 				.insert(users)
 				.values({
 					clerkId: ctx.userId,
 					email: `test-${ctx.userId}@test.local`,
-					name: "Test User",
+					name: "E2E Test User",
 					role: "user",
 				})
+				.onConflictDoNothing({ target: users.clerkId })
 				.returning();
 
-			user = newUser;
+			// If onConflictDoNothing returned nothing, fetch the existing user
+			if (!newUser) {
+				user = await ctx.db.query.users.findFirst({
+					where: eq(users.clerkId, ctx.userId),
+				});
+			} else {
+				user = newUser;
+			}
 		} else {
 			// Production: fetch user data from Clerk
 			const clerkUser = await currentUser();
