@@ -1,0 +1,34 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/**)",
+      "Write(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/**)",
+      "Edit(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/**)",
+      "Glob(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/**)",
+      "Grep(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/**)",
+      "Read(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/.auto-claude/ideation/**)",
+      "Write(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/.auto-claude/ideation/**)",
+      "Edit(/Users/nicolasgomeztoua/Desktop/Personal Code/edgejournal/.auto-claude/ideation/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}
