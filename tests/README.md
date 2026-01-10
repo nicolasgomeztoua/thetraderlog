@@ -375,3 +375,236 @@ describe("my-feature router", () => {
 });
 ```
 
+---
+
+## E2E Testing with Playwright
+
+EdgeJournal uses **Playwright** for end-to-end browser testing, with **@clerk/testing** integration for authenticated user flows.
+
+### E2E Testing Philosophy
+
+E2E tests verify the complete user experience from browser to database. They complement our integration tests:
+
+| Layer | Tool | What It Tests |
+|-------|------|---------------|
+| Integration | Vitest + Testcontainers | tRPC routers, database logic, business rules |
+| E2E | Playwright + Clerk | Browser UI, navigation, user flows, auth redirects |
+
+### E2E Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       Playwright                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  Global Setup                                                    │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 1. clerkSetup() - Initialize Clerk testing environment      ││
+│  └─────────────────────────────────────────────────────────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│  Auth Setup Project (auth.setup.ts)                              │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 1. Navigate to / to load Clerk JavaScript                   ││
+│  │ 2. Sign in via clerk.signIn()                               ││
+│  │ 3. Save session to .auth/user.json                          ││
+│  └─────────────────────────────────────────────────────────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│  Test Files (e.g., journal.spec.ts)                              │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ Uses stored auth from .auth/user.json                       ││
+│  │ Tests protected routes with pre-authenticated session        ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
+
+```
+tests/e2e/
+├── setup/
+│   ├── global-setup.ts      # Initializes clerkSetup() once
+│   └── auth.setup.ts        # Authenticates test user, saves session
+├── fixtures/
+│   └── auth.ts              # Authenticated test fixture
+├── auth/
+│   └── sign-in.spec.ts      # Authentication flow tests
+├── journal/
+│   └── journal.spec.ts      # Journal page E2E tests
+└── example.spec.ts          # Sample unauthenticated tests
+```
+
+### Clerk Authentication Gotchas
+
+**⚠️ CRITICAL: These are the most common E2E test failures:**
+
+1. **Must navigate before signing in**
+   ```typescript
+   // ❌ WRONG - Clerk JS not loaded yet
+   await clerk.signIn({ page, signInParams: { ... } });
+
+   // ✅ CORRECT - Navigate first to load Clerk
+   await page.goto('/');
+   await clerk.signIn({ page, signInParams: { ... } });
+   ```
+
+2. **Must call clerkSetup() in global setup**
+   ```typescript
+   // tests/e2e/setup/global-setup.ts
+   import { clerkSetup } from '@clerk/testing/playwright';
+
+   async function globalSetup() {
+     await clerkSetup(); // Required before using clerk helpers
+   }
+   ```
+
+3. **Test user must have password auth enabled**
+   - Create a dedicated E2E test user in Clerk Dashboard
+   - Enable "Password" as an authentication method
+   - Use a real email you control (for verification if needed)
+
+4. **Environment variables are required**
+   ```bash
+   E2E_CLERK_USER_EMAIL=your-test-user@example.com
+   E2E_CLERK_USER_PASSWORD=your-secure-password
+   ```
+
+### Writing E2E Tests
+
+#### Authenticated Tests (Protected Routes)
+
+Import from the auth fixture to use stored session:
+
+```typescript
+import { test, expect } from '../fixtures/auth';
+
+test.describe('Journal Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/journal');
+  });
+
+  test('should display the trades table', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: /trades/i })).toBeVisible();
+  });
+});
+```
+
+#### Unauthenticated Tests (Public Routes)
+
+Import from base Playwright to test without auth:
+
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('Marketing Page', () => {
+  test('should load landing page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Find Your')).toBeVisible();
+  });
+
+  test('should redirect to sign-in for protected routes', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/sign-in/);
+  });
+});
+```
+
+### Locator Best Practices
+
+Use semantic locators for resilience:
+
+```typescript
+// ✅ Good - semantic, accessible
+page.getByRole('button', { name: /submit/i })
+page.getByRole('link', { name: /journal/i })
+page.getByRole('tab', { name: /all trades/i })
+page.getByText('Trading Journal')
+page.getByPlaceholder(/search symbol/i)
+
+// ❌ Avoid - brittle, breaks with styling changes
+page.locator('.btn-primary')
+page.locator('#submit-button')
+page.locator('button:nth-child(2)')
+```
+
+### E2E Commands
+
+| Command | Description |
+|---------|-------------|
+| `bun run test:e2e` | Run all E2E tests (builds app first) |
+| `bun run test:e2e:ui` | Open Playwright UI mode for debugging |
+| `bun run test:e2e:debug` | Run tests with debugger attached |
+| `bun run test:e2e:report` | View the HTML test report |
+
+### First-Time Setup
+
+```bash
+# 1. Install Playwright browsers (one-time)
+bunx playwright install chromium
+
+# 2. Set environment variables (add to .env)
+E2E_CLERK_USER_EMAIL=your-test-user@example.com
+E2E_CLERK_USER_PASSWORD=your-secure-password
+
+# 3. Run E2E tests
+bun run test:e2e
+```
+
+### E2E Troubleshooting
+
+#### "clerk is not defined" or "clerkSetup() not called"
+
+The global setup didn't run. Ensure:
+- `globalSetup` is set in `playwright.config.ts`
+- The file at `tests/e2e/setup/global-setup.ts` exports a default function
+
+#### "Authentication failed"
+
+Check:
+- `E2E_CLERK_USER_EMAIL` and `E2E_CLERK_USER_PASSWORD` are set
+- Test user exists in Clerk with password auth enabled
+- Credentials are correct
+
+#### "Page redirects to sign-in" (in authenticated tests)
+
+The auth state wasn't saved properly:
+- Check `.auth/user.json` exists after setup runs
+- Ensure test uses auth fixture, not base `@playwright/test`
+
+#### Tests are slow
+
+- First run builds the app (~30-60s)
+- Use `--ui` mode for interactive debugging
+- Check for unnecessary `waitForTimeout` calls
+
+#### "webServer failed to start"
+
+- Port 3000 may be in use
+- Try stopping other dev servers
+- Increase timeout in `playwright.config.ts`
+
+### CI Configuration
+
+E2E tests run in GitHub Actions after integration tests pass:
+
+```yaml
+# .github/workflows/test.yml (E2E job excerpt)
+e2e:
+  name: E2E Tests
+  runs-on: ubuntu-latest
+  needs: test  # Runs after integration tests
+  steps:
+    - uses: actions/checkout@v4
+    - uses: oven-sh/setup-bun@v2
+    - run: bun install --frozen-lockfile
+    - run: bunx playwright install --with-deps chromium
+    - run: bun run test:e2e
+      env:
+        E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
+        E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+```
+
+Required GitHub secrets:
+- `E2E_CLERK_USER_EMAIL`
+- `E2E_CLERK_USER_PASSWORD`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+
