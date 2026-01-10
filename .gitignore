@@ -49,3 +49,6 @@ yarn-error.log*
 .trigger/
 .mcp.json
 
+
+# Auto Claude data directory
+.auto-claude/
