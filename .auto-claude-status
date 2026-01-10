@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "001-i-would-like-to-add-end-to-end-testing-system-for-",
+  "state": "building",
+  "subtasks": {
+    "completed": 7,
+    "total": 16,
+    "in_progress": 0,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Test Fixtures and Utilities",
+    "id": null,
+    "total": 2
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 7,
+    "started_at": "2026-01-10T19:01:14.571985"
+  },
+  "last_update": "2026-01-10T19:10:07.215672"
+}
