@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AttachmentGallery } from "@/components/daily-journal/attachment-gallery";
 import { AttachmentUpload } from "@/components/daily-journal/attachment-upload";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
@@ -156,6 +157,14 @@ export default function DailyJournalPage() {
 								journalId={journal?.id}
 								selectedDate={selectedDate}
 							/>
+							{/* Gallery */}
+							{journal?.attachments && journal.attachments.length > 0 && (
+								<AttachmentGallery
+									attachments={journal.attachments}
+									className="mt-4 border-white/5 border-t pt-4"
+									selectedDate={selectedDate}
+								/>
+							)}
 						</div>
 					</div>
 				</ResizablePanel>

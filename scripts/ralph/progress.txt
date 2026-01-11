@@ -310,3 +310,15 @@
   - Verification stories may not require code changes - just confirm existing functionality works
 ---
 
+## 2026-01-11 - US-030
+- Created AttachmentUpload component with drag-and-drop file upload
+- Files changed: src/components/daily-journal/attachment-upload.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Drag-drop zone: use onDragEnter/Leave/Over/Drop with preventDefault(), use section element for accessibility
+  - Upload progress with XMLHttpRequest: addEventListener("progress") gives lengthComputable + loaded/total for progress bar
+  - File validation pattern: define ALLOWED_FILE_TYPES array and MAX_FILE_SIZE constant at top
+  - Biome accessibility: section element is semantic, use aria-label for screen readers
+  - Track uploading files with array of {id, file, progress, error} objects for multiple concurrent uploads
+  - Retry pattern: track file reference so we can retry failed uploads without re-selecting
+---
+
