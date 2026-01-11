@@ -6,6 +6,9 @@
 		"useIgnoreFile": true,
 		"clientKind": "git"
 	},
+	"files": {
+		"includes": ["**", "!.claude", "!scripts/ralph/prd.example.json"]
+	},
 	"assist": {
 		"enabled": true,
 		"actions": {
