@@ -13,6 +13,61 @@ function normalizeDate(date: Date): Date {
 
 export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
+	// JOURNAL MUTATIONS
+	// ============================================================================
+
+	// Update journal content (upsert)
+	updateContent: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // ISO date string
+				content: z.string().nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+
+			// Try to find existing journal
+			const existing = await ctx.db.query.dailyJournals.findFirst({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					eq(dailyJournals.date, normalizedDate),
+				),
+			});
+
+			if (existing) {
+				// Update existing journal
+				const [updated] = await ctx.db
+					.update(dailyJournals)
+					.set({
+						content: input.content,
+						updatedAt: new Date(),
+					})
+					.where(eq(dailyJournals.id, existing.id))
+					.returning();
+
+				return updated;
+			}
+
+			// Create new journal with content
+			const [created] = await ctx.db
+				.insert(dailyJournals)
+				.values({
+					userId: ctx.user.id,
+					date: normalizedDate,
+					content: input.content,
+					contentFormat: "html",
+				})
+				.returning();
+
+			if (!created) {
+				throw new Error("Failed to create journal");
+			}
+
+			return created;
+		}),
+
+	// ============================================================================
 	// JOURNAL QUERIES
 	// ============================================================================
 
