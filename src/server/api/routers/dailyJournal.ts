@@ -1,12 +1,17 @@
 import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { getPresignedUploadUrl, isS3Configured } from "@/lib/storage/s3";
+import {
+	getPresignedDownloadUrl,
+	getPresignedUploadUrl,
+	isS3Configured,
+} from "@/lib/storage/s3";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	dailyChecklistChecks,
 	dailyChecklistTemplates,
 	dailyJournals,
+	journalAttachments,
 	trades,
 } from "@/server/db/schema";
 
@@ -729,5 +734,60 @@ export const dailyJournalRouter = createTRPCRouter({
 				presignedUrl,
 				key,
 			};
+		}),
+
+	// Confirm an upload completed and create database record
+	confirmUpload: protectedProcedure
+		.input(
+			z.object({
+				journalId: z.string(),
+				key: z.string(),
+				filename: z.string().min(1),
+				mimeType: z.string().min(1),
+				size: z.number().int().positive(),
+				caption: z.string().nullable().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (!isS3Configured()) {
+				throw new Error(
+					"File uploads are not configured. S3 settings are missing.",
+				);
+			}
+
+			// Verify user owns the journal
+			const journal = await ctx.db.query.dailyJournals.findFirst({
+				where: and(
+					eq(dailyJournals.id, input.journalId),
+					eq(dailyJournals.userId, ctx.user.id),
+				),
+			});
+
+			if (!journal) {
+				throw new Error("Journal not found");
+			}
+
+			// Generate a presigned URL for viewing the file
+			const url = getPresignedDownloadUrl(input.key, 86400 * 7); // 7 day expiry
+
+			// Create the attachment record
+			const [attachment] = await ctx.db
+				.insert(journalAttachments)
+				.values({
+					journalId: input.journalId,
+					url,
+					key: input.key,
+					filename: input.filename,
+					mimeType: input.mimeType,
+					size: input.size,
+					caption: input.caption ?? null,
+				})
+				.returning();
+
+			if (!attachment) {
+				throw new Error("Failed to create attachment");
+			}
+
+			return attachment;
 		}),
 });
