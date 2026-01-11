@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import {
 	ResizableHandle,
@@ -93,14 +94,12 @@ export default function DailyJournalPage() {
 					minSize={15}
 				>
 					<div className="h-full overflow-y-auto p-4">
-						{/* Calendar placeholder */}
+						{/* Calendar */}
 						<div className="mb-4 rounded border border-white/5 bg-white/[0.01] p-4">
-							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Calendar
-							</span>
-							<div className="mt-2 font-mono text-muted-foreground text-xs">
-								Calendar component will go here
-							</div>
+							<CalendarSidebar
+								onDateSelect={setSelectedDate}
+								selectedDate={selectedDate}
+							/>
 						</div>
 
 						{/* Checklist placeholder */}
