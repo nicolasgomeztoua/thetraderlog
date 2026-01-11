@@ -390,3 +390,32 @@
   - toISOString().split("T")[0] gives YYYY-MM-DD format for date comparison
 ---
 
+## 2026-01-11 - US-037
+- Added getComplianceStats query to dailyJournal router
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Compliance calculation pattern: fetch active templates (isActive: true), then journals with checks in date range
+  - Filter checks to only count those belonging to currently active templates (user may have deactivated templates)
+  - Return structured data: dailyCompliance array (date, checkedCount, totalTemplates, compliance %), averageCompliance, totalDays
+  - Handle edge case: if no active templates, return null averageCompliance and empty dailyCompliance array
+---
+
+## 2026-01-11 - US-038
+- Added streak and compliance UI to CalendarSidebar component
+- Files changed: src/components/daily-journal/calendar-sidebar.tsx
+- **Learnings for future iterations:**
+  - Check actual return type of API queries - streakData returns `{ streak }` not `{ currentStreak }`
+  - Stats display pattern: use Tooltip with icon + number + label, color-code by threshold (orange for streak, green/primary/muted for compliance)
+  - Null check pattern for averageCompliance: `!== null && !== undefined` since 0 is a valid value
+  - Pluralization pattern: `day${count !== 1 ? "s" : ""}` for singular/plural labels
+---
+
+## 2026-01-11 - US-039
+- Created barrel export for daily-journal components
+- Files changed: src/components/daily-journal/index.ts
+- **Learnings for future iterations:**
+  - Barrel export pattern: export { ComponentName } from "./component-file" (named exports)
+  - Sort exports alphabetically for consistency and easier maintenance
+  - Use index.ts for barrel exports, not index.tsx
+---
+

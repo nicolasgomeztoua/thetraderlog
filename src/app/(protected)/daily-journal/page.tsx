@@ -112,7 +112,7 @@ export default function DailyJournalPage() {
 				>
 					<div className="h-full overflow-y-auto p-4">
 						{/* Calendar */}
-						<div className="mb-4 rounded border border-white/5 bg-white/[0.01] p-4">
+						<div className="mb-4 rounded border border-white/5 bg-white/1 p-4">
 							<CalendarSidebar
 								onDateSelect={setSelectedDate}
 								selectedDate={selectedDate}

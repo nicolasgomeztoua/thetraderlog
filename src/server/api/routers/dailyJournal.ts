@@ -23,6 +23,37 @@ function normalizeDate(date: Date): Date {
 	return normalized;
 }
 
+// Type for attachment from database
+interface AttachmentRecord {
+	id: string;
+	journalId: string;
+	url: string; // Contains S3 key
+	key: string | null;
+	filename: string;
+	mimeType: string;
+	size: number;
+	caption: string | null;
+	createdAt: Date;
+}
+
+// Helper to generate presigned URLs for attachments on-demand
+function withPresignedUrls<T extends { attachments: AttachmentRecord[] }>(
+	journal: T,
+): T {
+	if (!isS3Configured()) {
+		return journal;
+	}
+
+	return {
+		...journal,
+		attachments: journal.attachments.map((attachment) => ({
+			...attachment,
+			// Generate fresh presigned URL from the stored key
+			url: getPresignedDownloadUrl(attachment.key ?? attachment.url, 3600), // 1 hour expiry
+		})),
+	};
+}
+
 export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
 	// JOURNAL MUTATIONS
@@ -139,6 +170,10 @@ export const dailyJournalRouter = createTRPCRouter({
 				});
 			}
 
+			// Generate presigned URLs for attachments on-demand
+			if (journal) {
+				return withPresignedUrls(journal);
+			}
 			return journal;
 		}),
 
@@ -258,7 +293,8 @@ export const dailyJournalRouter = createTRPCRouter({
 			});
 
 			return {
-				journal,
+				// Generate presigned URLs for attachments on-demand
+				journal: journal ? withPresignedUrls(journal) : journal,
 				trades: tradesForDate,
 			};
 		}),
@@ -768,15 +804,13 @@ export const dailyJournalRouter = createTRPCRouter({
 				throw new Error("Journal not found");
 			}
 
-			// Generate a presigned URL for viewing the file
-			const url = getPresignedDownloadUrl(input.key, 86400 * 7); // 7 day expiry
-
-			// Create the attachment record
+			// Store the key, not the presigned URL - URLs will be generated on-demand
+			// when fetching attachments to avoid expiration issues
 			const [attachment] = await ctx.db
 				.insert(journalAttachments)
 				.values({
 					journalId: input.journalId,
-					url,
+					url: input.key, // Store key in url field - will generate presigned URL on read
 					key: input.key,
 					filename: input.filename,
 					mimeType: input.mimeType,
