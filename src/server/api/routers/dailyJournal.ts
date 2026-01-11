@@ -2,6 +2,7 @@ import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
+	deleteObject,
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
@@ -789,5 +790,49 @@ export const dailyJournalRouter = createTRPCRouter({
 			}
 
 			return attachment;
+		}),
+
+	// Delete an attachment (from S3 and database)
+	deleteAttachment: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Find the attachment and verify ownership through journal
+			const attachment = await ctx.db.query.journalAttachments.findFirst({
+				where: eq(journalAttachments.id, input.id),
+				with: {
+					journal: true,
+				},
+			});
+
+			if (!attachment) {
+				throw new Error("Attachment not found");
+			}
+
+			// Verify user owns the journal that contains this attachment
+			if (attachment.journal.userId !== ctx.user.id) {
+				throw new Error("Attachment not found");
+			}
+
+			// Delete from S3 if configured
+			if (isS3Configured() && attachment.key) {
+				try {
+					await deleteObject(attachment.key);
+				} catch {
+					// Log error but continue with database deletion
+					// The file may have already been deleted or not exist
+					console.error(`Failed to delete S3 object: ${attachment.key}`);
+				}
+			}
+
+			// Delete from database
+			await ctx.db
+				.delete(journalAttachments)
+				.where(eq(journalAttachments.id, input.id));
+
+			return { success: true };
 		}),
 });
