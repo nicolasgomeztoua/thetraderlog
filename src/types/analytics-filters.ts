@@ -3,8 +3,6 @@
 // Shared types for analytics filtering across frontend and backend
 // =============================================================================
 
-import type { QueryBuilderState } from "./query-builder";
-
 /**
  * Date range filter for analytics
  */
@@ -68,9 +66,6 @@ export interface AnalyticsFilters {
 
 	/** Filter by review status */
 	reviewed: ReviewedFilter;
-
-	/** Advanced query builder state (overrides simple filters when set) */
-	advancedQuery: QueryBuilderState | null;
 }
 
 /**
@@ -89,7 +84,6 @@ export const DEFAULT_ANALYTICS_FILTERS: AnalyticsFilters = {
 	positionSizeRange: { min: null, max: null },
 	outcome: "all",
 	reviewed: "all",
-	advancedQuery: null,
 };
 
 /**
@@ -126,9 +120,6 @@ export function isFilterActive(
 
 		case "reviewed":
 			return value !== "all";
-
-		case "advancedQuery":
-			return value !== null;
 
 		default:
 			return false;

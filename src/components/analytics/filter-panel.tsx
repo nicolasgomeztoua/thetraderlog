@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarIcon, Save, Sparkles } from "lucide-react";
+import { CalendarIcon, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,12 +30,6 @@ import type {
 	ReviewedFilter,
 } from "@/types/analytics-filters";
 import { DEFAULT_ANALYTICS_FILTERS } from "@/types/analytics-filters";
-import {
-	countConditions,
-	DEFAULT_QUERY_STATE,
-	type QueryBuilderState,
-} from "@/types/query-builder";
-import { QueryBuilder } from "./query-builder";
 import { SavePresetDialog } from "./save-preset-dialog";
 
 // =============================================================================
@@ -312,19 +306,10 @@ export function FilterPanel({
 	sessions = [],
 	isLoading = false,
 }: FilterPanelProps) {
-	const {
-		filters,
-		setFilters,
-		setAdvancedQuery,
-		hasAdvancedQuery,
-		setActivePresetId,
-	} = useAnalyticsFilterStore();
+	const { filters, setFilters, setActivePresetId } = useAnalyticsFilterStore();
 
 	// Local state for editing (so changes aren't applied until "Apply" is clicked)
 	const [localFilters, setLocalFilters] = useState<AnalyticsFilters>(filters);
-
-	// Query builder modal state
-	const [queryBuilderOpen, setQueryBuilderOpen] = useState(false);
 
 	// Save preset dialog state
 	const [savePresetOpen, setSavePresetOpen] = useState(false);
@@ -335,24 +320,6 @@ export function FilterPanel({
 			setLocalFilters(filters);
 		}
 	}, [open, filters]);
-
-	// Handle query builder apply
-	const handleQueryApply = useCallback(
-		(query: QueryBuilderState) => {
-			// If query has conditions, set it; otherwise clear it
-			if (query.groups.length > 0 && countConditions(query) > 0) {
-				setAdvancedQuery(query);
-			} else {
-				setAdvancedQuery(null);
-			}
-		},
-		[setAdvancedQuery],
-	);
-
-	// Clear advanced query
-	const handleClearAdvancedQuery = useCallback(() => {
-		setAdvancedQuery(null);
-	}, [setAdvancedQuery]);
 
 	// Helper to update local filters
 	const updateLocal = useCallback(
@@ -409,280 +376,215 @@ export function FilterPanel({
 
 				<ScrollArea className="-mx-6 flex-1 px-6">
 					<div className="space-y-6 py-4">
-						{/* Advanced Query Builder Section */}
-						<div className="rounded border border-primary/20 bg-primary/5 p-4">
-							<div className="mb-3 flex items-center justify-between">
-								<div className="flex items-center gap-2">
-									<Sparkles className="size-4 text-primary" />
-									<span className="font-medium font-mono text-sm">
-										Advanced Query
-									</span>
-								</div>
-								{hasAdvancedQuery() && (
-									<Button
-										className="h-6 px-2 font-mono text-muted-foreground text-xs"
-										onClick={handleClearAdvancedQuery}
-										size="sm"
-										variant="ghost"
-									>
-										Clear
-									</Button>
-								)}
-							</div>
-
-							{hasAdvancedQuery() && filters.advancedQuery ? (
-								<div className="mb-3">
-									<div className="mb-2 flex items-center gap-2">
-										<Badge className="font-mono" variant="default">
-											{countConditions(filters.advancedQuery)} condition
-											{countConditions(filters.advancedQuery) !== 1 ? "s" : ""}
-										</Badge>
-										<span className="font-mono text-muted-foreground text-xs">
-											{filters.advancedQuery.groups.length} group
-											{filters.advancedQuery.groups.length !== 1 ? "s" : ""} (
-											{filters.advancedQuery.logic})
-										</span>
-									</div>
-									<p className="font-mono text-muted-foreground text-xs">
-										Advanced query is active. Simple filters below are disabled.
-									</p>
-								</div>
-							) : (
-								<p className="mb-3 font-mono text-muted-foreground text-xs">
-									Build complex filters with AND/OR logic between groups of
-									conditions.
+						{/* Symbol Filter */}
+						<FilterSection title="Symbols">
+							{isLoading ? (
+								<p className="font-mono text-muted-foreground text-xs">
+									Loading...
 								</p>
+							) : (
+								<MultiSelectFilter
+									onChange={(s) => updateLocal("symbols", s)}
+									options={symbolOptions}
+									selected={localFilters.symbols}
+								/>
 							)}
-
-							<Button
-								className="w-full font-mono text-xs"
-								onClick={() => setQueryBuilderOpen(true)}
-								size="sm"
-								variant={hasAdvancedQuery() ? "default" : "outline"}
-							>
-								<Sparkles className="mr-2 size-3" />
-								{hasAdvancedQuery() ? "Edit Query" : "Open Query Builder"}
-							</Button>
-						</div>
+						</FilterSection>
 
 						<Separator />
 
-						{/* Simple filters - disabled when advanced query is active */}
-						<div
-							className={
-								hasAdvancedQuery() ? "pointer-events-none opacity-50" : ""
-							}
-						>
-							{/* Symbol Filter */}
-							<FilterSection title="Symbols">
-								{isLoading ? (
-									<p className="font-mono text-muted-foreground text-xs">
-										Loading...
-									</p>
-								) : (
-									<MultiSelectFilter
-										onChange={(s) => updateLocal("symbols", s)}
-										options={symbolOptions}
-										selected={localFilters.symbols}
-									/>
-								)}
-							</FilterSection>
+						{/* Date Range */}
+						<FilterSection title="Date Range">
+							<DateRangeInput
+								endDate={localFilters.dateRange.end}
+								onEndChange={(date) =>
+									updateLocal("dateRange", {
+										...localFilters.dateRange,
+										end: date,
+									})
+								}
+								onStartChange={(date) =>
+									updateLocal("dateRange", {
+										...localFilters.dateRange,
+										start: date,
+									})
+								}
+								startDate={localFilters.dateRange.start}
+							/>
+						</FilterSection>
 
-							<Separator />
+						<Separator />
 
-							{/* Date Range */}
-							<FilterSection title="Date Range">
-								<DateRangeInput
-									endDate={localFilters.dateRange.end}
-									onEndChange={(date) =>
-										updateLocal("dateRange", {
-											...localFilters.dateRange,
-											end: date,
-										})
-									}
-									onStartChange={(date) =>
-										updateLocal("dateRange", {
-											...localFilters.dateRange,
-											start: date,
-										})
-									}
-									startDate={localFilters.dateRange.start}
+						{/* Day of Week */}
+						<FilterSection title="Day of Week">
+							<CheckboxGroup
+								onChange={(days) =>
+									updateLocal("daysOfWeek", days as number[])
+								}
+								options={[...DAYS_OF_WEEK]}
+								selected={localFilters.daysOfWeek}
+							/>
+						</FilterSection>
+
+						<Separator />
+
+						{/* Hour of Day */}
+						<FilterSection title="Hour of Day">
+							<CheckboxGroup
+								onChange={(hours) => updateLocal("hours", hours as number[])}
+								options={[...KEY_HOURS]}
+								selected={localFilters.hours}
+							/>
+						</FilterSection>
+
+						<Separator />
+
+						{/* Sessions */}
+						<FilterSection title="Trading Sessions">
+							{sessions.length === 0 ? (
+								<p className="font-mono text-muted-foreground text-xs">
+									No sessions configured
+								</p>
+							) : (
+								<MultiSelectFilter
+									onChange={(s) => updateLocal("sessions", s)}
+									options={sessions}
+									selected={localFilters.sessions}
 								/>
-							</FilterSection>
+							)}
+						</FilterSection>
 
-							<Separator />
+						<Separator />
 
-							{/* Day of Week */}
-							<FilterSection title="Day of Week">
-								<CheckboxGroup
-									onChange={(days) =>
-										updateLocal("daysOfWeek", days as number[])
-									}
-									options={[...DAYS_OF_WEEK]}
-									selected={localFilters.daysOfWeek}
+						{/* Strategies */}
+						<FilterSection title="Strategies">
+							{isLoading ? (
+								<p className="font-mono text-muted-foreground text-xs">
+									Loading...
+								</p>
+							) : strategies.length === 0 ? (
+								<p className="font-mono text-muted-foreground text-xs">
+									No strategies created
+								</p>
+							) : (
+								<MultiSelectFilter
+									onChange={(s) => updateLocal("strategies", s)}
+									options={strategies}
+									renderOption={(option) => (
+										<>
+											{option.color && (
+												<span
+													className="inline-block size-2 rounded-full"
+													style={{ backgroundColor: option.color }}
+												/>
+											)}
+											{option.name}
+										</>
+									)}
+									selected={localFilters.strategies}
 								/>
-							</FilterSection>
+							)}
+						</FilterSection>
 
-							<Separator />
+						<Separator />
 
-							{/* Hour of Day */}
-							<FilterSection title="Hour of Day">
-								<CheckboxGroup
-									onChange={(hours) => updateLocal("hours", hours as number[])}
-									options={[...KEY_HOURS]}
-									selected={localFilters.hours}
+						{/* Tags */}
+						<FilterSection title="Tags">
+							{isLoading ? (
+								<p className="font-mono text-muted-foreground text-xs">
+									Loading...
+								</p>
+							) : tags.length === 0 ? (
+								<p className="font-mono text-muted-foreground text-xs">
+									No tags created
+								</p>
+							) : (
+								<MultiSelectFilter
+									onChange={(t) => updateLocal("tags", t)}
+									options={tags}
+									renderOption={(option) => (
+										<Badge
+											className="border-0 px-0"
+											style={{ color: option.color }}
+											variant="outline"
+										>
+											{option.name}
+										</Badge>
+									)}
+									selected={localFilters.tags}
 								/>
-							</FilterSection>
+							)}
+						</FilterSection>
 
-							<Separator />
+						<Separator />
 
-							{/* Sessions */}
-							<FilterSection title="Trading Sessions">
-								{sessions.length === 0 ? (
-									<p className="font-mono text-muted-foreground text-xs">
-										No sessions configured
-									</p>
-								) : (
-									<MultiSelectFilter
-										onChange={(s) => updateLocal("sessions", s)}
-										options={sessions}
-										selected={localFilters.sessions}
-									/>
-								)}
-							</FilterSection>
+						{/* R-Multiple Range */}
+						<FilterSection title="R-Multiple Range">
+							<RangeInput
+								maxValue={localFilters.rMultipleRange.max}
+								minValue={localFilters.rMultipleRange.min}
+								onMaxChange={(max) =>
+									updateLocal("rMultipleRange", {
+										...localFilters.rMultipleRange,
+										max,
+									})
+								}
+								onMinChange={(min) =>
+									updateLocal("rMultipleRange", {
+										...localFilters.rMultipleRange,
+										min,
+									})
+								}
+								placeholder={{ min: "Min R", max: "Max R" }}
+								step={0.5}
+							/>
+						</FilterSection>
 
-							<Separator />
+						<Separator />
 
-							{/* Strategies */}
-							<FilterSection title="Strategies">
-								{isLoading ? (
-									<p className="font-mono text-muted-foreground text-xs">
-										Loading...
-									</p>
-								) : strategies.length === 0 ? (
-									<p className="font-mono text-muted-foreground text-xs">
-										No strategies created
-									</p>
-								) : (
-									<MultiSelectFilter
-										onChange={(s) => updateLocal("strategies", s)}
-										options={strategies}
-										renderOption={(option) => (
-											<>
-												{option.color && (
-													<span
-														className="inline-block size-2 rounded-full"
-														style={{ backgroundColor: option.color }}
-													/>
-												)}
-												{option.name}
-											</>
-										)}
-										selected={localFilters.strategies}
-									/>
-								)}
-							</FilterSection>
+						{/* Position Size Range */}
+						<FilterSection title="Position Size Range">
+							<RangeInput
+								maxValue={localFilters.positionSizeRange.max}
+								minValue={localFilters.positionSizeRange.min}
+								onMaxChange={(max) =>
+									updateLocal("positionSizeRange", {
+										...localFilters.positionSizeRange,
+										max,
+									})
+								}
+								onMinChange={(min) =>
+									updateLocal("positionSizeRange", {
+										...localFilters.positionSizeRange,
+										min,
+									})
+								}
+								placeholder={{ min: "Min size", max: "Max size" }}
+								step={1}
+							/>
+						</FilterSection>
 
-							<Separator />
+						<Separator />
 
-							{/* Tags */}
-							<FilterSection title="Tags">
-								{isLoading ? (
-									<p className="font-mono text-muted-foreground text-xs">
-										Loading...
-									</p>
-								) : tags.length === 0 ? (
-									<p className="font-mono text-muted-foreground text-xs">
-										No tags created
-									</p>
-								) : (
-									<MultiSelectFilter
-										onChange={(t) => updateLocal("tags", t)}
-										options={tags}
-										renderOption={(option) => (
-											<Badge
-												className="border-0 px-0"
-												style={{ color: option.color }}
-												variant="outline"
-											>
-												{option.name}
-											</Badge>
-										)}
-										selected={localFilters.tags}
-									/>
-								)}
-							</FilterSection>
+						{/* Outcome */}
+						<FilterSection title="Trade Outcome">
+							<RadioGroup
+								onChange={(v) => updateLocal("outcome", v as OutcomeFilter)}
+								options={[...OUTCOME_OPTIONS]}
+								value={localFilters.outcome}
+							/>
+						</FilterSection>
 
-							<Separator />
+						<Separator />
 
-							{/* R-Multiple Range */}
-							<FilterSection title="R-Multiple Range">
-								<RangeInput
-									maxValue={localFilters.rMultipleRange.max}
-									minValue={localFilters.rMultipleRange.min}
-									onMaxChange={(max) =>
-										updateLocal("rMultipleRange", {
-											...localFilters.rMultipleRange,
-											max,
-										})
-									}
-									onMinChange={(min) =>
-										updateLocal("rMultipleRange", {
-											...localFilters.rMultipleRange,
-											min,
-										})
-									}
-									placeholder={{ min: "Min R", max: "Max R" }}
-									step={0.5}
-								/>
-							</FilterSection>
-
-							<Separator />
-
-							{/* Position Size Range */}
-							<FilterSection title="Position Size Range">
-								<RangeInput
-									maxValue={localFilters.positionSizeRange.max}
-									minValue={localFilters.positionSizeRange.min}
-									onMaxChange={(max) =>
-										updateLocal("positionSizeRange", {
-											...localFilters.positionSizeRange,
-											max,
-										})
-									}
-									onMinChange={(min) =>
-										updateLocal("positionSizeRange", {
-											...localFilters.positionSizeRange,
-											min,
-										})
-									}
-									placeholder={{ min: "Min size", max: "Max size" }}
-									step={1}
-								/>
-							</FilterSection>
-
-							<Separator />
-
-							{/* Outcome */}
-							<FilterSection title="Trade Outcome">
-								<RadioGroup
-									onChange={(v) => updateLocal("outcome", v as OutcomeFilter)}
-									options={[...OUTCOME_OPTIONS]}
-									value={localFilters.outcome}
-								/>
-							</FilterSection>
-
-							<Separator />
-
-							{/* Review Status */}
-							<FilterSection title="Review Status">
-								<RadioGroup
-									onChange={(v) => updateLocal("reviewed", v as ReviewedFilter)}
-									options={[...REVIEW_STATUS_OPTIONS]}
-									value={localFilters.reviewed}
-								/>
-							</FilterSection>
-						</div>
+						{/* Review Status */}
+						<FilterSection title="Review Status">
+							<RadioGroup
+								onChange={(v) => updateLocal("reviewed", v as ReviewedFilter)}
+								options={[...REVIEW_STATUS_OPTIONS]}
+								value={localFilters.reviewed}
+							/>
+						</FilterSection>
 					</div>
 				</ScrollArea>
 
@@ -715,18 +617,6 @@ export function FilterPanel({
 					</div>
 				</SheetFooter>
 			</SheetContent>
-
-			{/* Query Builder Modal */}
-			<QueryBuilder
-				onApply={handleQueryApply}
-				onOpenChange={setQueryBuilderOpen}
-				open={queryBuilderOpen}
-				query={filters.advancedQuery ?? DEFAULT_QUERY_STATE}
-				sessions={sessions}
-				strategies={strategies}
-				symbols={symbols}
-				tags={tags}
-			/>
 
 			{/* Save Preset Dialog */}
 			<SavePresetDialog
