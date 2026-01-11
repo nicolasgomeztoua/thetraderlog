@@ -200,6 +200,50 @@ const handleMoveDown = (index: number) => {
 </div>
 ```
 
+### Tiptap Extension Commands TypeScript Errors
+**Problem:** TypeScript errors like "Property 'toggleBold' does not exist on type 'ChainedCommands'"
+**Solution:** Create custom interface with all extension commands and cast the chain:
+```tsx
+interface EditorCommands {
+  run: () => boolean;
+  toggleBold: () => EditorCommands;
+  toggleItalic: () => EditorCommands;
+  setLink: (attrs: { href: string }) => EditorCommands;
+  // ... other extension commands
+}
+
+const cmd = () => editor.chain().focus() as unknown as EditorCommands;
+cmd()?.toggleBold().run();
+```
+
+### Tiptap SSR Hydration Issues
+**Problem:** Tiptap can cause hydration mismatches when rendered on server
+**Solution:** Set `immediatelyRender: false` in useEditor options:
+```tsx
+const editor = useEditor({
+  extensions: [...],
+  immediatelyRender: false,
+});
+```
+
+### Debounced Auto-Save Pattern
+**When:** Building editors with automatic persistence
+**How:**
+```tsx
+const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const lastSavedContentRef = useRef<string | null>(null);
+
+// In onUpdate callback
+if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+const content = editor.getHTML();
+if (content === lastSavedContentRef.current) return; // Skip if unchanged
+
+debounceTimerRef.current = setTimeout(() => {
+  lastSavedContentRef.current = content;
+  saveMutation.mutate({ content });
+}, 500);
+```
+
 ## Decisions
 
 <!-- Architectural decisions and rationale -->

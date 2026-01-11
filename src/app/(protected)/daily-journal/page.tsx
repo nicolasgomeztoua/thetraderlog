@@ -5,6 +5,7 @@ import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
+import { JournalEditor } from "@/components/daily-journal/journal-editor";
 import {
 	ResizableHandle,
 	ResizablePanel,
@@ -132,14 +133,12 @@ export default function DailyJournalPage() {
 					minSize={30}
 				>
 					<div className="h-full overflow-y-auto p-4">
-						{/* Editor placeholder */}
+						{/* Journal Editor */}
 						<div className="mb-4 rounded border border-white/5 bg-white/[0.01] p-4">
-							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Journal Editor
+							<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+								Journal Entry
 							</span>
-							<div className="mt-2 min-h-[200px] font-mono text-muted-foreground text-xs">
-								Rich text editor will go here
-							</div>
+							<JournalEditor selectedDate={selectedDate} />
 						</div>
 
 						{/* Attachments placeholder */}

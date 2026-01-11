@@ -269,3 +269,30 @@
   - Group hover pattern: add `group` class to container, use `group-hover:opacity-100` for child elements to reveal on hover
 ---
 
+## 2026-01-11 - US-027
+- Created EditorToolbar component with formatting buttons for Tiptap rich text editor
+- Files changed: src/components/daily-journal/editor-toolbar.tsx
+- **Learnings for future iterations:**
+  - Tiptap v3 TypeScript: Editor type from @tiptap/react doesn't include extension commands by default
+  - Create custom EditorCommands interface with explicit methods (toggleBold, setLink, setImage, etc.) for type safety
+  - Use `as unknown as EditorCommands` cast on editor.chain().focus() result
+  - Link/Image commands come from extensions, not starter-kit, so they need separate type declarations
+  - Toolbar button pattern: wrap in Tooltip, use cn() for conditional active state styling (bg-primary/20 text-primary)
+  - Popover for link URL input: pre-fill with existing link using editor.getAttributes("link").href
+  - Image upload: use hidden file input triggered by button click, onImageUpload callback for S3 integration
+  - Separator component between button groups for visual organization
+---
+
+## 2026-01-11 - US-028
+- Created JournalEditor component with Tiptap rich text editor
+- Files changed: src/components/daily-journal/journal-editor.tsx, src/app/(protected)/daily-journal/page.tsx, tests/integration/daily-journal/checklist.test.ts
+- **Learnings for future iterations:**
+  - Tiptap useEditor: set `immediatelyRender: false` to avoid SSR hydration issues
+  - Auto-save pattern: use debounceTimerRef to track pending saves, track lastSavedContent to avoid redundant saves
+  - Track previous date with ref to detect date changes and reset editor state appropriately
+  - Save status indicator pattern: idle/saving/saved/error states with auto-clear timeout for "saved" status
+  - Image upload flow: getUploadUrl -> PUT to presigned URL -> confirmUpload to record in DB
+  - Placeholder extension: use `emptyEditorClass` with content-[attr(data-placeholder)] CSS trick
+  - Editor content update: only update if not focused and content differs to avoid cursor jumping
+---
+

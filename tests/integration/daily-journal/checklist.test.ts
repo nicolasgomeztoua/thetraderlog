@@ -57,9 +57,11 @@ describe("dailyJournal router - checklist operations", () => {
 			expect(templates.length).toBeGreaterThanOrEqual(3);
 			// Verify they're ordered
 			for (let i = 1; i < templates.length; i++) {
-				expect(templates[i].order).toBeGreaterThanOrEqual(
-					templates[i - 1].order,
-				);
+				const current = templates[i];
+				const previous = templates[i - 1];
+				if (current && previous) {
+					expect(current.order).toBeGreaterThanOrEqual(previous.order);
+				}
 			}
 		});
 
