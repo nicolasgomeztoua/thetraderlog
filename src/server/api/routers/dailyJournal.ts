@@ -792,6 +792,53 @@ export const dailyJournalRouter = createTRPCRouter({
 			return attachment;
 		}),
 
+	// ============================================================================
+	// STREAK & COMPLIANCE QUERIES
+	// ============================================================================
+
+	// Get current journaling streak (consecutive days with content from today backwards)
+	getStreak: protectedProcedure.query(async ({ ctx }) => {
+		// Get all journals with content, ordered by date descending
+		const journals = await ctx.db.query.dailyJournals.findMany({
+			where: eq(dailyJournals.userId, ctx.user.id),
+			columns: {
+				date: true,
+				content: true,
+			},
+			orderBy: (journals, { desc }) => [desc(journals.date)],
+		});
+
+		// Filter to only journals with content
+		const journalsWithContent = journals.filter(
+			(j) => j.content !== null && j.content.trim() !== "",
+		);
+
+		// Calculate streak starting from today
+		const today = normalizeDate(new Date());
+		let streak = 0;
+		const currentDate = new Date(today);
+
+		// Create a Set of dates with content for O(1) lookup
+		const datesWithContent = new Set(
+			journalsWithContent.map((j) => j.date.toISOString().split("T")[0]),
+		);
+
+		// Count consecutive days backwards from today
+		while (true) {
+			const dateStr = currentDate.toISOString().split("T")[0];
+			if (datesWithContent.has(dateStr)) {
+				streak++;
+				// Move to previous day
+				currentDate.setUTCDate(currentDate.getUTCDate() - 1);
+			} else {
+				// Gap found, streak ends
+				break;
+			}
+		}
+
+		return { streak };
+	}),
+
 	// Delete an attachment (from S3 and database)
 	deleteAttachment: protectedProcedure
 		.input(
