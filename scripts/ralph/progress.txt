@@ -296,3 +296,17 @@
   - Editor content update: only update if not focused and content differs to avoid cursor jumping
 ---
 
+## 2026-01-11 - US-029
+- Verified markdown shortcuts work in JournalEditor - no code changes needed
+- Files verified: src/components/daily-journal/journal-editor.tsx (StarterKit config)
+- **Learnings for future iterations:**
+  - StarterKit includes all standard markdown input rules by default - no configuration needed
+  - Heading extension: `#`, `##`, `###` + space triggers heading transformation
+  - Bold/Italic extensions: `**text**` and `*text*` patterns (via markInputRule)
+  - BulletList extension: `- ` and `* ` at line start triggers bullet list
+  - OrderedList extension: `1. ` at line start triggers ordered list
+  - Blockquote extension: `> ` at line start triggers blockquote
+  - Input rules are defined in each extension's addInputRules() method
+  - Verification stories may not require code changes - just confirm existing functionality works
+---
+
