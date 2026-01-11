@@ -8,6 +8,7 @@ import { ChecklistSettings } from "@/components/daily-journal/checklist-settings
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import { JournalEditor } from "@/components/daily-journal/journal-editor";
+import { TradesSummary } from "@/components/daily-journal/trades-summary";
 import {
 	ResizableHandle,
 	ResizablePanel,
@@ -119,11 +120,16 @@ export default function DailyJournalPage() {
 						</div>
 
 						{/* Checklist */}
-						<div className="rounded border border-white/5 bg-white/[0.01] p-4">
+						<div className="mb-4 rounded border border-white/5 bg-white/[0.01] p-4">
 							<DailyChecklist
 								onOpenSettings={() => setIsChecklistSettingsOpen(true)}
 								selectedDate={selectedDate}
 							/>
+						</div>
+
+						{/* Trades Summary */}
+						<div className="rounded border border-white/5 bg-white/[0.01] p-4">
+							<TradesSummary selectedDate={selectedDate} />
 						</div>
 
 						{/* Checklist Settings Modal */}

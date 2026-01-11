@@ -334,3 +334,15 @@
   - formatFileSize helper: convert bytes to B/KB/MB with appropriate precision
 ---
 
+## 2026-01-11 - US-032
+- Integrated image paste/drop upload into JournalEditor
+- Files changed: src/components/daily-journal/journal-editor.tsx
+- **Learnings for future iterations:**
+  - Paste handler: use clipboardData.items, check item.type.startsWith("image/"), call getAsFile()
+  - Drop handler: use dataTransfer.files, filter for image types
+  - Event listeners on editor: attach to editor.view.dom after editor is ready, cleanup in effect
+  - Cast to EventListener for TypeScript compatibility when attaching native events
+  - Tiptap setImage: use editor.chain().focus().setImage({ src: url }).run()
+  - Reuse existing upload handler (handleImageUpload) for consistency
+---
+
