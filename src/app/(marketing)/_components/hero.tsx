@@ -269,7 +269,7 @@ export function Hero() {
 						{/* Status badge */}
 						<div className="mb-6 inline-flex items-center gap-3 rounded-none border border-white/10 bg-white/2 px-4 py-2">
 							<span className="pulse-dot h-2 w-2 rounded-full bg-profit" />
-							<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">	
+							<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 								Now in public beta
 							</span>
 						</div>
