@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import {
 	ResizableHandle,
 	ResizablePanel,
@@ -44,9 +45,7 @@ function saveSizes(sizes: number[]) {
 
 export default function DailyJournalPage() {
 	// Selected date state
-	// setSelectedDate will be used by DateNavigation and CalendarSidebar components (US-022, US-023)
 	const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
-	void setSelectedDate; // Mark as used - will be passed to child components
 
 	// Panel sizes from localStorage [left, right]
 	const [panelSizes, setPanelSizes] = useState<number[]>([30, 70]);
@@ -77,6 +76,7 @@ export default function DailyJournalPage() {
 						})}
 					</h1>
 				</div>
+				<DateNavigation date={selectedDate} onDateChange={setSelectedDate} />
 			</div>
 
 			{/* Resizable Panels */}
