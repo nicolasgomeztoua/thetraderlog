@@ -18,6 +18,10 @@
 **When:** Creating a new tRPC router
 **How:** 1) Create file in routers/, 2) Export router, 3) Import in root.ts, 4) Add to appRouter object
 
+### Date Range Queries
+**When:** Queries that filter by a date range (e.g., calendar views, reports)
+**How:** Import `gte`, `lte` from drizzle-orm, normalize both dates to midnight UTC, use `and(eq(userId), gte(date, start), lte(date, end))`
+
 ## Gotchas
 
 ### Drizzle returning() can be undefined

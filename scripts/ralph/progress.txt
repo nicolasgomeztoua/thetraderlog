@@ -82,3 +82,12 @@
   - Remember to set updatedAt when updating existing records
 ---
 
+## 2026-01-11 - US-009
+- Added getRange query for fetching journals in a date range
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Date range queries: use `gte` and `lte` from drizzle-orm for inclusive date ranges
+  - For calendar display, transform data to include computed flags like `hasContent` to avoid sending full content
+  - Use `columns` option in findMany to limit returned fields when full data isn't needed
+---
+

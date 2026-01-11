@@ -1,8 +1,8 @@
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { dailyJournals } from "@/server/db/schema";
+import { dailyJournals, trades } from "@/server/db/schema";
 
 // Helper to normalize date to midnight UTC
 function normalizeDate(date: Date): Date {
@@ -165,5 +165,89 @@ export const dailyJournalRouter = createTRPCRouter({
 				createdAt: journal.createdAt,
 				updatedAt: journal.updatedAt,
 			}));
+		}),
+
+	// Get journal with trades for a specific date
+	getWithTrades: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // ISO date string
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+			// End of day is start of next day
+			const nextDay = new Date(normalizedDate);
+			nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+			// Get journal for the date (auto-create if not exists)
+			let journal = await ctx.db.query.dailyJournals.findFirst({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					eq(dailyJournals.date, normalizedDate),
+				),
+				with: {
+					attachments: true,
+					checklistChecks: {
+						with: {
+							template: true,
+						},
+					},
+				},
+			});
+
+			// Auto-create if not exists
+			if (!journal) {
+				const [created] = await ctx.db
+					.insert(dailyJournals)
+					.values({
+						userId: ctx.user.id,
+						date: normalizedDate,
+						content: null,
+						contentFormat: "html",
+					})
+					.returning();
+
+				if (!created) {
+					throw new Error("Failed to create journal");
+				}
+
+				// Fetch with relations
+				journal = await ctx.db.query.dailyJournals.findFirst({
+					where: eq(dailyJournals.id, created.id),
+					with: {
+						attachments: true,
+						checklistChecks: {
+							with: {
+								template: true,
+							},
+						},
+					},
+				});
+			}
+
+			// Get trades for the date (filter by entry time within the day)
+			const tradesForDate = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.userId, ctx.user.id),
+					gte(trades.entryTime, normalizedDate),
+					lt(trades.entryTime, nextDay),
+					isNull(trades.deletedAt),
+				),
+				with: {
+					account: true,
+					tradeTags: {
+						with: {
+							tag: true,
+						},
+					},
+				},
+				orderBy: (trades, { asc }) => [asc(trades.entryTime)],
+			});
+
+			return {
+				journal,
+				trades: tradesForDate,
+			};
 		}),
 });
