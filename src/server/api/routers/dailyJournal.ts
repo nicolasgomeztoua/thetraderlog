@@ -1,6 +1,7 @@
 import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { z } from "zod";
-
+import { getPresignedUploadUrl, isS3Configured } from "@/lib/storage/s3";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	dailyChecklistChecks,
@@ -689,6 +690,44 @@ export const dailyJournalRouter = createTRPCRouter({
 			return {
 				journalId: journal.id,
 				checks: updatedChecks,
+			};
+		}),
+
+	// ============================================================================
+	// FILE UPLOAD MUTATIONS
+	// ============================================================================
+
+	// Get a presigned URL for uploading a file to S3
+	getUploadUrl: protectedProcedure
+		.input(
+			z.object({
+				filename: z.string().min(1),
+				mimeType: z.string().min(1),
+				size: z.number().int().positive(),
+				date: z.string(), // ISO date string
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (!isS3Configured()) {
+				throw new Error(
+					"File uploads are not configured. S3 settings are missing.",
+				);
+			}
+
+			const normalizedDate = normalizeDate(new Date(input.date));
+			const dateStr = normalizedDate.toISOString().split("T")[0]; // YYYY-MM-DD
+
+			// Generate a unique key for the file
+			// Format: journals/{userId}/{date}/{uuid}-{filename}
+			const uuid = nanoid();
+			const key = `journals/${ctx.user.id}/${dateStr}/${uuid}-${input.filename}`;
+
+			// Generate presigned PUT URL (valid for 1 hour)
+			const presignedUrl = getPresignedUploadUrl(key, 3600);
+
+			return {
+				presignedUrl,
+				key,
 			};
 		}),
 });
