@@ -62,3 +62,23 @@
   - db:push is safe for new tables - no destructive changes
 ---
 
+## 2026-01-11 - US-007
+- Created dailyJournal router with getByDate query
+- Files changed: src/server/api/routers/dailyJournal.ts, src/server/api/root.ts
+- **Learnings for future iterations:**
+  - tRPC router pattern: create file in routers/, export router, register in root.ts
+  - Date normalization: use helper function to normalize to midnight UTC for date-based lookups
+  - Auto-create pattern: check if exists, if not insert and re-fetch with relations
+  - TypeScript: Drizzle returning() can return undefined, always guard with `if (!created)`
+  - Queries can include nested relations with `with: { relation: { with: { nested: true } } }`
+---
+
+## 2026-01-11 - US-008
+- Added updateContent mutation for upsert journal content
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Upsert pattern: query first to check if exists, then update or insert accordingly
+  - Mutations return the updated/created entity for optimistic updates on frontend
+  - Remember to set updatedAt when updating existing records
+---
+

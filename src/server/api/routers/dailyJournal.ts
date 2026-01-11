@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
@@ -128,5 +128,42 @@ export const dailyJournalRouter = createTRPCRouter({
 			}
 
 			return journal;
+		}),
+
+	// Get journals for a date range (for calendar display)
+	getRange: protectedProcedure
+		.input(
+			z.object({
+				startDate: z.string(), // ISO date string
+				endDate: z.string(), // ISO date string
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const startNormalized = normalizeDate(new Date(input.startDate));
+			const endNormalized = normalizeDate(new Date(input.endDate));
+
+			const journals = await ctx.db.query.dailyJournals.findMany({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					gte(dailyJournals.date, startNormalized),
+					lte(dailyJournals.date, endNormalized),
+				),
+				columns: {
+					id: true,
+					date: true,
+					content: true,
+					createdAt: true,
+					updatedAt: true,
+				},
+			});
+
+			// Transform to include hasContent indicator for calendar display
+			return journals.map((journal) => ({
+				id: journal.id,
+				date: journal.date,
+				hasContent: journal.content !== null && journal.content.trim() !== "",
+				createdAt: journal.createdAt,
+				updatedAt: journal.updatedAt,
+			}));
 		}),
 });
