@@ -1,5 +1,5 @@
-# Ralph Progress Log
-Started: Initial setup
+# Ralph Progress Log - Daily Journal Feature
+# Started: 2026-01-11
 ---
 
 ## Codebase Patterns
@@ -11,3 +11,8 @@ Started: Initial setup
 - Always run `bun run check` and `bun run build` before committing
 
 ---
+
+## Learnings
+
+(Ralph will add learnings here as stories are completed)
+

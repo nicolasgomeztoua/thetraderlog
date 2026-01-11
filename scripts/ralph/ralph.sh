@@ -145,7 +145,21 @@ if [ "$REMAINING" -gt 0 ]; then
 fi
 
 # =============================================================================
-# PHASE 2: Create Pull Request
+# PHASE 2: Code Quality Review
+# =============================================================================
+
+echo ""
+echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
+echo -e "${MAGENTA} Ralph Code Quality Phase - Security & Consistency Audit${NC}"
+echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
+
+# Run Claude with the code review prompt
+OUTPUT=$(cd "$PROJECT_ROOT" && cat "$SCRIPT_DIR/code-review-prompt.md" | claude --dangerously-skip-permissions -p 2>&1 | tee /dev/stderr) || true
+
+echo -e "${GREEN}Code quality review complete.${NC}"
+
+# =============================================================================
+# PHASE 3: Create Pull Request
 # =============================================================================
 
 echo ""
@@ -207,7 +221,7 @@ fi
 echo "$PR_NUMBER" > "$PR_NUMBER_FILE"
 
 # =============================================================================
-# PHASE 3: Greptile Review Loop
+# PHASE 4: Greptile Review Loop
 # =============================================================================
 
 echo ""

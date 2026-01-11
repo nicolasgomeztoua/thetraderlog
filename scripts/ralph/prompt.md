@@ -12,13 +12,15 @@ You are an autonomous coding agent working on the EdgeJournal project.
 
 1. Read the PRD at `scripts/ralph/prd.json`
 2. Read the progress log at `scripts/ralph/progress.txt` (check Codebase Patterns section first)
-3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
-4. Pick the **highest priority** user story where `passes: false`
-5. Implement that single user story
-6. Run quality checks: `bun run check` (Biome) and `bun run build` (TypeScript)
-7. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
-8. Update the PRD (`scripts/ralph/prd.json`) to set `passes: true` for the completed story
-9. Append your progress to `scripts/ralph/progress.txt`
+3. **Read AGENTS.md files** in directories you'll be working in (they contain learnings from past work)
+4. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
+5. Pick the **highest priority** user story where `passes: false`
+6. Implement that single user story
+7. Run quality checks: `bun run check` (Biome) and `bun run build` (TypeScript)
+8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
+9. Update the PRD (`scripts/ralph/prd.json`) to set `passes: true` for the completed story
+10. **Update AGENTS.md if you learned something** - patterns, gotchas, or decisions worth noting (see Compound Engineering section)
+11. Append your progress to `scripts/ralph/progress.txt`
 
 ## Progress Report Format
 
@@ -105,10 +107,49 @@ If ALL stories are complete and passing, reply with:
 
 If there are still stories with `passes: false`, end your response normally (another iteration will pick up the next story).
 
+## Compound Engineering (Self-Improving Documentation)
+
+**Read:** `.claude/skills/compound-engineering/SKILL.md`
+
+After completing each story, update the relevant `AGENTS.md` file with learnings:
+
+### AGENTS.md Locations
+- `src/server/api/routers/AGENTS.md` - tRPC patterns, auth, queries
+- `src/server/db/AGENTS.md` - Schema, migrations, decimal handling
+- `src/components/AGENTS.md` - UI patterns, Terminal design
+- `tests/AGENTS.md` - Test patterns, fixtures, assertions
+
+### What to Add
+
+**Patterns discovered:**
+```markdown
+### [Pattern Name]
+**When:** [context]
+**How:** [brief explanation]
+```
+
+**Mistakes made:**
+```markdown
+### [Gotcha Title]
+**Problem:** [what went wrong]
+**Solution:** [how to fix/avoid]
+```
+
+**Decisions made:**
+```markdown
+### [Decision]
+**Choice:** [what you chose]
+**Why:** [rationale]
+```
+
+Only add learnings that would help future iterations. If you didn't learn anything new, skip this step.
+
 ## Important
 
 - Work on ONE story per iteration
 - Commit after each story
 - Keep builds green
+- Read AGENTS.md files before working in a directory
+- Update AGENTS.md files with learnings after completing work
 - Read the Codebase Patterns section in progress.txt before starting
 - Reference CLAUDE.md for all conventions
