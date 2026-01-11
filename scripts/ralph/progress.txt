@@ -200,3 +200,40 @@
   - Use `bun add` for installing multiple packages in one command
 ---
 
+## 2026-01-11 - US-021
+- Created daily-journal page layout with resizable panels
+- Files changed: src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - ResizablePanelGroup pattern: use horizontal direction, set defaultSize on each panel
+  - Panel size persistence: use localStorage with getStoredSizes/saveSizes helpers
+  - Use onLayout callback to persist sizes, not direct state updates
+  - Full height layout: use `h-[calc(100vh-4rem)]` to account for nav header
+  - Panel constraints: use minSize/maxSize to prevent unusable layouts
+  - Placeholder pattern: use placeholder cards for components not yet implemented
+---
+
+## 2026-01-11 - US-022
+- Created DateNavigation component with prev/next day buttons, Today button, and date picker popover
+- Files changed: src/components/daily-journal/date-navigation.tsx, src/components/ui/calendar.tsx, src/components/ui/popover.tsx, src/app/(protected)/daily-journal/page.tsx, package.json, bun.lock
+- **Learnings for future iterations:**
+  - react-day-picker v9 is used for calendar, integrates with Radix popover
+  - Calendar component uses DayPicker with customized classNames for Terminal styling
+  - Date navigation pattern: prev/next buttons + popover picker + Today shortcut
+  - Use isToday() from date-fns to check if selected date is today
+  - addDays() from date-fns for prev/next day navigation
+  - format() from date-fns for date display formatting
+---
+
+## 2026-01-11 - US-023
+- Created CalendarSidebar component with month grid view, P&L colors, and journal indicators
+- Files changed: src/components/daily-journal/calendar-sidebar.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Use analytics.getCalendarData for P&L data (already includes date aggregation)
+  - Use dailyJournal.getRange for journal indicators (hasContent flag)
+  - Month grid pattern: use eachDayOfInterval() + getDay() to get days with padding
+  - Stable React keys for weeks: use first day of week as key, not array index
+  - Color intensity scaling: calculate maxAbsPnl for the visible month, then scale 0.25/0.5/0.75/1
+  - Tooltip pattern: wrap day buttons in Tooltip with TooltipTrigger asChild
+  - getDateStringInTimezone from lib/shared for timezone-aware date strings matching backend
+---
+

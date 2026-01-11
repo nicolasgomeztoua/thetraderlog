@@ -6,6 +6,7 @@ import {
 	BookMarked,
 	BookOpen,
 	Brain,
+	Calendar,
 	Check,
 	ChevronsUpDown,
 	FileSpreadsheet,
@@ -55,6 +56,11 @@ const mainNavItems = [
 		title: "Trades",
 		href: "/journal",
 		icon: BookOpen,
+	},
+	{
+		title: "Daily Journal",
+		href: "/daily-journal",
+		icon: Calendar,
 	},
 	{
 		title: "Strategies",
