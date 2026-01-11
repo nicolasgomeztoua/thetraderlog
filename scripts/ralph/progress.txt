@@ -16,3 +16,49 @@
 
 (Ralph will add learnings here as stories are completed)
 
+---
+
+## 2026-01-11 - US-001
+- Added ID generators for daily journal entities (dj, ct, ja prefixes)
+- Files changed: src/lib/shared/id.ts
+- **Learnings for future iterations:**
+  - ID generators follow pattern: `createId("prefix")` returning `prefix-{nanoid}`
+  - All entity IDs have 2-character prefixes (us=user, ac=account, dj=dailyJournal, etc.)
+---
+
+## 2026-01-11 - US-002
+- Added dailyJournals table schema with all required fields
+- Files changed: src/server/db/schema.ts
+- **Learnings for future iterations:**
+  - Table pattern: use createTable() with third argument for indexes
+  - User FK with cascade delete: `.references(() => users.id, { onDelete: "cascade" })`
+  - Unique index uses uniqueIndex(), regular index uses index()
+  - Relations added to usersRelations (many) and new entity relations (one back to user)
+  - Type exports follow pattern: `export type Entity = typeof table.$inferSelect`
+---
+
+## 2026-01-11 - US-003, US-004, US-005
+- Verified checklist templates, checklist checks, and journal attachments schemas already implemented
+- US-003: dailyChecklistTemplates table with id, userId, text, order, isActive, createdAt fields
+- US-004: dailyChecklistChecks table with journalId, templateId, checked, checkedAt (composite PK)
+- US-005: journalAttachments table with id, journalId, url, key, filename, mimeType, size, caption, createdAt
+- All relations properly configured in schema
+- Files verified: src/server/db/schema.ts (already committed in previous iteration)
+- **Learnings for future iterations:**
+  - Composite primary key pattern: `primaryKey({ columns: [t.col1, t.col2] })`
+  - Junction/join tables reference both parent tables with cascade delete
+  - All tables need corresponding relations defined for Drizzle ORM
+  - Type exports for both Select and Insert: `Entity` and `NewEntity`
+---
+
+## 2026-01-11 - US-006
+- Pushed schema changes to database with `bun run db:push`
+- All four tables created: dailyJournals, dailyChecklistTemplates, dailyChecklistChecks, journalAttachments
+- Fixed biome config to exclude example/config files from linting
+- Files changed: biome.jsonc
+- **Learnings for future iterations:**
+  - Biome exclude pattern: `"includes": ["**", "!folder", "!file.json"]` (add `**` first, then negations)
+  - Long PostgreSQL identifier names are automatically truncated (notice, not error)
+  - db:push is safe for new tables - no destructive changes
+---
+
