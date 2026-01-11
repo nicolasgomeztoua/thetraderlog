@@ -75,9 +75,7 @@ export function DailyChecklist({
 
 					// Add new check (was unchecked, now checked)
 					// Find template to include in the optimistic update
-					const template = templates?.find(
-						(t) => t.id === newData.templateId,
-					);
+					const template = templates?.find((t) => t.id === newData.templateId);
 
 					// If we can't find the template, don't optimistically update
 					// Let the actual mutation result handle it

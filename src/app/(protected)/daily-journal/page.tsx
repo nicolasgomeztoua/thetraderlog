@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
+import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import {
@@ -114,23 +115,11 @@ export default function DailyJournalPage() {
 							/>
 						</div>
 
-						{/* TODO: ChecklistSettings modal will be added in US-026 */}
-						{isChecklistSettingsOpen && (
-							<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-								<div className="rounded border border-border bg-background p-4">
-									<p className="font-mono text-sm">
-										Checklist settings modal (US-026)
-									</p>
-									<button
-										className="mt-2 font-mono text-primary text-xs"
-										onClick={() => setIsChecklistSettingsOpen(false)}
-										type="button"
-									>
-										Close
-									</button>
-								</div>
-							</div>
-						)}
+						{/* Checklist Settings Modal */}
+						<ChecklistSettings
+							onOpenChange={setIsChecklistSettingsOpen}
+							open={isChecklistSettingsOpen}
+						/>
 					</div>
 				</ResizablePanel>
 

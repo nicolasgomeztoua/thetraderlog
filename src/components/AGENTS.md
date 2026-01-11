@@ -99,11 +99,106 @@ function getPnLColorClass(pnl: number, maxAbsPnl: number): string {
 }
 ```
 
+### Optimistic Updates for Toggles
+**When:** Building toggle-based interactions (checkboxes, likes, favorites)
+**How:**
+```tsx
+const mutation = api.entity.toggle.useMutation({
+  onMutate: async (newData) => {
+    await utils.entity.get.cancel();
+    const previousData = utils.entity.get.getData();
+    utils.entity.get.setData(queryKey, (old) => {
+      if (!old) return old;
+      // Toggle existing record or add new one
+      // IMPORTANT: Ensure all required fields are non-undefined
+      const relatedData = templates?.find((t) => t.id === newData.id);
+      if (!relatedData) return old; // Skip update if related data not found
+      return { ...old, updated: true };
+    });
+    return { previousData };
+  },
+  onError: (_err, _data, context) => {
+    if (context?.previousData) {
+      utils.entity.get.setData(queryKey, context.previousData);
+    }
+  },
+  onSettled: () => utils.entity.get.invalidate(),
+});
+```
+
+### Settings Modal with CRUD
+**When:** Building modals for managing lists (templates, tags, etc.)
+**How:**
+```tsx
+// Track multiple states: editing, deleting, new item input
+const [newItemText, setNewItemText] = useState("");
+const [editingId, setEditingId] = useState<string | null>(null);
+const [editingText, setEditingText] = useState("");
+const [deletingId, setDeletingId] = useState<string | null>(null);
+
+// Inline editing: show input when editingId matches, handle Enter/Escape
+const handleEditKeyDown = (e: React.KeyboardEvent) => {
+  if (e.key === "Enter") handleSaveEdit();
+  else if (e.key === "Escape") setEditingId(null);
+};
+
+// Inline delete confirmation: show confirm/cancel buttons when deletingId matches
+{deletingId === item.id ? (
+  <div className="flex items-center justify-between">
+    <span className="text-destructive">Delete this item?</span>
+    <div className="flex gap-1">
+      <Button onClick={() => handleDelete(item.id)} variant="destructive">Delete</Button>
+      <Button onClick={() => setDeletingId(null)} variant="ghost">Cancel</Button>
+    </div>
+  </div>
+) : (
+  <span onClick={() => handleStartEdit(item.id, item.text)}>{item.text}</span>
+)}
+
+// Reveal buttons on hover with group pattern
+<div className="group flex items-center">
+  <button className="opacity-0 group-hover:opacity-100 transition-all">Delete</button>
+</div>
+```
+
+### Up/Down Reorder Buttons
+**When:** Reordering lists without drag-and-drop complexity
+**How:**
+```tsx
+const handleMoveUp = (index: number) => {
+  if (index === 0) return;
+  const items = data.map((item, i) => ({
+    id: item.id,
+    order: i === index ? index - 1 : i === index - 1 ? index : i,
+  }));
+  reorderMutation.mutate({ items });
+};
+
+const handleMoveDown = (index: number) => {
+  if (index === data.length - 1) return;
+  const items = data.map((item, i) => ({
+    id: item.id,
+    order: i === index ? index + 1 : i === index + 1 ? index : i,
+  }));
+  reorderMutation.mutate({ items });
+};
+```
+
 ## Gotchas
 
 ### Unused Variables in Placeholder Components
 **Problem:** State setters marked as unused when component structure is set up before child components exist
 **Solution:** Use `void setter;` comment to mark as used, or extract to separate hook
+
+### Label Accessibility (noLabelWithoutControl)
+**Problem:** Biome linter rejects labels wrapping Radix checkboxes without htmlFor
+**Solution:** Use id on Checkbox + htmlFor on label, instead of wrapping label:
+```tsx
+<div className="flex items-center gap-2">
+  <Checkbox id={checkboxId} />
+  <label htmlFor={checkboxId}>Label text</label>
+</div>
+```
 
 ## Decisions
 

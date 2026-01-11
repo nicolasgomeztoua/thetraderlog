@@ -237,3 +237,35 @@
   - getDateStringInTimezone from lib/shared for timezone-aware date strings matching backend
 ---
 
+## 2026-01-11 - US-024
+- Added Daily Journal nav item to sidebar navigation
+- Files changed: src/app/(protected)/_components/app-sidebar.tsx
+- **Learnings for future iterations:**
+  - Nav items in mainNavItems array with { title, href, icon } structure
+  - Import icons from lucide-react (alphabetically sorted)
+  - Position nav items logically by feature relationship (Daily Journal after Trades)
+---
+
+## 2026-01-11 - US-025
+- Created DailyChecklist component with optimistic updates, compliance percentage, settings gear
+- Files changed: src/components/daily-journal/daily-checklist.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Optimistic update pattern for toggles: use setData with updater function, handle both existing and new records
+  - When adding new items in optimistic update, ensure all required fields have non-undefined values (template must be found or skip update)
+  - Label accessibility: use htmlFor on label + id on input, not wrapping label around checkbox (Biome noLabelWithoutControl)
+  - Compliance calculation: filter active templates, count checked, calculate percentage, color by threshold (100%=profit, 75+=primary, <75=muted)
+  - Progress bar: simple div with dynamic width% and color based on compliance level
+---
+
+## 2026-01-11 - US-026
+- Created ChecklistSettings modal component for managing checklist templates
+- Files changed: src/components/daily-journal/checklist-settings.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Modal pattern: use Dialog from Radix with open/onOpenChange controlled state
+  - Delete confirmation pattern: track deletingId state, show inline confirmation UI, reset on cancel/success
+  - Edit inline pattern: track editingId + editingText state, show input field inline, handle Enter/Escape keys
+  - Reorder with up/down buttons: calculate new order values by swapping indices, use reorderTemplates mutation
+  - Toggle active: use small colored square button, filled when active, empty when inactive
+  - Group hover pattern: add `group` class to container, use `group-hover:opacity-100` for child elements to reveal on hover
+---
+
