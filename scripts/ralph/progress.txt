@@ -322,3 +322,15 @@
   - Retry pattern: track file reference so we can retry failed uploads without re-selecting
 ---
 
+## 2026-01-11 - US-031
+- Created AttachmentGallery component for viewing and managing journal attachments
+- Files changed: src/components/daily-journal/attachment-gallery.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Image lightbox pattern: track lightboxImage state, use dialog role, handle Escape key
+  - Delete confirmation: track deletingId state, show inline overlay for images, inline buttons for files
+  - Biome: external S3 images need biome-ignore for noImgElement since we can't use next/image without domain config
+  - Class sorting: Biome nursery rule requires sorted classes (-translate-x-1/2 before absolute)
+  - Separate images from files: filter by mimeType.startsWith("image/") for different display
+  - formatFileSize helper: convert bytes to B/KB/MB with appropriate precision
+---
+

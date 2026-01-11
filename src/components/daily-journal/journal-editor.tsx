@@ -172,7 +172,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		};
 	}, []);
 
-	// Handle image upload for toolbar
+	// Handle image upload for toolbar and paste/drop
 	const handleImageUpload = useCallback(
 		async (file: File): Promise<string | null> => {
 			if (!journal) return null;
@@ -226,6 +226,70 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 			utils.dailyJournal.getByDate,
 		],
 	);
+
+	// Handle image paste/drop and insert into editor
+	const handleImageInsert = useCallback(
+		async (file: File) => {
+			if (!editor || !file.type.startsWith("image/")) return;
+
+			const url = await handleImageUpload(file);
+			if (url) {
+				editor.chain().focus().setImage({ src: url }).run();
+			}
+		},
+		[editor, handleImageUpload],
+	);
+
+	// Handle paste event to catch clipboard images
+	const handlePaste = useCallback(
+		(event: ClipboardEvent) => {
+			const items = event.clipboardData?.items;
+			if (!items) return;
+
+			for (const item of items) {
+				if (item.type.startsWith("image/")) {
+					event.preventDefault();
+					const file = item.getAsFile();
+					if (file) {
+						handleImageInsert(file);
+					}
+					return;
+				}
+			}
+		},
+		[handleImageInsert],
+	);
+
+	// Handle drop event to catch dropped images
+	const handleDrop = useCallback(
+		(event: DragEvent) => {
+			const files = event.dataTransfer?.files;
+			if (!files || files.length === 0) return;
+
+			for (const file of files) {
+				if (file.type.startsWith("image/")) {
+					event.preventDefault();
+					handleImageInsert(file);
+					return;
+				}
+			}
+		},
+		[handleImageInsert],
+	);
+
+	// Attach paste and drop event listeners to editor DOM
+	useEffect(() => {
+		if (!editor) return;
+
+		const editorElement = editor.view.dom;
+		editorElement.addEventListener("paste", handlePaste as EventListener);
+		editorElement.addEventListener("drop", handleDrop as EventListener);
+
+		return () => {
+			editorElement.removeEventListener("paste", handlePaste as EventListener);
+			editorElement.removeEventListener("drop", handleDrop as EventListener);
+		};
+	}, [editor, handlePaste, handleDrop]);
 
 	if (isLoadingJournal) {
 		return (
