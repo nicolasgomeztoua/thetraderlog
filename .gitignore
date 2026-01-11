@@ -56,3 +56,11 @@ yarn-error.log*
 .auto-claude-status
 
 .worktrees/*
+
+# Ralph autonomous agent temp files
+scripts/ralph/.pr-number
+scripts/ralph/.last-branch
+scripts/ralph/.processed-comments
+scripts/ralph/.greptile-comments.json
+scripts/ralph/prd.json
+scripts/ralph/archive/

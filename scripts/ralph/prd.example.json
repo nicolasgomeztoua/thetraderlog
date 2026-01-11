@@ -1,0 +1,69 @@
+{
+  "project": "EdgeJournal",
+  "branchName": "ralph/example-feature",
+  "description": "Example PRD showing the expected structure for Ralph autonomous execution",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add Database Schema",
+      "description": "As a developer, I want a database schema for the new feature so that data can be persisted.",
+      "acceptanceCriteria": [
+        "New table added to src/server/db/schema.ts",
+        "Proper relations defined",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Create tRPC Router",
+      "description": "As a frontend, I want API endpoints so that I can interact with the feature.",
+      "acceptanceCriteria": [
+        "Router created in src/server/api/routers/",
+        "Uses protectedProcedure for auth",
+        "Added to root router",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Integration Tests for Feature Router",
+      "description": "As a developer, I want integration tests for the feature endpoints to verify correct behavior and prevent regressions.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/feature.test.ts",
+        "Uses setupTrader() or setupTraderWithTrades() fixtures",
+        "Happy path tested for each procedure",
+        "Auth validation tested (unauthorized access rejected)",
+        "Edge cases covered (empty results, invalid inputs)",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Build UI Component",
+      "description": "As a trader, I want a UI for the feature so that I can interact with it visually.",
+      "acceptanceCriteria": [
+        "Component follows Terminal design system",
+        "Uses existing Shadcn components",
+        "Monospace font for interactive elements",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

@@ -124,6 +124,8 @@ Reference documentation is organized in `.claude/skills/` for AI-assisted develo
 | Testing | `.claude/skills/testing/SKILL.md` | `.claude/skills/testing/TESTING_REFERENCE.md` |
 | Planning | `.claude/skills/planning/SKILL.md` | - |
 | Code Quality | `.claude/skills/consistency-audit/SKILL.md` | - |
+| PRD Generation | `.claude/skills/prd/SKILL.md` | - |
+| Ralph Converter | `.claude/skills/ralph/SKILL.md` | - |
 
 Other documentation:
 - [Testing README](./tests/README.md) - Quick testing overview
@@ -141,5 +143,96 @@ Claude Code skills provide contextual guidance when invoked:
 | `testing` | Testing patterns, fixtures, database testing |
 | `planning` | Interview-based planning to collaboratively design features through Q&A |
 | `consistency-audit` | Detect duplicated calculations, repeated utilities, AI slop |
+| `prd` | Generate PRDs with right-sized user stories for autonomous execution |
+| `ralph` | Convert PRD markdown to prd.json for Ralph autonomous loop |
 
 Skills are automatically suggested based on the type of work you're doing.
+
+## Ralph Autonomous Loop
+
+Ralph is an autonomous AI agent loop that executes PRD user stories one at a time, then creates a PR and handles Greptile AI code review. Based on [snarktank/ralph](https://github.com/snarktank/ralph), adapted for Claude Code.
+
+### Quick Start
+
+```bash
+# 1. Create a PRD (use /prd skill or manually)
+# 2. Convert to JSON (use /ralph skill or manually)
+cp scripts/ralph/prd.example.json scripts/ralph/prd.json
+# Edit prd.json with your stories
+
+# 3. Run Ralph
+./scripts/ralph/ralph.sh              # Default: 20 impl iterations, 10 PR review cycles
+./scripts/ralph/ralph.sh 30           # 30 impl iterations, 10 PR review cycles
+./scripts/ralph/ralph.sh 30 5         # 30 impl iterations, 5 PR review cycles
+```
+
+### Workflow Phases
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ PHASE 1: Implementation Loop                                │
+│   - Pick highest priority story with passes: false          │
+│   - Implement, test, commit                                 │
+│   - Update prd.json, repeat until all complete              │
+├─────────────────────────────────────────────────────────────┤
+│ PHASE 2: Create Pull Request                                │
+│   - Push branch to remote                                   │
+│   - Create PR with summary from prd.json                    │
+├─────────────────────────────────────────────────────────────┤
+│ PHASE 3: Greptile Review Loop (every 3 minutes)             │
+│   - Check for new Greptile AI comments                      │
+│   - Evaluate each comment skeptically                       │
+│   - Fix valid issues, commit                                │
+│   - Reply to @greptileai (valid or invalid)                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `scripts/ralph/ralph.sh` | Main orchestration loop (3 phases) |
+| `scripts/ralph/prompt.md` | Instructions for implementation iterations |
+| `scripts/ralph/pr-review-prompt.md` | Instructions for Greptile review handling |
+| `scripts/ralph/prd.json` | Your task manifest (create from example) |
+| `scripts/ralph/progress.txt` | Persistent learnings between iterations |
+| `scripts/ralph/prd.example.json` | Template for PRD format |
+
+### Story Sizing
+
+Each story must complete in ONE iteration. Right-sized examples:
+- Add database column
+- Create tRPC endpoint
+- Build single UI component
+- Write integration tests
+
+Too large (split these):
+- "Build entire dashboard"
+- "Add authentication"
+
+### Greptile Review Handling
+
+Ralph monitors PR comments from Greptile AI and:
+- **Evaluates skeptically** - Greptile can be wrong
+- **Fixes valid issues** - commits with `fix: address Greptile review`
+- **Replies to all comments** - tags @greptileai with verdict
+- **Pushes after all fixes** - keeps PR updated
+
+### Debugging
+
+```bash
+# View story status
+cat scripts/ralph/prd.json | jq '.userStories[] | {id, title, passes}'
+
+# Check progress
+cat scripts/ralph/progress.txt
+
+# Check PR number
+cat scripts/ralph/.pr-number
+
+# View processed Greptile comments
+cat scripts/ralph/.processed-comments
+
+# Recent commits
+git log --oneline -10
+```

@@ -1,0 +1,13 @@
+# Ralph Progress Log
+Started: Initial setup
+---
+
+## Codebase Patterns
+- Database schema: src/server/db/schema.ts (single source of truth)
+- Constants: src/lib/constants/ (never hardcode values)
+- tRPC routers: src/server/api/routers/
+- UI components: src/components/ui/ (Shadcn + Terminal design)
+- Colors: Chartreuse #d4ff00 (primary), Ice Blue #00d4ff (AI), Green #00ff88 (profit), Red #ff3b3b (loss)
+- Always run `bun run check` and `bun run build` before committing
+
+---
