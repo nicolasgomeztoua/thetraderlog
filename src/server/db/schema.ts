@@ -662,6 +662,35 @@ export const tradeRuleChecks = createTable(
 );
 
 // ============================================================================
+// DAILY JOURNALS TABLE
+// ============================================================================
+
+export const dailyJournals = createTable(
+	"daily_journal",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.dailyJournal()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		date: timestamp("date", { withTimezone: true }).notNull(), // Date of the journal (normalized to midnight)
+		content: text("content"), // Rich text content (HTML from Tiptap)
+		contentFormat: text("content_format").default("html"), // Format: "html", "markdown", etc.
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
+	},
+	(t) => [
+		index("daily_journal_user_id_idx").on(t.userId),
+		uniqueIndex("daily_journal_user_date_idx").on(t.userId, t.date),
+	],
+);
+
+// ============================================================================
 // CANDLE CACHE TABLE (for market data caching)
 // ============================================================================
 
@@ -703,6 +732,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	aiConversations: many(aiConversations),
 	filterPresets: many(filterPresets),
 	strategies: many(strategies),
+	dailyJournals: many(dailyJournals),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -860,6 +890,13 @@ export const tradeRuleChecksRelations = relations(
 	}),
 );
 
+export const dailyJournalsRelations = relations(dailyJournals, ({ one }) => ({
+	user: one(users, {
+		fields: [dailyJournals.userId],
+		references: [users.id],
+	}),
+}));
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -890,3 +927,5 @@ export type TradeRuleCheck = typeof tradeRuleChecks.$inferSelect;
 export type NewTradeRuleCheck = typeof tradeRuleChecks.$inferInsert;
 export type CandleCache = typeof candleCache.$inferSelect;
 export type NewCandleCache = typeof candleCache.$inferInsert;
+export type DailyJournal = typeof dailyJournals.$inferSelect;
+export type NewDailyJournal = typeof dailyJournals.$inferInsert;
