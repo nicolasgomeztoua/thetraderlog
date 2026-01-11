@@ -84,7 +84,7 @@ export function Pricing() {
 				</div>
 
 				{/* BYOK banner */}
-				<div className="mb-12 flex items-center justify-center gap-4 rounded border border-primary/20 bg-primary/[0.02] px-6 py-4">
+				<div className="mb-12 flex items-center justify-center gap-4 rounded border border-primary/20 bg-primary/2 px-6 py-4">
 					<Key className="h-5 w-5 text-primary" />
 					<p className="font-mono text-sm">
 						<span className="font-medium text-foreground">
@@ -103,8 +103,8 @@ export function Pricing() {
 						<div
 							className={`relative flex flex-col rounded border p-8 transition-all ${
 								plan.highlighted
-									? "border-primary/30 bg-primary/[0.02] shadow-lg shadow-primary/5"
-									: "border-white/10 bg-white/[0.01] hover:border-white/20"
+									? "border-primary/30 bg-primary/2 shadow-lg shadow-primary/5"
+									: "border-white/10 bg-white/1 hover:border-white/20"
 							}`}
 							key={plan.name}
 						>

@@ -123,7 +123,7 @@ export function AIShowcase() {
 	return (
 		<section className="relative py-32" id="ai">
 			{/* Background */}
-			<div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.02] to-transparent" />
+			<div className="absolute inset-0 bg-linear-to-b from-transparent via-primary/2 to-transparent" />
 
 			<div className="relative mx-auto max-w-6xl px-6">
 				{/* Header */}
@@ -149,7 +149,7 @@ export function AIShowcase() {
 				<div className="mx-auto max-w-4xl">
 					<div className="overflow-hidden rounded border border-white/10 bg-black/80 shadow-2xl">
 						{/* Terminal header */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/[0.02] px-4 py-3">
+						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-3">
 							<div className="flex items-center gap-3">
 								<div className="flex items-center gap-2">
 									<div className="h-3 w-3 rounded-full bg-loss/60" />
@@ -176,7 +176,7 @@ export function AIShowcase() {
 										className={`flex items-center gap-2 rounded border px-3 py-2 font-mono text-xs transition-all ${
 											activeIndex === index
 												? "border-primary/50 bg-primary/10 text-primary"
-												: "border-white/10 bg-white/[0.02] text-muted-foreground hover:border-white/20 hover:text-foreground"
+												: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground"
 										}`}
 										key={query.question}
 										onClick={() => handleQuerySelect(index)}
@@ -228,7 +228,7 @@ export function AIShowcase() {
 						</div>
 
 						{/* Terminal footer */}
-						<div className="border-white/5 border-t bg-white/[0.02] px-4 py-3">
+						<div className="border-white/5 border-t bg-white/2 px-4 py-3">
 							<div className="flex items-center justify-between">
 								<span className="font-mono text-muted-foreground text-xs">
 									Powered by your API key

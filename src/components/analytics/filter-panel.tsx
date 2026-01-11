@@ -418,9 +418,7 @@ export function FilterPanel({
 						{/* Day of Week */}
 						<FilterSection title="Day of Week">
 							<CheckboxGroup
-								onChange={(days) =>
-									updateLocal("daysOfWeek", days as number[])
-								}
+								onChange={(days) => updateLocal("daysOfWeek", days as number[])}
 								options={[...DAYS_OF_WEEK]}
 								selected={localFilters.daysOfWeek}
 							/>

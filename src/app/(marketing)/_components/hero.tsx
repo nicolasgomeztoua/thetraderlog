@@ -122,7 +122,7 @@ function DemoDashboard() {
 		<div className="flex h-full flex-col gap-3 p-3 sm:p-4">
 			{/* Stats row - responsive grid */}
 			<div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-				<div className="rounded border border-white/5 bg-white/[0.02] p-2 sm:p-3">
+				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Net P&L
@@ -136,7 +136,7 @@ function DemoDashboard() {
 						47 trades
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/[0.02] p-2 sm:p-3">
+				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Win Rate
@@ -150,7 +150,7 @@ function DemoDashboard() {
 						32W · 15L
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/[0.02] p-2 sm:p-3">
+				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Best Trade
@@ -164,7 +164,7 @@ function DemoDashboard() {
 						ES · Long
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/[0.02] p-2 sm:p-3">
+				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Avg Win
@@ -183,7 +183,7 @@ function DemoDashboard() {
 			{/* Chart and trades - responsive layout */}
 			<div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
 				{/* Equity curve */}
-				<div className="rounded border border-white/5 bg-white/[0.02] p-2 sm:col-span-2 sm:p-3">
+				<div className="rounded border border-white/5 bg-white/2 p-2 sm:col-span-2 sm:p-3">
 					<div className="mb-2 flex items-center justify-between sm:mb-3">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Equity Curve
@@ -195,7 +195,7 @@ function DemoDashboard() {
 					<div className="flex h-20 items-end gap-[2px] sm:h-32">
 						{animatedEquity.map((value, i) => (
 							<div
-								className="flex-1 rounded-t bg-gradient-to-t from-primary/60 to-primary/30 transition-all duration-300"
+								className="flex-1 rounded-t bg-linear-to-t from-primary/60 to-primary/30 transition-all duration-300"
 								key={`demo-equity-${value.toFixed(2)}-${i}`}
 								style={{
 									height: `${(value / maxEquity) * 100}%`,
@@ -207,14 +207,14 @@ function DemoDashboard() {
 				</div>
 
 				{/* Recent trades - hidden on smallest screens */}
-				<div className="hidden rounded border border-white/5 bg-white/[0.02] p-2 sm:block sm:p-3">
+				<div className="hidden rounded border border-white/5 bg-white/2 p-2 sm:block sm:p-3">
 					<div className="mb-3 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Recent Trades
 					</div>
 					<div className="space-y-2">
 						{demoTrades.map((trade) => (
 							<div
-								className="flex items-center justify-between rounded bg-white/[0.02] px-2 py-1"
+								className="flex items-center justify-between rounded bg-white/2 px-2 py-1"
 								key={`${trade.symbol}-${trade.direction}-${trade.pnl}`}
 							>
 								<div className="flex items-center gap-2">
@@ -267,15 +267,15 @@ export function Hero() {
 				<div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
 					<div className="mx-auto max-w-5xl text-center">
 						{/* Status badge */}
-						<div className="mb-6 inline-flex items-center gap-3 rounded-none border border-white/10 bg-white/[0.02] px-4 py-2">
+						<div className="mb-6 inline-flex items-center gap-3 rounded-none border border-white/10 bg-white/2 px-4 py-2">
 							<span className="pulse-dot h-2 w-2 rounded-full bg-profit" />
-							<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+							<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">	
 								Now in public beta
 							</span>
 						</div>
 
 						{/* Main headline */}
-						<h1 className="mb-5 font-bold text-4xl leading-[1] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+						<h1 className="mb-5 font-bold text-4xl leading-none tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
 							<span className="block">Find Your</span>
 							<span className="block text-glow-primary text-primary">
 								Trading Edge
@@ -370,7 +370,7 @@ export function Hero() {
 				<div className="mx-auto w-full max-w-5xl px-6 pb-12">
 					<div className="overflow-hidden rounded border border-white/10 bg-black/90 shadow-2xl">
 						{/* Terminal header */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/[0.02] px-4 py-2">
+						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
 							<div className="flex items-center gap-2">
 								<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
 								<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
@@ -383,11 +383,11 @@ export function Hero() {
 						</div>
 
 						{/* Terminal content */}
-						<div className="relative aspect-[4/3] overflow-hidden sm:aspect-[16/8]">
+						<div className="relative aspect-4/3 overflow-hidden sm:aspect-16/8">
 							<DashboardPreview />
 
 							{/* Gradient overlay */}
-							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-background to-transparent" />
 						</div>
 					</div>
 				</div>
