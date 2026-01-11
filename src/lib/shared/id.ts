@@ -22,4 +22,7 @@ export const ids = {
 	strategy: () => createId("sy"),
 	strategyRule: () => createId("sr"),
 	candleCache: () => createId("cc"),
+	dailyJournal: () => createId("dj"),
+	checklistTemplate: () => createId("ct"),
+	journalAttachment: () => createId("ja"),
 };
