@@ -1,16 +1,13 @@
 "use client";
 
-import { RotateCcw, Sparkles } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/shared";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
-import type { QueryBuilderState } from "@/types/query-builder";
-import { DEFAULT_QUERY_STATE } from "@/types/query-builder";
 import { HowFilters } from "./how-filters";
 import { ManagePresetsDialog } from "./manage-presets-dialog";
 import { PresetSelector } from "./preset-selector";
-import { QueryBuilder } from "./query-builder";
 import { QuickFilters } from "./quick-filters";
 import { ResultFilters } from "./result-filters";
 import { TradeCountBadge } from "./trade-count-badge";
@@ -66,8 +63,6 @@ export function AnalyticsQueryBar({
 		hasActiveFilters,
 		setFilters,
 		clearFilters,
-		setAdvancedQuery,
-		hasAdvancedQuery,
 		activePresetId,
 		setActivePresetId,
 	} = useAnalyticsFilterStore();
@@ -80,9 +75,6 @@ export function AnalyticsQueryBar({
 	useEffect(() => {
 		setHasMounted(true);
 	}, []);
-
-	// Query builder modal state
-	const [queryBuilderOpen, setQueryBuilderOpen] = useState(false);
 
 	// Manage presets dialog state
 	const [managePresetsOpen, setManagePresetsOpen] = useState(false);
@@ -122,17 +114,6 @@ export function AnalyticsQueryBar({
 	const handleClearAll = useCallback(() => {
 		clearFilters();
 	}, [clearFilters]);
-
-	// Handle query builder apply
-	const handleQueryApply = useCallback(
-		(query: QueryBuilderState) => {
-			const hasConditions =
-				query.groups.length > 0 &&
-				query.groups.some((g) => g.conditions.length > 0);
-			setAdvancedQuery(hasConditions ? query : null);
-		},
-		[setAdvancedQuery],
-	);
 
 	// Sync isExpanded with preview mode on external changes
 	useEffect(() => {
@@ -258,20 +239,8 @@ export function AnalyticsQueryBar({
 							reviewed={displayFilters.reviewed}
 						/>
 
-						{/* Advanced Query & Presets */}
-						<div className="flex items-center justify-between border-white/5 border-t pt-4">
-							<Button
-								className="gap-2 font-mono text-xs"
-								onClick={() => setQueryBuilderOpen(true)}
-								size="sm"
-								variant={hasAdvancedQuery() ? "default" : "outline"}
-							>
-								<Sparkles className="size-3" />
-								{hasAdvancedQuery()
-									? "Edit Advanced Query"
-									: "Advanced Query Builder"}
-							</Button>
-
+						{/* Presets */}
+						<div className="flex items-center justify-end border-white/5 border-t pt-4">
 							<PresetSelector
 								activePresetId={activePresetId}
 								onManageClick={() => setManagePresetsOpen(true)}
@@ -281,18 +250,6 @@ export function AnalyticsQueryBar({
 					</div>
 				</div>
 			</div>
-
-			{/* Query Builder Modal */}
-			<QueryBuilder
-				onApply={handleQueryApply}
-				onOpenChange={setQueryBuilderOpen}
-				open={queryBuilderOpen}
-				query={filters.advancedQuery ?? DEFAULT_QUERY_STATE}
-				sessions={sessions}
-				strategies={strategies}
-				symbols={symbols}
-				tags={tags}
-			/>
 
 			{/* Manage Presets Dialog */}
 			<ManagePresetsDialog

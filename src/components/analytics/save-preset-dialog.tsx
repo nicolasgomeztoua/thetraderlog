@@ -90,7 +90,6 @@ export function SavePresetDialog({
 			positionSizeRange: filters.positionSizeRange,
 			outcome: filters.outcome,
 			reviewed: filters.reviewed,
-			advancedQuery: filters.advancedQuery,
 		});
 
 		createPreset.mutate({

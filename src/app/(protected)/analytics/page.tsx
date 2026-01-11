@@ -1163,7 +1163,6 @@ function parseFiltersFromJson(filtersJson: string): Partial<AnalyticsFilters> {
 			positionSizeRange: parsed.positionSizeRange ?? { min: null, max: null },
 			outcome: parsed.outcome ?? "all",
 			reviewed: parsed.reviewed ?? "all",
-			advancedQuery: parsed.advancedQuery ?? null,
 		};
 	} catch {
 		return {};

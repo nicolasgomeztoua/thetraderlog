@@ -8,7 +8,6 @@ import {
 	type ReviewedFilter,
 	type SerializedAnalyticsFilters,
 } from "@/types/analytics-filters";
-import type { QueryBuilderState } from "@/types/query-builder";
 
 // =============================================================================
 // STORE INTERFACE
@@ -45,7 +44,6 @@ interface AnalyticsFilterStore {
 	setPositionSizeRange: (min: number | null, max: number | null) => void;
 	setOutcome: (outcome: OutcomeFilter) => void;
 	setReviewed: (reviewed: ReviewedFilter) => void;
-	setAdvancedQuery: (query: QueryBuilderState | null) => void;
 
 	// Preset management
 	setActivePresetId: (presetId: string | null) => void;
@@ -58,7 +56,6 @@ interface AnalyticsFilterStore {
 	// Computed helpers
 	hasActiveFilters: () => boolean;
 	getActiveFilterCount: () => number;
-	hasAdvancedQuery: () => boolean;
 
 	// URL serialization
 	toQueryParams: () => SerializedAnalyticsFilters;
@@ -83,7 +80,6 @@ interface PersistedState {
 		positionSizeRange: { min: number | null; max: number | null };
 		outcome: OutcomeFilter;
 		reviewed: ReviewedFilter;
-		advancedQuery: QueryBuilderState | null;
 	};
 	activePresetId: string | null;
 }
@@ -191,11 +187,6 @@ export const useAnalyticsFilterStore = create<AnalyticsFilterStore>()(
 					filters: { ...state.filters, reviewed },
 				})),
 
-			setAdvancedQuery: (advancedQuery) =>
-				set((state) => ({
-					filters: { ...state.filters, advancedQuery },
-				})),
-
 			// Preset management
 			setActivePresetId: (presetId) =>
 				set({
@@ -237,11 +228,6 @@ export const useAnalyticsFilterStore = create<AnalyticsFilterStore>()(
 				return (Object.keys(filters) as (keyof AnalyticsFilters)[]).filter(
 					(key) => isFilterActive(key, filters[key]),
 				).length;
-			},
-
-			hasAdvancedQuery: () => {
-				const { filters } = get();
-				return filters.advancedQuery !== null;
 			},
 
 			// URL serialization
