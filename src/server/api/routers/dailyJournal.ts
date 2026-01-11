@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
+	dailyChecklistChecks,
 	dailyChecklistTemplates,
 	dailyJournals,
 	trades,
@@ -430,5 +431,264 @@ export const dailyJournalRouter = createTRPCRouter({
 			});
 
 			return updated;
+		}),
+
+	// ============================================================================
+	// CHECKLIST CHECK QUERIES
+	// ============================================================================
+
+	// Get checks for a date (auto-creates journal if needed)
+	getChecks: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // ISO date string
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+
+			// Find or create journal for this date
+			let journal = await ctx.db.query.dailyJournals.findFirst({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					eq(dailyJournals.date, normalizedDate),
+				),
+			});
+
+			if (!journal) {
+				const [created] = await ctx.db
+					.insert(dailyJournals)
+					.values({
+						userId: ctx.user.id,
+						date: normalizedDate,
+						content: null,
+						contentFormat: "html",
+					})
+					.returning();
+
+				if (!created) {
+					throw new Error("Failed to create journal");
+				}
+
+				journal = created;
+			}
+
+			// Get all checks for this journal with template info
+			const checks = await ctx.db.query.dailyChecklistChecks.findMany({
+				where: eq(dailyChecklistChecks.journalId, journal.id),
+				with: {
+					template: true,
+				},
+			});
+
+			return {
+				journalId: journal.id,
+				checks,
+			};
+		}),
+
+	// ============================================================================
+	// CHECKLIST CHECK MUTATIONS
+	// ============================================================================
+
+	// Toggle a check for a journal+template (creates if not exists)
+	toggleCheck: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // ISO date string
+				templateId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+
+			// Verify user owns the template
+			const template = await ctx.db.query.dailyChecklistTemplates.findFirst({
+				where: and(
+					eq(dailyChecklistTemplates.id, input.templateId),
+					eq(dailyChecklistTemplates.userId, ctx.user.id),
+				),
+			});
+
+			if (!template) {
+				throw new Error("Template not found");
+			}
+
+			// Find or create journal for this date
+			let journal = await ctx.db.query.dailyJournals.findFirst({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					eq(dailyJournals.date, normalizedDate),
+				),
+			});
+
+			if (!journal) {
+				const [created] = await ctx.db
+					.insert(dailyJournals)
+					.values({
+						userId: ctx.user.id,
+						date: normalizedDate,
+						content: null,
+						contentFormat: "html",
+					})
+					.returning();
+
+				if (!created) {
+					throw new Error("Failed to create journal");
+				}
+
+				journal = created;
+			}
+
+			// Check if check record exists
+			const existingCheck = await ctx.db.query.dailyChecklistChecks.findFirst({
+				where: and(
+					eq(dailyChecklistChecks.journalId, journal.id),
+					eq(dailyChecklistChecks.templateId, input.templateId),
+				),
+			});
+
+			if (existingCheck) {
+				// Toggle the check
+				const newChecked = !existingCheck.checked;
+				await ctx.db
+					.update(dailyChecklistChecks)
+					.set({
+						checked: newChecked,
+						checkedAt: newChecked ? new Date() : null,
+					})
+					.where(
+						and(
+							eq(dailyChecklistChecks.journalId, journal.id),
+							eq(dailyChecklistChecks.templateId, input.templateId),
+						),
+					);
+
+				return {
+					journalId: journal.id,
+					templateId: input.templateId,
+					checked: newChecked,
+					checkedAt: newChecked ? new Date() : null,
+				};
+			}
+
+			// Create new check (starts as checked since it was unchecked before)
+			await ctx.db.insert(dailyChecklistChecks).values({
+				journalId: journal.id,
+				templateId: input.templateId,
+				checked: true,
+				checkedAt: new Date(),
+			});
+
+			return {
+				journalId: journal.id,
+				templateId: input.templateId,
+				checked: true,
+				checkedAt: new Date(),
+			};
+		}),
+
+	// Bulk update checks for a journal
+	bulkUpdateChecks: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // ISO date string
+				checks: z.array(
+					z.object({
+						templateId: z.string(),
+						checked: z.boolean(),
+					}),
+				),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+
+			// Verify user owns all templates
+			const templateIds = input.checks.map((c) => c.templateId);
+			const templates = await ctx.db.query.dailyChecklistTemplates.findMany({
+				where: eq(dailyChecklistTemplates.userId, ctx.user.id),
+				columns: { id: true },
+			});
+			const ownedIds = new Set(templates.map((t) => t.id));
+
+			for (const id of templateIds) {
+				if (!ownedIds.has(id)) {
+					throw new Error(`Template ${id} not found or not owned by user`);
+				}
+			}
+
+			// Find or create journal for this date
+			let journal = await ctx.db.query.dailyJournals.findFirst({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					eq(dailyJournals.date, normalizedDate),
+				),
+			});
+
+			if (!journal) {
+				const [created] = await ctx.db
+					.insert(dailyJournals)
+					.values({
+						userId: ctx.user.id,
+						date: normalizedDate,
+						content: null,
+						contentFormat: "html",
+					})
+					.returning();
+
+				if (!created) {
+					throw new Error("Failed to create journal");
+				}
+
+				journal = created;
+			}
+
+			// Update/insert all checks in a transaction
+			await ctx.db.transaction(async (tx) => {
+				for (const check of input.checks) {
+					const existingCheck = await tx.query.dailyChecklistChecks.findFirst({
+						where: and(
+							eq(dailyChecklistChecks.journalId, journal.id),
+							eq(dailyChecklistChecks.templateId, check.templateId),
+						),
+					});
+
+					if (existingCheck) {
+						await tx
+							.update(dailyChecklistChecks)
+							.set({
+								checked: check.checked,
+								checkedAt: check.checked ? new Date() : null,
+							})
+							.where(
+								and(
+									eq(dailyChecklistChecks.journalId, journal.id),
+									eq(dailyChecklistChecks.templateId, check.templateId),
+								),
+							);
+					} else {
+						await tx.insert(dailyChecklistChecks).values({
+							journalId: journal.id,
+							templateId: check.templateId,
+							checked: check.checked,
+							checkedAt: check.checked ? new Date() : null,
+						});
+					}
+				}
+			});
+
+			// Return updated checks
+			const updatedChecks = await ctx.db.query.dailyChecklistChecks.findMany({
+				where: eq(dailyChecklistChecks.journalId, journal.id),
+				with: {
+					template: true,
+				},
+			});
+
+			return {
+				journalId: journal.id,
+				checks: updatedChecks,
+			};
 		}),
 });
