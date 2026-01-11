@@ -1,5 +1,6 @@
 import { accountsRouter } from "@/server/api/routers/accounts";
 import { analyticsRouter } from "@/server/api/routers/analytics";
+import { dailyJournalRouter } from "@/server/api/routers/dailyJournal";
 import { filterPresetsRouter } from "@/server/api/routers/filterPresets";
 import { marketDataRouter } from "@/server/api/routers/marketData";
 import { settingsRouter } from "@/server/api/routers/settings";
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
 	tags: tagsRouter,
 	strategies: strategiesRouter,
 	analytics: analyticsRouter,
+	dailyJournal: dailyJournalRouter,
 });
 
 // export type definition of API

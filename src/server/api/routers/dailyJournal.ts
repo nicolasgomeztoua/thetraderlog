@@ -1,0 +1,77 @@
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { dailyJournals } from "@/server/db/schema";
+
+// Helper to normalize date to midnight UTC
+function normalizeDate(date: Date): Date {
+	const normalized = new Date(date);
+	normalized.setUTCHours(0, 0, 0, 0);
+	return normalized;
+}
+
+export const dailyJournalRouter = createTRPCRouter({
+	// ============================================================================
+	// JOURNAL QUERIES
+	// ============================================================================
+
+	// Get journal by date, auto-create if not exists
+	getByDate: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // ISO date string (YYYY-MM-DD or full ISO)
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+
+			// Try to find existing journal
+			let journal = await ctx.db.query.dailyJournals.findFirst({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					eq(dailyJournals.date, normalizedDate),
+				),
+				with: {
+					attachments: true,
+					checklistChecks: {
+						with: {
+							template: true,
+						},
+					},
+				},
+			});
+
+			// Auto-create if not exists
+			if (!journal) {
+				const [created] = await ctx.db
+					.insert(dailyJournals)
+					.values({
+						userId: ctx.user.id,
+						date: normalizedDate,
+						content: null,
+						contentFormat: "html",
+					})
+					.returning();
+
+				if (!created) {
+					throw new Error("Failed to create journal");
+				}
+
+				// Fetch with relations
+				journal = await ctx.db.query.dailyJournals.findFirst({
+					where: eq(dailyJournals.id, created.id),
+					with: {
+						attachments: true,
+						checklistChecks: {
+							with: {
+								template: true,
+							},
+						},
+					},
+				});
+			}
+
+			return journal;
+		}),
+});
