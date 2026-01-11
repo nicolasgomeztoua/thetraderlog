@@ -12,7 +12,12 @@ import {
 	startOfMonth,
 	subMonths,
 } from "date-fns";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+	CheckCircle2Icon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	FlameIcon,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -87,6 +92,17 @@ export function CalendarSidebar({
 		startDate: monthStart.toISOString(),
 		endDate: monthEnd.toISOString(),
 	});
+
+	// Fetch journaling streak
+	const { data: streakData } = api.dailyJournal.getStreak.useQuery();
+
+	// Fetch compliance stats for the displayed month
+	const { data: complianceData } = api.dailyJournal.getComplianceStats.useQuery(
+		{
+			startDate: monthStart.toISOString(),
+			endDate: monthEnd.toISOString(),
+		},
+	);
 
 	// Create lookup maps
 	const pnlMap = useMemo(() => {
@@ -343,6 +359,87 @@ export function CalendarSidebar({
 						Journal
 					</span>
 				</div>
+			</div>
+
+			{/* Streak and Compliance Stats */}
+			<div className="flex items-center justify-between border-border border-t pt-3">
+				{/* Journaling Streak */}
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<div className="flex items-center gap-1.5">
+							<FlameIcon
+								className={cn(
+									"size-4",
+									streakData?.streak && streakData.streak > 0
+										? "text-orange-500"
+										: "text-muted-foreground",
+								)}
+							/>
+							<span className="font-mono text-sm">
+								{streakData?.streak ?? 0}
+							</span>
+							<span className="font-mono text-[10px] text-muted-foreground uppercase">
+								day{(streakData?.streak ?? 0) !== 1 ? "s" : ""}
+							</span>
+						</div>
+					</TooltipTrigger>
+					<TooltipContent
+						className="border border-border bg-card p-2 text-foreground"
+						side="top"
+					>
+						<div className="font-mono text-xs">
+							<div className="mb-1">Journaling Streak</div>
+							<div className="text-muted-foreground">
+								{(streakData?.streak ?? 0) > 0
+									? `${streakData?.streak} consecutive day${(streakData?.streak ?? 0) !== 1 ? "s" : ""} with journal entries`
+									: "Start journaling to build your streak!"}
+							</div>
+						</div>
+					</TooltipContent>
+				</Tooltip>
+
+				{/* Monthly Compliance */}
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<div className="flex items-center gap-1.5">
+							<CheckCircle2Icon
+								className={cn(
+									"size-4",
+									complianceData?.averageCompliance !== null &&
+										complianceData?.averageCompliance !== undefined
+										? complianceData.averageCompliance >= 75
+											? "text-profit"
+											: complianceData.averageCompliance >= 50
+												? "text-primary"
+												: "text-muted-foreground"
+										: "text-muted-foreground",
+								)}
+							/>
+							<span className="font-mono text-sm">
+								{complianceData?.averageCompliance !== null &&
+								complianceData?.averageCompliance !== undefined
+									? `${Math.round(complianceData.averageCompliance)}%`
+									: "—"}
+							</span>
+						</div>
+					</TooltipTrigger>
+					<TooltipContent
+						className="border border-border bg-card p-2 text-foreground"
+						side="top"
+					>
+						<div className="font-mono text-xs">
+							<div className="mb-1">
+								{format(displayMonth, "MMMM")} Checklist Compliance
+							</div>
+							<div className="text-muted-foreground">
+								{complianceData?.averageCompliance !== null &&
+								complianceData?.averageCompliance !== undefined
+									? `${Math.round(complianceData.averageCompliance)}% average compliance across ${complianceData.totalDays} day${complianceData.totalDays !== 1 ? "s" : ""}`
+									: "No checklist data for this month"}
+							</div>
+						</div>
+					</TooltipContent>
+				</Tooltip>
 			</div>
 		</div>
 	);
