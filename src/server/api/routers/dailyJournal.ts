@@ -1,8 +1,12 @@
-import { and, eq, gte, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { dailyJournals, trades } from "@/server/db/schema";
+import {
+	dailyChecklistTemplates,
+	dailyJournals,
+	trades,
+} from "@/server/db/schema";
 
 // Helper to normalize date to midnight UTC
 function normalizeDate(date: Date): Date {
@@ -249,5 +253,135 @@ export const dailyJournalRouter = createTRPCRouter({
 				journal,
 				trades: tradesForDate,
 			};
+		}),
+
+	// ============================================================================
+	// CHECKLIST TEMPLATE QUERIES
+	// ============================================================================
+
+	// Get all templates for the current user, ordered by order field
+	getTemplates: protectedProcedure.query(async ({ ctx }) => {
+		const templates = await ctx.db.query.dailyChecklistTemplates.findMany({
+			where: eq(dailyChecklistTemplates.userId, ctx.user.id),
+			orderBy: [asc(dailyChecklistTemplates.order)],
+		});
+
+		return templates;
+	}),
+
+	// ============================================================================
+	// CHECKLIST TEMPLATE MUTATIONS
+	// ============================================================================
+
+	// Create a new checklist template
+	createTemplate: protectedProcedure
+		.input(
+			z.object({
+				text: z.string().min(1),
+				order: z.number().int().min(0).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// If order not provided, calculate the next order
+			let order = input.order;
+			if (order === undefined) {
+				const existingTemplates =
+					await ctx.db.query.dailyChecklistTemplates.findMany({
+						where: eq(dailyChecklistTemplates.userId, ctx.user.id),
+						columns: { order: true },
+						orderBy: [asc(dailyChecklistTemplates.order)],
+					});
+				order =
+					existingTemplates.length > 0
+						? Math.max(...existingTemplates.map((t) => t.order)) + 1
+						: 0;
+			}
+
+			const [created] = await ctx.db
+				.insert(dailyChecklistTemplates)
+				.values({
+					userId: ctx.user.id,
+					text: input.text,
+					order,
+				})
+				.returning();
+
+			if (!created) {
+				throw new Error("Failed to create template");
+			}
+
+			return created;
+		}),
+
+	// Update an existing checklist template
+	updateTemplate: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				text: z.string().min(1).optional(),
+				order: z.number().int().min(0).optional(),
+				isActive: z.boolean().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns this template
+			const existing = await ctx.db.query.dailyChecklistTemplates.findFirst({
+				where: and(
+					eq(dailyChecklistTemplates.id, input.id),
+					eq(dailyChecklistTemplates.userId, ctx.user.id),
+				),
+			});
+
+			if (!existing) {
+				throw new Error("Template not found");
+			}
+
+			const updateData: Partial<{
+				text: string;
+				order: number;
+				isActive: boolean;
+			}> = {};
+			if (input.text !== undefined) updateData.text = input.text;
+			if (input.order !== undefined) updateData.order = input.order;
+			if (input.isActive !== undefined) updateData.isActive = input.isActive;
+
+			if (Object.keys(updateData).length === 0) {
+				return existing;
+			}
+
+			const [updated] = await ctx.db
+				.update(dailyChecklistTemplates)
+				.set(updateData)
+				.where(eq(dailyChecklistTemplates.id, input.id))
+				.returning();
+
+			return updated;
+		}),
+
+	// Delete a checklist template
+	deleteTemplate: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns this template
+			const existing = await ctx.db.query.dailyChecklistTemplates.findFirst({
+				where: and(
+					eq(dailyChecklistTemplates.id, input.id),
+					eq(dailyChecklistTemplates.userId, ctx.user.id),
+				),
+			});
+
+			if (!existing) {
+				throw new Error("Template not found");
+			}
+
+			await ctx.db
+				.delete(dailyChecklistTemplates)
+				.where(eq(dailyChecklistTemplates.id, input.id));
+
+			return { success: true };
 		}),
 });
