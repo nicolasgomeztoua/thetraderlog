@@ -91,3 +91,112 @@
   - Use `columns` option in findMany to limit returned fields when full data isn't needed
 ---
 
+## 2026-01-11 - US-010
+- Added getWithTrades query that returns journal and trades for a specific date
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - For "within a day" queries, use `gte(field, normalizedDate)` AND `lt(field, nextDay)` instead of lte(endOfDay)
+  - Combine auto-create pattern with related entity fetching in a single query method
+  - Filter soft-deleted trades with `isNull(trades.deletedAt)`
+  - Use `orderBy: (table, { asc }) => [asc(table.field)]` for query ordering
+---
+
+## 2026-01-11 - US-011
+- Added checklist template CRUD operations: getTemplates, createTemplate, updateTemplate, deleteTemplate
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - User ownership validation pattern: query first to verify user owns entity before update/delete
+  - Auto-order calculation: when order not provided, query existing items and use max(order) + 1
+  - Partial update pattern: build updateData object with only provided fields, skip update if empty
+  - All mutations should throw errors for "not found" cases rather than returning null
+---
+
+## 2026-01-11 - US-012
+- Added reorderTemplates mutation for bulk order updates with transaction
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Bulk validation pattern: query all owned items once, build Set of ids, check each input id against Set
+  - Use db.transaction() for multi-row updates to ensure atomicity
+  - Return updated data after bulk operations for frontend sync
+---
+
+## 2026-01-11 - US-013
+- Added daily check operations: getChecks, toggleCheck, bulkUpdateChecks
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Toggle pattern: if record exists toggle value, if not create with checked=true
+  - Upsert pattern: check existence first, then update or insert
+  - Track checkedAt timestamp - set to new Date() when checked, null when unchecked
+  - Composite primary key access requires both columns in where clause
+---
+
+## 2026-01-11 - US-014
+- Created integration tests for dailyJournal router core operations
+- Files changed: tests/integration/daily-journal/journal.test.ts
+- **Learnings for future iterations:**
+  - Test file location: tests/integration/{feature}/{domain}.test.ts
+  - setupTrader() provides user + account for basic test setup
+  - Test date normalization by using different times on same day
+  - Test user isolation by creating second user and verifying they can't access first user's data
+  - Use createTestUser() directly for creating additional test users
+---
+
+## 2026-01-11 - US-015
+- Created integration tests for checklist template and check operations
+- Files changed: tests/integration/daily-journal/checklist.test.ts
+- **Learnings for future iterations:**
+  - Test toggle behavior across multiple calls (on -> off -> on)
+  - Test ownership by having user2 try to access user1's templates
+  - Use beforeAll in nested describe to set up fixtures for specific test groups
+  - Test bulk operations by creating multiple entities and verifying each
+---
+
+## 2026-01-11 - US-016
+- Set up S3 client utility using Bun's built-in S3Client
+- Files changed: src/env.js, src/lib/storage/s3.ts
+- **Learnings for future iterations:**
+  - Use optional() for env vars that not all users will have configured
+  - Lazy initialization pattern: store client in module-level variable, create on first getS3Client() call
+  - Bun S3Client uses presign() for presigned URLs, supports PUT/GET methods
+  - Export isS3Configured() helper for graceful degradation when S3 not set up
+---
+
+## 2026-01-11 - US-017
+- Added getUploadUrl mutation for presigned PUT URL generation
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Use nanoid for unique keys in S3 paths
+  - Key format pattern: `{feature}/{userId}/{date}/{uuid}-{filename}`
+  - Check isS3Configured() at start of mutation and throw descriptive error if not
+  - Return both presignedUrl and key so frontend can use key for confirmUpload
+---
+
+## 2026-01-11 - US-018
+- Added confirmUpload mutation to create journalAttachments records after S3 upload
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Validate user ownership of parent entity (journal) before creating child records (attachment)
+  - Use getPresignedDownloadUrl for URL stored in database - URLs expire, so frontend should regenerate as needed
+  - Schema uses integer for size field, so z.number().int().positive() for validation
+  - caption is nullable in schema, handle optional input with ?? null
+---
+
+## 2026-01-11 - US-019
+- Added deleteAttachment mutation for removing journal attachments
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Validate child ownership through parent: query attachment with { with: { journal: true } }, then check journal.userId
+  - Use same error message for "not found" and "not authorized" to avoid information leakage
+  - Graceful S3 deletion: try/catch around deleteObject, log error but continue with DB deletion
+  - S3 file may have already been deleted or never existed, so don't block database cleanup
+---
+
+## 2026-01-11 - US-020
+- Installed Tiptap dependencies for rich text editor
+- Files changed: package.json, bun.lock
+- **Learnings for future iterations:**
+  - Tiptap v3 packages: @tiptap/react, @tiptap/pm, @tiptap/starter-kit for core functionality
+  - Extensions for specific features: @tiptap/extension-link, @tiptap/extension-image, @tiptap/extension-placeholder
+  - Use `bun add` for installing multiple packages in one command
+---
+
