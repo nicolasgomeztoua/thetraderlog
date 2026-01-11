@@ -370,3 +370,23 @@
   - Link alias: import NextLink from "next/link" when @tiptap/extension-link is also imported
 ---
 
+## 2026-01-11 - US-035
+- Integrated DailyJournalPreview into trade detail content-panel.tsx
+- Files changed: src/components/trade-detail/content-panel.tsx
+- **Learnings for future iterations:**
+  - Simple integration: import component and replace placeholder content
+  - Use trade.entryTime (Date) as the date prop - DailyJournalPreview accepts both Date and string
+  - Enable editable mode by passing `editable` prop (boolean shorthand)
+  - Existing placeholder content often shows "coming soon" messages - replace entirely
+---
+
+## 2026-01-11 - US-036
+- Added getStreak query to dailyJournal router
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Streak calculation pattern: fetch all journals, filter to those with content, create Set of date strings for O(1) lookup
+  - Count backwards from today, incrementing streak for each consecutive day with content
+  - Use const for Date objects even when mutating (setUTCDate) - Biome only cares about reassignment
+  - toISOString().split("T")[0] gives YYYY-MM-DD format for date comparison
+---
+

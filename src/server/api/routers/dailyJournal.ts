@@ -796,6 +796,94 @@ export const dailyJournalRouter = createTRPCRouter({
 	// STREAK & COMPLIANCE QUERIES
 	// ============================================================================
 
+	// Get checklist compliance statistics for a date range
+	getComplianceStats: protectedProcedure
+		.input(
+			z.object({
+				startDate: z.string(), // ISO date string
+				endDate: z.string(), // ISO date string
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const startNormalized = normalizeDate(new Date(input.startDate));
+			const endNormalized = normalizeDate(new Date(input.endDate));
+
+			// Get all active templates for this user
+			const templates = await ctx.db.query.dailyChecklistTemplates.findMany({
+				where: and(
+					eq(dailyChecklistTemplates.userId, ctx.user.id),
+					eq(dailyChecklistTemplates.isActive, true),
+				),
+				columns: { id: true },
+			});
+
+			// If no active templates, compliance is undefined (or 100%)
+			if (templates.length === 0) {
+				return {
+					dailyCompliance: [],
+					averageCompliance: null,
+					totalDays: 0,
+				};
+			}
+
+			const templateIds = new Set(templates.map((t) => t.id));
+			const totalTemplates = templates.length;
+
+			// Get all journals in the date range with their checks
+			const journals = await ctx.db.query.dailyJournals.findMany({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					gte(dailyJournals.date, startNormalized),
+					lte(dailyJournals.date, endNormalized),
+				),
+				with: {
+					checklistChecks: true,
+				},
+			});
+
+			// Calculate compliance per day
+			const dailyCompliance: Array<{
+				date: Date;
+				checkedCount: number;
+				totalTemplates: number;
+				compliance: number;
+			}> = [];
+
+			for (const journal of journals) {
+				// Count checks that are checked AND belong to active templates
+				const checkedCount = journal.checklistChecks.filter(
+					(check) => check.checked && templateIds.has(check.templateId),
+				).length;
+
+				const compliance =
+					totalTemplates > 0
+						? Math.round((checkedCount / totalTemplates) * 100)
+						: 0;
+
+				dailyCompliance.push({
+					date: journal.date,
+					checkedCount,
+					totalTemplates,
+					compliance,
+				});
+			}
+
+			// Calculate average compliance across all days with journals
+			const averageCompliance =
+				dailyCompliance.length > 0
+					? Math.round(
+							dailyCompliance.reduce((sum, day) => sum + day.compliance, 0) /
+								dailyCompliance.length,
+						)
+					: null;
+
+			return {
+				dailyCompliance,
+				averageCompliance,
+				totalDays: dailyCompliance.length,
+			};
+		}),
+
 	// Get current journaling streak (consecutive days with content from today backwards)
 	getStreak: protectedProcedure.query(async ({ ctx }) => {
 		// Get all journals with content, ordered by date descending
