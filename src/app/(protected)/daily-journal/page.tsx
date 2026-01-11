@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AttachmentUpload } from "@/components/daily-journal/attachment-upload";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
@@ -11,6 +12,7 @@ import {
 	ResizablePanel,
 	ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { api } from "@/trpc/react";
 
 // =============================================================================
 // LOCAL STORAGE KEY
@@ -56,6 +58,13 @@ export default function DailyJournalPage() {
 
 	// Checklist settings modal state
 	const [isChecklistSettingsOpen, setIsChecklistSettingsOpen] = useState(false);
+
+	// Fetch journal data to get journalId for attachments
+	const dateString = selectedDate.toISOString().split("T")[0] ?? "";
+	const { data: journal } = api.dailyJournal.getByDate.useQuery(
+		{ date: dateString },
+		{ enabled: !!dateString },
+	);
 
 	useEffect(() => {
 		setPanelSizes(getStoredSizes());
@@ -141,14 +150,12 @@ export default function DailyJournalPage() {
 							<JournalEditor selectedDate={selectedDate} />
 						</div>
 
-						{/* Attachments placeholder */}
+						{/* Attachments */}
 						<div className="rounded border border-white/5 bg-white/[0.01] p-4">
-							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Attachments
-							</span>
-							<div className="mt-2 font-mono text-muted-foreground text-xs">
-								Attachment upload and gallery will go here
-							</div>
+							<AttachmentUpload
+								journalId={journal?.id}
+								selectedDate={selectedDate}
+							/>
 						</div>
 					</div>
 				</ResizablePanel>
