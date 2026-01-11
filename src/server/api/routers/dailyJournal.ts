@@ -384,4 +384,51 @@ export const dailyJournalRouter = createTRPCRouter({
 
 			return { success: true };
 		}),
+
+	// Reorder checklist templates in bulk
+	reorderTemplates: protectedProcedure
+		.input(
+			z.object({
+				items: z.array(
+					z.object({
+						id: z.string(),
+						order: z.number().int().min(0),
+					}),
+				),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Validate user owns all templates
+			const templateIds = input.items.map((item) => item.id);
+			const existingTemplates =
+				await ctx.db.query.dailyChecklistTemplates.findMany({
+					where: eq(dailyChecklistTemplates.userId, ctx.user.id),
+					columns: { id: true },
+				});
+			const ownedIds = new Set(existingTemplates.map((t) => t.id));
+
+			for (const id of templateIds) {
+				if (!ownedIds.has(id)) {
+					throw new Error(`Template ${id} not found or not owned by user`);
+				}
+			}
+
+			// Update all orders in a transaction
+			await ctx.db.transaction(async (tx) => {
+				for (const item of input.items) {
+					await tx
+						.update(dailyChecklistTemplates)
+						.set({ order: item.order })
+						.where(eq(dailyChecklistTemplates.id, item.id));
+				}
+			});
+
+			// Return updated templates in order
+			const updated = await ctx.db.query.dailyChecklistTemplates.findMany({
+				where: eq(dailyChecklistTemplates.userId, ctx.user.id),
+				orderBy: [asc(dailyChecklistTemplates.order)],
+			});
+
+			return updated;
+		}),
 });
