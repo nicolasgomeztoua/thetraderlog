@@ -17,6 +17,12 @@ export const env = createEnv({
 		DATABENTO_API_KEY: z.string().min(1),
 		// Trigger.dev for background jobs
 		TRIGGER_SECRET_KEY: z.string().min(1),
+		// S3-compatible storage (optional - for file uploads)
+		S3_ENDPOINT: z.string().url().optional(),
+		S3_REGION: z.string().optional(),
+		S3_ACCESS_KEY_ID: z.string().optional(),
+		S3_SECRET_ACCESS_KEY: z.string().optional(),
+		S3_BUCKET: z.string().optional(),
 	},
 
 	/**
@@ -52,6 +58,11 @@ export const env = createEnv({
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
 		DATABENTO_API_KEY: process.env.DATABENTO_API_KEY,
 		TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
+		S3_ENDPOINT: process.env.S3_ENDPOINT,
+		S3_REGION: process.env.S3_REGION,
+		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
+		S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
+		S3_BUCKET: process.env.S3_BUCKET,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
