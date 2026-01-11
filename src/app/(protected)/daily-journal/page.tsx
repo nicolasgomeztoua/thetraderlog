@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
+import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import {
 	ResizableHandle,
@@ -50,6 +51,9 @@ export default function DailyJournalPage() {
 
 	// Panel sizes from localStorage [left, right]
 	const [panelSizes, setPanelSizes] = useState<number[]>([30, 70]);
+
+	// Checklist settings modal state
+	const [isChecklistSettingsOpen, setIsChecklistSettingsOpen] = useState(false);
 
 	useEffect(() => {
 		setPanelSizes(getStoredSizes());
@@ -102,15 +106,31 @@ export default function DailyJournalPage() {
 							/>
 						</div>
 
-						{/* Checklist placeholder */}
+						{/* Checklist */}
 						<div className="rounded border border-white/5 bg-white/[0.01] p-4">
-							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Daily Checklist
-							</span>
-							<div className="mt-2 font-mono text-muted-foreground text-xs">
-								Checklist component will go here
-							</div>
+							<DailyChecklist
+								onOpenSettings={() => setIsChecklistSettingsOpen(true)}
+								selectedDate={selectedDate}
+							/>
 						</div>
+
+						{/* TODO: ChecklistSettings modal will be added in US-026 */}
+						{isChecklistSettingsOpen && (
+							<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+								<div className="rounded border border-border bg-background p-4">
+									<p className="font-mono text-sm">
+										Checklist settings modal (US-026)
+									</p>
+									<button
+										className="mt-2 font-mono text-primary text-xs"
+										onClick={() => setIsChecklistSettingsOpen(false)}
+										type="button"
+									>
+										Close
+									</button>
+								</div>
+							</div>
+						)}
 					</div>
 				</ResizablePanel>
 
