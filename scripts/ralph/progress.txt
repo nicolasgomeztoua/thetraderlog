@@ -346,3 +346,27 @@
   - Reuse existing upload handler (handleImageUpload) for consistency
 ---
 
+## 2026-01-11 - US-033
+- Created TradesSummary component for viewing trades for selected date
+- Files changed: src/components/daily-journal/trades-summary.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - getWithTrades query: returns journal + trades for date, includes account and tags relations
+  - Direction icons: ArrowUpIcon (profit color) for long, ArrowDownIcon (loss color) for short
+  - Trade link pattern: Link to /journal/{trade.id} with hover reveal of ExternalLinkIcon
+  - Stats calculation: useMemo for wins/losses/total, filter by realizedPnl > 0 or < 0
+  - Biome class ordering: font-medium before font-mono (alphabetical)
+  - Multi-line conditional: format as separate lines when condition is long
+---
+
+## 2026-01-11 - US-034
+- Created DailyJournalPreview component for compact journal display in trade detail
+- Files changed: src/components/daily-journal/daily-journal-preview.tsx
+- **Learnings for future iterations:**
+  - Preview components need separate queries for templates + checks, not just journal data
+  - Compliance calculation: fetch all active templates, build Map of checked status, count matches
+  - Date normalization: handle both string and Date inputs with useMemo
+  - Different ISO formats: getByDate uses "YYYY-MM-DD", getChecks needs full ISO string
+  - Tiptap editable mode: use `editorProps.editable: () => boolean` or top-level `editable` prop
+  - Link alias: import NextLink from "next/link" when @tiptap/extension-link is also imported
+---
+

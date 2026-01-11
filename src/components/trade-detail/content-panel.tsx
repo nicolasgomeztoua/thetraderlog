@@ -1,4 +1,5 @@
 import { CandlestickChart } from "lucide-react";
+import { DailyJournalPreview } from "@/components/daily-journal/daily-journal-preview";
 import { TradeTags } from "@/components/tags/tag-selector";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -69,12 +70,7 @@ function NotesSection({
 				</TabsContent>
 
 				<TabsContent className="mt-4" value="daily-journal">
-					<div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-						<p className="font-mono text-xs">Daily journal coming soon</p>
-						<p className="mt-1 font-mono text-[10px] opacity-50">
-							Notes for the entire trading day
-						</p>
-					</div>
+					<DailyJournalPreview date={trade.entryTime} editable />
 				</TabsContent>
 			</Tabs>
 
