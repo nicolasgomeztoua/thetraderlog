@@ -23,6 +23,52 @@ function normalizeDate(date: Date): Date {
 	return normalized;
 }
 
+// Helper to find or create a journal for a date, handling race conditions
+async function findOrCreateJournal(
+	db: typeof import("@/server/db").db,
+	userId: string,
+	date: Date,
+) {
+	// Try to find existing journal
+	const existing = await db.query.dailyJournals.findFirst({
+		where: and(eq(dailyJournals.userId, userId), eq(dailyJournals.date, date)),
+	});
+
+	if (existing) {
+		return existing;
+	}
+
+	// Try to insert, using onConflictDoNothing to handle race conditions
+	const [created] = await db
+		.insert(dailyJournals)
+		.values({
+			userId,
+			date,
+			content: null,
+			contentFormat: "html",
+		})
+		.onConflictDoNothing({
+			target: [dailyJournals.userId, dailyJournals.date],
+		})
+		.returning();
+
+	// If insert succeeded, return the created record
+	if (created) {
+		return created;
+	}
+
+	// If insert was a no-op due to conflict, fetch the existing record
+	const journal = await db.query.dailyJournals.findFirst({
+		where: and(eq(dailyJournals.userId, userId), eq(dailyJournals.date, date)),
+	});
+
+	if (!journal) {
+		throw new Error("Failed to find or create journal");
+	}
+
+	return journal;
+}
+
 // Type for attachment from database
 interface AttachmentRecord {
 	id: string;
@@ -124,12 +170,16 @@ export const dailyJournalRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const normalizedDate = normalizeDate(new Date(input.date));
 
-			// Try to find existing journal
-			let journal = await ctx.db.query.dailyJournals.findFirst({
-				where: and(
-					eq(dailyJournals.userId, ctx.user.id),
-					eq(dailyJournals.date, normalizedDate),
-				),
+			// Find or create journal for this date (handles race conditions)
+			const baseJournal = await findOrCreateJournal(
+				ctx.db,
+				ctx.user.id,
+				normalizedDate,
+			);
+
+			// Fetch with relations
+			const journal = await ctx.db.query.dailyJournals.findFirst({
+				where: eq(dailyJournals.id, baseJournal.id),
 				with: {
 					attachments: true,
 					checklistChecks: {
@@ -139,36 +189,6 @@ export const dailyJournalRouter = createTRPCRouter({
 					},
 				},
 			});
-
-			// Auto-create if not exists
-			if (!journal) {
-				const [created] = await ctx.db
-					.insert(dailyJournals)
-					.values({
-						userId: ctx.user.id,
-						date: normalizedDate,
-						content: null,
-						contentFormat: "html",
-					})
-					.returning();
-
-				if (!created) {
-					throw new Error("Failed to create journal");
-				}
-
-				// Fetch with relations
-				journal = await ctx.db.query.dailyJournals.findFirst({
-					where: eq(dailyJournals.id, created.id),
-					with: {
-						attachments: true,
-						checklistChecks: {
-							with: {
-								template: true,
-							},
-						},
-					},
-				});
-			}
 
 			// Generate presigned URLs for attachments on-demand
 			if (journal) {
@@ -227,12 +247,16 @@ export const dailyJournalRouter = createTRPCRouter({
 			const nextDay = new Date(normalizedDate);
 			nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
-			// Get journal for the date (auto-create if not exists)
-			let journal = await ctx.db.query.dailyJournals.findFirst({
-				where: and(
-					eq(dailyJournals.userId, ctx.user.id),
-					eq(dailyJournals.date, normalizedDate),
-				),
+			// Find or create journal for this date (handles race conditions)
+			const baseJournal = await findOrCreateJournal(
+				ctx.db,
+				ctx.user.id,
+				normalizedDate,
+			);
+
+			// Fetch with relations
+			const journal = await ctx.db.query.dailyJournals.findFirst({
+				where: eq(dailyJournals.id, baseJournal.id),
 				with: {
 					attachments: true,
 					checklistChecks: {
@@ -242,36 +266,6 @@ export const dailyJournalRouter = createTRPCRouter({
 					},
 				},
 			});
-
-			// Auto-create if not exists
-			if (!journal) {
-				const [created] = await ctx.db
-					.insert(dailyJournals)
-					.values({
-						userId: ctx.user.id,
-						date: normalizedDate,
-						content: null,
-						contentFormat: "html",
-					})
-					.returning();
-
-				if (!created) {
-					throw new Error("Failed to create journal");
-				}
-
-				// Fetch with relations
-				journal = await ctx.db.query.dailyJournals.findFirst({
-					where: eq(dailyJournals.id, created.id),
-					with: {
-						attachments: true,
-						checklistChecks: {
-							with: {
-								template: true,
-							},
-						},
-					},
-				});
-			}
 
 			// Get trades for the date (filter by entry time within the day)
 			const tradesForDate = await ctx.db.query.trades.findMany({
@@ -490,31 +484,12 @@ export const dailyJournalRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const normalizedDate = normalizeDate(new Date(input.date));
 
-			// Find or create journal for this date
-			let journal = await ctx.db.query.dailyJournals.findFirst({
-				where: and(
-					eq(dailyJournals.userId, ctx.user.id),
-					eq(dailyJournals.date, normalizedDate),
-				),
-			});
-
-			if (!journal) {
-				const [created] = await ctx.db
-					.insert(dailyJournals)
-					.values({
-						userId: ctx.user.id,
-						date: normalizedDate,
-						content: null,
-						contentFormat: "html",
-					})
-					.returning();
-
-				if (!created) {
-					throw new Error("Failed to create journal");
-				}
-
-				journal = created;
-			}
+			// Find or create journal for this date (handles race conditions)
+			const journal = await findOrCreateJournal(
+				ctx.db,
+				ctx.user.id,
+				normalizedDate,
+			);
 
 			// Get all checks for this journal with template info
 			const checks = await ctx.db.query.dailyChecklistChecks.findMany({
@@ -557,31 +532,12 @@ export const dailyJournalRouter = createTRPCRouter({
 				throw new Error("Template not found");
 			}
 
-			// Find or create journal for this date
-			let journal = await ctx.db.query.dailyJournals.findFirst({
-				where: and(
-					eq(dailyJournals.userId, ctx.user.id),
-					eq(dailyJournals.date, normalizedDate),
-				),
-			});
-
-			if (!journal) {
-				const [created] = await ctx.db
-					.insert(dailyJournals)
-					.values({
-						userId: ctx.user.id,
-						date: normalizedDate,
-						content: null,
-						contentFormat: "html",
-					})
-					.returning();
-
-				if (!created) {
-					throw new Error("Failed to create journal");
-				}
-
-				journal = created;
-			}
+			// Find or create journal for this date (handles race conditions)
+			const journal = await findOrCreateJournal(
+				ctx.db,
+				ctx.user.id,
+				normalizedDate,
+			);
 
 			// Check if check record exists
 			const existingCheck = await ctx.db.query.dailyChecklistChecks.findFirst({
@@ -661,31 +617,12 @@ export const dailyJournalRouter = createTRPCRouter({
 				}
 			}
 
-			// Find or create journal for this date
-			let journal = await ctx.db.query.dailyJournals.findFirst({
-				where: and(
-					eq(dailyJournals.userId, ctx.user.id),
-					eq(dailyJournals.date, normalizedDate),
-				),
-			});
-
-			if (!journal) {
-				const [created] = await ctx.db
-					.insert(dailyJournals)
-					.values({
-						userId: ctx.user.id,
-						date: normalizedDate,
-						content: null,
-						contentFormat: "html",
-					})
-					.returning();
-
-				if (!created) {
-					throw new Error("Failed to create journal");
-				}
-
-				journal = created;
-			}
+			// Find or create journal for this date (handles race conditions)
+			const journal = await findOrCreateJournal(
+				ctx.db,
+				ctx.user.id,
+				normalizedDate,
+			);
 
 			// Update/insert all checks in a transaction
 			await ctx.db.transaction(async (tx) => {

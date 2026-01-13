@@ -125,6 +125,7 @@ Reference documentation is organized in `.claude/skills/` for AI-assisted develo
 | Planning | `.claude/skills/planning/SKILL.md` | - |
 | Code Quality | `.claude/skills/consistency-audit/SKILL.md` | - |
 | PRD Generation | `.claude/skills/prd/SKILL.md` | - |
+| UX Design | `.claude/skills/ux/SKILL.md` | `.claude/skills/ux/UX_REFERENCE.md` |
 | Ralph Converter | `.claude/skills/ralph/SKILL.md` | - |
 | Compound Engineering | `.claude/skills/compound-engineering/SKILL.md` | - |
 
@@ -145,6 +146,7 @@ Claude Code skills provide contextual guidance when invoked:
 | `planning` | Interview-based planning to collaboratively design features through Q&A |
 | `consistency-audit` | Detect duplicated calculations, repeated utilities, AI slop |
 | `prd` | Generate PRDs with right-sized user stories for autonomous execution |
+| `ux` | 3-step UX workflow: Lite PRD → Clarifier → UX Spec → Build Prompts |
 | `ralph` | Convert PRD markdown to prd.json for Ralph autonomous loop |
 | `compound-engineering` | Self-improving documentation via AGENTS.md files |
 

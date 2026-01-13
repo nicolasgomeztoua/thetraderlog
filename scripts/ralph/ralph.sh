@@ -234,6 +234,9 @@ echo -e "${MAGENTA}════════════════════�
 PROCESSED_COMMENTS_FILE="$SCRIPT_DIR/.processed-comments"
 touch "$PROCESSED_COMMENTS_FILE"
 
+# Track consecutive cycles with no new comments for early exit
+NO_COMMENTS_COUNT=0
+
 for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
     echo ""
     echo -e "${CYAN}PR Review Cycle $cycle of $PR_REVIEW_CYCLES${NC}"
@@ -267,7 +270,17 @@ for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
 
     if [ -z "$NEW_COMMENTS" ]; then
         echo -e "${YELLOW}No new Greptile comments found.${NC}"
+        NO_COMMENTS_COUNT=$((NO_COMMENTS_COUNT + 1))
+
+        # Stop if no new comments for 2 consecutive cycles
+        if [ "$NO_COMMENTS_COUNT" -ge 2 ]; then
+            echo -e "${GREEN}No new Greptile comments for 2 consecutive cycles. All reviews complete!${NC}"
+            break
+        fi
     else
+        # Reset counter when we find new comments
+        NO_COMMENTS_COUNT=0
+
         COMMENT_COUNT=$(echo "$NEW_COMMENTS" | grep -c '^{' || echo "0")
         echo -e "${GREEN}Found $COMMENT_COUNT new Greptile comment(s)! Invoking Claude for review...${NC}"
 
