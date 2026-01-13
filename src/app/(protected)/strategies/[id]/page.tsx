@@ -200,7 +200,7 @@ export default function StrategyDetailPage() {
 			{/* Stats summary */}
 			{stats && stats.totalTrades > 0 && (
 				<div className="grid grid-cols-4 gap-4">
-					<div className="rounded border border-white/5 bg-white/[0.02] p-4">
+					<div className="rounded border border-white/5 bg-white/2 p-4">
 						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Trades
 						</div>
@@ -208,7 +208,7 @@ export default function StrategyDetailPage() {
 							{stats.totalTrades}
 						</div>
 					</div>
-					<div className="rounded border border-white/5 bg-white/[0.02] p-4">
+					<div className="rounded border border-white/5 bg-white/2 p-4">
 						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Win Rate
 						</div>
@@ -221,7 +221,7 @@ export default function StrategyDetailPage() {
 							{stats.winRate.toFixed(0)}%
 						</div>
 					</div>
-					<div className="rounded border border-white/5 bg-white/[0.02] p-4">
+					<div className="rounded border border-white/5 bg-white/2 p-4">
 						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Total P&L
 						</div>
@@ -238,7 +238,7 @@ export default function StrategyDetailPage() {
 							})}
 						</div>
 					</div>
-					<div className="rounded border border-white/5 bg-white/[0.02] p-4">
+					<div className="rounded border border-white/5 bg-white/2 p-4">
 						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Profit Factor
 						</div>
@@ -255,7 +255,7 @@ export default function StrategyDetailPage() {
 			)}
 
 			{/* Form */}
-			<div className="rounded border border-white/5 bg-white/[0.02] p-6">
+			<div className="rounded border border-white/5 bg-white/2 p-6">
 				<StrategyForm
 					initialData={{
 						name: strategy.name,

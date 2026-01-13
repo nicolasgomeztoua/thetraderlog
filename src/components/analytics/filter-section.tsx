@@ -187,16 +187,16 @@ export function FilterToggle({
 	const variantClasses = {
 		default: active
 			? "border-primary/40 bg-primary/10 text-primary"
-			: "border-white/10 bg-white/[0.02] text-muted-foreground",
+			: "border-white/10 bg-white/2 text-muted-foreground",
 		profit: active
 			? "border-profit/40 bg-profit/10 text-profit"
-			: "border-white/10 bg-white/[0.02] text-muted-foreground",
+			: "border-white/10 bg-white/2 text-muted-foreground",
 		loss: active
 			? "border-loss/40 bg-loss/10 text-loss"
-			: "border-white/10 bg-white/[0.02] text-muted-foreground",
+			: "border-white/10 bg-white/2 text-muted-foreground",
 		neutral: active
 			? "border-yellow-500/40 bg-yellow-500/10 text-yellow-500"
-			: "border-white/10 bg-white/[0.02] text-muted-foreground",
+			: "border-white/10 bg-white/2 text-muted-foreground",
 	};
 
 	return (

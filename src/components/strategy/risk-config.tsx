@@ -297,7 +297,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 				<div className="flex flex-wrap gap-2">
 					{(riskParams.targetRMultiples ?? []).map((r) => (
 						<div
-							className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.02] px-2 py-1"
+							className="flex items-center gap-1 rounded border border-white/10 bg-white/2 px-2 py-1"
 							key={r}
 						>
 							<span className="font-mono text-sm">{r}R</span>

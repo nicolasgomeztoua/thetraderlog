@@ -1,5 +1,5 @@
-# Ralph Progress Log
-Started: Initial setup
+# Ralph Progress Log - Daily Journal Feature
+# Started: 2026-01-11
 ---
 
 ## Codebase Patterns
@@ -11,3 +11,411 @@ Started: Initial setup
 - Always run `bun run check` and `bun run build` before committing
 
 ---
+
+## Learnings
+
+(Ralph will add learnings here as stories are completed)
+
+---
+
+## 2026-01-11 - US-001
+- Added ID generators for daily journal entities (dj, ct, ja prefixes)
+- Files changed: src/lib/shared/id.ts
+- **Learnings for future iterations:**
+  - ID generators follow pattern: `createId("prefix")` returning `prefix-{nanoid}`
+  - All entity IDs have 2-character prefixes (us=user, ac=account, dj=dailyJournal, etc.)
+---
+
+## 2026-01-11 - US-002
+- Added dailyJournals table schema with all required fields
+- Files changed: src/server/db/schema.ts
+- **Learnings for future iterations:**
+  - Table pattern: use createTable() with third argument for indexes
+  - User FK with cascade delete: `.references(() => users.id, { onDelete: "cascade" })`
+  - Unique index uses uniqueIndex(), regular index uses index()
+  - Relations added to usersRelations (many) and new entity relations (one back to user)
+  - Type exports follow pattern: `export type Entity = typeof table.$inferSelect`
+---
+
+## 2026-01-11 - US-003, US-004, US-005
+- Verified checklist templates, checklist checks, and journal attachments schemas already implemented
+- US-003: dailyChecklistTemplates table with id, userId, text, order, isActive, createdAt fields
+- US-004: dailyChecklistChecks table with journalId, templateId, checked, checkedAt (composite PK)
+- US-005: journalAttachments table with id, journalId, url, key, filename, mimeType, size, caption, createdAt
+- All relations properly configured in schema
+- Files verified: src/server/db/schema.ts (already committed in previous iteration)
+- **Learnings for future iterations:**
+  - Composite primary key pattern: `primaryKey({ columns: [t.col1, t.col2] })`
+  - Junction/join tables reference both parent tables with cascade delete
+  - All tables need corresponding relations defined for Drizzle ORM
+  - Type exports for both Select and Insert: `Entity` and `NewEntity`
+---
+
+## 2026-01-11 - US-006
+- Pushed schema changes to database with `bun run db:push`
+- All four tables created: dailyJournals, dailyChecklistTemplates, dailyChecklistChecks, journalAttachments
+- Fixed biome config to exclude example/config files from linting
+- Files changed: biome.jsonc
+- **Learnings for future iterations:**
+  - Biome exclude pattern: `"includes": ["**", "!folder", "!file.json"]` (add `**` first, then negations)
+  - Long PostgreSQL identifier names are automatically truncated (notice, not error)
+  - db:push is safe for new tables - no destructive changes
+---
+
+## 2026-01-11 - US-007
+- Created dailyJournal router with getByDate query
+- Files changed: src/server/api/routers/dailyJournal.ts, src/server/api/root.ts
+- **Learnings for future iterations:**
+  - tRPC router pattern: create file in routers/, export router, register in root.ts
+  - Date normalization: use helper function to normalize to midnight UTC for date-based lookups
+  - Auto-create pattern: check if exists, if not insert and re-fetch with relations
+  - TypeScript: Drizzle returning() can return undefined, always guard with `if (!created)`
+  - Queries can include nested relations with `with: { relation: { with: { nested: true } } }`
+---
+
+## 2026-01-11 - US-008
+- Added updateContent mutation for upsert journal content
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Upsert pattern: query first to check if exists, then update or insert accordingly
+  - Mutations return the updated/created entity for optimistic updates on frontend
+  - Remember to set updatedAt when updating existing records
+---
+
+## 2026-01-11 - US-009
+- Added getRange query for fetching journals in a date range
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Date range queries: use `gte` and `lte` from drizzle-orm for inclusive date ranges
+  - For calendar display, transform data to include computed flags like `hasContent` to avoid sending full content
+  - Use `columns` option in findMany to limit returned fields when full data isn't needed
+---
+
+## 2026-01-11 - US-010
+- Added getWithTrades query that returns journal and trades for a specific date
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - For "within a day" queries, use `gte(field, normalizedDate)` AND `lt(field, nextDay)` instead of lte(endOfDay)
+  - Combine auto-create pattern with related entity fetching in a single query method
+  - Filter soft-deleted trades with `isNull(trades.deletedAt)`
+  - Use `orderBy: (table, { asc }) => [asc(table.field)]` for query ordering
+---
+
+## 2026-01-11 - US-011
+- Added checklist template CRUD operations: getTemplates, createTemplate, updateTemplate, deleteTemplate
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - User ownership validation pattern: query first to verify user owns entity before update/delete
+  - Auto-order calculation: when order not provided, query existing items and use max(order) + 1
+  - Partial update pattern: build updateData object with only provided fields, skip update if empty
+  - All mutations should throw errors for "not found" cases rather than returning null
+---
+
+## 2026-01-11 - US-012
+- Added reorderTemplates mutation for bulk order updates with transaction
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Bulk validation pattern: query all owned items once, build Set of ids, check each input id against Set
+  - Use db.transaction() for multi-row updates to ensure atomicity
+  - Return updated data after bulk operations for frontend sync
+---
+
+## 2026-01-11 - US-013
+- Added daily check operations: getChecks, toggleCheck, bulkUpdateChecks
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Toggle pattern: if record exists toggle value, if not create with checked=true
+  - Upsert pattern: check existence first, then update or insert
+  - Track checkedAt timestamp - set to new Date() when checked, null when unchecked
+  - Composite primary key access requires both columns in where clause
+---
+
+## 2026-01-11 - US-014
+- Created integration tests for dailyJournal router core operations
+- Files changed: tests/integration/daily-journal/journal.test.ts
+- **Learnings for future iterations:**
+  - Test file location: tests/integration/{feature}/{domain}.test.ts
+  - setupTrader() provides user + account for basic test setup
+  - Test date normalization by using different times on same day
+  - Test user isolation by creating second user and verifying they can't access first user's data
+  - Use createTestUser() directly for creating additional test users
+---
+
+## 2026-01-11 - US-015
+- Created integration tests for checklist template and check operations
+- Files changed: tests/integration/daily-journal/checklist.test.ts
+- **Learnings for future iterations:**
+  - Test toggle behavior across multiple calls (on -> off -> on)
+  - Test ownership by having user2 try to access user1's templates
+  - Use beforeAll in nested describe to set up fixtures for specific test groups
+  - Test bulk operations by creating multiple entities and verifying each
+---
+
+## 2026-01-11 - US-016
+- Set up S3 client utility using Bun's built-in S3Client
+- Files changed: src/env.js, src/lib/storage/s3.ts
+- **Learnings for future iterations:**
+  - Use optional() for env vars that not all users will have configured
+  - Lazy initialization pattern: store client in module-level variable, create on first getS3Client() call
+  - Bun S3Client uses presign() for presigned URLs, supports PUT/GET methods
+  - Export isS3Configured() helper for graceful degradation when S3 not set up
+---
+
+## 2026-01-11 - US-017
+- Added getUploadUrl mutation for presigned PUT URL generation
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Use nanoid for unique keys in S3 paths
+  - Key format pattern: `{feature}/{userId}/{date}/{uuid}-{filename}`
+  - Check isS3Configured() at start of mutation and throw descriptive error if not
+  - Return both presignedUrl and key so frontend can use key for confirmUpload
+---
+
+## 2026-01-11 - US-018
+- Added confirmUpload mutation to create journalAttachments records after S3 upload
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Validate user ownership of parent entity (journal) before creating child records (attachment)
+  - Use getPresignedDownloadUrl for URL stored in database - URLs expire, so frontend should regenerate as needed
+  - Schema uses integer for size field, so z.number().int().positive() for validation
+  - caption is nullable in schema, handle optional input with ?? null
+---
+
+## 2026-01-11 - US-019
+- Added deleteAttachment mutation for removing journal attachments
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Validate child ownership through parent: query attachment with { with: { journal: true } }, then check journal.userId
+  - Use same error message for "not found" and "not authorized" to avoid information leakage
+  - Graceful S3 deletion: try/catch around deleteObject, log error but continue with DB deletion
+  - S3 file may have already been deleted or never existed, so don't block database cleanup
+---
+
+## 2026-01-11 - US-020
+- Installed Tiptap dependencies for rich text editor
+- Files changed: package.json, bun.lock
+- **Learnings for future iterations:**
+  - Tiptap v3 packages: @tiptap/react, @tiptap/pm, @tiptap/starter-kit for core functionality
+  - Extensions for specific features: @tiptap/extension-link, @tiptap/extension-image, @tiptap/extension-placeholder
+  - Use `bun add` for installing multiple packages in one command
+---
+
+## 2026-01-11 - US-021
+- Created daily-journal page layout with resizable panels
+- Files changed: src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - ResizablePanelGroup pattern: use horizontal direction, set defaultSize on each panel
+  - Panel size persistence: use localStorage with getStoredSizes/saveSizes helpers
+  - Use onLayout callback to persist sizes, not direct state updates
+  - Full height layout: use `h-[calc(100vh-4rem)]` to account for nav header
+  - Panel constraints: use minSize/maxSize to prevent unusable layouts
+  - Placeholder pattern: use placeholder cards for components not yet implemented
+---
+
+## 2026-01-11 - US-022
+- Created DateNavigation component with prev/next day buttons, Today button, and date picker popover
+- Files changed: src/components/daily-journal/date-navigation.tsx, src/components/ui/calendar.tsx, src/components/ui/popover.tsx, src/app/(protected)/daily-journal/page.tsx, package.json, bun.lock
+- **Learnings for future iterations:**
+  - react-day-picker v9 is used for calendar, integrates with Radix popover
+  - Calendar component uses DayPicker with customized classNames for Terminal styling
+  - Date navigation pattern: prev/next buttons + popover picker + Today shortcut
+  - Use isToday() from date-fns to check if selected date is today
+  - addDays() from date-fns for prev/next day navigation
+  - format() from date-fns for date display formatting
+---
+
+## 2026-01-11 - US-023
+- Created CalendarSidebar component with month grid view, P&L colors, and journal indicators
+- Files changed: src/components/daily-journal/calendar-sidebar.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Use analytics.getCalendarData for P&L data (already includes date aggregation)
+  - Use dailyJournal.getRange for journal indicators (hasContent flag)
+  - Month grid pattern: use eachDayOfInterval() + getDay() to get days with padding
+  - Stable React keys for weeks: use first day of week as key, not array index
+  - Color intensity scaling: calculate maxAbsPnl for the visible month, then scale 0.25/0.5/0.75/1
+  - Tooltip pattern: wrap day buttons in Tooltip with TooltipTrigger asChild
+  - getDateStringInTimezone from lib/shared for timezone-aware date strings matching backend
+---
+
+## 2026-01-11 - US-024
+- Added Daily Journal nav item to sidebar navigation
+- Files changed: src/app/(protected)/_components/app-sidebar.tsx
+- **Learnings for future iterations:**
+  - Nav items in mainNavItems array with { title, href, icon } structure
+  - Import icons from lucide-react (alphabetically sorted)
+  - Position nav items logically by feature relationship (Daily Journal after Trades)
+---
+
+## 2026-01-11 - US-025
+- Created DailyChecklist component with optimistic updates, compliance percentage, settings gear
+- Files changed: src/components/daily-journal/daily-checklist.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Optimistic update pattern for toggles: use setData with updater function, handle both existing and new records
+  - When adding new items in optimistic update, ensure all required fields have non-undefined values (template must be found or skip update)
+  - Label accessibility: use htmlFor on label + id on input, not wrapping label around checkbox (Biome noLabelWithoutControl)
+  - Compliance calculation: filter active templates, count checked, calculate percentage, color by threshold (100%=profit, 75+=primary, <75=muted)
+  - Progress bar: simple div with dynamic width% and color based on compliance level
+---
+
+## 2026-01-11 - US-026
+- Created ChecklistSettings modal component for managing checklist templates
+- Files changed: src/components/daily-journal/checklist-settings.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Modal pattern: use Dialog from Radix with open/onOpenChange controlled state
+  - Delete confirmation pattern: track deletingId state, show inline confirmation UI, reset on cancel/success
+  - Edit inline pattern: track editingId + editingText state, show input field inline, handle Enter/Escape keys
+  - Reorder with up/down buttons: calculate new order values by swapping indices, use reorderTemplates mutation
+  - Toggle active: use small colored square button, filled when active, empty when inactive
+  - Group hover pattern: add `group` class to container, use `group-hover:opacity-100` for child elements to reveal on hover
+---
+
+## 2026-01-11 - US-027
+- Created EditorToolbar component with formatting buttons for Tiptap rich text editor
+- Files changed: src/components/daily-journal/editor-toolbar.tsx
+- **Learnings for future iterations:**
+  - Tiptap v3 TypeScript: Editor type from @tiptap/react doesn't include extension commands by default
+  - Create custom EditorCommands interface with explicit methods (toggleBold, setLink, setImage, etc.) for type safety
+  - Use `as unknown as EditorCommands` cast on editor.chain().focus() result
+  - Link/Image commands come from extensions, not starter-kit, so they need separate type declarations
+  - Toolbar button pattern: wrap in Tooltip, use cn() for conditional active state styling (bg-primary/20 text-primary)
+  - Popover for link URL input: pre-fill with existing link using editor.getAttributes("link").href
+  - Image upload: use hidden file input triggered by button click, onImageUpload callback for S3 integration
+  - Separator component between button groups for visual organization
+---
+
+## 2026-01-11 - US-028
+- Created JournalEditor component with Tiptap rich text editor
+- Files changed: src/components/daily-journal/journal-editor.tsx, src/app/(protected)/daily-journal/page.tsx, tests/integration/daily-journal/checklist.test.ts
+- **Learnings for future iterations:**
+  - Tiptap useEditor: set `immediatelyRender: false` to avoid SSR hydration issues
+  - Auto-save pattern: use debounceTimerRef to track pending saves, track lastSavedContent to avoid redundant saves
+  - Track previous date with ref to detect date changes and reset editor state appropriately
+  - Save status indicator pattern: idle/saving/saved/error states with auto-clear timeout for "saved" status
+  - Image upload flow: getUploadUrl -> PUT to presigned URL -> confirmUpload to record in DB
+  - Placeholder extension: use `emptyEditorClass` with content-[attr(data-placeholder)] CSS trick
+  - Editor content update: only update if not focused and content differs to avoid cursor jumping
+---
+
+## 2026-01-11 - US-029
+- Verified markdown shortcuts work in JournalEditor - no code changes needed
+- Files verified: src/components/daily-journal/journal-editor.tsx (StarterKit config)
+- **Learnings for future iterations:**
+  - StarterKit includes all standard markdown input rules by default - no configuration needed
+  - Heading extension: `#`, `##`, `###` + space triggers heading transformation
+  - Bold/Italic extensions: `**text**` and `*text*` patterns (via markInputRule)
+  - BulletList extension: `- ` and `* ` at line start triggers bullet list
+  - OrderedList extension: `1. ` at line start triggers ordered list
+  - Blockquote extension: `> ` at line start triggers blockquote
+  - Input rules are defined in each extension's addInputRules() method
+  - Verification stories may not require code changes - just confirm existing functionality works
+---
+
+## 2026-01-11 - US-030
+- Created AttachmentUpload component with drag-and-drop file upload
+- Files changed: src/components/daily-journal/attachment-upload.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Drag-drop zone: use onDragEnter/Leave/Over/Drop with preventDefault(), use section element for accessibility
+  - Upload progress with XMLHttpRequest: addEventListener("progress") gives lengthComputable + loaded/total for progress bar
+  - File validation pattern: define ALLOWED_FILE_TYPES array and MAX_FILE_SIZE constant at top
+  - Biome accessibility: section element is semantic, use aria-label for screen readers
+  - Track uploading files with array of {id, file, progress, error} objects for multiple concurrent uploads
+  - Retry pattern: track file reference so we can retry failed uploads without re-selecting
+---
+
+## 2026-01-11 - US-031
+- Created AttachmentGallery component for viewing and managing journal attachments
+- Files changed: src/components/daily-journal/attachment-gallery.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - Image lightbox pattern: track lightboxImage state, use dialog role, handle Escape key
+  - Delete confirmation: track deletingId state, show inline overlay for images, inline buttons for files
+  - Biome: external S3 images need biome-ignore for noImgElement since we can't use next/image without domain config
+  - Class sorting: Biome nursery rule requires sorted classes (-translate-x-1/2 before absolute)
+  - Separate images from files: filter by mimeType.startsWith("image/") for different display
+  - formatFileSize helper: convert bytes to B/KB/MB with appropriate precision
+---
+
+## 2026-01-11 - US-032
+- Integrated image paste/drop upload into JournalEditor
+- Files changed: src/components/daily-journal/journal-editor.tsx
+- **Learnings for future iterations:**
+  - Paste handler: use clipboardData.items, check item.type.startsWith("image/"), call getAsFile()
+  - Drop handler: use dataTransfer.files, filter for image types
+  - Event listeners on editor: attach to editor.view.dom after editor is ready, cleanup in effect
+  - Cast to EventListener for TypeScript compatibility when attaching native events
+  - Tiptap setImage: use editor.chain().focus().setImage({ src: url }).run()
+  - Reuse existing upload handler (handleImageUpload) for consistency
+---
+
+## 2026-01-11 - US-033
+- Created TradesSummary component for viewing trades for selected date
+- Files changed: src/components/daily-journal/trades-summary.tsx, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - getWithTrades query: returns journal + trades for date, includes account and tags relations
+  - Direction icons: ArrowUpIcon (profit color) for long, ArrowDownIcon (loss color) for short
+  - Trade link pattern: Link to /journal/{trade.id} with hover reveal of ExternalLinkIcon
+  - Stats calculation: useMemo for wins/losses/total, filter by realizedPnl > 0 or < 0
+  - Biome class ordering: font-medium before font-mono (alphabetical)
+  - Multi-line conditional: format as separate lines when condition is long
+---
+
+## 2026-01-11 - US-034
+- Created DailyJournalPreview component for compact journal display in trade detail
+- Files changed: src/components/daily-journal/daily-journal-preview.tsx
+- **Learnings for future iterations:**
+  - Preview components need separate queries for templates + checks, not just journal data
+  - Compliance calculation: fetch all active templates, build Map of checked status, count matches
+  - Date normalization: handle both string and Date inputs with useMemo
+  - Different ISO formats: getByDate uses "YYYY-MM-DD", getChecks needs full ISO string
+  - Tiptap editable mode: use `editorProps.editable: () => boolean` or top-level `editable` prop
+  - Link alias: import NextLink from "next/link" when @tiptap/extension-link is also imported
+---
+
+## 2026-01-11 - US-035
+- Integrated DailyJournalPreview into trade detail content-panel.tsx
+- Files changed: src/components/trade-detail/content-panel.tsx
+- **Learnings for future iterations:**
+  - Simple integration: import component and replace placeholder content
+  - Use trade.entryTime (Date) as the date prop - DailyJournalPreview accepts both Date and string
+  - Enable editable mode by passing `editable` prop (boolean shorthand)
+  - Existing placeholder content often shows "coming soon" messages - replace entirely
+---
+
+## 2026-01-11 - US-036
+- Added getStreak query to dailyJournal router
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Streak calculation pattern: fetch all journals, filter to those with content, create Set of date strings for O(1) lookup
+  - Count backwards from today, incrementing streak for each consecutive day with content
+  - Use const for Date objects even when mutating (setUTCDate) - Biome only cares about reassignment
+  - toISOString().split("T")[0] gives YYYY-MM-DD format for date comparison
+---
+
+## 2026-01-11 - US-037
+- Added getComplianceStats query to dailyJournal router
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Compliance calculation pattern: fetch active templates (isActive: true), then journals with checks in date range
+  - Filter checks to only count those belonging to currently active templates (user may have deactivated templates)
+  - Return structured data: dailyCompliance array (date, checkedCount, totalTemplates, compliance %), averageCompliance, totalDays
+  - Handle edge case: if no active templates, return null averageCompliance and empty dailyCompliance array
+---
+
+## 2026-01-11 - US-038
+- Added streak and compliance UI to CalendarSidebar component
+- Files changed: src/components/daily-journal/calendar-sidebar.tsx
+- **Learnings for future iterations:**
+  - Check actual return type of API queries - streakData returns `{ streak }` not `{ currentStreak }`
+  - Stats display pattern: use Tooltip with icon + number + label, color-code by threshold (orange for streak, green/primary/muted for compliance)
+  - Null check pattern for averageCompliance: `!== null && !== undefined` since 0 is a valid value
+  - Pluralization pattern: `day${count !== 1 ? "s" : ""}` for singular/plural labels
+---
+
+## 2026-01-11 - US-039
+- Created barrel export for daily-journal components
+- Files changed: src/components/daily-journal/index.ts
+- **Learnings for future iterations:**
+  - Barrel export pattern: export { ComponentName } from "./component-file" (named exports)
+  - Sort exports alphabetically for consistency and easier maintenance
+  - Use index.ts for barrel exports, not index.tsx
+---
+

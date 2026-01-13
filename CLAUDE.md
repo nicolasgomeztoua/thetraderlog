@@ -125,7 +125,9 @@ Reference documentation is organized in `.claude/skills/` for AI-assisted develo
 | Planning | `.claude/skills/planning/SKILL.md` | - |
 | Code Quality | `.claude/skills/consistency-audit/SKILL.md` | - |
 | PRD Generation | `.claude/skills/prd/SKILL.md` | - |
+| UX Design | `.claude/skills/ux/SKILL.md` | `.claude/skills/ux/UX_REFERENCE.md` |
 | Ralph Converter | `.claude/skills/ralph/SKILL.md` | - |
+| Compound Engineering | `.claude/skills/compound-engineering/SKILL.md` | - |
 
 Other documentation:
 - [Testing README](./tests/README.md) - Quick testing overview
@@ -144,7 +146,9 @@ Claude Code skills provide contextual guidance when invoked:
 | `planning` | Interview-based planning to collaboratively design features through Q&A |
 | `consistency-audit` | Detect duplicated calculations, repeated utilities, AI slop |
 | `prd` | Generate PRDs with right-sized user stories for autonomous execution |
+| `ux` | 3-step UX workflow: Lite PRD → Clarifier → UX Spec → Build Prompts |
 | `ralph` | Convert PRD markdown to prd.json for Ralph autonomous loop |
+| `compound-engineering` | Self-improving documentation via AGENTS.md files |
 
 Skills are automatically suggested based on the type of work you're doing.
 
@@ -175,11 +179,16 @@ cp scripts/ralph/prd.example.json scripts/ralph/prd.json
 │   - Implement, test, commit                                 │
 │   - Update prd.json, repeat until all complete              │
 ├─────────────────────────────────────────────────────────────┤
-│ PHASE 2: Create Pull Request                                │
+│ PHASE 2: Code Quality Review                                │
+│   - Security audit (uses security-audit skill)              │
+│   - Consistency audit (uses consistency-audit skill)        │
+│   - Fix issues, commit                                      │
+├─────────────────────────────────────────────────────────────┤
+│ PHASE 3: Create Pull Request                                │
 │   - Push branch to remote                                   │
 │   - Create PR with summary from prd.json                    │
 ├─────────────────────────────────────────────────────────────┤
-│ PHASE 3: Greptile Review Loop (every 3 minutes)             │
+│ PHASE 4: Greptile Review Loop (every 3 minutes)             │
 │   - Check for new Greptile AI comments                      │
 │   - Evaluate each comment skeptically                       │
 │   - Fix valid issues, commit                                │
@@ -191,8 +200,9 @@ cp scripts/ralph/prd.example.json scripts/ralph/prd.json
 
 | File | Purpose |
 |------|---------|
-| `scripts/ralph/ralph.sh` | Main orchestration loop (3 phases) |
+| `scripts/ralph/ralph.sh` | Main orchestration loop (4 phases) |
 | `scripts/ralph/prompt.md` | Instructions for implementation iterations |
+| `scripts/ralph/code-review-prompt.md` | Instructions for security & consistency audit |
 | `scripts/ralph/pr-review-prompt.md` | Instructions for Greptile review handling |
 | `scripts/ralph/prd.json` | Your task manifest (create from example) |
 | `scripts/ralph/progress.txt` | Persistent learnings between iterations |
@@ -209,6 +219,19 @@ Each story must complete in ONE iteration. Right-sized examples:
 Too large (split these):
 - "Build entire dashboard"
 - "Add authentication"
+
+### Compound Engineering (Self-Improving)
+
+Ralph reads and updates `AGENTS.md` files in core directories:
+
+| Directory | AGENTS.md Contains |
+|-----------|-------------------|
+| `src/server/api/routers/` | tRPC patterns, auth, query gotchas |
+| `src/server/db/` | Schema patterns, decimal handling |
+| `src/components/` | UI patterns, Terminal design |
+| `tests/` | Test patterns, fixtures |
+
+After each story, Ralph adds learnings (patterns, mistakes, decisions) so future iterations benefit.
 
 ### Greptile Review Handling
 

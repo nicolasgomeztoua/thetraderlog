@@ -29,8 +29,8 @@ EdgeJournal uses **"The Terminal"** design language—a high-end trading termina
 ### Opacity Scale (Critical)
 
 ```
-bg-white/[0.01]     Barely visible card background
-bg-white/[0.02]     Subtle card/element background
+bg-white/1     Barely visible card background
+bg-white/2     Subtle card/element background
 border-white/5      Default subtle border
 border-white/10     Medium visibility (hover states)
 border-primary/20   Highlighted border
@@ -68,13 +68,13 @@ HEADLINES:    font-bold text-4xl sm:text-5xl tracking-tight
 
 ```tsx
 // Standard card
-<div className="rounded border border-white/5 bg-white/[0.01] p-6 hover:border-white/10 transition-all">
+<div className="rounded border border-white/5 bg-white/1 p-6 hover:border-white/10 transition-all">
 
 // Highlighted/accent card
-<div className="rounded border border-primary/20 bg-primary/[0.02] p-6 hover:border-primary/40 transition-all">
+<div className="rounded border border-primary/20 bg-primary/2 p-6 hover:border-primary/40 transition-all">
 
 // Data-dense card
-<div className="rounded border border-white/5 bg-white/[0.02] p-3">
+<div className="rounded border border-white/5 bg-white/2 p-3">
   <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Label</div>
   <div className="font-mono font-bold text-lg">$2,847.50</div>
 </div>
@@ -101,7 +101,7 @@ Use for preview/demo content:
 ```tsx
 <div className="overflow-hidden rounded border border-white/10 bg-black/80 shadow-2xl">
   {/* Traffic light header */}
-  <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-4 py-2">
+  <div className="flex items-center justify-between border-b border-white/5 bg-white/2 px-4 py-2">
     <div className="flex items-center gap-2">
       <div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
       <div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />

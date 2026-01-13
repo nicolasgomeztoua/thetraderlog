@@ -176,7 +176,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 					<div className="space-y-2">
 						{(trailingRules.trailStops ?? []).map((rule, idx) => (
 							<div
-								className="flex items-end gap-3 rounded border border-white/5 bg-white/[0.02] p-3"
+								className="flex items-end gap-3 rounded border border-white/5 bg-white/2 p-3"
 								key={`trail-${rule.triggerR}-${rule.method}`}
 							>
 								<div className="w-24 space-y-1">

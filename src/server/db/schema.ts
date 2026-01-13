@@ -662,6 +662,106 @@ export const tradeRuleChecks = createTable(
 );
 
 // ============================================================================
+// DAILY JOURNALS TABLE
+// ============================================================================
+
+export const dailyJournals = createTable(
+	"daily_journal",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.dailyJournal()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		date: timestamp("date", { withTimezone: true }).notNull(), // Date of the journal (normalized to midnight)
+		content: text("content"), // Rich text content (HTML from Tiptap)
+		contentFormat: text("content_format").default("html"), // Format: "html", "markdown", etc.
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
+	},
+	(t) => [
+		index("daily_journal_user_id_idx").on(t.userId),
+		uniqueIndex("daily_journal_user_date_idx").on(t.userId, t.date),
+	],
+);
+
+// ============================================================================
+// DAILY CHECKLIST TEMPLATES TABLE
+// ============================================================================
+
+export const dailyChecklistTemplates = createTable(
+	"daily_checklist_template",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.checklistTemplate()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		text: text("text").notNull(), // The checklist item text
+		order: integer("order").notNull().default(0), // For sorting items
+		isActive: boolean("is_active").notNull().default(true), // Whether to show in daily checklist
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [index("daily_checklist_template_user_id_idx").on(t.userId)],
+);
+
+// ============================================================================
+// DAILY CHECKLIST CHECKS TABLE
+// ============================================================================
+
+export const dailyChecklistChecks = createTable(
+	"daily_checklist_check",
+	{
+		journalId: text("journal_id")
+			.notNull()
+			.references(() => dailyJournals.id, { onDelete: "cascade" }),
+		templateId: text("template_id")
+			.notNull()
+			.references(() => dailyChecklistTemplates.id, { onDelete: "cascade" }),
+		checked: boolean("checked").notNull().default(false),
+		checkedAt: timestamp("checked_at", { withTimezone: true }),
+	},
+	(t) => [
+		primaryKey({ columns: [t.journalId, t.templateId] }),
+		index("daily_checklist_check_journal_id_idx").on(t.journalId),
+	],
+);
+
+// ============================================================================
+// JOURNAL ATTACHMENTS TABLE
+// ============================================================================
+
+export const journalAttachments = createTable(
+	"journal_attachment",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.journalAttachment()),
+		journalId: text("journal_id")
+			.notNull()
+			.references(() => dailyJournals.id, { onDelete: "cascade" }),
+		url: text("url").notNull(), // S3/CDN URL
+		key: text("key").notNull(), // S3 object key
+		filename: text("filename").notNull(), // Original filename
+		mimeType: text("mime_type").notNull(), // e.g., "image/png"
+		size: integer("size").notNull(), // File size in bytes
+		caption: text("caption"), // Optional caption
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [index("journal_attachment_journal_id_idx").on(t.journalId)],
+);
+
+// ============================================================================
 // CANDLE CACHE TABLE (for market data caching)
 // ============================================================================
 
@@ -703,6 +803,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	aiConversations: many(aiConversations),
 	filterPresets: many(filterPresets),
 	strategies: many(strategies),
+	dailyJournals: many(dailyJournals),
+	dailyChecklistTemplates: many(dailyChecklistTemplates),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -860,6 +962,53 @@ export const tradeRuleChecksRelations = relations(
 	}),
 );
 
+export const dailyJournalsRelations = relations(
+	dailyJournals,
+	({ one, many }) => ({
+		user: one(users, {
+			fields: [dailyJournals.userId],
+			references: [users.id],
+		}),
+		checklistChecks: many(dailyChecklistChecks),
+		attachments: many(journalAttachments),
+	}),
+);
+
+export const dailyChecklistTemplatesRelations = relations(
+	dailyChecklistTemplates,
+	({ one, many }) => ({
+		user: one(users, {
+			fields: [dailyChecklistTemplates.userId],
+			references: [users.id],
+		}),
+		checks: many(dailyChecklistChecks),
+	}),
+);
+
+export const dailyChecklistChecksRelations = relations(
+	dailyChecklistChecks,
+	({ one }) => ({
+		journal: one(dailyJournals, {
+			fields: [dailyChecklistChecks.journalId],
+			references: [dailyJournals.id],
+		}),
+		template: one(dailyChecklistTemplates, {
+			fields: [dailyChecklistChecks.templateId],
+			references: [dailyChecklistTemplates.id],
+		}),
+	}),
+);
+
+export const journalAttachmentsRelations = relations(
+	journalAttachments,
+	({ one }) => ({
+		journal: one(dailyJournals, {
+			fields: [journalAttachments.journalId],
+			references: [dailyJournals.id],
+		}),
+	}),
+);
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -890,3 +1039,13 @@ export type TradeRuleCheck = typeof tradeRuleChecks.$inferSelect;
 export type NewTradeRuleCheck = typeof tradeRuleChecks.$inferInsert;
 export type CandleCache = typeof candleCache.$inferSelect;
 export type NewCandleCache = typeof candleCache.$inferInsert;
+export type DailyJournal = typeof dailyJournals.$inferSelect;
+export type NewDailyJournal = typeof dailyJournals.$inferInsert;
+export type DailyChecklistTemplate =
+	typeof dailyChecklistTemplates.$inferSelect;
+export type NewDailyChecklistTemplate =
+	typeof dailyChecklistTemplates.$inferInsert;
+export type DailyChecklistCheck = typeof dailyChecklistChecks.$inferSelect;
+export type NewDailyChecklistCheck = typeof dailyChecklistChecks.$inferInsert;
+export type JournalAttachment = typeof journalAttachments.$inferSelect;
+export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
