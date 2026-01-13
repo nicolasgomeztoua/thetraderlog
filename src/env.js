@@ -18,11 +18,11 @@ export const env = createEnv({
 		// Trigger.dev for background jobs
 		TRIGGER_SECRET_KEY: z.string().min(1),
 		// S3-compatible storage (optional - for file uploads)
-		S3_ENDPOINT: z.string().url().optional(),
-		S3_REGION: z.string().optional(),
-		S3_ACCESS_KEY_ID: z.string().optional(),
-		S3_SECRET_ACCESS_KEY: z.string().optional(),
-		S3_BUCKET: z.string().optional(),
+		S3_ENDPOINT: z.string().url(),
+		S3_REGION: z.string(),
+		S3_ACCESS_KEY_ID: z.string(),
+		S3_SECRET_ACCESS_KEY: z.string(),
+		S3_BUCKET: z.string(),
 	},
 
 	/**

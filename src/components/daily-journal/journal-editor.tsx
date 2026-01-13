@@ -305,7 +305,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 			<EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
 
 			{/* Editor content */}
-			<div className="rounded-b border border-white/10 border-t-0 bg-white/[0.01]">
+			<div className="rounded-b border border-white/10 border-t-0 bg-white/1">
 				<EditorContent editor={editor} />
 			</div>
 

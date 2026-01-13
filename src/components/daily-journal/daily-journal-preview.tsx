@@ -255,7 +255,7 @@ export function DailyJournalPreview({
 			{/* Editor */}
 			<div
 				className={cn(
-					"rounded border border-white/10 bg-white/[0.01]",
+					"rounded border border-white/10 bg-white/1",
 					editable && "focus-within:border-primary/50",
 				)}
 			>

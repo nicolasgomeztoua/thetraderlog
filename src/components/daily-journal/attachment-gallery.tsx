@@ -123,7 +123,7 @@ export function AttachmentGallery({
 				<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
 					{images.map((attachment) => (
 						<div
-							className="group relative aspect-square overflow-hidden rounded border border-white/5 bg-white/[0.01]"
+							className="group relative aspect-square overflow-hidden rounded border border-white/5 bg-white/1"
 							key={attachment.id}
 						>
 							{/* Image - using img because these are user-uploaded S3 images */}
@@ -191,7 +191,7 @@ export function AttachmentGallery({
 
 						return (
 							<div
-								className="group flex items-center gap-3 rounded border border-white/5 bg-white/[0.01] p-2"
+								className="group flex items-center gap-3 rounded border border-white/5 bg-white/1 p-2"
 								key={attachment.id}
 							>
 								{/* Icon */}

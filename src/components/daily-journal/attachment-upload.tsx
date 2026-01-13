@@ -357,7 +357,7 @@ export function AttachmentUpload({
 				<div className="space-y-2">
 					{uploadingFiles.map((upload) => (
 						<div
-							className="flex items-center gap-3 rounded border border-white/5 bg-white/[0.01] p-2"
+							className="flex items-center gap-3 rounded border border-white/5 bg-white/1 p-2"
 							key={upload.id}
 						>
 							{/* File info */}

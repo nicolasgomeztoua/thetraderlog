@@ -272,7 +272,7 @@ export default function StrategiesPage() {
 
 			{/* Empty state */}
 			{!isLoading && (!strategies || strategies.length === 0) && (
-				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/[0.02] py-16">
+				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 py-16">
 					<BookMarked className="mb-4 h-12 w-12 text-muted-foreground/50" />
 					<h2 className="font-semibold text-lg">No strategies yet</h2>
 					<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-sm">

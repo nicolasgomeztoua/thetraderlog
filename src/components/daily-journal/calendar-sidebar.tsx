@@ -274,7 +274,7 @@ export function CalendarSidebar({
 												// P&L background color
 												pnlColorClass,
 												// No trades - subtle background
-												!hasTrades && "hover:bg-white/[0.05]",
+												!hasTrades && "hover:bg-white/5",
 												// Today indicator
 												isTodayDate && !isSelected && "ring-1 ring-primary/50",
 												// Selected state

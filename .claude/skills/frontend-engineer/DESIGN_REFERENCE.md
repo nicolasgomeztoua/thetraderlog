@@ -30,7 +30,7 @@ What makes EdgeJournal's UI feel special:
 - **Terminal window chrome** (traffic light dots) on preview cards
 - **Command prompt characters** (`$`, `→`, `>`) for interactive elements
 - **Typewriter effects** with blinking cursors for AI/dynamic content
-- **Ultra-subtle backgrounds** (`bg-white/[0.01]`) that create depth without distraction
+- **Ultra-subtle backgrounds** (`bg-white/1`) that create depth without distraction
 - **Gradient glow orbs** that create atmosphere without being distracting
 - **Monospace uppercase tracking-wider** on all interactive elements
 
@@ -79,13 +79,13 @@ Use these opacity values consistently for subtle layering:
 
 | Pattern | Usage |
 |---------|-------|
-| `bg-white/[0.01]` | Barely visible card background |
-| `bg-white/[0.02]` | Subtle card/element background |
-| `bg-white/[0.05]` | More visible background |
+| `bg-white/1` | Barely visible card background |
+| `bg-white/2` | Subtle card/element background |
+| `bg-white/5` | More visible background |
 | `border-white/5` | Default subtle border |
 | `border-white/10` | Medium visibility border |
 | `border-white/20` | High visibility border (hover states) |
-| `bg-primary/[0.02]` | Highlighted element background |
+| `bg-primary/2` | Highlighted element background |
 | `bg-primary/5` | Accent background |
 | `bg-primary/10` | Strong accent background |
 | `border-primary/20` | Highlighted border |
@@ -788,8 +788,8 @@ BUTTONS:        font-mono text-xs uppercase tracking-wider
 NAV LINKS:      font-mono text-xs uppercase tracking-wider text-muted-foreground
 LABELS:         font-mono text-[10px] text-muted-foreground uppercase tracking-wider
 DATA VALUES:    font-mono font-bold text-lg
-CARD BG:        bg-white/[0.02] border border-white/5 rounded
-HIGHLIGHTED:    bg-primary/[0.02] border border-primary/20 rounded
+CARD BG:        bg-white/2 border border-white/5 rounded
+HIGHLIGHTED:    bg-primary/2 border border-primary/20 rounded
 PROFIT:         text-profit (green)
 LOSS:           text-loss (red)
 SECTION:        py-32 relative

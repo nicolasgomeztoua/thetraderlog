@@ -111,7 +111,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleIn ?? []).map((rule, idx) => (
 							<div
-								className="flex items-center gap-3 rounded border border-white/5 bg-white/[0.02] p-3"
+								className="flex items-center gap-3 rounded border border-white/5 bg-white/2 p-3"
 								key={`scalein-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
@@ -186,7 +186,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleOut ?? []).map((rule, idx) => (
 							<div
-								className="flex items-center gap-3 rounded border border-white/5 bg-white/[0.02] p-3"
+								className="flex items-center gap-3 rounded border border-white/5 bg-white/2 p-3"
 								key={`scaleout-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">

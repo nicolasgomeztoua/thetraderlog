@@ -34,7 +34,7 @@ export function TradeSummaryCard({
 		return (
 			<div
 				className={cn(
-					"relative overflow-hidden rounded-sm border border-white/15 bg-gradient-to-br from-white/[0.03] to-transparent p-8",
+					"relative overflow-hidden rounded-sm border border-white/15 bg-gradient-to-br from-white/3 to-transparent p-8",
 					className,
 				)}
 			>
@@ -75,12 +75,11 @@ export function TradeSummaryCard({
 			className={cn(
 				"relative overflow-hidden rounded-sm border p-8",
 				isProfit &&
-					"border-profit/25 bg-gradient-to-br from-profit/[0.04] to-transparent",
-				isLoss &&
-					"border-loss/25 bg-gradient-to-br from-loss/[0.04] to-transparent",
+					"border-profit/25 bg-gradient-to-br from-profit/4 to-transparent",
+				isLoss && "border-loss/25 bg-gradient-to-br from-loss/4 to-transparent",
 				!isProfit &&
 					!isLoss &&
-					"border-white/15 bg-gradient-to-br from-white/[0.03] to-transparent",
+					"border-white/15 bg-gradient-to-br from-white/3 to-transparent",
 				className,
 			)}
 		>

@@ -106,7 +106,7 @@ export function TradesSummary({ selectedDate, className }: TradesSummaryProps) {
 
 						return (
 							<Link
-								className="group flex items-center justify-between rounded border border-white/5 bg-white/[0.01] p-2 transition-colors hover:border-white/10 hover:bg-white/[0.02]"
+								className="group flex items-center justify-between rounded border border-white/5 bg-white/1 p-2 transition-colors hover:border-white/10 hover:bg-white/2"
 								href={`/journal/${trade.id}`}
 								key={trade.id}
 							>

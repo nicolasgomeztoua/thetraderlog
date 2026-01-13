@@ -215,7 +215,7 @@ export function ChecklistSettings({
 						templates?.map((template, index) => (
 							<div
 								className={cn(
-									"group flex items-center gap-2 rounded border border-white/5 bg-white/[0.02] p-2 transition-colors",
+									"group flex items-center gap-2 rounded border border-white/5 bg-white/2 p-2 transition-colors",
 									!template.isActive && "opacity-50",
 									deletingId === template.id &&
 										"border-destructive/50 bg-destructive/10",

@@ -58,7 +58,7 @@ export default function NewStrategyPage() {
 			</div>
 
 			{/* Form */}
-			<div className="rounded border border-white/5 bg-white/[0.02] p-6">
+			<div className="rounded border border-white/5 bg-white/2 p-6">
 				<StrategyForm
 					isSubmitting={createMutation.isPending}
 					onSubmit={handleSubmit}

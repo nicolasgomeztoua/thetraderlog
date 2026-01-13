@@ -120,7 +120,7 @@ export default function DailyJournalPage() {
 						</div>
 
 						{/* Checklist */}
-						<div className="mb-4 rounded border border-white/5 bg-white/[0.01] p-4">
+						<div className="mb-4 rounded border border-white/5 bg-white/1 p-4">
 							<DailyChecklist
 								onOpenSettings={() => setIsChecklistSettingsOpen(true)}
 								selectedDate={selectedDate}
@@ -128,7 +128,7 @@ export default function DailyJournalPage() {
 						</div>
 
 						{/* Trades Summary */}
-						<div className="rounded border border-white/5 bg-white/[0.01] p-4">
+						<div className="rounded border border-white/5 bg-white/1 p-4">
 							<TradesSummary selectedDate={selectedDate} />
 						</div>
 
@@ -150,7 +150,7 @@ export default function DailyJournalPage() {
 				>
 					<div className="h-full overflow-y-auto p-4">
 						{/* Journal Editor */}
-						<div className="mb-4 rounded border border-white/5 bg-white/[0.01] p-4">
+						<div className="mb-4 rounded border border-white/5 bg-white/1 p-4">
 							<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 								Journal Entry
 							</span>
@@ -158,7 +158,7 @@ export default function DailyJournalPage() {
 						</div>
 
 						{/* Attachments */}
-						<div className="rounded border border-white/5 bg-white/[0.01] p-4">
+						<div className="rounded border border-white/5 bg-white/1 p-4">
 							<AttachmentUpload
 								journalId={journal?.id}
 								selectedDate={selectedDate}

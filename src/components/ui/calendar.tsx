@@ -40,13 +40,13 @@ function Calendar({
 				),
 				day_button: cn(
 					buttonVariants({ variant: "ghost" }),
-					"size-8 p-0 font-mono text-xs hover:bg-white/[0.05] aria-selected:opacity-100",
+					"size-8 p-0 font-mono text-xs hover:bg-white/5 aria-selected:opacity-100",
 				),
 				range_start: "day-range-start rounded-l",
 				range_end: "day-range-end rounded-r",
 				selected:
 					"bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-				today: "bg-white/[0.05] text-foreground",
+				today: "bg-white/5 text-foreground",
 				outside:
 					"day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
 				disabled: "text-muted-foreground opacity-50",
