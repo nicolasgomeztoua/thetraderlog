@@ -24,5 +24,6 @@ export const ids = {
 	candleCache: () => createId("cc"),
 	dailyJournal: () => createId("dj"),
 	checklistTemplate: () => createId("ct"),
+	checklistCheck: () => createId("ck"),
 	journalAttachment: () => createId("ja"),
 };

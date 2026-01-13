@@ -308,6 +308,30 @@ const { start, end } = getDayBoundsInTimezone(dateString, userTimezone);
 **Example:** At 10pm EST on Jan 13, `toISOString()` gives "2026-01-14" (UTC) instead of "2026-01-13"
 **Solution:** Use `format(date, "yyyy-MM-dd")` from date-fns to preserve local date
 
+### Calendar Date Display vs Trade Time Display
+**Problem:** Using `formatDateInTimezone()` for calendar dates shows wrong day (e.g., Jan 6 appears as Jan 5)
+**Why:** Journal dates are stored as UTC midnight (e.g., `2026-01-06T00:00:00.000Z`). Converting UTC midnight to EST (UTC-5) gives 7pm on the *previous* day.
+
+**Two types of date formatting:**
+| Type | Use Case | Utility |
+|------|----------|---------|
+| Calendar dates | Calendar grid, date navigation, journal dates | `formatLocalDate()` |
+| Trade times | Trade entry/exit, actual moments in time | `formatDateInTimezone()` |
+
+**Calendar/Journal dates (stored as UTC midnight or local Date objects):**
+```tsx
+import { formatLocalDate } from "@/lib/shared";
+{formatLocalDate(day, "MMM d, yyyy")}  // Preserves calendar date - NO timezone conversion
+```
+
+**Trade entry/exit times (actual moments that occurred):**
+```tsx
+import { formatDateInTimezone } from "@/lib/shared";
+{formatDateInTimezone(trade.entryTime, timezone, { format: "MMM d HH:mm" })}  // Converts to user TZ
+```
+
+**Rule of thumb:** If you're displaying a calendar day number, month header, or date from a date picker, use `formatLocalDate()`. If you're displaying when a trade happened, use `formatDateInTimezone()`.
+
 ### Unused Variables in Placeholder Components
 **Problem:** State setters marked as unused when component structure is set up before child components exist
 **Solution:** Use `void setter;` comment to mark as used, or extract to separate hook

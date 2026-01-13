@@ -1,20 +1,6 @@
 "use client";
 
 import {
-	addMonths,
-	eachDayOfInterval,
-	endOfMonth,
-	format,
-	getDay,
-	isAfter,
-	isSameDay,
-	isSameMonth,
-	isToday,
-	startOfDay,
-	startOfMonth,
-	subMonths,
-} from "date-fns";
-import {
 	CheckCircle2Icon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
@@ -28,8 +14,23 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatCurrency, toDateString, toUserTimezone } from "@/lib/shared";
-import { useSettingsStore } from "@/stores/settings-store";
+import {
+	addMonthsToDate,
+	cn,
+	formatCurrency,
+	formatLocalDate,
+	getDayOfWeek,
+	getDaysInInterval,
+	getEndOfMonth,
+	getStartOfDay,
+	getStartOfMonth,
+	isDateAfter,
+	isSameCalendarDay,
+	isSameCalendarMonth,
+	isTodayDate,
+	subtractMonthsFromDate,
+	toDateString,
+} from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 interface CalendarSidebarProps {
@@ -73,12 +74,9 @@ export function CalendarSidebar({
 	// Month being displayed (independent of selectedDate)
 	const [displayMonth, setDisplayMonth] = useState<Date>(() => selectedDate);
 
-	// Get timezone from settings store
-	const timezone = useSettingsStore((state) => state.timezone);
-
 	// Calculate start and end of the displayed month
-	const monthStart = startOfMonth(displayMonth);
-	const monthEnd = endOfMonth(displayMonth);
+	const monthStart = getStartOfMonth(displayMonth);
+	const monthEnd = getEndOfMonth(displayMonth);
 
 	// Fetch P&L data for the displayed month
 	const { data: calendarData } = api.analytics.getCalendarData.useQuery(
@@ -121,7 +119,7 @@ export function CalendarSidebar({
 		if (!journalData) return map;
 		for (const journal of journalData) {
 			// Convert journal date to YYYY-MM-DD string
-			const dateStr = format(new Date(journal.date), "yyyy-MM-dd");
+			const dateStr = toDateString(new Date(journal.date));
 			map.set(dateStr, journal.hasContent);
 		}
 		return map;
@@ -132,8 +130,8 @@ export function CalendarSidebar({
 		if (!calendarData) return 0;
 
 		// Filter to only the displayed month's data
-		const monthStartStr = format(monthStart, "yyyy-MM-dd");
-		const monthEndStr = format(monthEnd, "yyyy-MM-dd");
+		const monthStartStr = toDateString(monthStart);
+		const monthEndStr = toDateString(monthEnd);
 
 		const monthData = calendarData.filter(
 			(d) => d.date >= monthStartStr && d.date <= monthEndStr,
@@ -145,10 +143,10 @@ export function CalendarSidebar({
 
 	// Generate days of the month with padding for week alignment
 	const calendarDays = useMemo(() => {
-		const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+		const days = getDaysInInterval(monthStart, monthEnd);
 
 		// Get the day of week the month starts on (0 = Sunday)
-		const startDayOfWeek = getDay(monthStart);
+		const startDayOfWeek = getDayOfWeek(monthStart);
 
 		// Add null padding for days before month starts
 		const padding: null[] = Array(startDayOfWeek).fill(null);
@@ -167,9 +165,7 @@ export function CalendarSidebar({
 			}
 			// Use the first non-null day for key, or week index as fallback
 			const firstDay = week.find((d) => d !== null);
-			const key = firstDay
-				? format(firstDay, "yyyy-MM-dd")
-				: `week-${result.length}`;
+			const key = firstDay ? toDateString(firstDay) : `week-${result.length}`;
 			result.push({ key, days: week });
 		}
 		return result;
@@ -177,11 +173,11 @@ export function CalendarSidebar({
 
 	// Navigation handlers
 	const handlePreviousMonth = () => {
-		setDisplayMonth((prev) => subMonths(prev, 1));
+		setDisplayMonth((prev) => subtractMonthsFromDate(prev, 1));
 	};
 
 	const handleNextMonth = () => {
-		setDisplayMonth((prev) => addMonths(prev, 1));
+		setDisplayMonth((prev) => addMonthsToDate(prev, 1));
 	};
 
 	const handleTodayClick = () => {
@@ -208,7 +204,7 @@ export function CalendarSidebar({
 					onClick={handleTodayClick}
 					type="button"
 				>
-					{format(displayMonth, "MMMM yyyy")}
+					{formatLocalDate(displayMonth, "MMMM yyyy")}
 				</button>
 
 				<Button
@@ -253,16 +249,18 @@ export function CalendarSidebar({
 							const pnlData = pnlMap.get(dateStr);
 							const hasJournal = journalMap.get(dateStr) ?? false;
 
-							const isSelected = isSameDay(day, selectedDate);
-							const isCurrentMonth = isSameMonth(day, displayMonth);
-							const isTodayDate = isToday(day);
+							const isSelected = isSameCalendarDay(day, selectedDate);
+							const isCurrentMonth = isSameCalendarMonth(day, displayMonth);
+							const isDayToday = isTodayDate(day);
 							const hasTrades = pnlData && pnlData.trades > 0;
 
-							// Check if this is a future date (timezone-aware)
-							const todayInTz = toUserTimezone(new Date(), timezone);
-							const isFutureDate = isAfter(
-								startOfDay(day),
-								startOfDay(todayInTz),
+							// Check if this is a future date
+							// Use browser's actual "today" - not trade timezone
+							// Trade timezone is for grouping trades, not for UI interaction
+							const browserToday = new Date();
+							const isFutureDate = isDateAfter(
+								getStartOfDay(day),
+								getStartOfDay(browserToday),
 							);
 
 							// Determine background color
@@ -272,7 +270,7 @@ export function CalendarSidebar({
 
 							const buttonContent = (
 								<>
-									{format(day, "d")}
+									{formatLocalDate(day, "d")}
 									{/* Journal indicator dot */}
 									{hasJournal && (
 										<span
@@ -294,10 +292,10 @@ export function CalendarSidebar({
 								// No trades - subtle background (except today which has its own hover)
 								!hasTrades &&
 									!isFutureDate &&
-									!isTodayDate &&
+									!isDayToday &&
 									"hover:bg-white/5",
 								// Today indicator with distinct hover
-								isTodayDate &&
+								isDayToday &&
 									!isSelected &&
 									"ring-1 ring-primary/50 hover:ring-2 hover:ring-primary",
 								// Selected state
@@ -343,7 +341,7 @@ export function CalendarSidebar({
 									>
 										<div className="font-mono text-xs">
 											<div className="mb-1 text-muted-foreground">
-												{format(day, "EEE, MMM d, yyyy")}
+												{formatLocalDate(day, "EEE, MMM d, yyyy")}
 											</div>
 											{hasTrades ? (
 												<div
@@ -465,7 +463,7 @@ export function CalendarSidebar({
 					>
 						<div className="font-mono text-xs">
 							<div className="mb-1">
-								{format(displayMonth, "MMMM")} Checklist Compliance
+								{formatLocalDate(displayMonth, "MMMM")} Checklist Compliance
 							</div>
 							<div className="text-muted-foreground">
 								{complianceData?.averageCompliance !== null &&

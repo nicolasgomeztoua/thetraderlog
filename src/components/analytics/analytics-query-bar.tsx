@@ -61,7 +61,6 @@ export function AnalyticsQueryBar({
 		discardPreviewFilters,
 		resetPreviewFilters,
 		hasActiveFilters,
-		setFilters,
 		clearFilters,
 		activePresetId,
 		setActivePresetId,
@@ -102,14 +101,6 @@ export function AnalyticsQueryBar({
 		resetPreviewFilters();
 	}, [resetPreviewFilters]);
 
-	// Quick outcome change (applies immediately without expanding)
-	const handleQuickOutcomeChange = useCallback(
-		(outcome: "all" | "win" | "loss" | "breakeven") => {
-			setFilters({ outcome });
-		},
-		[setFilters],
-	);
-
 	// Clear all filters
 	const handleClearAll = useCallback(() => {
 		clearFilters();
@@ -133,7 +124,6 @@ export function AnalyticsQueryBar({
 				hasActiveFilters={hasMounted && hasActiveFilters()}
 				isExpanded={isExpanded}
 				onClearAll={handleClearAll}
-				onOutcomeChange={handleQuickOutcomeChange}
 				onToggleExpand={handleToggleExpand}
 			/>
 

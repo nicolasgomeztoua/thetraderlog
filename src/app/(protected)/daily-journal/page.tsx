@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckCircleIcon, Loader2Icon, PlayIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AttachmentGallery } from "@/components/daily-journal/attachment-gallery";
 import { AttachmentUpload } from "@/components/daily-journal/attachment-upload";
@@ -9,6 +10,7 @@ import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import { JournalEditor } from "@/components/daily-journal/journal-editor";
 import { TradesSummary } from "@/components/daily-journal/trades-summary";
+import { Button } from "@/components/ui/button";
 import {
 	ResizableHandle,
 	ResizablePanel,
@@ -64,10 +66,27 @@ export default function DailyJournalPage() {
 
 	// Date string for API queries - preserves the calendar date as clicked
 	const dateString = toDateString(selectedDate);
+	const todayString = toDateString(new Date());
+	const isToday = dateString === todayString;
+
 	const { data: journal } = api.dailyJournal.getByDate.useQuery(
 		{ date: dateString },
 		{ enabled: !!dateString },
 	);
+
+	const utils = api.useUtils();
+	const startDay = api.dailyJournal.startDay.useMutation({
+		onSuccess: () => {
+			utils.dailyJournal.getByDate.invalidate({ date: dateString });
+		},
+	});
+
+	const handleStartJournal = () => {
+		startDay.mutate({ date: dateString });
+	};
+
+	const isStarted = journal?.dayStartedAt !== null;
+	const isStarting = startDay.isPending;
 
 	useEffect(() => {
 		setPanelSizes(getStoredSizes());
@@ -82,18 +101,55 @@ export default function DailyJournalPage() {
 		<div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden">
 			{/* Header */}
 			<div className="flex shrink-0 items-center justify-between border-border border-b bg-background px-4 py-3">
-				<div>
-					<span className="mb-1 block font-mono text-primary text-xs uppercase tracking-wider">
-						Daily Journal
-					</span>
-					<h1 className="font-bold text-2xl tracking-tight">
-						{selectedDate.toLocaleDateString("en-US", {
-							weekday: "long",
-							month: "long",
-							day: "numeric",
-							year: "numeric",
-						})}
-					</h1>
+				<div className="flex items-end gap-4">
+					<div>
+						<span className="mb-1 block font-mono text-primary text-xs uppercase tracking-wider">
+							Daily Journal
+						</span>
+						<h1 className="font-bold text-2xl tracking-tight">
+							{selectedDate.toLocaleDateString("en-US", {
+								weekday: "long",
+								month: "long",
+								day: "numeric",
+								year: "numeric",
+							})}
+						</h1>
+					</div>
+					{/* Start My Journal button - only show for today */}
+					{isToday && journal && (
+						<div className="ml-4">
+							{isStarted ? (
+								<div className="mb-0.5 flex items-center gap-1.5 rounded border border-profit/20 bg-profit/5 px-3 py-1.5">
+									<CheckCircleIcon className="h-4 w-4 text-profit" />
+									<span className="font-mono text-profit text-sm">
+										Journal Started
+									</span>
+									{journal.dayStartedAt && (
+										<span className="font-mono text-muted-foreground text-xs">
+											{new Date(journal.dayStartedAt).toLocaleTimeString(
+												"en-US",
+												{ hour: "numeric", minute: "2-digit" },
+											)}
+										</span>
+									)}
+								</div>
+							) : (
+								<Button
+									className="font-mono"
+									disabled={isStarting}
+									onClick={handleStartJournal}
+									size="sm"
+								>
+									{isStarting ? (
+										<Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+									) : (
+										<PlayIcon className="mr-2 h-4 w-4" />
+									)}
+									Start My Journal
+								</Button>
+							)}
+						</div>
+					)}
 				</div>
 				<DateNavigation date={selectedDate} onDateChange={setSelectedDate} />
 			</div>

@@ -1,9 +1,13 @@
-import { format, startOfYear, subDays } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { DAY_LABELS, HOURS, QUICK_DATE_PRESETS } from "@/lib/constants";
-import { cn } from "@/lib/shared";
+import {
+	cn,
+	getStartOfYear,
+	subtractDaysFromDate,
+	toDateString,
+} from "@/lib/shared";
 import { FilterField, FilterPill, FilterSection } from "./filter-section";
 
 // =============================================================================
@@ -59,7 +63,7 @@ export function WhenFilters({
 	// Format date for input
 	const formatForInput = (date: Date | null) => {
 		if (!date) return "";
-		return format(date, "yyyy-MM-dd");
+		return toDateString(date);
 	};
 
 	// Handle quick date preset
@@ -73,9 +77,9 @@ export function WhenFilters({
 				onDateRangeChange({ start: null, end: null });
 			} else if (preset.days === -1) {
 				// YTD
-				onDateRangeChange({ start: startOfYear(today), end: today });
+				onDateRangeChange({ start: getStartOfYear(today), end: today });
 			} else {
-				const startDate = subDays(today, preset.days);
+				const startDate = subtractDaysFromDate(today, preset.days);
 				startDate.setHours(0, 0, 0, 0);
 				onDateRangeChange({ start: startDate, end: today });
 			}
@@ -100,11 +104,8 @@ export function WhenFilters({
 
 		// Check YTD
 		if (dateRange.start) {
-			const yearStart = startOfYear(today);
-			if (
-				format(dateRange.start, "yyyy-MM-dd") ===
-				format(yearStart, "yyyy-MM-dd")
-			) {
+			const yearStart = getStartOfYear(today);
+			if (toDateString(dateRange.start) === toDateString(yearStart)) {
 				return "YTD";
 			}
 		}
