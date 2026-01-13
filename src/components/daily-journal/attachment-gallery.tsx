@@ -10,7 +10,7 @@ import {
 import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/shared";
+import { cn, toDateString } from "@/lib/shared";
 import type { JournalAttachment } from "@/server/db/schema";
 import { api } from "@/trpc/react";
 
@@ -64,7 +64,9 @@ export function AttachmentGallery({
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 
 	const utils = api.useUtils();
-	const dateString = selectedDate.toISOString().split("T")[0] ?? "";
+
+	// Date string for API calls - preserves the calendar date as clicked
+	const dateString = toDateString(selectedDate);
 
 	// Delete attachment mutation
 	const deleteAttachment = api.dailyJournal.deleteAttachment.useMutation({

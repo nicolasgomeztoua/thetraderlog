@@ -14,7 +14,7 @@ import {
 	Loader2Icon,
 	StrikethroughIcon,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,7 +80,10 @@ function ToolbarButton({
 						isActive && "bg-primary/20 text-primary",
 					)}
 					disabled={disabled}
-					onClick={onClick}
+					onMouseDown={(e) => {
+						e.preventDefault();
+						onClick();
+					}}
 					type="button"
 				>
 					{icon}
@@ -102,6 +105,25 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
 	const [linkUrl, setLinkUrl] = useState("");
 	const [isUploading, setIsUploading] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [, forceUpdate] = useState(0);
+
+	// Detect Mac for keyboard shortcut display
+	const mod = useMemo(() => {
+		if (typeof window === "undefined") return "Ctrl";
+		return /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+	}, []);
+
+	// Force re-render when editor state changes (for active states)
+	useEffect(() => {
+		if (!editor) return;
+
+		const handleUpdate = () => forceUpdate((n) => n + 1);
+		editor.on("transaction", handleUpdate);
+
+		return () => {
+			editor.off("transaction", handleUpdate);
+		};
+	}, [editor]);
 
 	// Helper to get typed command chain
 	const cmd = useCallback((): EditorCommands | null => {
@@ -194,13 +216,13 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
 			<ToolbarButton
 				icon={<BoldIcon className="size-4" />}
 				isActive={editor.isActive("bold")}
-				label="Bold (Ctrl+B)"
+				label={`Bold (${mod}+B)`}
 				onClick={() => cmd()?.toggleBold().run()}
 			/>
 			<ToolbarButton
 				icon={<ItalicIcon className="size-4" />}
 				isActive={editor.isActive("italic")}
-				label="Italic (Ctrl+I)"
+				label={`Italic (${mod}+I)`}
 				onClick={() => cmd()?.toggleItalic().run()}
 			/>
 			<ToolbarButton

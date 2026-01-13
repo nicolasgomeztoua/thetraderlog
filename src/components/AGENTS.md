@@ -55,8 +55,6 @@ const handleCalendarSelect = (selectedDate: Date | undefined) => {
 **How:**
 ```tsx
 import { eachDayOfInterval, endOfMonth, format, getDay, startOfMonth } from "date-fns";
-import { getDateStringInTimezone } from "@/lib/shared";
-import { useSettingsStore } from "@/stores/settings-store";
 
 // Generate days with padding for week alignment
 const calendarDays = useMemo(() => {
@@ -77,9 +75,9 @@ const weeks = useMemo(() => {
   return result;
 }, [calendarDays]);
 
-// Use timezone-aware date strings for API data matching
-const timezone = useSettingsStore((state) => state.timezone);
-const dateStr = getDateStringInTimezone(day, timezone);
+// Use toDateString() utility for API data matching
+import { toDateString } from "@/lib/shared";
+const dateStr = toDateString(day);
 ```
 
 ### P&L Color Intensity
@@ -99,31 +97,63 @@ function getPnLColorClass(pnl: number, maxAbsPnl: number): string {
 }
 ```
 
-### Optimistic Updates for Toggles
-**When:** Building toggle-based interactions (checkboxes, likes, favorites)
-**How:**
+### Optimistic Updates Pattern (tRPC)
+**When:** Any mutation where you want instant UI feedback before server confirmation
+**Structure:**
 ```tsx
-const mutation = api.entity.toggle.useMutation({
-  onMutate: async (newData) => {
-    await utils.entity.get.cancel();
-    const previousData = utils.entity.get.getData();
-    utils.entity.get.setData(queryKey, (old) => {
+const mutation = api.entity.update.useMutation({
+  // 1. onMutate: Runs BEFORE the mutation - update cache optimistically
+  onMutate: async (input) => {
+    // Cancel outgoing refetches to prevent overwriting optimistic update
+    await utils.entity.getAll.cancel();
+
+    // Snapshot current data for rollback
+    const previousData = utils.entity.getAll.getData();
+
+    // Optimistically update the cache
+    utils.entity.getAll.setData(undefined, (old) => {
       if (!old) return old;
-      // Toggle existing record or add new one
-      // IMPORTANT: Ensure all required fields are non-undefined
-      const relatedData = templates?.find((t) => t.id === newData.id);
-      if (!relatedData) return old; // Skip update if related data not found
-      return { ...old, updated: true };
+      // Transform data based on mutation type
+      return transformedData;
     });
+
+    // Return context for potential rollback
     return { previousData };
   },
-  onError: (_err, _data, context) => {
+
+  // 2. onError: Rollback on failure
+  onError: (_err, _input, context) => {
     if (context?.previousData) {
-      utils.entity.get.setData(queryKey, context.previousData);
+      utils.entity.getAll.setData(undefined, context.previousData);
     }
   },
-  onSettled: () => utils.entity.get.invalidate(),
+
+  // 3. onSettled: Always sync with server (success or failure)
+  onSettled: () => utils.entity.getAll.invalidate(),
 });
+```
+
+**Common Transformations:**
+```tsx
+// Toggle boolean
+return old.map((item) =>
+  item.id === input.id ? { ...item, isActive: !item.isActive } : item
+);
+
+// Update field
+return old.map((item) =>
+  item.id === input.id ? { ...item, ...input.updates } : item
+);
+
+// Reorder list
+const orderMap = new Map(input.items.map((i) => [i.id, i.order]));
+return [...old].sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+
+// Add item (at end)
+return [...old, { id: 'temp-id', ...input }];
+
+// Remove item
+return old.filter((item) => item.id !== input.id);
 ```
 
 ### Settings Modal with CRUD
@@ -161,30 +191,122 @@ const handleEditKeyDown = (e: React.KeyboardEvent) => {
 </div>
 ```
 
-### Up/Down Reorder Buttons
-**When:** Reordering lists without drag-and-drop complexity
+### Drag-and-Drop Reorder with Optimistic Updates
+**When:** Reordering lists with smooth drag-and-drop UX
+**Dependencies:** `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
 **How:**
 ```tsx
-const handleMoveUp = (index: number) => {
-  if (index === 0) return;
-  const items = data.map((item, i) => ({
-    id: item.id,
-    order: i === index ? index - 1 : i === index - 1 ? index : i,
-  }));
-  reorderMutation.mutate({ items });
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, arrayMove, sortableKeyboardCoordinates,
+  useSortable, verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVerticalIcon } from "lucide-react";
+
+// Sortable item component
+function SortableItem({ item }: { item: Item }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = { transform: CSS.Transform.toString(transform), transition };
+
+  return (
+    <div ref={setNodeRef} style={style} className={cn(isDragging && "z-10 shadow-lg")}>
+      <button {...attributes} {...listeners} className="cursor-grab touch-none">
+        <GripVerticalIcon className="size-4" />
+      </button>
+      {/* rest of item content */}
+    </div>
+  );
+}
+
+// In parent component
+const sensors = useSensors(
+  useSensor(PointerSensor),
+  useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+);
+
+// Mutation with optimistic update
+const reorderMutation = api.entity.reorder.useMutation({
+  onMutate: async ({ items }) => {
+    await utils.entity.getAll.cancel();
+    const previousData = utils.entity.getAll.getData();
+    utils.entity.getAll.setData(undefined, (old) => {
+      if (!old) return old;
+      const orderMap = new Map(items.map((item) => [item.id, item.order]));
+      return [...old].sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+    });
+    return { previousData };
+  },
+  onError: (_err, _vars, context) => {
+    if (context?.previousData) utils.entity.getAll.setData(undefined, context.previousData);
+  },
+  onSettled: () => utils.entity.getAll.invalidate(),
+});
+
+const handleDragEnd = (event: DragEndEvent) => {
+  const { active, over } = event;
+  if (!over || !data || active.id === over.id) return;
+  const oldIndex = data.findIndex((t) => t.id === active.id);
+  const newIndex = data.findIndex((t) => t.id === over.id);
+  const reordered = arrayMove(data, oldIndex, newIndex);
+  reorderMutation.mutate({ items: reordered.map((t, i) => ({ id: t.id, order: i })) });
 };
 
-const handleMoveDown = (index: number) => {
-  if (index === data.length - 1) return;
-  const items = data.map((item, i) => ({
-    id: item.id,
-    order: i === index ? index + 1 : i === index + 1 ? index : i,
-  }));
-  reorderMutation.mutate({ items });
-};
+// JSX
+<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+  <SortableContext items={data.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+    {data.map((item) => <SortableItem key={item.id} item={item} />)}
+  </SortableContext>
+</DndContext>
 ```
 
+### Key Prop Remount Pattern for Date-Based Components
+**When:** Components fetch data based on a date/ID prop and you need clean state on change
+**Problem:** Multiple useEffects fighting each other, race conditions, manual ref tracking
+**Solution:** Use `key={identifier}` on the component to force remount on change:
+```tsx
+// Parent component
+<JournalEditor key={dateString} selectedDate={selectedDate} />
+
+// Child component - MUST show loading until data arrives
+if (isLoading || !data) {
+  return <LoadingSpinner />;
+}
+```
+**Why this works:**
+- React unmounts old component (cleanup effects run, refs reset)
+- React mounts fresh component with new props
+- No date validation, no manual ref tracking, no race conditions
+
+**Critical:** Always check `|| !data` in loading state, not just `isLoading`. The query may not be loading but data hasn't arrived yet after remount.
+
 ## Gotchas
+
+### Calendar Date → API Date String (Frontend)
+**Problem:** When user clicks a date in the calendar, the Date object is in browser's local timezone. If user's _preferred_ timezone differs from browser timezone, don't convert on frontend.
+**Wrong approach:** `getDateStringInTimezone(selectedDate, userPreferredTimezone)` - this double-converts
+**Correct approach:** Use the `toDateString()` utility:
+```tsx
+import { toDateString } from "@/lib/shared";
+
+// Frontend: preserve the calendar date exactly as clicked
+const dateString = toDateString(selectedDate);
+
+// Backend handles timezone conversion when querying trades
+const { start, end } = getDayBoundsInTimezone(dateString, userTimezone);
+```
+**Why:** The calendar shows dates in browser local time. If user clicks "Jan 6", they want "Jan 6" - regardless of their preferred timezone for trade grouping. The backend converts "Jan 6" to the correct UTC range based on their timezone preference.
+**Key utilities:**
+- `toDateString(date)` - Frontend: preserves calendar date for API calls
+- `getDayBoundsInTimezone(dateString, tz)` - Backend: converts to UTC bounds
+
+### Date String Formatting - NEVER Use toISOString()
+**Problem:** `date.toISOString().split("T")[0]` gives UTC date, not user's local date
+**Example:** At 10pm EST on Jan 13, `toISOString()` gives "2026-01-14" (UTC) instead of "2026-01-13"
+**Solution:** Use `format(date, "yyyy-MM-dd")` from date-fns to preserve local date
 
 ### Unused Variables in Placeholder Components
 **Problem:** State setters marked as unused when component structure is set up before child components exist

@@ -1,4 +1,31 @@
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { format } from "date-fns";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+
+// =============================================================================
+// FRONTEND DATE UTILITIES
+// =============================================================================
+
+/**
+ * Convert a Date to a YYYY-MM-DD string, preserving the local calendar date.
+ *
+ * USE THIS for frontend → backend API calls when the user clicks a date in the calendar.
+ * The backend will handle timezone conversion using the user's preferred timezone.
+ *
+ * DO NOT USE getDateStringInTimezone() for this purpose - that causes double conversion
+ * when the user's browser timezone differs from their preferred timezone.
+ *
+ * @example
+ * // User clicks "Jan 6" in calendar → Date object is Jan 6 00:00 local time
+ * const dateString = toDateString(selectedDate); // "2026-01-06"
+ * // Backend uses getDayBoundsInTimezone("2026-01-06", userTimezone) to query
+ */
+export function toDateString(date: Date): string {
+	return format(date, "yyyy-MM-dd");
+}
+
+// =============================================================================
+// TIMEZONE CONVERSION UTILITIES
+// =============================================================================
 
 /**
  * Convert a UTC Date to the user's timezone
@@ -142,4 +169,39 @@ export function getTimezoneOffset(timezone: string, date?: Date): number {
 	const utcDate = new Date(d.toLocaleString("en-US", { timeZone: "UTC" }));
 	const tzDate = new Date(d.toLocaleString("en-US", { timeZone: timezone }));
 	return (tzDate.getTime() - utcDate.getTime()) / (1000 * 60 * 60);
+}
+
+/**
+ * Get the UTC start and end of a day in a specific timezone
+ * Useful for querying trades that fall within a specific calendar day
+ *
+ * @param dateString - Date string in YYYY-MM-DD format
+ * @param timezone - IANA timezone string (e.g., "America/New_York")
+ * @returns { start: Date, end: Date } - UTC dates representing the day boundaries
+ *
+ * @example
+ * // Get Jan 6 in EST (UTC-5)
+ * getDayBoundsInTimezone("2026-01-06", "America/New_York")
+ * // Returns: { start: 2026-01-06T05:00:00Z, end: 2026-01-07T05:00:00Z }
+ */
+export function getDayBoundsInTimezone(
+	dateString: string,
+	timezone: string,
+): { start: Date; end: Date } {
+	// Parse date components to avoid local timezone issues
+	const parts = dateString.split("-").map(Number);
+	const year = parts[0] ?? 0;
+	const month = parts[1] ?? 1;
+	const day = parts[2] ?? 1;
+
+	// Create next day for end boundary
+	const nextDay = new Date(Date.UTC(year, month - 1, day + 1));
+	const nextDateString = `${nextDay.getUTCFullYear()}-${String(nextDay.getUTCMonth() + 1).padStart(2, "0")}-${String(nextDay.getUTCDate()).padStart(2, "0")}`;
+
+	// Convert midnight in the target timezone to UTC
+	// fromZonedTime interprets the string as being in the specified timezone
+	const start = fromZonedTime(`${dateString} 00:00:00`, timezone);
+	const end = fromZonedTime(`${nextDateString} 00:00:00`, timezone);
+
+	return { start, end };
 }

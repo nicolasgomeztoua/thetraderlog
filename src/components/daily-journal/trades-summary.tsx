@@ -9,7 +9,7 @@ import {
 import Link from "next/link";
 import { useMemo } from "react";
 
-import { cn, formatPnL } from "@/lib/shared";
+import { cn, formatPnL, toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // =============================================================================
@@ -30,7 +30,8 @@ interface TradesSummaryProps {
  * Lists trades with symbol, direction, P&L and links to trade detail.
  */
 export function TradesSummary({ selectedDate, className }: TradesSummaryProps) {
-	const dateString = selectedDate.toISOString().split("T")[0] ?? "";
+	// Date string for API calls - preserves the calendar date as clicked
+	const dateString = toDateString(selectedDate);
 
 	// Fetch journal with trades for the date
 	const { data, isLoading } = api.dailyJournal.getWithTrades.useQuery(

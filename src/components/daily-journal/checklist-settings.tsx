@@ -1,8 +1,24 @@
 "use client";
 
 import {
-	ArrowDownIcon,
-	ArrowUpIcon,
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import {
+	arrayMove,
+	SortableContext,
+	sortableKeyboardCoordinates,
+	useSortable,
+	verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+	GripVerticalIcon,
 	Loader2Icon,
 	PlusIcon,
 	Trash2Icon,
@@ -24,6 +40,190 @@ import { api } from "@/trpc/react";
 interface ChecklistSettingsProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+}
+
+interface SortableItemProps {
+	template: {
+		id: string;
+		text: string;
+		isActive: boolean;
+	};
+	editingId: string | null;
+	deletingId: string | null;
+	editingText: string;
+	isMutating: boolean;
+	onEditingTextChange: (text: string) => void;
+	onStartEdit: (id: string, text: string) => void;
+	onSaveEdit: () => void;
+	onCancelEdit: () => void;
+	onEditKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+	onToggleActive: (id: string, isActive: boolean) => void;
+	onDelete: (id: string) => void;
+	onSetDeletingId: (id: string | null) => void;
+	updatePending: boolean;
+	deletePending: boolean;
+}
+
+function SortableItem({
+	template,
+	editingId,
+	deletingId,
+	editingText,
+	isMutating,
+	onEditingTextChange,
+	onStartEdit,
+	onSaveEdit,
+	onCancelEdit,
+	onEditKeyDown,
+	onToggleActive,
+	onDelete,
+	onSetDeletingId,
+	updatePending,
+	deletePending,
+}: SortableItemProps) {
+	const {
+		attributes,
+		listeners,
+		setNodeRef,
+		transform,
+		transition,
+		isDragging,
+	} = useSortable({ id: template.id });
+
+	const style = {
+		transform: CSS.Transform.toString(transform),
+		transition,
+	};
+
+	return (
+		<div
+			className={cn(
+				"group flex items-center gap-2 rounded border border-white/5 bg-white/2 p-2 transition-colors",
+				!template.isActive && "opacity-50",
+				deletingId === template.id && "border-destructive/50 bg-destructive/10",
+				isDragging && "z-10 border-primary/50 bg-white/5 shadow-lg",
+			)}
+			ref={setNodeRef}
+			style={style}
+		>
+			{/* Drag handle */}
+			<button
+				{...attributes}
+				{...listeners}
+				aria-label="Drag to reorder"
+				className={cn(
+					"cursor-grab touch-none rounded p-0.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground",
+					isDragging && "cursor-grabbing",
+				)}
+				disabled={isMutating}
+				type="button"
+			>
+				<GripVerticalIcon className="size-4" />
+			</button>
+
+			{/* Active toggle */}
+			<button
+				aria-label={template.isActive ? "Deactivate" : "Activate"}
+				className={cn(
+					"size-4 shrink-0 rounded border transition-colors",
+					template.isActive
+						? "border-primary bg-primary"
+						: "border-white/20 bg-transparent",
+				)}
+				disabled={isMutating}
+				onClick={() => onToggleActive(template.id, template.isActive)}
+				type="button"
+			/>
+
+			{/* Text or edit input */}
+			{editingId === template.id ? (
+				<div className="flex flex-1 gap-1">
+					<Input
+						autoFocus
+						className="h-7 flex-1 font-mono text-sm"
+						disabled={updatePending}
+						onChange={(e) => onEditingTextChange(e.target.value)}
+						onKeyDown={onEditKeyDown}
+						value={editingText}
+					/>
+					<Button
+						className="h-7"
+						disabled={!editingText.trim() || updatePending}
+						onClick={onSaveEdit}
+						size="sm"
+						variant="outline"
+					>
+						{updatePending ? (
+							<Loader2Icon className="size-3 animate-spin" />
+						) : (
+							"Save"
+						)}
+					</Button>
+					<Button
+						className="h-7"
+						disabled={updatePending}
+						onClick={onCancelEdit}
+						size="sm"
+						variant="ghost"
+					>
+						Cancel
+					</Button>
+				</div>
+			) : deletingId === template.id ? (
+				<div className="flex flex-1 items-center justify-between">
+					<span className="font-mono text-destructive text-sm">
+						Delete this item?
+					</span>
+					<div className="flex gap-1">
+						<Button
+							className="h-7"
+							disabled={deletePending}
+							onClick={() => onDelete(template.id)}
+							size="sm"
+							variant="destructive"
+						>
+							{deletePending ? (
+								<Loader2Icon className="size-3 animate-spin" />
+							) : (
+								"Delete"
+							)}
+						</Button>
+						<Button
+							className="h-7"
+							disabled={deletePending}
+							onClick={() => onSetDeletingId(null)}
+							size="sm"
+							variant="ghost"
+						>
+							Cancel
+						</Button>
+					</div>
+				</div>
+			) : (
+				<button
+					className="flex-1 cursor-pointer text-left font-mono text-sm transition-colors hover:text-primary"
+					disabled={isMutating}
+					onClick={() => onStartEdit(template.id, template.text)}
+					type="button"
+				>
+					{template.text}
+				</button>
+			)}
+
+			{/* Delete button (only shown when not editing/deleting) */}
+			{editingId !== template.id && deletingId !== template.id && (
+				<button
+					aria-label="Delete"
+					className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:bg-destructive/20 hover:text-destructive group-hover:opacity-100"
+					disabled={isMutating}
+					onClick={() => onSetDeletingId(template.id)}
+					type="button"
+				>
+					<Trash2Icon className="size-3.5" />
+				</button>
+			)}
+		</div>
+	);
 }
 
 /**
@@ -75,9 +275,39 @@ export function ChecklistSettings({
 		},
 	});
 
-	// Reorder templates mutation
+	// Reorder templates mutation with optimistic updates
 	const reorderTemplates = api.dailyJournal.reorderTemplates.useMutation({
-		onSuccess: () => {
+		onMutate: async ({ items }) => {
+			// Cancel outgoing refetches
+			await utils.dailyJournal.getTemplates.cancel();
+
+			// Snapshot previous value
+			const previousTemplates = utils.dailyJournal.getTemplates.getData();
+
+			// Optimistically update the cache
+			utils.dailyJournal.getTemplates.setData(undefined, (old) => {
+				if (!old) return old;
+				// Create a map of id -> new order
+				const orderMap = new Map(items.map((item) => [item.id, item.order]));
+				// Sort templates by new order
+				return [...old].sort(
+					(a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
+				);
+			});
+
+			return { previousTemplates };
+		},
+		onError: (_err, _vars, context) => {
+			// Roll back on error
+			if (context?.previousTemplates) {
+				utils.dailyJournal.getTemplates.setData(
+					undefined,
+					context.previousTemplates,
+				);
+			}
+		},
+		onSettled: () => {
+			// Sync with server
 			utils.dailyJournal.getTemplates.invalidate();
 		},
 	});
@@ -130,24 +360,25 @@ export function ChecklistSettings({
 		deleteTemplate.mutate({ id });
 	};
 
-	const handleMoveUp = (index: number) => {
-		if (!templates || index === 0) return;
+	// Drag and drop sensors
+	const sensors = useSensors(
+		useSensor(PointerSensor),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		}),
+	);
 
-		const items = templates.map((t, i) => ({
-			id: t.id,
-			order: i === index ? index - 1 : i === index - 1 ? index : i,
-		}));
-		reorderTemplates.mutate({ items });
-	};
+	const handleDragEnd = (event: DragEndEvent) => {
+		const { active, over } = event;
+		if (!over || !templates || active.id === over.id) return;
 
-	const handleMoveDown = (index: number) => {
-		if (!templates || index === templates.length - 1) return;
+		const oldIndex = templates.findIndex((t) => t.id === active.id);
+		const newIndex = templates.findIndex((t) => t.id === over.id);
+		const reordered = arrayMove(templates, oldIndex, newIndex);
 
-		const items = templates.map((t, i) => ({
-			id: t.id,
-			order: i === index ? index + 1 : i === index + 1 ? index : i,
-		}));
-		reorderTemplates.mutate({ items });
+		reorderTemplates.mutate({
+			items: reordered.map((t, i) => ({ id: t.id, order: i })),
+		});
 	};
 
 	const isMutating =
@@ -211,155 +442,39 @@ export function ChecklistSettings({
 						</div>
 					)}
 
-					{!isLoading &&
-						templates?.map((template, index) => (
-							<div
-								className={cn(
-									"group flex items-center gap-2 rounded border border-white/5 bg-white/2 p-2 transition-colors",
-									!template.isActive && "opacity-50",
-									deletingId === template.id &&
-										"border-destructive/50 bg-destructive/10",
-								)}
-								key={template.id}
+					{!isLoading && templates && templates.length > 0 && (
+						<DndContext
+							collisionDetection={closestCenter}
+							onDragEnd={handleDragEnd}
+							sensors={sensors}
+						>
+							<SortableContext
+								items={templates.map((t) => t.id)}
+								strategy={verticalListSortingStrategy}
 							>
-								{/* Move up/down buttons */}
-								<div className="flex flex-col gap-0.5">
-									<button
-										aria-label="Move up"
-										className={cn(
-											"rounded p-0.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground",
-											index === 0 && "cursor-not-allowed opacity-30",
-										)}
-										disabled={index === 0 || isMutating}
-										onClick={() => handleMoveUp(index)}
-										type="button"
-									>
-										<ArrowUpIcon className="size-3" />
-									</button>
-									<button
-										aria-label="Move down"
-										className={cn(
-											"rounded p-0.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground",
-											templates &&
-												index === templates.length - 1 &&
-												"cursor-not-allowed opacity-30",
-										)}
-										disabled={
-											(templates && index === templates.length - 1) ||
-											isMutating
-										}
-										onClick={() => handleMoveDown(index)}
-										type="button"
-									>
-										<ArrowDownIcon className="size-3" />
-									</button>
-								</div>
-
-								{/* Active toggle */}
-								<button
-									aria-label={template.isActive ? "Deactivate" : "Activate"}
-									className={cn(
-										"size-4 shrink-0 rounded border transition-colors",
-										template.isActive
-											? "border-primary bg-primary"
-											: "border-white/20 bg-transparent",
-									)}
-									disabled={isMutating}
-									onClick={() =>
-										handleToggleActive(template.id, template.isActive)
-									}
-									type="button"
-								/>
-
-								{/* Text or edit input */}
-								{editingId === template.id ? (
-									<div className="flex flex-1 gap-1">
-										<Input
-											autoFocus
-											className="h-7 flex-1 font-mono text-sm"
-											disabled={updateTemplate.isPending}
-											onChange={(e) => setEditingText(e.target.value)}
-											onKeyDown={handleEditKeyDown}
-											value={editingText}
-										/>
-										<Button
-											className="h-7"
-											disabled={!editingText.trim() || updateTemplate.isPending}
-											onClick={handleSaveEdit}
-											size="sm"
-											variant="outline"
-										>
-											{updateTemplate.isPending ? (
-												<Loader2Icon className="size-3 animate-spin" />
-											) : (
-												"Save"
-											)}
-										</Button>
-										<Button
-											className="h-7"
-											disabled={updateTemplate.isPending}
-											onClick={handleCancelEdit}
-											size="sm"
-											variant="ghost"
-										>
-											Cancel
-										</Button>
-									</div>
-								) : deletingId === template.id ? (
-									<div className="flex flex-1 items-center justify-between">
-										<span className="font-mono text-destructive text-sm">
-											Delete this item?
-										</span>
-										<div className="flex gap-1">
-											<Button
-												className="h-7"
-												disabled={deleteTemplate.isPending}
-												onClick={() => handleDelete(template.id)}
-												size="sm"
-												variant="destructive"
-											>
-												{deleteTemplate.isPending ? (
-													<Loader2Icon className="size-3 animate-spin" />
-												) : (
-													"Delete"
-												)}
-											</Button>
-											<Button
-												className="h-7"
-												disabled={deleteTemplate.isPending}
-												onClick={() => setDeletingId(null)}
-												size="sm"
-												variant="ghost"
-											>
-												Cancel
-											</Button>
-										</div>
-									</div>
-								) : (
-									<button
-										className="flex-1 cursor-pointer text-left font-mono text-sm transition-colors hover:text-primary"
-										disabled={isMutating}
-										onClick={() => handleStartEdit(template.id, template.text)}
-										type="button"
-									>
-										{template.text}
-									</button>
-								)}
-
-								{/* Delete button (only shown when not editing/deleting) */}
-								{editingId !== template.id && deletingId !== template.id && (
-									<button
-										aria-label="Delete"
-										className="rounded p-1 text-muted-foreground opacity-0 transition-all hover:bg-destructive/20 hover:text-destructive group-hover:opacity-100"
-										disabled={isMutating}
-										onClick={() => setDeletingId(template.id)}
-										type="button"
-									>
-										<Trash2Icon className="size-3.5" />
-									</button>
-								)}
-							</div>
-						))}
+								{templates.map((template) => (
+									<SortableItem
+										deletePending={deleteTemplate.isPending}
+										deletingId={deletingId}
+										editingId={editingId}
+										editingText={editingText}
+										isMutating={isMutating}
+										key={template.id}
+										onCancelEdit={handleCancelEdit}
+										onDelete={handleDelete}
+										onEditingTextChange={setEditingText}
+										onEditKeyDown={handleEditKeyDown}
+										onSaveEdit={handleSaveEdit}
+										onSetDeletingId={setDeletingId}
+										onStartEdit={handleStartEdit}
+										onToggleActive={handleToggleActive}
+										template={template}
+										updatePending={updateTemplate.isPending}
+									/>
+								))}
+							</SortableContext>
+						</DndContext>
+					)}
 				</div>
 
 				{/* Footer hint */}

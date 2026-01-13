@@ -14,6 +14,7 @@ import {
 	ResizablePanel,
 	ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // =============================================================================
@@ -61,8 +62,8 @@ export default function DailyJournalPage() {
 	// Checklist settings modal state
 	const [isChecklistSettingsOpen, setIsChecklistSettingsOpen] = useState(false);
 
-	// Fetch journal data to get journalId for attachments
-	const dateString = selectedDate.toISOString().split("T")[0] ?? "";
+	// Date string for API queries - preserves the calendar date as clicked
+	const dateString = toDateString(selectedDate);
 	const { data: journal } = api.dailyJournal.getByDate.useQuery(
 		{ date: dateString },
 		{ enabled: !!dateString },
@@ -154,7 +155,7 @@ export default function DailyJournalPage() {
 							<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 								Journal Entry
 							</span>
-							<JournalEditor selectedDate={selectedDate} />
+							<JournalEditor key={dateString} selectedDate={selectedDate} />
 						</div>
 
 						{/* Attachments */}

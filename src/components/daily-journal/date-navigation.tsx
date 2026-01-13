@@ -1,17 +1,11 @@
 "use client";
 
-import { addDays, format, isToday } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/shared";
+import { cn, toUserTimezone } from "@/lib/shared";
+import { useSettingsStore } from "@/stores/settings-store";
 
 interface DateNavigationProps {
 	date: Date;
@@ -24,28 +18,22 @@ export function DateNavigation({
 	onDateChange,
 	className,
 }: DateNavigationProps) {
-	const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+	const { timezone } = useSettingsStore();
+	const todayInTz = toUserTimezone(new Date(), timezone);
+	const isTodaySelected = isSameDay(date, todayInTz);
 
 	const handlePreviousDay = () => {
 		onDateChange(addDays(date, -1));
 	};
 
 	const handleNextDay = () => {
+		if (isTodaySelected) return;
 		onDateChange(addDays(date, 1));
 	};
 
 	const handleToday = () => {
-		onDateChange(new Date());
+		onDateChange(todayInTz);
 	};
-
-	const handleCalendarSelect = (selectedDate: Date | undefined) => {
-		if (selectedDate) {
-			onDateChange(selectedDate);
-			setIsCalendarOpen(false);
-		}
-	};
-
-	const isTodaySelected = isToday(date);
 
 	return (
 		<div className={cn("flex items-center gap-2", className)}>
@@ -60,30 +48,17 @@ export function DateNavigation({
 				<ChevronLeftIcon className="size-4" />
 			</Button>
 
-			{/* Date Picker Popover */}
-			<Popover onOpenChange={setIsCalendarOpen} open={isCalendarOpen}>
-				<PopoverTrigger asChild>
-					<Button
-						className="min-w-[160px] justify-start font-mono text-xs uppercase tracking-wider"
-						variant="outline"
-					>
-						<CalendarIcon className="mr-2 size-4" />
-						{format(date, "MMM d, yyyy")}
-					</Button>
-				</PopoverTrigger>
-				<PopoverContent align="start" className="w-auto p-0">
-					<Calendar
-						mode="single"
-						onSelect={handleCalendarSelect}
-						selected={date}
-					/>
-				</PopoverContent>
-			</Popover>
+			{/* Date Display */}
+			<span className="flex min-w-[160px] items-center justify-start rounded-md border border-input bg-background px-3 py-1.5 font-mono text-xs uppercase tracking-wider">
+				<CalendarIcon className="mr-2 size-4" />
+				{format(date, "MMM d, yyyy")}
+			</span>
 
 			{/* Next Day Button */}
 			<Button
 				aria-label="Next day"
 				className="font-mono"
+				disabled={isTodaySelected}
 				onClick={handleNextDay}
 				size="icon-sm"
 				variant="outline"

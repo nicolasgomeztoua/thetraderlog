@@ -6,9 +6,11 @@ import {
 	endOfMonth,
 	format,
 	getDay,
+	isAfter,
 	isSameDay,
 	isSameMonth,
 	isToday,
+	startOfDay,
 	startOfMonth,
 	subMonths,
 } from "date-fns";
@@ -26,7 +28,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatCurrency, getDateStringInTimezone } from "@/lib/shared";
+import { cn, formatCurrency, toDateString, toUserTimezone } from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
 
@@ -246,8 +248,8 @@ export function CalendarSidebar({
 								);
 							}
 
-							// Get date string for lookups
-							const dateStr = getDateStringInTimezone(day, timezone);
+							// Get date string for lookups - matches calendar cell display
+							const dateStr = toDateString(day);
 							const pnlData = pnlMap.get(dateStr);
 							const hasJournal = journalMap.get(dateStr) ?? false;
 
@@ -256,49 +258,83 @@ export function CalendarSidebar({
 							const isTodayDate = isToday(day);
 							const hasTrades = pnlData && pnlData.trades > 0;
 
+							// Check if this is a future date (timezone-aware)
+							const todayInTz = toUserTimezone(new Date(), timezone);
+							const isFutureDate = isAfter(
+								startOfDay(day),
+								startOfDay(todayInTz),
+							);
+
 							// Determine background color
 							const pnlColorClass = hasTrades
 								? getPnLColorClass(pnlData.pnl, maxAbsPnl)
 								: "";
 
+							const buttonContent = (
+								<>
+									{format(day, "d")}
+									{/* Journal indicator dot */}
+									{hasJournal && (
+										<span
+											className={cn(
+												"absolute right-0.5 bottom-0.5 size-1.5 rounded-full",
+												isSelected ? "bg-primary-foreground" : "bg-primary",
+											)}
+										/>
+									)}
+								</>
+							);
+
+							const buttonClassName = cn(
+								"relative flex aspect-square items-center justify-center rounded-sm font-mono text-xs transition-all",
+								// Base styling
+								isCurrentMonth ? "text-foreground" : "text-muted-foreground/50",
+								// P&L background color
+								pnlColorClass,
+								// No trades - subtle background (except today which has its own hover)
+								!hasTrades &&
+									!isFutureDate &&
+									!isTodayDate &&
+									"hover:bg-white/5",
+								// Today indicator with distinct hover
+								isTodayDate &&
+									!isSelected &&
+									"ring-1 ring-primary/50 hover:ring-2 hover:ring-primary",
+								// Selected state
+								isSelected &&
+									"bg-primary text-primary-foreground ring-2 ring-primary",
+								// Hover state for days with trades
+								hasTrades &&
+									!isSelected &&
+									!isFutureDate &&
+									"hover:ring-1 hover:ring-white/30",
+								// Future date styling
+								isFutureDate && "cursor-not-allowed text-muted-foreground/30",
+							);
+
+							// No tooltip for future dates
+							if (isFutureDate) {
+								return (
+									<button
+										className={buttonClassName}
+										disabled
+										key={dateStr}
+										type="button"
+									>
+										{buttonContent}
+									</button>
+								);
+							}
+
 							return (
 								<Tooltip key={dateStr}>
 									<TooltipTrigger asChild>
 										<button
-											className={cn(
-												"relative flex aspect-square items-center justify-center rounded-sm font-mono text-xs transition-all",
-												// Base styling
-												isCurrentMonth
-													? "text-foreground"
-													: "text-muted-foreground/50",
-												// P&L background color
-												pnlColorClass,
-												// No trades - subtle background
-												!hasTrades && "hover:bg-white/5",
-												// Today indicator
-												isTodayDate && !isSelected && "ring-1 ring-primary/50",
-												// Selected state
-												isSelected &&
-													"bg-primary text-primary-foreground ring-2 ring-primary",
-												// Hover state for days with trades
-												hasTrades &&
-													!isSelected &&
-													"hover:ring-1 hover:ring-white/30",
-											)}
+											className={buttonClassName}
 											onClick={() => onDateSelect(day)}
 											type="button"
 										>
-											{format(day, "d")}
-
-											{/* Journal indicator dot */}
-											{hasJournal && (
-												<span
-													className={cn(
-														"absolute right-0.5 bottom-0.5 size-1.5 rounded-full",
-														isSelected ? "bg-primary-foreground" : "bg-primary",
-													)}
-												/>
-											)}
+											{buttonContent}
 										</button>
 									</TooltipTrigger>
 									<TooltipContent

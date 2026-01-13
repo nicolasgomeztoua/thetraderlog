@@ -4,7 +4,7 @@ import { Loader2Icon, UploadCloudIcon, XIcon } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/shared";
+import { cn, toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // =============================================================================
@@ -60,7 +60,9 @@ export function AttachmentUpload({
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const utils = api.useUtils();
-	const dateString = selectedDate.toISOString().split("T")[0] ?? "";
+
+	// Date string for API calls - preserves the calendar date as clicked
+	const dateString = toDateString(selectedDate);
 
 	// Get upload URL mutation
 	const getUploadUrl = api.dailyJournal.getUploadUrl.useMutation();

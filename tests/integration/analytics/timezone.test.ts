@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { getDayBoundsInTimezone } from "@/lib/shared";
 import {
 	createTestAccount,
 	createTestCaller,
@@ -379,6 +380,104 @@ describe("Analytics Timezone Handling", () => {
 
 			// Trade at 10:00 UTC should be in hour 10
 			expect(result[10]?.trades).toBe(1);
+		});
+	});
+
+	describe("getDayBoundsInTimezone utility", () => {
+		it("should return correct UTC bounds for EST timezone", () => {
+			// Jan 6 in EST (UTC-5) should be:
+			// Start: Jan 6 00:00 EST = Jan 6 05:00 UTC
+			// End: Jan 7 00:00 EST = Jan 7 05:00 UTC
+			const { start, end } = getDayBoundsInTimezone(
+				"2026-01-06",
+				"America/New_York",
+			);
+
+			expect(start.toISOString()).toBe("2026-01-06T05:00:00.000Z");
+			expect(end.toISOString()).toBe("2026-01-07T05:00:00.000Z");
+		});
+
+		it("should return correct UTC bounds for UTC timezone", () => {
+			const { start, end } = getDayBoundsInTimezone("2026-01-06", "UTC");
+
+			expect(start.toISOString()).toBe("2026-01-06T00:00:00.000Z");
+			expect(end.toISOString()).toBe("2026-01-07T00:00:00.000Z");
+		});
+
+		it("should return correct UTC bounds for positive offset timezone", () => {
+			// Jan 6 in Europe/Madrid (UTC+1) should be:
+			// Start: Jan 6 00:00 CET = Jan 5 23:00 UTC
+			// End: Jan 7 00:00 CET = Jan 6 23:00 UTC
+			const { start, end } = getDayBoundsInTimezone(
+				"2026-01-06",
+				"Europe/Madrid",
+			);
+
+			expect(start.toISOString()).toBe("2026-01-05T23:00:00.000Z");
+			expect(end.toISOString()).toBe("2026-01-06T23:00:00.000Z");
+		});
+	});
+
+	describe("Daily Journal Trades with User Timezone", () => {
+		let caller: TestCaller;
+
+		beforeAll(async () => {
+			await truncateAllTables();
+			const db = getTestDb();
+
+			const user = await createTestUser();
+
+			// Set user timezone to America/New_York (EST, UTC-5)
+			await db.insert(schema.userSettings).values({
+				userId: user.id,
+				timezone: "America/New_York",
+			});
+
+			const account = await createTestAccount(user.id, { isDefault: true });
+
+			// Create a trade at 02:00 EST on Jan 6 = 07:00 UTC on Jan 6
+			// This should appear in the journal for Jan 6 (EST), NOT Jan 6 (UTC)
+			const tradeTime = new Date("2026-01-06T07:00:00Z"); // 02:00 EST
+			await createTestTrade(user.id, account.id, {
+				symbol: "ES",
+				direction: "long",
+				status: "closed",
+				entryPrice: "5000",
+				exitPrice: "5020",
+				quantity: "1",
+				entryTime: tradeTime,
+				exitTime: new Date(tradeTime.getTime() + 30 * 60000),
+				realizedPnl: "1000",
+				netPnl: "995",
+				fees: "5",
+			});
+
+			caller = await createTestCaller(user.clerkId, user);
+		});
+
+		afterAll(async () => {
+			await truncateAllTables();
+		});
+
+		it("should include trade in correct day based on user timezone", async () => {
+			// Query for Jan 6 in user's timezone (EST)
+			// Trade at 07:00 UTC = 02:00 EST on Jan 6 should be included
+			const result = await caller.dailyJournal.getWithTrades({
+				date: "2026-01-06",
+			});
+
+			expect(result.trades.length).toBe(1);
+			expect(result.trades[0]?.symbol).toBe("ES");
+		});
+
+		it("should NOT include trade when querying wrong day", async () => {
+			// Query for Jan 5 in user's timezone (EST)
+			// Trade at 07:00 UTC = 02:00 EST on Jan 6 should NOT be included
+			const result = await caller.dailyJournal.getWithTrades({
+				date: "2026-01-05",
+			});
+
+			expect(result.trades.length).toBe(0);
 		});
 	});
 });

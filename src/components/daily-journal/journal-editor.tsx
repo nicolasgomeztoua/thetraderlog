@@ -3,12 +3,17 @@
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { AlertCircleIcon, CheckCircleIcon, Loader2Icon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { EditorBubbleMenu } from "@/components/daily-journal/editor-bubble-menu";
 import { EditorToolbar } from "@/components/daily-journal/editor-toolbar";
+import { SlashCommand } from "@/components/daily-journal/slash-command-menu";
+import { toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 interface JournalEditorProps {
@@ -17,9 +22,29 @@ interface JournalEditorProps {
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+const EDITOR_EXTENSIONS = [
+	StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+	Link.configure({
+		openOnClick: false,
+		HTMLAttributes: {
+			class: "text-primary underline underline-offset-4 hover:text-primary/80",
+		},
+	}),
+	Image.configure({
+		HTMLAttributes: { class: "max-w-full h-auto rounded my-4" },
+	}),
+	TaskList.configure({ HTMLAttributes: { class: "not-prose" } }),
+	TaskItem.configure({ nested: true }),
+	SlashCommand,
+	Placeholder.configure({
+		placeholder: "Write something, or type '/' for commands...",
+		emptyEditorClass:
+			"before:content-[attr(data-placeholder)] before:text-muted-foreground/50 before:float-left before:h-0 before:pointer-events-none",
+	}),
+];
+
 /**
  * Rich text editor for daily journal entries.
- * Uses Tiptap with StarterKit, Link, Image, and Placeholder extensions.
  * Auto-saves content with 500ms debounce.
  */
 export function JournalEditor({ selectedDate }: JournalEditorProps) {
@@ -32,14 +57,18 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 
 	const utils = api.useUtils();
 
-	// Format date for API calls
-	const dateString = selectedDate.toISOString().split("T")[0] ?? "";
+	// Date string for API calls - preserves the calendar date as clicked
+	const dateString = toDateString(selectedDate);
 
 	// Fetch journal data for selected date
 	const { data: journal, isLoading: isLoadingJournal } =
 		api.dailyJournal.getByDate.useQuery(
 			{ date: dateString },
-			{ enabled: !!dateString },
+			{
+				enabled: !!dateString,
+				// Ensure fresh data when switching dates
+				staleTime: 0,
+			},
 		);
 
 	// Update content mutation
@@ -50,8 +79,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 			savedIndicatorTimeoutRef.current = setTimeout(() => {
 				setSaveStatus("idle");
 			}, 2000);
-			// Invalidate to sync with server
-			utils.dailyJournal.getByDate.invalidate({ date: dateString });
+			// Note: No invalidation needed - we just saved, no need to refetch
 		},
 		onError: () => {
 			setSaveStatus("error");
@@ -64,34 +92,17 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 
 	// Initialize Tiptap editor
 	const editor = useEditor({
-		extensions: [
-			StarterKit.configure({
-				heading: {
-					levels: [1, 2, 3],
-				},
-			}),
-			Link.configure({
-				openOnClick: false,
-				HTMLAttributes: {
-					class:
-						"text-primary underline underline-offset-4 hover:text-primary/80",
-				},
-			}),
-			Image.configure({
-				HTMLAttributes: {
-					class: "max-w-full h-auto rounded my-4",
-				},
-			}),
-			Placeholder.configure({
-				placeholder: "Start writing your journal entry...",
-				emptyEditorClass:
-					"before:content-[attr(data-placeholder)] before:text-muted-foreground/50 before:float-left before:h-0 before:pointer-events-none",
-			}),
-		],
+		extensions: EDITOR_EXTENSIONS,
 		editorProps: {
 			attributes: {
-				class:
-					"prose prose-invert prose-sm max-w-none min-h-[300px] px-4 py-3 focus:outline-none",
+				class: "min-h-[300px] px-4 py-3 focus:outline-none",
+			},
+			handleKeyDown: (_view, event) => {
+				// Capture Cmd/Ctrl+B before it bubbles to app
+				if ((event.metaKey || event.ctrlKey) && event.key === "b") {
+					event.stopPropagation();
+				}
+				return false;
 			},
 		},
 		onUpdate: ({ editor }) => {
@@ -119,46 +130,13 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		immediatelyRender: false,
 	});
 
-	// Update editor content when journal data changes
+	// Load content when journal data arrives (key prop handles date changes)
 	useEffect(() => {
-		if (editor && journal && !editor.isFocused) {
-			const newContent = journal.content ?? "";
-			const currentContent = editor.getHTML();
-
-			// Only update if content is different
-			if (newContent !== currentContent) {
-				editor.commands.setContent(newContent);
-				lastSavedContentRef.current = newContent;
-			}
-		}
+		if (!editor || !journal) return;
+		const content = journal.content ?? "";
+		editor.commands.setContent(content);
+		lastSavedContentRef.current = content || "<p></p>";
 	}, [editor, journal]);
-
-	// Track previous date to detect changes
-	const previousDateRef = useRef<string>(dateString);
-
-	// Reset editor when date changes
-	useEffect(() => {
-		// Only reset if date actually changed
-		if (previousDateRef.current === dateString) {
-			return;
-		}
-		previousDateRef.current = dateString;
-
-		// Clear any pending saves
-		if (debounceTimerRef.current) {
-			clearTimeout(debounceTimerRef.current);
-		}
-		if (savedIndicatorTimeoutRef.current) {
-			clearTimeout(savedIndicatorTimeoutRef.current);
-		}
-		setSaveStatus("idle");
-		lastSavedContentRef.current = null;
-
-		// Clear editor content immediately when date changes
-		if (editor) {
-			editor.commands.setContent("");
-		}
-	}, [dateString, editor]);
 
 	// Cleanup timers on unmount
 	useEffect(() => {
@@ -291,7 +269,8 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		};
 	}, [editor, handlePaste, handleDrop]);
 
-	if (isLoadingJournal) {
+	// Show loading until journal data arrives (key prop causes remount, so we wait for fresh data)
+	if (isLoadingJournal || !journal) {
 		return (
 			<div className="flex min-h-[300px] items-center justify-center">
 				<Loader2Icon className="size-6 animate-spin text-muted-foreground" />
@@ -307,6 +286,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 			{/* Editor content */}
 			<div className="rounded-b border border-white/10 border-t-0 bg-white/1">
 				<EditorContent editor={editor} />
+				{editor && <EditorBubbleMenu editor={editor} />}
 			</div>
 
 			{/* Save status indicator */}

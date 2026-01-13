@@ -1,12 +1,14 @@
 import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { getDayBoundsInTimezone } from "@/lib/shared";
 import {
 	deleteObject,
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
 } from "@/lib/storage/s3";
+import { getUserTimezone } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	dailyChecklistChecks,
@@ -238,14 +240,21 @@ export const dailyJournalRouter = createTRPCRouter({
 	getWithTrades: protectedProcedure
 		.input(
 			z.object({
-				date: z.string(), // ISO date string
+				date: z.string(), // YYYY-MM-DD date string in user's timezone
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			// Get user's timezone for trade filtering
+			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+
+			// Journal uses UTC midnight for storage (date only, no time component)
 			const normalizedDate = normalizeDate(new Date(input.date));
-			// End of day is start of next day
-			const nextDay = new Date(normalizedDate);
-			nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+			// Get UTC bounds for the day in user's timezone (for trade filtering)
+			const { start: dayStart, end: dayEnd } = getDayBoundsInTimezone(
+				input.date,
+				userTimezone,
+			);
 
 			// Find or create journal for this date (handles race conditions)
 			const baseJournal = await findOrCreateJournal(
@@ -267,12 +276,12 @@ export const dailyJournalRouter = createTRPCRouter({
 				},
 			});
 
-			// Get trades for the date (filter by entry time within the day)
+			// Get trades for the date (filter by entry time within the day in user's timezone)
 			const tradesForDate = await ctx.db.query.trades.findMany({
 				where: and(
 					eq(trades.userId, ctx.user.id),
-					gte(trades.entryTime, normalizedDate),
-					lt(trades.entryTime, nextDay),
+					gte(trades.entryTime, dayStart),
+					lt(trades.entryTime, dayEnd),
 					isNull(trades.deletedAt),
 				),
 				with: {
