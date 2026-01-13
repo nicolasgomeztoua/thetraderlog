@@ -111,6 +111,21 @@ export function AttachmentGallery({
 		[handleCloseLightbox],
 	);
 
+	// Handle drag start for dragging images to editor
+	const handleDragStart = useCallback(
+		(event: React.DragEvent, attachment: JournalAttachment) => {
+			// Set URL for native drag behavior
+			event.dataTransfer.setData("text/uri-list", attachment.url);
+			// Set custom data to indicate this is an existing attachment (no re-upload needed)
+			event.dataTransfer.setData(
+				"application/x-attachment",
+				JSON.stringify({ url: attachment.url, isAttachment: true }),
+			);
+			event.dataTransfer.effectAllowed = "copy";
+		},
+		[],
+	);
+
 	if (attachments.length === 0) {
 		return null;
 	}
@@ -125,8 +140,11 @@ export function AttachmentGallery({
 				<div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
 					{images.map((attachment) => (
 						<div
-							className="group relative aspect-square overflow-hidden rounded border border-white/5 bg-white/1"
+							className="group relative aspect-square cursor-grab overflow-hidden rounded border border-white/5 bg-white/1 active:cursor-grabbing"
+							draggable
 							key={attachment.id}
+							onDragStart={(e) => handleDragStart(e, attachment)}
+							role="img"
 						>
 							{/* Image - using img because these are user-uploaded S3 images */}
 							<button
@@ -137,7 +155,7 @@ export function AttachmentGallery({
 								{/* biome-ignore lint/performance/noImgElement: External S3 images cannot use next/image without domain config */}
 								<img
 									alt={attachment.filename}
-									className="size-full object-cover transition-transform group-hover:scale-105"
+									className="pointer-events-none size-full object-cover transition-transform group-hover:scale-105"
 									src={attachment.url}
 								/>
 							</button>

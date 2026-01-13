@@ -769,7 +769,12 @@ export const dailyJournalRouter = createTRPCRouter({
 				throw new Error("Failed to create attachment");
 			}
 
-			return attachment;
+			// Generate presigned URL for immediate use (e.g., inserting into editor)
+			const presignedUrl = isS3Configured()
+				? getPresignedDownloadUrl(input.key, 3600)
+				: attachment.url;
+
+			return { ...attachment, url: presignedUrl };
 		}),
 
 	// ============================================================================

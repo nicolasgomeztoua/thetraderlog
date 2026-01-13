@@ -9,6 +9,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { AlertCircleIcon, CheckCircleIcon, Loader2Icon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { EditorBubbleMenu } from "@/components/daily-journal/editor-bubble-menu";
 import { EditorToolbar } from "@/components/daily-journal/editor-toolbar";
@@ -155,6 +156,8 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		async (file: File): Promise<string | null> => {
 			if (!journal) return null;
 
+			const toastId = toast.loading("Uploading... 0%");
+
 			try {
 				// Get presigned upload URL
 				const { presignedUrl, key } = await getUploadUrl.mutateAsync({
@@ -164,19 +167,39 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 					size: file.size,
 				});
 
-				// Upload file to S3
-				const uploadResponse = await fetch(presignedUrl, {
-					method: "PUT",
-					body: file,
-					headers: {
-						"Content-Type": file.type,
-					},
+				toast.loading("Uploading... 10%", { id: toastId });
+
+				// Upload file to S3 using XMLHttpRequest for progress tracking
+				await new Promise<void>((resolve, reject) => {
+					const xhr = new XMLHttpRequest();
+
+					xhr.upload.addEventListener("progress", (event) => {
+						if (event.lengthComputable) {
+							// Map progress: 10-90% for actual upload
+							const percent =
+								Math.round((event.loaded / event.total) * 80) + 10;
+							toast.loading(`Uploading... ${percent}%`, { id: toastId });
+						}
+					});
+
+					xhr.addEventListener("load", () => {
+						if (xhr.status >= 200 && xhr.status < 300) {
+							resolve();
+						} else {
+							reject(new Error(`Upload failed with status ${xhr.status}`));
+						}
+					});
+
+					xhr.addEventListener("error", () => {
+						reject(new Error("Upload failed"));
+					});
+
+					xhr.open("PUT", presignedUrl);
+					xhr.setRequestHeader("Content-Type", file.type);
+					xhr.send(file);
 				});
 
-				if (!uploadResponse.ok) {
-					console.error("Failed to upload file to S3");
-					return null;
-				}
+				toast.loading("Processing... 95%", { id: toastId });
 
 				// Confirm upload and get download URL
 				const attachment = await confirmUpload.mutateAsync({
@@ -190,9 +213,11 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				// Invalidate attachments
 				utils.dailyJournal.getByDate.invalidate({ date: dateString });
 
+				toast.success("Image uploaded", { id: toastId });
 				return attachment.url;
 			} catch (error) {
 				console.error("Image upload failed:", error);
+				toast.error("Upload failed", { id: toastId });
 				return null;
 			}
 		},
@@ -205,15 +230,66 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		],
 	);
 
-	// Handle image paste/drop and insert into editor
+	// Handle image paste/drop and insert into editor with instant preview
 	const handleImageInsert = useCallback(
 		async (file: File) => {
 			if (!editor || !file.type.startsWith("image/")) return;
 
-			const url = await handleImageUpload(file);
-			if (url) {
-				editor.chain().focus().setImage({ src: url }).run();
+			// Create blob URL for instant preview
+			const blobUrl = URL.createObjectURL(file);
+
+			// Insert blob URL immediately for instant feedback
+			editor.chain().focus().setImage({ src: blobUrl }).run();
+
+			// Upload in background
+			const finalUrl = await handleImageUpload(file);
+
+			if (finalUrl) {
+				// Preload the final image before swapping
+				const img = new window.Image();
+				img.src = finalUrl;
+				await new Promise<void>((resolve) => {
+					img.onload = () => resolve();
+					img.onerror = () => resolve(); // Continue even if preload fails
+				});
+
+				// Find and replace blob URL with final URL in editor content
+				const { state, view } = editor;
+				const { tr } = state;
+				let replaced = false;
+
+				state.doc.descendants((node, pos) => {
+					if (node.type.name === "image" && node.attrs.src === blobUrl) {
+						tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: finalUrl });
+						replaced = true;
+						return false; // Stop searching
+					}
+				});
+
+				if (replaced) {
+					view.dispatch(tr);
+				}
+			} else {
+				// Upload failed - remove the blob image from editor
+				const { state, view } = editor;
+				const { tr } = state;
+				let nodePos = -1;
+
+				state.doc.descendants((node, pos) => {
+					if (node.type.name === "image" && node.attrs.src === blobUrl) {
+						nodePos = pos;
+						return false;
+					}
+				});
+
+				if (nodePos >= 0) {
+					tr.delete(nodePos, nodePos + 1);
+					view.dispatch(tr);
+				}
 			}
+
+			// Clean up blob URL
+			URL.revokeObjectURL(blobUrl);
 		},
 		[editor, handleImageUpload],
 	);
@@ -238,9 +314,30 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		[handleImageInsert],
 	);
 
-	// Handle drop event to catch dropped images
+	// Handle drop event to catch dropped images (both new files and existing attachments)
 	const handleDrop = useCallback(
 		(event: DragEvent) => {
+			if (!editor) return;
+
+			// Check if this is an existing attachment being dragged from the gallery
+			const attachmentData = event.dataTransfer?.getData(
+				"application/x-attachment",
+			);
+			if (attachmentData) {
+				try {
+					const { url, isAttachment } = JSON.parse(attachmentData);
+					if (isAttachment && url) {
+						event.preventDefault();
+						// Insert directly without re-uploading
+						editor.chain().focus().setImage({ src: url }).run();
+						return;
+					}
+				} catch {
+					// Not valid attachment data, continue with file handling
+				}
+			}
+
+			// Handle new file drops
 			const files = event.dataTransfer?.files;
 			if (!files || files.length === 0) return;
 
@@ -252,7 +349,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				}
 			}
 		},
-		[handleImageInsert],
+		[editor, handleImageInsert],
 	);
 
 	// Attach paste and drop event listeners to editor DOM
