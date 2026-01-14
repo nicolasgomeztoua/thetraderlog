@@ -97,8 +97,10 @@ export function DailyChecklist({
 						checks: [
 							...old.checks,
 							{
+								id: `temp-${Date.now()}`, // Temporary ID for optimistic update
 								journalId: old.journalId,
 								templateId: newData.templateId,
+								forcedItemId: null, // Template-based check, not a forced item
 								checked: true,
 								checkedAt: new Date(),
 								template,
@@ -139,7 +141,10 @@ export function DailyChecklist({
 		const map = new Map<string, boolean>();
 		if (!checksData?.checks) return map;
 		for (const check of checksData.checks) {
-			map.set(check.templateId, check.checked);
+			// Only include template-based checks (not forced items)
+			if (check.templateId) {
+				map.set(check.templateId, check.checked);
+			}
 		}
 		return map;
 	}, [checksData?.checks]);
