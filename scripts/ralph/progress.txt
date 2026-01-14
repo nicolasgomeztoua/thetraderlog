@@ -28,3 +28,21 @@ Started: Wed Jan 14 18:20:29 +01 2026
   - SidebarTrigger toggles Sheet drawer on mobile automatically
   - Biome enforces CSS class sorting (useSortedClasses rule)
 ---
+
+## 2026-01-14 - US-002 Dashboard Mobile Responsive Grid
+- What was implemented:
+  - Stats grid responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 (both skeleton and actual)
+  - StartJournalHero stacks vertically on mobile with flex-col sm:flex-row
+  - Responsive padding on hero section: p-4 sm:p-6
+  - Responsive button text: 'Start' on mobile, 'Start My Journal' on desktop
+  - Full-width buttons on mobile (w-full sm:w-auto)
+  - Page title responsive: text-2xl sm:text-3xl
+  - Performance summary key metrics grid stacks on mobile: grid-cols-1 sm:grid-cols-2
+  - Performance summary wrapper grid made explicitly responsive
+- Files changed:
+  - src/app/(protected)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - Use conditional spans for mobile/desktop text variants: `<span className="sm:hidden">Short</span><span className="hidden sm:inline">Longer text</span>`
+  - Full-width buttons on mobile with `w-full sm:w-auto` pattern
+  - Always update skeleton/loading states to match responsive patterns of actual content
+---
