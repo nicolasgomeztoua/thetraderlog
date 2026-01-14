@@ -279,3 +279,18 @@ Started: Wed Jan 14 18:20:29 +01 2026
   - Use order-first on highlighted pricing cards to show them first on mobile stacked layout
   - Marketing sections should use larger section padding steps: py-16 sm:py-24 lg:py-32
 ---
+
+## 2026-01-14 - US-013 Fix Marketing Navbar Mobile Menu
+- What was implemented:
+  - Removed navigation links (Features, AI, Pricing) from mobile Sheet drawer
+  - Kept only auth actions in Sheet: SignedOut shows Login + Get Started buttons, SignedIn shows Dashboard link
+  - Hamburger button remains visible on mobile (md:hidden)
+  - All touch targets remain 44px minimum
+  - Sheet drawer maintains Terminal design consistency with font-mono styling
+- Files changed:
+  - src/app/(marketing)/_components/navbar.tsx
+- **Learnings for future iterations:**
+  - For marketing page mobile menus, section links (Features, AI, Pricing) aren't necessary since users can scroll to see them
+  - Keep mobile drawers focused on primary actions (auth) for cleaner UX
+  - Simple change: just removed navLinks.map() and separator div from Sheet content
+---

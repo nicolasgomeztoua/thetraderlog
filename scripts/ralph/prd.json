@@ -245,7 +245,8 @@
         "Verify in browser at 375px viewport"
       ],
       "priority": 13,
-      "passes": false
+      "passes": true,
+      "notes": "Removed navigation links (Features, AI, Pricing) from mobile Sheet drawer. Kept only auth actions: Login/Get Started buttons when signed out, Dashboard link when signed in. Hamburger button remains visible (md:hidden). Touch targets remain 44px minimum. Sheet drawer maintains Terminal design consistency."
     },
     {
       "id": "US-014",
