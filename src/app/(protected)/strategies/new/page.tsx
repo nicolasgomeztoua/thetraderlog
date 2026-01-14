@@ -40,17 +40,24 @@ export default function NewStrategyPage() {
 	};
 
 	return (
-		<div className="mx-auto w-[95%] max-w-4xl space-y-8 py-6">
+		<div className="mx-auto w-[95%] max-w-4xl space-y-4 py-4 sm:space-y-8 sm:py-6">
 			{/* Header */}
-			<div className="flex items-center gap-3">
-				<Button asChild className="h-8 w-8" size="icon" variant="ghost">
+			<div className="flex items-center gap-2 sm:gap-3">
+				<Button
+					asChild
+					className="min-h-[44px] min-w-[44px] shrink-0 sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
+					size="icon"
+					variant="ghost"
+				>
 					<Link href="/strategies">
 						<ArrowLeft className="h-4 w-4" />
 					</Link>
 				</Button>
-				<div>
-					<h1 className="font-bold text-2xl tracking-tight">New Strategy</h1>
-					<p className="mt-1 font-mono text-muted-foreground text-sm">
+				<div className="min-w-0">
+					<h1 className="font-bold text-lg tracking-tight sm:text-2xl">
+						New Strategy
+					</h1>
+					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
 						Define your trading strategy with entry rules, risk management, and
 						a checklist.
 					</p>
@@ -58,7 +65,7 @@ export default function NewStrategyPage() {
 			</div>
 
 			{/* Form */}
-			<div className="rounded border border-white/5 bg-white/2 p-6">
+			<div className="rounded border border-white/5 bg-white/2 p-4 sm:p-6">
 				<StrategyForm
 					isSubmitting={createMutation.isPending}
 					onSubmit={handleSubmit}

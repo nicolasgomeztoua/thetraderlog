@@ -264,18 +264,18 @@ export function Hero() {
 				<Ticker />
 
 				{/* Main hero content */}
-				<div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+				<div className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
 					<div className="mx-auto max-w-5xl text-center">
 						{/* Status badge */}
-						<div className="mb-6 inline-flex items-center gap-3 rounded-none border border-white/10 bg-white/2 px-4 py-2">
+						<div className="mb-4 inline-flex items-center gap-2 rounded-none border border-white/10 bg-white/2 px-3 py-1.5 sm:mb-6 sm:gap-3 sm:px-4 sm:py-2">
 							<span className="pulse-dot h-2 w-2 rounded-full bg-profit" />
-							<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-xs">
 								Now in public beta
 							</span>
 						</div>
 
 						{/* Main headline */}
-						<h1 className="mb-5 font-bold text-4xl leading-none tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+						<h1 className="mb-4 font-bold text-3xl leading-none tracking-tight sm:mb-5 sm:text-5xl lg:text-6xl xl:text-7xl">
 							<span className="block">Find Your</span>
 							<span className="block text-glow-primary text-primary">
 								Trading Edge
@@ -283,7 +283,7 @@ export function Hero() {
 						</h1>
 
 						{/* Subheadline */}
-						<p className="mx-auto max-w-xl font-mono text-muted-foreground text-sm sm:text-base">
+						<p className="mx-auto max-w-xl font-mono text-muted-foreground text-xs sm:text-sm md:text-base">
 							The AI-powered trading journal for futures and forex traders.
 							<br className="hidden sm:block" />
 							Track. Analyze. Improve.{" "}
@@ -291,11 +291,11 @@ export function Hero() {
 						</p>
 
 						{/* CTA buttons */}
-						<div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+						<div className="mt-6 flex flex-col items-center justify-center gap-3 sm:mt-8 sm:flex-row sm:gap-4">
 							<SignedOut>
 								<SignUpButton mode="modal">
 									<Button
-										className="group h-12 gap-3 px-8 font-mono text-sm uppercase tracking-wider"
+										className="group h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
 										size="lg"
 									>
 										Start Free
@@ -306,7 +306,7 @@ export function Hero() {
 							<SignedIn>
 								<Button
 									asChild
-									className="group h-12 gap-3 px-8 font-mono text-sm uppercase tracking-wider"
+									className="group h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
 									size="lg"
 								>
 									<Link href="/dashboard">
@@ -317,48 +317,49 @@ export function Hero() {
 							</SignedIn>
 							<Button
 								asChild
-								className="h-12 gap-3 px-8 font-mono text-sm uppercase tracking-wider"
+								className="h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
 								size="lg"
 								variant="outline"
 							>
 								<a href="#features">
 									<Play className="h-4 w-4" />
-									Watch Demo
+									<span className="sm:hidden">Demo</span>
+									<span className="hidden sm:inline">Watch Demo</span>
 								</a>
 							</Button>
 						</div>
 
 						{/* Stats row */}
-						<div className="mt-12 grid grid-cols-2 gap-6 border-white/5 border-t pt-8 sm:grid-cols-4">
+						<div className="mt-8 grid grid-cols-2 gap-4 border-white/5 border-t pt-6 sm:mt-12 sm:gap-6 sm:pt-8 md:grid-cols-4">
 							<div className="text-center">
-								<div className="font-bold font-mono text-3xl text-primary sm:text-4xl">
+								<div className="font-bold font-mono text-2xl text-primary sm:text-3xl md:text-4xl">
 									<AnimatedCounter end={32} prefix="+" suffix="%" />
 								</div>
-								<div className="mt-2 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+								<div className="mt-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:mt-2 sm:text-xs">
 									Avg Win Rate Gain
 								</div>
 							</div>
 							<div className="text-center">
-								<div className="font-bold font-mono text-3xl sm:text-4xl">
+								<div className="font-bold font-mono text-2xl sm:text-3xl md:text-4xl">
 									<AnimatedCounter end={50} suffix="K" />
 								</div>
-								<div className="mt-2 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+								<div className="mt-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:mt-2 sm:text-xs">
 									Trades Analyzed
 								</div>
 							</div>
 							<div className="text-center">
-								<div className="font-bold font-mono text-3xl text-accent sm:text-4xl">
+								<div className="font-bold font-mono text-2xl text-accent sm:text-3xl md:text-4xl">
 									<AnimatedCounter end={2} prefix="<" suffix="s" />
 								</div>
-								<div className="mt-2 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+								<div className="mt-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:mt-2 sm:text-xs">
 									AI Response Time
 								</div>
 							</div>
 							<div className="text-center">
-								<div className="font-bold font-mono text-3xl sm:text-4xl">
+								<div className="font-bold font-mono text-2xl sm:text-3xl md:text-4xl">
 									<AnimatedCounter end={99} suffix="%" />
 								</div>
-								<div className="mt-2 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+								<div className="mt-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:mt-2 sm:text-xs">
 									Uptime SLA
 								</div>
 							</div>
@@ -367,19 +368,19 @@ export function Hero() {
 				</div>
 
 				{/* Terminal preview section */}
-				<div className="mx-auto w-full max-w-5xl px-6 pb-12">
+				<div className="mx-auto w-full max-w-5xl px-4 pb-8 sm:px-6 sm:pb-12">
 					<div className="overflow-hidden rounded border border-white/10 bg-black/90 shadow-2xl">
 						{/* Terminal header */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-							<div className="flex items-center gap-2">
-								<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
-								<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
-								<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4">
+							<div className="flex items-center gap-1.5 sm:gap-2">
+								<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+								<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+								<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 							</div>
-							<span className="font-mono text-[10px] text-muted-foreground">
+							<span className="hidden font-mono text-[10px] text-muted-foreground sm:block">
 								edgejournal — dashboard
 							</span>
-							<div className="w-14" />
+							<div className="hidden w-14 sm:block" />
 						</div>
 
 						{/* Terminal content */}
@@ -387,7 +388,7 @@ export function Hero() {
 							<DashboardPreview />
 
 							{/* Gradient overlay */}
-							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-background to-transparent" />
+							<div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-background to-transparent sm:h-16" />
 						</div>
 					</div>
 				</div>

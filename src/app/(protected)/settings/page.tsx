@@ -4,13 +4,13 @@ import { SettingsContent } from "./_components/settings-content";
 
 function SettingsLoading() {
 	return (
-		<div className="mx-auto max-w-3xl space-y-6">
+		<div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
 			<div>
-				<Skeleton className="h-9 w-32" />
-				<Skeleton className="mt-2 h-5 w-64" />
+				<Skeleton className="h-7 w-32 sm:h-9" />
+				<Skeleton className="mt-2 hidden h-5 w-64 sm:block" />
 			</div>
-			<Skeleton className="h-12 w-full" />
-			<Skeleton className="h-[400px] w-full" />
+			<Skeleton className="h-10 w-full sm:h-12" />
+			<Skeleton className="h-[300px] w-full sm:h-[400px]" />
 		</div>
 	);
 }

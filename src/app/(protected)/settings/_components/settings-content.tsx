@@ -712,67 +712,73 @@ export function SettingsContent() {
 	const isFunded = accountForm.accountType === "prop_funded";
 
 	return (
-		<div className="mx-auto max-w-3xl space-y-6">
+		<div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
 			{/* Header */}
 			<div>
 				<span className="mb-2 block font-mono text-primary text-xs uppercase tracking-wider">
 					Configuration
 				</span>
-				<h1 className="font-bold text-3xl tracking-tight">Settings</h1>
-				<p className="mt-1 font-mono text-muted-foreground text-xs">
+				<h1 className="font-bold text-2xl tracking-tight sm:text-3xl">
+					Settings
+				</h1>
+				<p className="mt-1 hidden font-mono text-muted-foreground text-xs sm:block">
 					Configure your accounts and AI integrations
 				</p>
 			</div>
 
 			<Tabs onValueChange={setActiveTab} value={activeTab}>
-				<TabsList className="grid w-full grid-cols-5 border border-border bg-secondary">
-					<TabsTrigger
-						className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
-						value="general"
-					>
-						General
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
-						value="trading"
-					>
-						Trading
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
-						value="accounts"
-					>
-						Accounts
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
-						value="tags"
-					>
-						Tags
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
-						value="ai"
-					>
-						AI
-					</TabsTrigger>
-				</TabsList>
+				<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+					<TabsList className="inline-flex w-auto min-w-full border border-border bg-secondary sm:grid sm:w-full sm:grid-cols-5">
+						<TabsTrigger
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							value="general"
+						>
+							General
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							value="trading"
+						>
+							Trading
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							value="accounts"
+						>
+							Accounts
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							value="tags"
+						>
+							Tags
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							value="ai"
+						>
+							AI
+						</TabsTrigger>
+					</TabsList>
+				</div>
 
 				{/* General Tab */}
-				<TabsContent className="space-y-6" value="general">
+				<TabsContent className="space-y-4 sm:space-y-6" value="general">
 					{/* Profile Info */}
 					<Card>
-						<CardHeader>
-							<div className="flex items-center justify-between">
+						<CardHeader className="p-4 sm:p-6">
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<div>
 									<CardTitle className="flex items-center gap-2">
 										<Shield className="h-5 w-5" />
 										Profile
 									</CardTitle>
-									<CardDescription>Your account information</CardDescription>
+									<CardDescription className="hidden sm:block">
+										Your account information
+									</CardDescription>
 								</div>
 								<Button
-									className="font-mono text-xs uppercase tracking-wider"
+									className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 									onClick={() => openUserProfile()}
 									variant="outline"
 								>
@@ -781,9 +787,9 @@ export function SettingsContent() {
 								</Button>
 							</div>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
 							<button
-								className="-m-2 flex cursor-pointer items-center gap-4 rounded-lg p-2 text-left transition-colors hover:bg-secondary/50"
+								className="-m-2 flex min-h-[44px] cursor-pointer items-center gap-4 rounded-lg p-2 text-left transition-colors hover:bg-secondary/50"
 								onClick={() => openUserProfile()}
 								type="button"
 							>
@@ -795,11 +801,11 @@ export function SettingsContent() {
 										src={user.imageUrl}
 									/>
 								)}
-								<div>
+								<div className="min-w-0 flex-1">
 									<p className="font-medium transition-colors hover:text-primary">
 										{user?.firstName} {user?.lastName}
 									</p>
-									<p className="font-mono text-muted-foreground text-xs">
+									<p className="truncate font-mono text-muted-foreground text-xs">
 										{user?.primaryEmailAddress?.emailAddress}
 									</p>
 								</div>
@@ -809,14 +815,16 @@ export function SettingsContent() {
 				</TabsContent>
 
 				{/* Trading Tab */}
-				<TabsContent className="space-y-6" value="trading">
+				<TabsContent className="space-y-4 sm:space-y-6" value="trading">
 					{/* Trading Preferences */}
 					<Card>
-						<CardHeader>
+						<CardHeader className="p-4 sm:p-6">
 							<CardTitle>Trading Preferences</CardTitle>
-							<CardDescription>Default settings for new trades</CardDescription>
+							<CardDescription className="hidden sm:block">
+								Default settings for new trades
+							</CardDescription>
 						</CardHeader>
-						<CardContent className="space-y-4">
+						<CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
 							<div className="grid gap-4 sm:grid-cols-2">
 								<div className="space-y-2">
 									<Label>Default Instrument</Label>
@@ -903,7 +911,8 @@ export function SettingsContent() {
 								<div className="flex items-center gap-2">
 									<span className="text-muted-foreground">$</span>
 									<Input
-										className="w-32"
+										className="w-full sm:w-32"
+										inputMode="decimal"
 										min="0"
 										onChange={(e) =>
 											setSettings({
@@ -917,7 +926,7 @@ export function SettingsContent() {
 										value={settings.breakevenThreshold}
 									/>
 								</div>
-								<p className="text-muted-foreground text-sm">
+								<p className="text-muted-foreground text-xs sm:text-sm">
 									Trades with P&L within ±${settings.breakevenThreshold || "0"}{" "}
 									are classified as breakeven
 								</p>
@@ -927,39 +936,39 @@ export function SettingsContent() {
 
 					{/* Trading Sessions */}
 					<Card>
-						<CardHeader>
-							<div className="flex items-center justify-between">
+						<CardHeader className="p-4 sm:p-6">
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<div>
 									<CardTitle className="flex items-center gap-2">
 										<Clock className="h-5 w-5" />
 										Trading Sessions
 									</CardTitle>
-									<CardDescription>
+									<CardDescription className="hidden sm:block">
 										Define your trading sessions for analytics breakdown
 									</CardDescription>
 								</div>
 								<div className="flex gap-2">
 									<Button
-										className="font-mono text-[10px]"
+										className="min-h-[36px] flex-1 font-mono text-[10px] sm:flex-none"
 										onClick={resetSessionsToDefault}
 										size="sm"
 										variant="outline"
 									>
-										Reset to Default
+										Reset
 									</Button>
 									<Button
-										className="font-mono text-[10px]"
+										className="min-h-[36px] flex-1 font-mono text-[10px] sm:flex-none"
 										onClick={addSession}
 										size="sm"
 										variant="outline"
 									>
 										<Plus className="mr-1 h-3 w-3" />
-										Add Session
+										Add
 									</Button>
 								</div>
 							</div>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
 							{settings.tradingSessions.length === 0 ? (
 								<p className="py-4 text-center text-muted-foreground text-sm">
 									No sessions configured. Add one or reset to defaults.
@@ -968,29 +977,43 @@ export function SettingsContent() {
 								<div className="space-y-3">
 									{settings.tradingSessions.map((session, index) => (
 										<div
-											className="flex items-center gap-3 rounded border border-border bg-card p-3"
+											className="flex flex-col gap-3 rounded border border-border bg-card p-3 sm:flex-row sm:items-center"
 											key={`session-${session.name}-${session.startHour}`}
 										>
-											{/* Color indicator */}
-											<div
-												className="h-8 w-2 rounded"
-												style={{ backgroundColor: session.color }}
-											/>
-
-											{/* Session name */}
-											<div className="flex-1">
-												<Input
-													className="h-8 font-mono text-sm"
-													onChange={(e) =>
-														updateSession(index, { name: e.target.value })
-													}
-													placeholder="Session name"
-													value={session.name}
+											{/* Top row on mobile: Name + Delete */}
+											<div className="flex items-center gap-3 sm:flex-1">
+												{/* Color indicator */}
+												<div
+													className="h-8 w-2 shrink-0 rounded"
+													style={{ backgroundColor: session.color }}
 												/>
+
+												{/* Session name */}
+												<div className="min-w-0 flex-1">
+													<Input
+														className="h-8 font-mono text-sm"
+														onChange={(e) =>
+															updateSession(index, { name: e.target.value })
+														}
+														placeholder="Session name"
+														value={session.name}
+													/>
+												</div>
+
+												{/* Delete button - visible on mobile at end of name row */}
+												<Button
+													className="h-8 w-8 shrink-0 p-0 sm:hidden"
+													onClick={() => removeSession(index)}
+													size="sm"
+													variant="ghost"
+												>
+													<Trash2 className="h-4 w-4 text-destructive" />
+												</Button>
 											</div>
 
-											{/* Time range */}
+											{/* Bottom row on mobile: Time range + Color */}
 											<div className="flex items-center gap-2">
+												{/* Time range */}
 												<Select
 													onValueChange={(value) =>
 														updateSession(index, {
@@ -999,7 +1022,7 @@ export function SettingsContent() {
 													}
 													value={session.startHour.toString()}
 												>
-													<SelectTrigger className="w-24 font-mono text-xs">
+													<SelectTrigger className="min-h-[36px] w-[70px] font-mono text-xs sm:w-24">
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
@@ -1025,7 +1048,7 @@ export function SettingsContent() {
 													}
 													value={session.endHour.toString()}
 												>
-													<SelectTrigger className="w-24 font-mono text-xs">
+													<SelectTrigger className="min-h-[36px] w-[70px] font-mono text-xs sm:w-24">
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
@@ -1042,44 +1065,44 @@ export function SettingsContent() {
 														))}
 													</SelectContent>
 												</Select>
+
+												{/* Color picker */}
+												<Select
+													onValueChange={(value) =>
+														updateSession(index, { color: value })
+													}
+													value={session.color}
+												>
+													<SelectTrigger className="min-h-[36px] w-12 sm:w-16">
+														<div
+															className="h-4 w-4 rounded"
+															style={{ backgroundColor: session.color }}
+														/>
+													</SelectTrigger>
+													<SelectContent>
+														{PRESET_COLORS.map((color) => (
+															<SelectItem key={color} value={color}>
+																<div className="flex items-center gap-2">
+																	<div
+																		className="h-4 w-4 rounded"
+																		style={{ backgroundColor: color }}
+																	/>
+																</div>
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+
+												{/* Delete button - hidden on mobile, visible on desktop */}
+												<Button
+													className="hidden h-8 w-8 p-0 sm:flex"
+													onClick={() => removeSession(index)}
+													size="sm"
+													variant="ghost"
+												>
+													<Trash2 className="h-4 w-4 text-destructive" />
+												</Button>
 											</div>
-
-											{/* Color picker */}
-											<Select
-												onValueChange={(value) =>
-													updateSession(index, { color: value })
-												}
-												value={session.color}
-											>
-												<SelectTrigger className="w-16">
-													<div
-														className="h-4 w-4 rounded"
-														style={{ backgroundColor: session.color }}
-													/>
-												</SelectTrigger>
-												<SelectContent>
-													{PRESET_COLORS.map((color) => (
-														<SelectItem key={color} value={color}>
-															<div className="flex items-center gap-2">
-																<div
-																	className="h-4 w-4 rounded"
-																	style={{ backgroundColor: color }}
-																/>
-															</div>
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-
-											{/* Delete button */}
-											<Button
-												className="h-8 w-8 p-0"
-												onClick={() => removeSession(index)}
-												size="sm"
-												variant="ghost"
-											>
-												<Trash2 className="h-4 w-4 text-destructive" />
-											</Button>
 										</div>
 									))}
 								</div>
@@ -1132,17 +1155,17 @@ export function SettingsContent() {
 				</TabsContent>
 
 				{/* Trading Accounts Tab */}
-				<TabsContent className="space-y-6" value="accounts">
+				<TabsContent className="space-y-4 sm:space-y-6" value="accounts">
 					{/* Account Groups Section */}
 					<Card>
-						<CardHeader>
-							<div className="flex items-center justify-between">
+						<CardHeader className="p-4 sm:p-6">
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<div>
 									<CardTitle className="flex items-center gap-2">
 										<FolderOpen className="h-5 w-5" />
 										Account Groups
 									</CardTitle>
-									<CardDescription>
+									<CardDescription className="hidden sm:block">
 										Group accounts for copy trading or combined stats
 									</CardDescription>
 								</div>
@@ -1158,7 +1181,7 @@ export function SettingsContent() {
 								>
 									<DialogTrigger asChild>
 										<Button
-											className="font-mono text-xs uppercase tracking-wider"
+											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 											variant="outline"
 										>
 											<Plus className="mr-2 h-3.5 w-3.5" />
@@ -1228,7 +1251,7 @@ export function SettingsContent() {
 								</Dialog>
 							</div>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
 							{groups.length === 0 ? (
 								<p className="py-4 text-center text-muted-foreground text-sm">
 									No groups yet. Create one to combine account statistics.
@@ -1237,20 +1260,21 @@ export function SettingsContent() {
 								<div className="space-y-2">
 									{groups.map((group) => (
 										<div
-											className="flex items-center justify-between rounded border border-border bg-card p-3"
+											className="flex items-center justify-between gap-2 rounded border border-border bg-card p-3"
 											key={group.id}
 										>
-											<div>
+											<div className="min-w-0 flex-1">
 												<span className="font-medium font-mono text-sm">
 													{group.name}
 												</span>
-												<p className="font-mono text-muted-foreground text-xs">
+												<p className="truncate font-mono text-muted-foreground text-xs">
 													{group.accounts?.length || 0} accounts
 													{group.description && ` • ${group.description}`}
 												</p>
 											</div>
-											<div className="flex items-center gap-2">
+											<div className="flex shrink-0 items-center gap-1">
 												<Button
+													className="min-h-[36px] min-w-[36px]"
 													onClick={() => openEditGroup(group)}
 													size="sm"
 													variant="ghost"
@@ -1258,6 +1282,7 @@ export function SettingsContent() {
 													<Edit className="h-4 w-4" />
 												</Button>
 												<Button
+													className="min-h-[36px] min-w-[36px]"
 													disabled={deleteGroup.isPending}
 													onClick={() => {
 														if (
@@ -1283,14 +1308,14 @@ export function SettingsContent() {
 
 					{/* Trading Accounts Section */}
 					<Card>
-						<CardHeader>
-							<div className="flex items-center justify-between">
+						<CardHeader className="p-4 sm:p-6">
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 								<div>
 									<CardTitle className="flex items-center gap-2">
 										<Wallet className="h-5 w-5" />
 										Trading Accounts
 									</CardTitle>
-									<CardDescription>
+									<CardDescription className="hidden sm:block">
 										Manage your trading accounts to track performance separately
 									</CardDescription>
 								</div>
@@ -1305,7 +1330,7 @@ export function SettingsContent() {
 									open={isAccountDialogOpen}
 								>
 									<DialogTrigger asChild>
-										<Button className="font-mono text-xs uppercase tracking-wider">
+										<Button className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto">
 											<Plus className="mr-2 h-3.5 w-3.5" />
 											Add Account
 										</Button>
@@ -1751,7 +1776,7 @@ export function SettingsContent() {
 								</Dialog>
 							</div>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
 							{loadingAccounts ? (
 								<div className="flex items-center justify-center py-8">
 									<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1768,18 +1793,18 @@ export function SettingsContent() {
 								<div className="space-y-3">
 									{accounts.map((account) => (
 										<div
-											className="flex items-center justify-between rounded border border-border bg-card p-4 transition-colors hover:border-primary/30"
+											className="flex flex-col gap-3 rounded border border-border bg-card p-3 transition-colors hover:border-primary/30 sm:flex-row sm:items-center sm:justify-between sm:p-4"
 											key={account.id}
 										>
-											<div className="flex items-center gap-3">
+											<div className="flex items-start gap-3 sm:items-center">
 												<div
 													className={cn(
-														"h-2.5 w-2.5 rounded-full",
+														"mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full sm:mt-0",
 														ACCOUNT_TYPE_COLORS[account.accountType],
 													)}
 												/>
-												<div>
-													<div className="flex flex-wrap items-center gap-2">
+												<div className="min-w-0 flex-1">
+													<div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
 														<span className="font-medium font-mono text-sm">
 															{account.name}
 														</span>
@@ -1789,7 +1814,9 @@ export function SettingsContent() {
 																variant="secondary"
 															>
 																<Star className="h-2.5 w-2.5" />
-																Default
+																<span className="hidden sm:inline">
+																	Default
+																</span>
 															</Badge>
 														)}
 														<Badge
@@ -1820,7 +1847,7 @@ export function SettingsContent() {
 															)}
 														{account.linkedAccountId && (
 															<Badge
-																className="gap-1 font-mono text-[10px]"
+																className="hidden gap-1 font-mono text-[10px] sm:inline-flex"
 																variant="secondary"
 															>
 																<Link2 className="h-2.5 w-2.5" />
@@ -1829,7 +1856,7 @@ export function SettingsContent() {
 														)}
 														{account.groupId && (
 															<Badge
-																className="gap-1 font-mono text-[10px]"
+																className="hidden gap-1 font-mono text-[10px] sm:inline-flex"
 																variant="secondary"
 															>
 																<FolderOpen className="h-2.5 w-2.5" />
@@ -1838,7 +1865,7 @@ export function SettingsContent() {
 															</Badge>
 														)}
 													</div>
-													<p className="font-mono text-muted-foreground text-xs">
+													<p className="truncate font-mono text-muted-foreground text-xs">
 														{PLATFORM_LABELS[account.platform ?? "other"]}
 														{account.broker && ` • ${account.broker}`} •{" "}
 														{account.initialBalance
@@ -1852,13 +1879,13 @@ export function SettingsContent() {
 													</p>
 												</div>
 											</div>
-											<div className="flex items-center gap-1">
+											<div className="flex shrink-0 items-center justify-end gap-1">
 												{/* Mark as Passed button for active challenges */}
 												{account.accountType === "prop_challenge" &&
 													account.challengeStatus === "active" && (
 														<>
 															<Button
-																className="text-green-500 hover:text-green-400"
+																className="min-h-[36px] min-w-[36px] text-green-500 hover:text-green-400"
 																onClick={() => openConvertDialog(account)}
 																size="sm"
 																title="Mark as Passed"
@@ -1867,7 +1894,7 @@ export function SettingsContent() {
 																<Trophy className="h-4 w-4" />
 															</Button>
 															<Button
-																className="text-red-500 hover:text-red-400"
+																className="min-h-[36px] min-w-[36px] text-red-500 hover:text-red-400"
 																disabled={markChallengeFailed.isPending}
 																onClick={() => {
 																	if (
@@ -1888,6 +1915,7 @@ export function SettingsContent() {
 													)}
 												{!account.isDefault && (
 													<Button
+														className="min-h-[36px] min-w-[36px]"
 														disabled={setDefaultAccount.isPending}
 														onClick={() =>
 															setDefaultAccount.mutate({ id: account.id })
@@ -1900,6 +1928,7 @@ export function SettingsContent() {
 													</Button>
 												)}
 												<Button
+													className="min-h-[36px] min-w-[36px]"
 													onClick={() => openEditAccount(account)}
 													size="sm"
 													title="Edit"
@@ -1908,6 +1937,7 @@ export function SettingsContent() {
 													<Edit className="h-4 w-4" />
 												</Button>
 												<Button
+													className="min-h-[36px] min-w-[36px]"
 													disabled={deleteAccount.isPending}
 													onClick={() => {
 														if (
@@ -2078,39 +2108,41 @@ export function SettingsContent() {
 				</TabsContent>
 
 				{/* Tags Tab */}
-				<TabsContent className="space-y-6" value="tags">
+				<TabsContent className="space-y-4 sm:space-y-6" value="tags">
 					<Card>
-						<CardHeader>
+						<CardHeader className="p-4 sm:p-6">
 							<CardTitle>Tag Management</CardTitle>
-							<CardDescription>
+							<CardDescription className="hidden sm:block">
 								Create and manage tags to organize your trades
 							</CardDescription>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
 							<TagManager />
 						</CardContent>
 					</Card>
 				</TabsContent>
 
 				{/* AI Providers Tab */}
-				<TabsContent className="space-y-6" value="ai">
+				<TabsContent className="space-y-4 sm:space-y-6" value="ai">
 					<Card>
-						<CardHeader>
+						<CardHeader className="p-4 sm:p-6">
 							<CardTitle className="flex items-center gap-2">
 								<Key className="h-5 w-5" />
 								AI Provider Keys
 							</CardTitle>
-							<CardDescription>
+							<CardDescription className="hidden sm:block">
 								Configure your AI provider API keys for advanced insights
 							</CardDescription>
 						</CardHeader>
-						<CardContent className="space-y-6">
+						<CardContent className="space-y-4 p-4 pt-0 sm:space-y-6 sm:p-6 sm:pt-0">
 							{/* Security Notice */}
-							<div className="flex items-start gap-3 rounded-lg border border-primary/50 bg-primary/5 p-4">
-								<Sparkles className="mt-0.5 h-5 w-5 text-primary" />
+							<div className="flex items-start gap-3 rounded-lg border border-primary/50 bg-primary/5 p-3 sm:p-4">
+								<Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
 								<div>
-									<p className="font-medium">Bring Your Own Key (BYOK)</p>
-									<p className="text-muted-foreground text-sm">
+									<p className="font-medium text-sm sm:text-base">
+										Bring Your Own Key (BYOK)
+									</p>
+									<p className="text-muted-foreground text-xs sm:text-sm">
 										Your API keys are encrypted and stored securely. We never
 										share your keys or use them for any purpose other than
 										generating insights for you.
@@ -2145,15 +2177,15 @@ export function SettingsContent() {
 							{/* API Keys */}
 							{AI_PROVIDERS.map((provider) => (
 								<div className="space-y-2" key={provider.id}>
-									<div className="flex items-center justify-between">
-										<Label htmlFor={provider.id}>
+									<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+										<Label className="text-sm" htmlFor={provider.id}>
 											{provider.name} API Key
-											<span className="ml-2 text-muted-foreground text-xs">
+											<span className="ml-2 hidden text-muted-foreground text-xs sm:inline">
 												{provider.description}
 											</span>
 										</Label>
 										{settings[`${provider.id}Key` as keyof typeof settings] && (
-											<Badge className="gap-1" variant="secondary">
+											<Badge className="w-fit gap-1" variant="secondary">
 												<Check className="h-3 w-3" />
 												Configured
 											</Badge>
@@ -2161,7 +2193,7 @@ export function SettingsContent() {
 									</div>
 									<div className="relative">
 										<Input
-											className="pr-10 font-mono"
+											className="min-h-[44px] pr-12 font-mono text-sm"
 											id={provider.id}
 											onChange={(e) =>
 												setSettings({
@@ -2178,7 +2210,7 @@ export function SettingsContent() {
 											}
 										/>
 										<Button
-											className="-translate-y-1/2 absolute top-1/2 right-1 h-8 w-8"
+											className="-translate-y-1/2 absolute top-1/2 right-1 min-h-[36px] min-w-[36px]"
 											onClick={() => toggleShowKey(provider.id)}
 											size="icon"
 											type="button"
@@ -2199,7 +2231,7 @@ export function SettingsContent() {
 			</Tabs>
 
 			{/* Save Button - Fixed at bottom */}
-			<div className="flex items-center justify-between rounded border border-border bg-card p-4">
+			<div className="flex flex-col gap-3 rounded border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
 				<div className="flex items-center gap-2">
 					{hasUnsavedChanges && (
 						<>
@@ -2211,7 +2243,7 @@ export function SettingsContent() {
 					)}
 				</div>
 				<Button
-					className="font-mono text-xs uppercase tracking-wider"
+					className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 					disabled={updateSettings.isPending || !hasUnsavedChanges}
 					onClick={handleSave}
 				>

@@ -24,6 +24,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -64,104 +65,106 @@ function PerformanceComparisonTable() {
 			<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
 				Performance Comparison
 			</h2>
-			<div className="overflow-hidden rounded border border-border">
-				<Table>
-					<TableHeader>
-						<TableRow className="border-border hover:bg-transparent">
-							<TableHead className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Strategy
-							</TableHead>
-							<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Trades
-							</TableHead>
-							<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Win Rate
-							</TableHead>
-							<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Profit Factor
-							</TableHead>
-							<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Total P&L
-							</TableHead>
-							<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Avg R
-							</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{sortedStats.map((s) => (
-							<TableRow className="border-border" key={s.strategyId}>
-								<TableCell>
-									<Link
-										className="flex items-center gap-2 transition-colors hover:text-primary"
-										href={`/strategies/${s.strategyId}`}
-									>
-										<div
-											className="h-2 w-2 shrink-0 rounded-full"
-											style={{
-												backgroundColor: s.strategyColor ?? "#d4ff00",
-											}}
-										/>
-										<span className="font-medium font-mono text-sm">
-											{s.strategyName}
-										</span>
-									</Link>
-								</TableCell>
-								<TableCell className="text-right font-mono text-sm">
-									{s.totalTrades}
-								</TableCell>
-								<TableCell className="text-right">
-									<span
-										className={cn(
-											"font-mono text-sm",
-											s.winRate >= 50 ? "text-profit" : "text-loss",
-										)}
-									>
-										{s.winRate.toFixed(1)}%
-									</span>
-								</TableCell>
-								<TableCell className="text-right">
-									<span
-										className={cn(
-											"font-mono text-sm",
-											s.profitFactor >= 1 ? "text-profit" : "text-loss",
-										)}
-									>
-										{s.profitFactor === Infinity
-											? "∞"
-											: s.profitFactor.toFixed(2)}
-									</span>
-								</TableCell>
-								<TableCell className="text-right">
-									<span
-										className={cn(
-											"font-bold font-mono text-sm",
-											s.totalPnl >= 0 ? "text-profit" : "text-loss",
-										)}
-									>
-										{formatCurrency(s.totalPnl)}
-									</span>
-								</TableCell>
-								<TableCell className="text-right">
-									<span
-										className={cn(
-											"font-mono text-sm",
-											s.avgRMultiple !== null
-												? s.avgRMultiple >= 0
-													? "text-profit"
-													: "text-loss"
-												: "text-muted-foreground",
-										)}
-									>
-										{s.avgRMultiple !== null
-											? `${s.avgRMultiple.toFixed(2)}R`
-											: "—"}
-									</span>
-								</TableCell>
+			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+				<div className="min-w-[600px] overflow-hidden rounded border border-border sm:min-w-0">
+					<Table>
+						<TableHeader>
+							<TableRow className="border-border hover:bg-transparent">
+								<TableHead className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Strategy
+								</TableHead>
+								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Trades
+								</TableHead>
+								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Win Rate
+								</TableHead>
+								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Profit Factor
+								</TableHead>
+								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Total P&L
+								</TableHead>
+								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Avg R
+								</TableHead>
 							</TableRow>
-						))}
-					</TableBody>
-				</Table>
+						</TableHeader>
+						<TableBody>
+							{sortedStats.map((s) => (
+								<TableRow className="border-border" key={s.strategyId}>
+									<TableCell>
+										<Link
+											className="flex items-center gap-2 transition-colors hover:text-primary"
+											href={`/strategies/${s.strategyId}`}
+										>
+											<div
+												className="h-2 w-2 shrink-0 rounded-full"
+												style={{
+													backgroundColor: s.strategyColor ?? "#d4ff00",
+												}}
+											/>
+											<span className="font-medium font-mono text-sm">
+												{s.strategyName}
+											</span>
+										</Link>
+									</TableCell>
+									<TableCell className="text-right font-mono text-sm">
+										{s.totalTrades}
+									</TableCell>
+									<TableCell className="text-right">
+										<span
+											className={cn(
+												"font-mono text-sm",
+												s.winRate >= 50 ? "text-profit" : "text-loss",
+											)}
+										>
+											{s.winRate.toFixed(1)}%
+										</span>
+									</TableCell>
+									<TableCell className="text-right">
+										<span
+											className={cn(
+												"font-mono text-sm",
+												s.profitFactor >= 1 ? "text-profit" : "text-loss",
+											)}
+										>
+											{s.profitFactor === Infinity
+												? "∞"
+												: s.profitFactor.toFixed(2)}
+										</span>
+									</TableCell>
+									<TableCell className="text-right">
+										<span
+											className={cn(
+												"font-bold font-mono text-sm",
+												s.totalPnl >= 0 ? "text-profit" : "text-loss",
+											)}
+										>
+											{formatCurrency(s.totalPnl)}
+										</span>
+									</TableCell>
+									<TableCell className="text-right">
+										<span
+											className={cn(
+												"font-mono text-sm",
+												s.avgRMultiple !== null
+													? s.avgRMultiple >= 0
+														? "text-profit"
+														: "text-loss"
+													: "text-muted-foreground",
+											)}
+										>
+											{s.avgRMultiple !== null
+												? `${s.avgRMultiple.toFixed(2)}R`
+												: "—"}
+										</span>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
 			</div>
 		</div>
 	);
@@ -237,21 +240,28 @@ export default function StrategiesPage() {
 		}
 	});
 
+	const isMobile = useIsMobile();
+
 	return (
-		<div className="mx-auto w-[95%] max-w-none space-y-8 py-6">
+		<div className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
 			{/* Header */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="font-bold text-2xl tracking-tight">Strategies</h1>
-					<p className="mt-1 font-mono text-muted-foreground text-sm">
+			<div className="flex items-center justify-between gap-3">
+				<div className="min-w-0 flex-1">
+					<h1 className="font-bold text-xl tracking-tight sm:text-2xl">
+						Strategies
+					</h1>
+					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
 						Document your trading strategies with entry rules, risk management,
 						and checklists.
 					</p>
 				</div>
-				<Button asChild className="font-mono text-xs uppercase tracking-wider">
+				<Button
+					asChild
+					className="min-h-[44px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+				>
 					<Link href="/strategies/new">
-						<Plus className="mr-2 h-4 w-4" />
-						New Strategy
+						<Plus className="h-4 w-4 sm:mr-2" />
+						<span className="hidden sm:inline">New Strategy</span>
 					</Link>
 				</Button>
 			</div>
@@ -263,25 +273,27 @@ export default function StrategiesPage() {
 
 			{/* Loading state */}
 			{isLoading && (
-				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
 					{[1, 2, 3].map((i) => (
-						<Skeleton className="h-48" key={i} />
+						<Skeleton className="h-40 sm:h-48" key={i} />
 					))}
 				</div>
 			)}
 
 			{/* Empty state */}
 			{!isLoading && (!strategies || strategies.length === 0) && (
-				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 py-16">
-					<BookMarked className="mb-4 h-12 w-12 text-muted-foreground/50" />
-					<h2 className="font-semibold text-lg">No strategies yet</h2>
-					<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-sm">
+				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
+					<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
+					<h2 className="font-semibold text-base sm:text-lg">
+						No strategies yet
+					</h2>
+					<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-xs sm:text-sm">
 						Create your first strategy to document your trading approach and
 						track rule compliance.
 					</p>
 					<Button
 						asChild
-						className="mt-6 font-mono text-xs uppercase tracking-wider"
+						className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
 					>
 						<Link href="/strategies/new">
 							<Plus className="mr-2 h-4 w-4" />
@@ -293,13 +305,14 @@ export default function StrategiesPage() {
 
 			{/* Strategies grid */}
 			{!isLoading && strategies && strategies.length > 0 && (
-				<div className="space-y-4">
+				<div className="space-y-3 sm:space-y-4">
 					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
 						Your Strategies
 					</h2>
-					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
 						{strategies.map((strategy) => (
 							<StrategyCard
+								isMobile={isMobile}
 								key={strategy.id}
 								onDelete={() => handleDelete(strategy.id)}
 								onDuplicate={() =>
@@ -326,11 +339,16 @@ export default function StrategiesPage() {
 							from all associated trades.
 						</DialogDescription>
 					</DialogHeader>
-					<DialogFooter>
-						<Button onClick={() => setDeleteDialogOpen(false)} variant="ghost">
+					<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+						<Button
+							className="min-h-[44px] sm:min-h-0"
+							onClick={() => setDeleteDialogOpen(false)}
+							variant="ghost"
+						>
 							Cancel
 						</Button>
 						<Button
+							className="min-h-[44px] sm:min-h-0"
 							disabled={deleteMutation.isPending}
 							onClick={confirmDelete}
 							variant="destructive"

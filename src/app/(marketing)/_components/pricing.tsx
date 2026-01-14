@@ -62,31 +62,31 @@ const plans = [
 
 export function Pricing() {
 	return (
-		<section className="relative py-32" id="pricing">
+		<section className="relative py-16 sm:py-24 lg:py-32" id="pricing">
 			{/* Background */}
 			<div className="grid-bg absolute inset-0 opacity-30" />
 
-			<div className="relative mx-auto max-w-6xl px-6">
+			<div className="relative mx-auto max-w-6xl px-4 sm:px-6">
 				{/* Header */}
-				<div className="mb-16 text-center">
-					<span className="mb-4 inline-block font-mono text-primary text-xs uppercase tracking-wider">
+				<div className="mb-10 text-center sm:mb-16">
+					<span className="mb-3 inline-block font-mono text-[10px] text-primary uppercase tracking-wider sm:mb-4 sm:text-xs">
 						Pricing
 					</span>
-					<h2 className="font-bold text-4xl leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+					<h2 className="font-bold text-2xl leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
 						Simple, transparent
 						<br />
 						<span className="text-primary">pricing</span>
 					</h2>
-					<p className="mx-auto mt-6 max-w-xl font-mono text-base text-muted-foreground">
+					<p className="mx-auto mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
 						Start free. Upgrade when you need more. Bring your own AI keys for
 						full control.
 					</p>
 				</div>
 
 				{/* BYOK banner */}
-				<div className="mb-12 flex items-center justify-center gap-4 rounded border border-primary/20 bg-primary/2 px-6 py-4">
-					<Key className="h-5 w-5 text-primary" />
-					<p className="font-mono text-sm">
+				<div className="mb-8 flex flex-col items-center justify-center gap-3 rounded border border-primary/20 bg-primary/2 p-4 sm:mb-12 sm:flex-row sm:gap-4 sm:px-6 sm:py-4">
+					<Key className="h-5 w-5 shrink-0 text-primary" />
+					<p className="text-center font-mono text-xs sm:text-left sm:text-sm">
 						<span className="font-medium text-foreground">
 							Bring Your Own Key:
 						</span>{" "}
@@ -97,55 +97,55 @@ export function Pricing() {
 					</p>
 				</div>
 
-				{/* Pricing cards */}
-				<div className="grid gap-6 lg:grid-cols-3">
+				{/* Pricing cards - Pro card first on mobile for importance */}
+				<div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
 					{plans.map((plan) => (
 						<div
-							className={`relative flex flex-col rounded border p-8 transition-all ${
+							className={`relative flex flex-col rounded border p-5 transition-all sm:p-8 ${
 								plan.highlighted
-									? "border-primary/30 bg-primary/2 shadow-lg shadow-primary/5"
+									? "order-first border-primary/30 bg-primary/2 shadow-lg shadow-primary/5 lg:order-none"
 									: "border-white/10 bg-white/1 hover:border-white/20"
 							}`}
 							key={plan.name}
 						>
 							{/* Popular badge */}
 							{plan.highlighted && (
-								<div className="-top-3 absolute left-6 flex items-center gap-1 rounded bg-primary px-3 py-1">
+								<div className="-top-3 absolute left-4 flex items-center gap-1 rounded bg-primary px-2.5 py-0.5 sm:left-6 sm:px-3 sm:py-1">
 									<Sparkles className="h-3 w-3 text-primary-foreground" />
-									<span className="font-medium font-mono text-primary-foreground text-xs uppercase tracking-wider">
+									<span className="font-medium font-mono text-[10px] text-primary-foreground uppercase tracking-wider sm:text-xs">
 										Popular
 									</span>
 								</div>
 							)}
 
 							{/* Plan header */}
-							<div className="mb-6">
-								<h3 className="font-bold text-xl">{plan.name}</h3>
-								<p className="mt-1 font-mono text-muted-foreground text-sm">
+							<div className="mb-4 sm:mb-6">
+								<h3 className="font-bold text-lg sm:text-xl">{plan.name}</h3>
+								<p className="mt-1 font-mono text-muted-foreground text-xs sm:text-sm">
 									{plan.tagline}
 								</p>
 							</div>
 
 							{/* Price */}
-							<div className="mb-8">
-								<span className="font-bold text-5xl tracking-tight">
+							<div className="mb-6 sm:mb-8">
+								<span className="font-bold text-4xl tracking-tight sm:text-5xl">
 									{plan.price}
 								</span>
-								<span className="font-mono text-muted-foreground text-sm">
+								<span className="font-mono text-muted-foreground text-xs sm:text-sm">
 									{plan.period}
 								</span>
 							</div>
 
 							{/* Features */}
-							<ul className="mb-8 flex-1 space-y-4">
+							<ul className="mb-6 flex-1 space-y-3 sm:mb-8 sm:space-y-4">
 								{plan.features.map((feature) => (
-									<li className="flex items-start gap-3" key={feature}>
+									<li className="flex items-start gap-2 sm:gap-3" key={feature}>
 										<Check
-											className={`mt-0.5 h-4 w-4 shrink-0 ${
+											className={`mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 ${
 												plan.highlighted ? "text-primary" : "text-profit"
 											}`}
 										/>
-										<span className="font-mono text-muted-foreground text-sm">
+										<span className="font-mono text-muted-foreground text-xs sm:text-sm">
 											{feature}
 										</span>
 									</li>
@@ -155,7 +155,7 @@ export function Pricing() {
 							{/* CTA */}
 							{plan.name === "Team" ? (
 								<Button
-									className="w-full gap-2 font-mono text-xs uppercase tracking-wider"
+									className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
 									variant="outline"
 								>
 									{plan.cta}
@@ -166,7 +166,7 @@ export function Pricing() {
 									<SignedOut>
 										<SignUpButton mode="modal">
 											<Button
-												className="w-full gap-2 font-mono text-xs uppercase tracking-wider"
+												className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
 												variant={plan.highlighted ? "default" : "outline"}
 											>
 												{plan.cta}
@@ -177,7 +177,7 @@ export function Pricing() {
 									<SignedIn>
 										<Button
 											asChild
-											className="w-full gap-2 font-mono text-xs uppercase tracking-wider"
+											className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
 											variant={plan.highlighted ? "default" : "outline"}
 										>
 											<Link
@@ -195,7 +195,7 @@ export function Pricing() {
 				</div>
 
 				{/* Trial note */}
-				<p className="mt-12 text-center font-mono text-muted-foreground text-sm">
+				<p className="mt-8 text-center font-mono text-muted-foreground text-xs sm:mt-12 sm:text-sm">
 					All plans include a 14-day free trial of Pro features.{" "}
 					<span className="text-foreground">No credit card required.</span>
 				</p>

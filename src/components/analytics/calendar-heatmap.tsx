@@ -167,7 +167,7 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 	return (
 		<div className={cn("space-y-4", className)}>
 			{/* Summary stats */}
-			<div className="flex gap-6 font-mono text-xs">
+			<div className="flex flex-wrap gap-3 font-mono text-xs sm:gap-6">
 				<div>
 					<span className="text-muted-foreground">Trading Days:</span>{" "}
 					<span className="text-foreground">{totals.tradingDays}</span>

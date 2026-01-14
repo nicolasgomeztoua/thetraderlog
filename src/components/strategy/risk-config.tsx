@@ -47,15 +47,15 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6">
 			{/* Position Sizing */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[11px] text-primary/80 uppercase tracking-wider">
+				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
 					Position Sizing
 				</h4>
-				<div className="grid grid-cols-2 gap-4">
+				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Method
 						</span>
 						<Select
@@ -67,24 +67,34 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							}
 							value={riskParams.positionSizing?.method ?? ""}
 						>
-							<SelectTrigger className="font-mono text-sm">
+							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
 								<SelectValue placeholder="Select method..." />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="fixed">Fixed Size</SelectItem>
-								<SelectItem value="risk_percent">Risk % of Account</SelectItem>
-								<SelectItem value="kelly">Kelly Criterion</SelectItem>
+								<SelectItem className="min-h-[44px] sm:min-h-0" value="fixed">
+									Fixed Size
+								</SelectItem>
+								<SelectItem
+									className="min-h-[44px] sm:min-h-0"
+									value="risk_percent"
+								>
+									Risk % of Account
+								</SelectItem>
+								<SelectItem className="min-h-[44px] sm:min-h-0" value="kelly">
+									Kelly Criterion
+								</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
 
 					{riskParams.positionSizing?.method === "fixed" && (
 						<div className="space-y-1">
-							<span className="font-mono text-[10px] text-muted-foreground uppercase">
+							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Size (lots/contracts)
 							</span>
 							<Input
-								className="font-mono"
+								className="min-h-[44px] font-mono sm:min-h-0"
+								inputMode="decimal"
 								onChange={(e) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
@@ -102,11 +112,12 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 					{riskParams.positionSizing?.method === "risk_percent" && (
 						<div className="space-y-1">
-							<span className="font-mono text-[10px] text-muted-foreground uppercase">
+							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Risk %
 							</span>
 							<Input
-								className="font-mono"
+								className="min-h-[44px] font-mono sm:min-h-0"
+								inputMode="decimal"
 								onChange={(e) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
@@ -124,11 +135,12 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 					{riskParams.positionSizing?.method === "kelly" && (
 						<div className="space-y-1">
-							<span className="font-mono text-[10px] text-muted-foreground uppercase">
+							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Kelly Fraction
 							</span>
 							<Input
-								className="font-mono"
+								className="min-h-[44px] font-mono sm:min-h-0"
+								inputMode="decimal"
 								onChange={(e) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
@@ -148,12 +160,12 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Max Risk Per Trade */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[11px] text-primary/80 uppercase tracking-wider">
+				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
 					Max Risk Per Trade
 				</h4>
-				<div className="grid grid-cols-2 gap-4">
+				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Type
 						</span>
 						<Select
@@ -165,21 +177,26 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							}
 							value={riskParams.maxRiskPerTrade?.type ?? ""}
 						>
-							<SelectTrigger className="font-mono text-sm">
+							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
 								<SelectValue placeholder="Select type..." />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="dollars">Dollars ($)</SelectItem>
-								<SelectItem value="percent">Percent (%)</SelectItem>
+								<SelectItem className="min-h-[44px] sm:min-h-0" value="dollars">
+									Dollars ($)
+								</SelectItem>
+								<SelectItem className="min-h-[44px] sm:min-h-0" value="percent">
+									Percent (%)
+								</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
 					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Value
 						</span>
 						<Input
-							className="font-mono"
+							className="min-h-[44px] font-mono sm:min-h-0"
+							inputMode="decimal"
 							onChange={(e) =>
 								updateField("maxRiskPerTrade", {
 									type: riskParams.maxRiskPerTrade?.type ?? "dollars",
@@ -197,12 +214,12 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Daily Loss Limit */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[11px] text-primary/80 uppercase tracking-wider">
+				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
 					Daily Loss Limit
 				</h4>
-				<div className="grid grid-cols-2 gap-4">
+				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Type
 						</span>
 						<Select
@@ -214,21 +231,26 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							}
 							value={riskParams.dailyLossLimit?.type ?? ""}
 						>
-							<SelectTrigger className="font-mono text-sm">
+							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
 								<SelectValue placeholder="Select type..." />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="dollars">Dollars ($)</SelectItem>
-								<SelectItem value="percent">Percent (%)</SelectItem>
+								<SelectItem className="min-h-[44px] sm:min-h-0" value="dollars">
+									Dollars ($)
+								</SelectItem>
+								<SelectItem className="min-h-[44px] sm:min-h-0" value="percent">
+									Percent (%)
+								</SelectItem>
 							</SelectContent>
 						</Select>
 					</div>
 					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Value
 						</span>
 						<Input
-							className="font-mono"
+							className="min-h-[44px] font-mono sm:min-h-0"
+							inputMode="decimal"
 							onChange={(e) =>
 								updateField("dailyLossLimit", {
 									type: riskParams.dailyLossLimit?.type ?? "dollars",
@@ -246,16 +268,17 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Other Settings */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[11px] text-primary/80 uppercase tracking-wider">
+				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
 					Other Settings
 				</h4>
-				<div className="grid grid-cols-2 gap-4">
+				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Max Concurrent Positions
 						</span>
 						<Input
-							className="font-mono"
+							className="min-h-[44px] font-mono sm:min-h-0"
+							inputMode="numeric"
 							onChange={(e) =>
 								updateField(
 									"maxConcurrentPositions",
@@ -269,11 +292,12 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						/>
 					</div>
 					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Min R:R Ratio
 						</span>
 						<Input
-							className="font-mono"
+							className="min-h-[44px] font-mono sm:min-h-0"
+							inputMode="decimal"
 							onChange={(e) =>
 								updateField(
 									"minRRRatio",
@@ -291,18 +315,18 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Target R Multiples */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[11px] text-primary/80 uppercase tracking-wider">
+				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
 					Target R Multiples
 				</h4>
 				<div className="flex flex-wrap gap-2">
 					{(riskParams.targetRMultiples ?? []).map((r) => (
 						<div
-							className="flex items-center gap-1 rounded border border-white/10 bg-white/2 px-2 py-1"
+							className="flex min-h-[36px] items-center gap-1 rounded border border-white/10 bg-white/2 px-2 py-1 sm:min-h-0"
 							key={r}
 						>
 							<span className="font-mono text-sm">{r}R</span>
 							<button
-								className="text-muted-foreground hover:text-loss"
+								className="min-h-[24px] min-w-[24px] text-muted-foreground hover:text-loss sm:min-h-0 sm:min-w-0"
 								onClick={() => {
 									const newMultiples = (
 										riskParams.targetRMultiples ?? []
@@ -319,7 +343,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						</div>
 					))}
 					<Button
-						className="h-7 font-mono text-xs"
+						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
 						onClick={() => {
 							const newValue = prompt("Enter R multiple (e.g., 2):");
 							if (newValue) {

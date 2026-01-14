@@ -1,0 +1,677 @@
+{
+	"project": "EdgeJournal",
+	"branchName": "ralph/daily-journal",
+	"description": "Daily journaling system with rich text editor, file uploads, checklists, and trade integration",
+	"userStories": [
+		{
+			"id": "US-001",
+			"title": "Add ID generators for daily journal entities",
+			"description": "As a developer, I want ID generators for daily journal, checklist template, and journal attachment entities so that they have consistent prefixed IDs.",
+			"acceptanceCriteria": [
+				"dailyJournal ID generator added to src/lib/shared/id.ts with prefix 'dj'",
+				"checklistTemplate ID generator added with prefix 'ct'",
+				"journalAttachment ID generator added with prefix 'ja'",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 1,
+			"passes": true,
+			"notes": "Added dailyJournal, checklistTemplate, journalAttachment ID generators with prefixes dj, ct, ja"
+		},
+		{
+			"id": "US-002",
+			"title": "Add daily journals schema",
+			"description": "As a developer, I want a database schema for daily journals so that journal content can be stored per user per date.",
+			"acceptanceCriteria": [
+				"dailyJournals table exists in src/server/db/schema.ts",
+				"Fields: id, userId, date, content, contentFormat, createdAt, updatedAt",
+				"Foreign key references users table with cascade delete",
+				"Unique index on userId + date combination",
+				"Index on userId for efficient queries",
+				"Uses ids.dailyJournal() for primary key default",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 2,
+			"passes": true,
+			"notes": "Added dailyJournals table with all required fields, FK to users, unique index on userId+date, index on userId, uses ids.dailyJournal()"
+		},
+		{
+			"id": "US-003",
+			"title": "Add checklist templates schema",
+			"description": "As a developer, I want a database schema for checklist templates so that users can define reusable checklist items.",
+			"acceptanceCriteria": [
+				"dailyChecklistTemplates table exists in src/server/db/schema.ts",
+				"Fields: id, userId, text, order, isActive, createdAt",
+				"Foreign key references users table with cascade delete",
+				"Index on userId",
+				"Uses ids.checklistTemplate() for primary key default",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 3,
+			"passes": true,
+			"notes": "Added dailyChecklistTemplates table with all fields, FK to users with cascade delete, index on userId, uses ids.checklistTemplate()"
+		},
+		{
+			"id": "US-004",
+			"title": "Add checklist checks schema",
+			"description": "As a developer, I want a database schema for daily checklist checks so that users can track which items they completed each day.",
+			"acceptanceCriteria": [
+				"dailyChecklistChecks table exists in src/server/db/schema.ts",
+				"Fields: journalId, templateId, checked, checkedAt",
+				"Composite primary key on journalId + templateId",
+				"Foreign keys reference dailyJournals and dailyChecklistTemplates with cascade delete",
+				"Index on journalId",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 4,
+			"passes": true,
+			"notes": "Added dailyChecklistChecks table with composite PK on journalId+templateId, FKs to dailyJournals and dailyChecklistTemplates with cascade delete, index on journalId"
+		},
+		{
+			"id": "US-005",
+			"title": "Add journal attachments schema",
+			"description": "As a developer, I want a database schema for journal attachments so that files uploaded to journals can be tracked.",
+			"acceptanceCriteria": [
+				"journalAttachments table exists in src/server/db/schema.ts",
+				"Fields: id, journalId, url, key, filename, mimeType, size, caption, createdAt",
+				"Foreign key references dailyJournals with cascade delete",
+				"Index on journalId",
+				"Uses ids.journalAttachment() for primary key default",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 5,
+			"passes": true,
+			"notes": "Added journalAttachments table with all fields, FK to dailyJournals with cascade delete, index on journalId, uses ids.journalAttachment()"
+		},
+		{
+			"id": "US-006",
+			"title": "Run db:push for daily journal tables",
+			"description": "As a developer, I want to push schema changes to the database so that the new tables are available.",
+			"acceptanceCriteria": [
+				"bun run db:push completes successfully",
+				"All four new tables exist in database",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 6,
+			"passes": true,
+			"notes": "db:push completed successfully, created dailyJournals, dailyChecklistTemplates, dailyChecklistChecks, journalAttachments tables. Also fixed biome config to exclude example files."
+		},
+		{
+			"id": "US-007",
+			"title": "Create dailyJournal router with getByDate",
+			"description": "As a frontend, I want a getByDate query so that I can fetch or auto-create a journal for a specific date.",
+			"acceptanceCriteria": [
+				"Router file created at src/server/api/routers/dailyJournal.ts",
+				"getByDate query accepts date input",
+				"Auto-creates journal if not exists for user+date",
+				"Returns journal with content",
+				"Uses protectedProcedure for auth",
+				"Router registered in src/server/api/root.ts",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 7,
+			"passes": true,
+			"notes": "Created dailyJournal router with getByDate query that auto-creates journals. Normalizes dates to midnight UTC. Returns journal with attachments and checklist checks."
+		},
+		{
+			"id": "US-008",
+			"title": "Add updateContent mutation",
+			"description": "As a trader, I want to save my journal content so that my notes are persisted.",
+			"acceptanceCriteria": [
+				"updateContent mutation in dailyJournal router",
+				"Accepts date and content parameters",
+				"Upserts journal content by user+date",
+				"Returns updated journal",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 8,
+			"passes": true,
+			"notes": "Added updateContent mutation with upsert logic. Normalizes date to midnight UTC, finds existing or creates new journal with content."
+		},
+		{
+			"id": "US-009",
+			"title": "Add getRange query",
+			"description": "As a frontend, I want to fetch journals for a date range so that I can display them on a calendar.",
+			"acceptanceCriteria": [
+				"getRange query in dailyJournal router",
+				"Accepts startDate and endDate parameters",
+				"Returns journals between dates for current user",
+				"Includes content presence indicator for calendar display",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 9,
+			"passes": true,
+			"notes": "Added getRange query with date filtering using gte/lte. Returns hasContent indicator for calendar display."
+		},
+		{
+			"id": "US-010",
+			"title": "Add getWithTrades query",
+			"description": "As a trader, I want to see my journal alongside trades for a date so that I can review the full context.",
+			"acceptanceCriteria": [
+				"getWithTrades query in dailyJournal router",
+				"Accepts date parameter",
+				"Returns journal and trades for that date",
+				"Trades filtered by entry time within the date",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 10,
+			"passes": true,
+			"notes": "Added getWithTrades query that auto-creates journal and fetches trades by entry time within the date. Uses lt(entryTime, nextDay) for proper date boundary filtering. Returns journal with attachments/checks and trades with account/tags."
+		},
+		{
+			"id": "US-011",
+			"title": "Add checklist template CRUD operations",
+			"description": "As a trader, I want to manage my checklist templates so that I can customize my daily routine.",
+			"acceptanceCriteria": [
+				"getTemplates query returns user's templates ordered by order field",
+				"createTemplate mutation creates new template with text and order",
+				"updateTemplate mutation updates text, order, or isActive",
+				"deleteTemplate mutation removes a template",
+				"All use protectedProcedure",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 11,
+			"passes": true,
+			"notes": "Added getTemplates query (ordered by order field), createTemplate mutation (auto-calculates next order if not provided), updateTemplate mutation (text/order/isActive), deleteTemplate mutation. All use protectedProcedure with user ownership validation."
+		},
+		{
+			"id": "US-012",
+			"title": "Add reorderTemplates mutation",
+			"description": "As a trader, I want to reorder my checklist templates so that I can prioritize important items.",
+			"acceptanceCriteria": [
+				"reorderTemplates mutation in dailyJournal router",
+				"Accepts array of {id, order} objects",
+				"Updates order values in bulk",
+				"Validates user owns all templates",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 12,
+			"passes": true,
+			"notes": "Added reorderTemplates mutation that accepts items array with id/order, validates user ownership, uses db transaction for bulk update, returns updated templates ordered by order field."
+		},
+		{
+			"id": "US-013",
+			"title": "Add daily check operations",
+			"description": "As a trader, I want to check off items on my daily checklist so that I can track my routine adherence.",
+			"acceptanceCriteria": [
+				"getChecks query returns checks for a date (auto-creates journal if needed)",
+				"toggleCheck mutation toggles a check for journal+template",
+				"bulkUpdateChecks mutation updates multiple checks at once",
+				"Check records created on first toggle",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 13,
+			"passes": true,
+			"notes": "Added getChecks query (auto-creates journal), toggleCheck mutation (creates check record on first toggle, toggles existing), bulkUpdateChecks mutation (upserts multiple checks in transaction). All validate template ownership."
+		},
+		{
+			"id": "US-014",
+			"title": "Integration tests for dailyJournal router core operations",
+			"description": "As a developer, I want integration tests for journal CRUD operations to verify correct behavior.",
+			"acceptanceCriteria": [
+				"Test file created: tests/integration/dailyJournal.test.ts",
+				"Uses setupTrader() fixture",
+				"Tests getByDate auto-creation",
+				"Tests updateContent persistence",
+				"Tests getRange date filtering",
+				"Tests user isolation (cannot access other user's journals)",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 14,
+			"passes": true,
+			"notes": "Created tests/integration/daily-journal/journal.test.ts with 15 tests covering getByDate auto-creation, updateContent persistence, getRange date filtering, hasContent indicator, and user isolation. All tests pass."
+		},
+		{
+			"id": "US-015",
+			"title": "Integration tests for checklist operations",
+			"description": "As a developer, I want integration tests for checklist template and check operations.",
+			"acceptanceCriteria": [
+				"Tests added to tests/integration/dailyJournal.test.ts",
+				"Tests template CRUD operations",
+				"Tests reorderTemplates",
+				"Tests check toggle and bulk update",
+				"Tests check auto-creates journal",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 15,
+			"passes": true,
+			"notes": "Created tests/integration/daily-journal/checklist.test.ts with 19 tests covering template CRUD, reorderTemplates, toggleCheck, bulkUpdateChecks, auto-journal creation, and user ownership validation. All tests pass."
+		},
+		{
+			"id": "US-016",
+			"title": "Set up S3 client utility",
+			"description": "As a developer, I want an S3 client configured for Bun so that I can interact with object storage.",
+			"acceptanceCriteria": [
+				"S3 client created at src/lib/storage/s3.ts",
+				"Uses Bun's built-in S3Client",
+				"Configured via environment variables (S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET)",
+				"Environment variables added to src/env.js schema",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 16,
+			"passes": true,
+			"notes": "Created src/lib/storage/s3.ts with Bun S3Client, lazy initialization, presigned URL helpers, delete/exists functions. Added optional S3_* env vars to src/env.js schema."
+		},
+		{
+			"id": "US-017",
+			"title": "Add getUploadUrl mutation",
+			"description": "As a trader, I want to get a presigned URL so that I can upload files directly to S3.",
+			"acceptanceCriteria": [
+				"getUploadUrl mutation in dailyJournal router",
+				"Accepts filename, mimeType, size, and date parameters",
+				"Generates presigned PUT URL",
+				"Key format: journals/{userId}/{date}/{uuid}-{filename}",
+				"Returns presigned URL and key",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 17,
+			"passes": true,
+			"notes": "Added getUploadUrl mutation using nanoid for unique keys, presigned PUT URL via getPresignedUploadUrl, checks isS3Configured before proceeding."
+		},
+		{
+			"id": "US-018",
+			"title": "Add confirmUpload mutation",
+			"description": "As a frontend, I want to confirm an upload completed so that the attachment is recorded in the database.",
+			"acceptanceCriteria": [
+				"confirmUpload mutation in dailyJournal router",
+				"Accepts journalId, key, filename, mimeType, size, caption",
+				"Creates journalAttachments record",
+				"Returns created attachment",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 18,
+			"passes": true,
+			"notes": "Added confirmUpload mutation that validates journal ownership, generates presigned download URL (7-day expiry), creates journalAttachments record with all fields."
+		},
+		{
+			"id": "US-019",
+			"title": "Add deleteAttachment mutation",
+			"description": "As a trader, I want to delete attachments so that I can remove unwanted files.",
+			"acceptanceCriteria": [
+				"deleteAttachment mutation in dailyJournal router",
+				"Accepts attachment id",
+				"Deletes from S3 using stored key",
+				"Deletes database record",
+				"Validates user owns the attachment",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 19,
+			"passes": true,
+			"notes": "Added deleteAttachment mutation that validates user owns attachment via journal ownership, deletes from S3 (with graceful error handling), and deletes database record."
+		},
+		{
+			"id": "US-020",
+			"title": "Install and configure Tiptap dependencies",
+			"description": "As a developer, I want Tiptap installed so that I can build a rich text editor.",
+			"acceptanceCriteria": [
+				"@tiptap/react, @tiptap/pm, @tiptap/starter-kit added to package.json",
+				"@tiptap/extension-link, @tiptap/extension-image, @tiptap/extension-placeholder added",
+				"bun install runs successfully",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 20,
+			"passes": true,
+			"notes": "Installed @tiptap/react, @tiptap/pm, @tiptap/starter-kit, @tiptap/extension-link, @tiptap/extension-image, @tiptap/extension-placeholder v3.15.3"
+		},
+		{
+			"id": "US-021",
+			"title": "Create daily-journal page layout",
+			"description": "As a trader, I want a daily journal page with resizable panels so that I can view calendar and editor side by side.",
+			"acceptanceCriteria": [
+				"Page created at src/app/(protected)/daily-journal/page.tsx",
+				"Uses ResizablePanelGroup with horizontal layout",
+				"Left panel (30%) for calendar and checklist",
+				"Right panel (70%) for editor and attachments",
+				"Date state managed with useState",
+				"Follows Terminal design system",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 21,
+			"passes": true,
+			"notes": "Created page with ResizablePanelGroup, left panel (30%) for calendar/checklist, right panel (70%) for editor/attachments. Uses useState for date management. Panel sizes persist to localStorage."
+		},
+		{
+			"id": "US-022",
+			"title": "Create DateNavigation component",
+			"description": "As a trader, I want date navigation controls so that I can move between days and select dates.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/date-navigation.tsx",
+				"Prev/Next day buttons",
+				"Today button to jump to current date",
+				"Date picker integration using existing Calendar component",
+				"Displays formatted date",
+				"Monospace font for interactive elements",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 22,
+			"passes": true,
+			"notes": "Created DateNavigation component with prev/next buttons, Today button, and date picker popover using react-day-picker. Added Calendar and Popover UI components."
+		},
+		{
+			"id": "US-023",
+			"title": "Create CalendarSidebar component",
+			"description": "As a trader, I want a calendar view with P&L colors so that I can see my trading performance at a glance.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/calendar-sidebar.tsx",
+				"Month grid calendar display",
+				"Days colored by P&L (green for profit, red for loss)",
+				"Journal indicator dot for days with content",
+				"Click day to select date",
+				"Navigate between months",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 23,
+			"passes": true,
+			"notes": "Created CalendarSidebar with month grid, P&L colors using analytics.getCalendarData, journal indicators using dailyJournal.getRange. Uses stable keys for weeks, date-fns for date manipulation, tooltips for day details."
+		},
+		{
+			"id": "US-024",
+			"title": "Add Daily Journal to sidebar navigation",
+			"description": "As a trader, I want Daily Journal in the nav so that I can easily access it.",
+			"acceptanceCriteria": [
+				"Nav item added to src/app/(protected)/_components/app-sidebar.tsx",
+				"Title: Daily Journal",
+				"Href: /daily-journal",
+				"Icon: Calendar (from lucide-react)",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 24,
+			"passes": true,
+			"notes": "Added Daily Journal nav item to mainNavItems array with Calendar icon, positioned after Trades."
+		},
+		{
+			"id": "US-025",
+			"title": "Create DailyChecklist component",
+			"description": "As a trader, I want to see and interact with my daily checklist so that I can track my routine.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/daily-checklist.tsx",
+				"Fetches templates and checks for selected date",
+				"Displays checkboxes for each active template",
+				"Toggle updates check status with optimistic update",
+				"Shows compliance percentage",
+				"Settings gear icon to open template management",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 25,
+			"passes": true,
+			"notes": "Created DailyChecklist component with optimistic updates for toggle, compliance percentage display with progress bar, settings gear icon, loading/empty states. Uses getTemplates and getChecks queries with toggleCheck mutation."
+		},
+		{
+			"id": "US-026",
+			"title": "Create ChecklistSettings modal",
+			"description": "As a trader, I want to manage my checklist templates so that I can customize my routine.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/checklist-settings.tsx",
+				"Modal/dialog using existing UI components",
+				"Add new template item with text input",
+				"Edit existing template text",
+				"Delete template (with confirmation)",
+				"Drag-and-drop reorder (or up/down buttons)",
+				"Toggle template active/inactive",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 26,
+			"passes": true,
+			"notes": "Created ChecklistSettings modal with add/edit/delete templates, up/down reorder buttons, toggle active/inactive, delete confirmation, optimistic updates."
+		},
+		{
+			"id": "US-027",
+			"title": "Create EditorToolbar component",
+			"description": "As a trader, I want a toolbar with formatting options so that I can style my journal content.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/editor-toolbar.tsx",
+				"Bold, italic, strikethrough buttons",
+				"Heading level buttons (H1, H2, H3)",
+				"Bullet list and ordered list buttons",
+				"Link insert button",
+				"Image upload button (integrates with S3)",
+				"Buttons show active state when format is applied",
+				"Follows Terminal design system",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 27,
+			"passes": true,
+			"notes": "Created EditorToolbar component with bold, italic, strikethrough, H1/H2/H3, bullet/ordered lists, link popover, and image upload button. Used custom EditorCommands interface to handle Tiptap extension command types."
+		},
+		{
+			"id": "US-028",
+			"title": "Create JournalEditor component",
+			"description": "As a trader, I want a rich text editor so that I can write formatted journal entries.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/journal-editor.tsx",
+				"Tiptap editor with StarterKit, Link, Image, Placeholder extensions",
+				"Placeholder text when empty",
+				"Auto-save with 500ms debounce",
+				"Loading state while saving",
+				"Error handling for save failures",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 28,
+			"passes": true,
+			"notes": "Created JournalEditor component with Tiptap, StarterKit/Link/Image/Placeholder extensions, 500ms debounced auto-save, save status indicator (saving/saved/error), image upload integration, date change handling."
+		},
+		{
+			"id": "US-029",
+			"title": "Add markdown shortcuts to editor",
+			"description": "As a trader, I want markdown shortcuts so that I can quickly format text without the toolbar.",
+			"acceptanceCriteria": [
+				"# for H1, ## for H2, ### for H3",
+				"**text** for bold, *text* for italic",
+				"- or * for bullet list",
+				"1. for ordered list",
+				"> for blockquote",
+				"Shortcuts work in JournalEditor",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 29,
+			"passes": true,
+			"notes": "Verified: StarterKit includes all markdown shortcuts by default - # for headings, **bold**, *italic*, - for bullets, 1. for ordered lists, > for blockquotes. No code changes needed."
+		},
+		{
+			"id": "US-030",
+			"title": "Create AttachmentUpload component",
+			"description": "As a trader, I want to upload files to my journal so that I can attach screenshots and documents.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/attachment-upload.tsx",
+				"Drag-and-drop zone",
+				"File select button",
+				"Upload progress indicator",
+				"Uses getUploadUrl and confirmUpload mutations",
+				"Validates file type and size",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 30,
+			"passes": true,
+			"notes": "Created AttachmentUpload component with drag-drop, progress tracking via XMLHttpRequest, file validation, and S3 upload flow. Integrated into daily-journal page."
+		},
+		{
+			"id": "US-031",
+			"title": "Create AttachmentGallery component",
+			"description": "As a trader, I want to view and manage my journal attachments so that I can see uploaded files.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/attachment-gallery.tsx",
+				"Grid display of attached images/files",
+				"Image lightbox on click",
+				"Delete button with confirmation",
+				"Shows filename and file type icon for non-images",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 31,
+			"passes": true,
+			"notes": "Created AttachmentGallery with image grid, lightbox, delete confirmation, and file list with icons. Integrated into daily-journal page."
+		},
+		{
+			"id": "US-032",
+			"title": "Integrate image upload into editor",
+			"description": "As a trader, I want to paste or drop images into the editor so that they appear inline.",
+			"acceptanceCriteria": [
+				"Paste image from clipboard inserts into editor",
+				"Drop image onto editor inserts inline",
+				"Images uploaded to S3 automatically",
+				"Image URL inserted at cursor position",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 32,
+			"passes": true,
+			"notes": "Added paste/drop handlers to JournalEditor. Images auto-upload to S3 and insert at cursor position."
+		},
+		{
+			"id": "US-033",
+			"title": "Create TradesSummary component",
+			"description": "As a trader, I want to see trades for the selected date so that I can review them alongside my journal.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/trades-summary.tsx",
+				"Lists trades for selected date",
+				"Shows symbol, direction, P&L for each trade",
+				"Total P&L summary",
+				"Links to trade detail page",
+				"Empty state when no trades",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 33,
+			"passes": true,
+			"notes": "Created TradesSummary with trade list, direction icons, P&L display, win/loss stats, and total P&L. Integrated into left panel."
+		},
+		{
+			"id": "US-034",
+			"title": "Create DailyJournalPreview component",
+			"description": "As a trader, I want a compact journal preview so that I can see journal content in the trade detail tab.",
+			"acceptanceCriteria": [
+				"Component created at src/components/daily-journal/daily-journal-preview.tsx",
+				"Shows journal content for given date",
+				"Displays checklist compliance badge",
+				"Link to full journal page",
+				"Supports read-only and editable modes",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 34,
+			"passes": true,
+			"notes": "Created DailyJournalPreview component with Tiptap editor, checklist compliance badge from templates+checks, link to full journal, and read-only/editable modes with auto-save."
+		},
+		{
+			"id": "US-035",
+			"title": "Integrate DailyJournalPreview into trade detail",
+			"description": "As a trader, I want to see and edit my daily journal from the trade detail view so that context is readily available.",
+			"acceptanceCriteria": [
+				"DailyJournalPreview integrated into src/components/trade-detail/content-panel.tsx",
+				"Replaces 'Daily Journal' tab placeholder content",
+				"Uses trade's entry date",
+				"Editable mode enabled",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 35,
+			"passes": true,
+			"notes": "Integrated DailyJournalPreview into content-panel.tsx. Replaced placeholder with component using trade.entryTime for date, editable mode enabled."
+		},
+		{
+			"id": "US-036",
+			"title": "Add getStreak query",
+			"description": "As a trader, I want to see my journaling streak so that I stay motivated to journal daily.",
+			"acceptanceCriteria": [
+				"getStreak query in dailyJournal router",
+				"Calculates consecutive days with journal content",
+				"Counts from today backwards",
+				"Returns current streak number",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 36,
+			"passes": true,
+			"notes": "Added getStreak query that fetches all user journals, filters to those with content, creates Set for O(1) lookup, counts consecutive days backwards from today."
+		},
+		{
+			"id": "US-037",
+			"title": "Add getComplianceStats query",
+			"description": "As a trader, I want to see my checklist compliance over time so that I can track my routine adherence.",
+			"acceptanceCriteria": [
+				"getComplianceStats query in dailyJournal router",
+				"Accepts date range parameters",
+				"Returns compliance percentage per day",
+				"Returns overall average compliance",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 37,
+			"passes": true,
+			"notes": "Added getComplianceStats query that accepts startDate/endDate, fetches active templates and journals with checks in range, calculates compliance % per day (checkedCount/totalTemplates), returns dailyCompliance array and averageCompliance."
+		},
+		{
+			"id": "US-038",
+			"title": "Add streak and compliance UI",
+			"description": "As a trader, I want to see my streak and compliance stats in the calendar sidebar.",
+			"acceptanceCriteria": [
+				"Current streak displayed in CalendarSidebar",
+				"Compliance percentage for current month",
+				"Visual indicator (fire icon or similar for streak)",
+				"Follows Terminal design system",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 38,
+			"passes": true,
+			"notes": "Added streak display with FlameIcon (orange when > 0), compliance % with CheckCircle2Icon (color-coded by threshold). Both have tooltips with detailed info."
+		},
+		{
+			"id": "US-039",
+			"title": "Create barrel export for daily-journal components",
+			"description": "As a developer, I want a barrel export for daily journal components so that imports are cleaner.",
+			"acceptanceCriteria": [
+				"src/components/daily-journal/index.ts created",
+				"Exports all daily-journal components",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 39,
+			"passes": true,
+			"notes": "Created barrel export index.ts with all 10 daily-journal components exported alphabetically."
+		}
+	]
+}

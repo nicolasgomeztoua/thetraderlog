@@ -232,36 +232,9 @@ export function formatMonthFull(monthIndex: number): string {
 
 // ============================================================================
 // NUMBER FORMATTERS
+// NOTE: formatCurrency and formatPercent live in @/lib/shared/utils.ts
+// Use those for consistency across the codebase.
 // ============================================================================
-
-/**
- * Format a number as currency.
- */
-export function formatCurrency(
-	value: number,
-	options?: { showSign?: boolean; decimals?: number },
-): string {
-	const { showSign = false, decimals = 2 } = options ?? {};
-	const formatted = Math.abs(value).toLocaleString(undefined, {
-		minimumFractionDigits: decimals,
-		maximumFractionDigits: decimals,
-	});
-	const sign = showSign && value > 0 ? "+" : value < 0 ? "-" : "";
-	return `${sign}$${formatted}`;
-}
-
-/**
- * Format a number as percentage.
- */
-export function formatPercent(
-	value: number,
-	options?: { showSign?: boolean; decimals?: number },
-): string {
-	const { showSign = false, decimals = 1 } = options ?? {};
-	const formatted = Math.abs(value).toFixed(decimals);
-	const sign = showSign && value > 0 ? "+" : value < 0 ? "-" : "";
-	return `${sign}${formatted}%`;
-}
 
 /**
  * Format a number with appropriate suffix (K, M, B).

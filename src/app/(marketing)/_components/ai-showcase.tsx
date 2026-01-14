@@ -121,25 +121,25 @@ export function AIShowcase() {
 	};
 
 	return (
-		<section className="relative py-32" id="ai">
+		<section className="relative py-16 sm:py-24 lg:py-32" id="ai">
 			{/* Background */}
 			<div className="absolute inset-0 bg-linear-to-b from-transparent via-primary/2 to-transparent" />
 
-			<div className="relative mx-auto max-w-6xl px-6">
+			<div className="relative mx-auto max-w-6xl px-4 sm:px-6">
 				{/* Header */}
-				<div className="mb-16 flex flex-col items-center text-center">
-					<div className="mb-6 inline-flex items-center gap-2 rounded-none border border-accent/20 bg-accent/5 px-4 py-2">
-						<Sparkles className="h-4 w-4 text-accent" />
-						<span className="font-mono text-accent text-xs uppercase tracking-wider">
+				<div className="mb-10 flex flex-col items-center text-center sm:mb-16">
+					<div className="mb-4 inline-flex items-center gap-2 rounded-none border border-accent/20 bg-accent/5 px-3 py-1.5 sm:mb-6 sm:px-4 sm:py-2">
+						<Sparkles className="h-3.5 w-3.5 text-accent sm:h-4 sm:w-4" />
+						<span className="font-mono text-[10px] text-accent uppercase tracking-wider sm:text-xs">
 							AI-Powered
 						</span>
 					</div>
-					<h2 className="font-bold text-4xl leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+					<h2 className="font-bold text-2xl leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
 						Ask anything about
 						<br />
 						<span className="text-accent text-glow-accent">your trading</span>
 					</h2>
-					<p className="mt-6 max-w-xl font-mono text-base text-muted-foreground">
+					<p className="mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
 						Natural language queries powered by your choice of AI. Get insights
 						that would take hours to analyze manually.
 					</p>
@@ -149,61 +149,69 @@ export function AIShowcase() {
 				<div className="mx-auto max-w-4xl">
 					<div className="overflow-hidden rounded border border-white/10 bg-black/80 shadow-2xl">
 						{/* Terminal header */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-3">
-							<div className="flex items-center gap-3">
-								<div className="flex items-center gap-2">
-									<div className="h-3 w-3 rounded-full bg-loss/60" />
-									<div className="h-3 w-3 rounded-full bg-breakeven/60" />
-									<div className="h-3 w-3 rounded-full bg-profit/60" />
+						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4 sm:py-3">
+							<div className="flex items-center gap-2 sm:gap-3">
+								<div className="flex items-center gap-1.5 sm:gap-2">
+									<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-3 sm:w-3" />
+									<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-3 sm:w-3" />
+									<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-3 sm:w-3" />
 								</div>
-								<span className="ml-4 font-mono text-muted-foreground text-xs">
+								<span className="hidden font-mono text-muted-foreground text-xs sm:ml-4 sm:block">
 									edge-ai
 								</span>
 							</div>
-							<div className="flex items-center gap-2">
-								<Brain className="h-4 w-4 text-accent" />
-								<span className="font-mono text-muted-foreground text-xs">
-									Claude 3.5 Sonnet
+							<div className="flex items-center gap-1.5 sm:gap-2">
+								<Brain className="h-3.5 w-3.5 text-accent sm:h-4 sm:w-4" />
+								<span className="font-mono text-[10px] text-muted-foreground sm:text-xs">
+									<span className="hidden sm:inline">Claude 3.5 </span>Sonnet
 								</span>
 							</div>
 						</div>
 
-						{/* Query selector */}
-						<div className="border-white/5 border-b p-4">
-							<div className="flex flex-wrap gap-2">
-								{queries.map((query, index) => (
-									<button
-										className={`flex items-center gap-2 rounded border px-3 py-2 font-mono text-xs transition-all ${
-											activeIndex === index
-												? "border-primary/50 bg-primary/10 text-primary"
-												: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground"
-										}`}
-										key={query.question}
-										onClick={() => handleQuerySelect(index)}
-										type="button"
-									>
-										<ChevronRight className="h-3 w-3" />
-										{query.question}
-									</button>
-								))}
+						{/* Query selector - horizontal scroll on mobile */}
+						<div className="-mx-4 border-white/5 border-b px-4 sm:mx-0 sm:px-0">
+							<div className="overflow-x-auto p-3 sm:p-4">
+								<div className="flex gap-2 sm:flex-wrap">
+									{queries.map((query, index) => (
+										<button
+											className={`flex min-h-[36px] shrink-0 items-center gap-1.5 rounded border px-2.5 py-1.5 font-mono text-[10px] transition-all sm:min-h-0 sm:gap-2 sm:px-3 sm:py-2 sm:text-xs ${
+												activeIndex === index
+													? "border-primary/50 bg-primary/10 text-primary"
+													: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground"
+											}`}
+											key={query.question}
+											onClick={() => handleQuerySelect(index)}
+											type="button"
+										>
+											<ChevronRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+											<span className="whitespace-nowrap">
+												{query.question}
+											</span>
+										</button>
+									))}
+								</div>
 							</div>
 						</div>
 
 						{/* Terminal content */}
-						<div className="min-h-[400px] p-6">
+						<div className="min-h-[280px] p-4 sm:min-h-[400px] sm:p-6">
 							{/* User input */}
-							<div className="mb-6 flex items-start gap-3">
-								<span className="font-mono text-primary text-sm">$</span>
-								<span className="font-mono text-sm">
+							<div className="mb-4 flex items-start gap-2 sm:mb-6 sm:gap-3">
+								<span className="font-mono text-primary text-xs sm:text-sm">
+									$
+								</span>
+								<span className="font-mono text-xs sm:text-sm">
 									{queries[activeIndex]?.question}
 								</span>
 							</div>
 
 							{/* AI Response */}
 							{showResponse ? (
-								<div className="flex items-start gap-3">
-									<span className="font-mono text-accent text-sm">→</span>
-									<div className="whitespace-pre-wrap font-mono text-muted-foreground text-sm leading-relaxed">
+								<div className="flex items-start gap-2 sm:gap-3">
+									<span className="font-mono text-accent text-xs sm:text-sm">
+										→
+									</span>
+									<div className="min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-muted-foreground text-xs leading-relaxed sm:text-sm">
 										<TypewriterText
 											key={key}
 											speed={8}
@@ -212,9 +220,9 @@ export function AIShowcase() {
 									</div>
 								</div>
 							) : (
-								<div className="flex items-center justify-center py-20">
+								<div className="flex items-center justify-center py-12 sm:py-20">
 									<Button
-										className="gap-2 font-mono text-xs uppercase tracking-wider"
+										className="min-h-[44px] gap-2 font-mono text-xs uppercase tracking-wider"
 										onClick={() => {
 											setShowResponse(true);
 											setKey((prev) => prev + 1);
@@ -228,12 +236,12 @@ export function AIShowcase() {
 						</div>
 
 						{/* Terminal footer */}
-						<div className="border-white/5 border-t bg-white/2 px-4 py-3">
-							<div className="flex items-center justify-between">
-								<span className="font-mono text-muted-foreground text-xs">
+						<div className="border-white/5 border-t bg-white/2 px-3 py-2 sm:px-4 sm:py-3">
+							<div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+								<span className="font-mono text-[10px] text-muted-foreground sm:text-xs">
 									Powered by your API key
 								</span>
-								<div className="flex items-center gap-4 font-mono text-muted-foreground text-xs">
+								<div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground sm:gap-4 sm:text-xs">
 									<span>OpenAI</span>
 									<span>Anthropic</span>
 									<span>Google</span>
@@ -244,7 +252,7 @@ export function AIShowcase() {
 				</div>
 
 				{/* Trust badges */}
-				<div className="mt-12 flex flex-wrap items-center justify-center gap-8 font-mono text-muted-foreground text-xs">
+				<div className="mt-8 flex flex-col items-center justify-center gap-3 font-mono text-[10px] text-muted-foreground sm:mt-12 sm:flex-row sm:gap-8 sm:text-xs">
 					<div className="flex items-center gap-2">
 						<span className="h-2 w-2 rounded-full bg-profit" />
 						<span>Your data stays private</span>

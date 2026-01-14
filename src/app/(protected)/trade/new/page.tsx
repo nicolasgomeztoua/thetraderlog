@@ -151,10 +151,15 @@ export default function NewTradePage() {
 	const isPending = createTrade.isPending;
 
 	return (
-		<div className="mx-auto max-w-2xl space-y-6">
+		<div className="mx-auto max-w-2xl space-y-4 pb-6 sm:space-y-6">
 			{/* Header */}
-			<div className="flex items-center gap-4">
-				<Button asChild size="icon" variant="ghost">
+			<div className="flex items-center gap-3 sm:gap-4">
+				<Button
+					asChild
+					className="min-h-[44px] min-w-[44px]"
+					size="icon"
+					variant="ghost"
+				>
 					<Link href="/journal">
 						<ArrowLeft className="h-4 w-4" />
 					</Link>
@@ -163,17 +168,19 @@ export default function NewTradePage() {
 					<span className="mb-1 block font-mono text-primary text-xs uppercase tracking-wider">
 						New Entry
 					</span>
-					<h1 className="font-bold text-2xl tracking-tight">Log Trade</h1>
-					<p className="font-mono text-muted-foreground text-xs">
+					<h1 className="font-bold text-xl tracking-tight sm:text-2xl">
+						Log Trade
+					</h1>
+					<p className="hidden font-mono text-muted-foreground text-xs sm:block">
 						Record a completed trade
 					</p>
 				</div>
 			</div>
 
-			<form className="space-y-6" onSubmit={handleSubmit}>
+			<form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
 				{/* Account Selection */}
 				{accounts.length > 0 && (
-					<div className="rounded border border-border bg-card p-4">
+					<div className="rounded border border-border bg-card p-3 sm:p-4">
 						<div className="mb-3 flex items-center gap-2">
 							<Wallet className="h-4 w-4 text-muted-foreground" />
 							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -203,7 +210,7 @@ export default function NewTradePage() {
 				)}
 
 				{/* Instrument Type */}
-				<div className="space-y-4 rounded border border-border bg-card p-4">
+				<div className="space-y-4 rounded border border-border bg-card p-3 sm:p-4">
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Instrument
 					</div>
@@ -261,7 +268,7 @@ export default function NewTradePage() {
 				</div>
 
 				{/* Entry Details */}
-				<div className="space-y-4 rounded border border-border bg-card p-4">
+				<div className="space-y-4 rounded border border-border bg-card p-3 sm:p-4">
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Entry
 					</div>
@@ -291,13 +298,14 @@ export default function NewTradePage() {
 							</Tabs>
 						</div>
 
-						<div className="grid gap-4 sm:grid-cols-2">
+						<div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
 							<div className="space-y-2">
 								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 									Entry Price <span className="text-loss">*</span>
 								</Label>
 								<Input
 									className="font-mono text-sm"
+									inputMode="decimal"
 									onChange={(e) => setEntryPrice(e.target.value)}
 									placeholder="0.00"
 									step="any"
@@ -313,6 +321,7 @@ export default function NewTradePage() {
 								</Label>
 								<Input
 									className="font-mono text-sm"
+									inputMode="decimal"
 									onChange={(e) => setQuantity(e.target.value)}
 									placeholder={instrumentType === "futures" ? "1" : "0.01"}
 									step="any"
@@ -322,7 +331,7 @@ export default function NewTradePage() {
 							</div>
 						</div>
 
-						<div className="grid gap-4 sm:grid-cols-2">
+						<div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
 							<div className="space-y-2">
 								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 									Entry Date <span className="text-loss">*</span>
@@ -351,7 +360,7 @@ export default function NewTradePage() {
 				</div>
 
 				{/* Exit Details */}
-				<div className="rounded border border-border bg-card p-4">
+				<div className="rounded border border-border bg-card p-3 sm:p-4">
 					<div className="flex items-center justify-between pb-4">
 						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Exit
@@ -371,14 +380,15 @@ export default function NewTradePage() {
 						</div>
 					</div>
 					{!isStillOpen && (
-						<div className="space-y-4">
-							<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-3 sm:space-y-4">
+							<div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
 								<div className="space-y-2">
 									<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 										Exit Price <span className="text-loss">*</span>
 									</Label>
 									<Input
 										className="font-mono text-sm"
+										inputMode="decimal"
 										onChange={(e) => setExitPrice(e.target.value)}
 										placeholder="0.00"
 										step="any"
@@ -393,6 +403,7 @@ export default function NewTradePage() {
 									</Label>
 									<Input
 										className="font-mono text-sm"
+										inputMode="decimal"
 										onChange={(e) => setRealizedPnl(e.target.value)}
 										placeholder="e.g. 150.00 or -75.50"
 										step="any"
@@ -402,13 +413,14 @@ export default function NewTradePage() {
 								</div>
 							</div>
 
-							<div className="grid gap-4 sm:grid-cols-2">
+							<div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
 								<div className="space-y-2">
 									<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 										Fees / Commission
 									</Label>
 									<Input
 										className="font-mono text-sm"
+										inputMode="decimal"
 										onChange={(e) => setFees(e.target.value)}
 										placeholder="0.00"
 										step="any"
@@ -446,17 +458,18 @@ export default function NewTradePage() {
 				</div>
 
 				{/* Risk Management */}
-				<div className="space-y-4 rounded border border-border bg-card p-4">
+				<div className="space-y-4 rounded border border-border bg-card p-3 sm:p-4">
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Risk Management
 					</div>
-					<div className="grid gap-4 sm:grid-cols-2">
+					<div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
 						<div className="space-y-2">
 							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 								Stop Loss
 							</Label>
 							<Input
 								className="font-mono text-sm"
+								inputMode="decimal"
 								onChange={(e) => setStopLoss(e.target.value)}
 								placeholder="Optional"
 								step="any"
@@ -471,6 +484,7 @@ export default function NewTradePage() {
 							</Label>
 							<Input
 								className="font-mono text-sm"
+								inputMode="decimal"
 								onChange={(e) => setTakeProfit(e.target.value)}
 								placeholder="Optional"
 								step="any"
@@ -482,12 +496,12 @@ export default function NewTradePage() {
 				</div>
 
 				{/* Trade Context */}
-				<div className="space-y-4 rounded border border-border bg-card p-4">
+				<div className="space-y-4 rounded border border-border bg-card p-3 sm:p-4">
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Trade Context
 					</div>
-					<div className="space-y-4">
-						<div className="grid gap-4 sm:grid-cols-2">
+					<div className="space-y-3 sm:space-y-4">
+						<div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
 							<div className="space-y-2">
 								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 									Setup Type
@@ -563,17 +577,17 @@ export default function NewTradePage() {
 				</div>
 
 				{/* Submit */}
-				<div className="flex justify-end gap-4">
+				<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-4">
 					<Button
 						asChild
-						className="font-mono text-xs uppercase tracking-wider"
+						className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 						type="button"
 						variant="outline"
 					>
 						<Link href="/journal">Cancel</Link>
 					</Button>
 					<Button
-						className="font-mono text-xs uppercase tracking-wider"
+						className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 						disabled={isPending}
 						type="submit"
 					>

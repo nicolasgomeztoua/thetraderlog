@@ -35,7 +35,7 @@ export default async function ProtectedLayout({
 								orientation="vertical"
 							/>
 						</header>
-						<main className="relative flex-1 overflow-auto p-6">
+						<main className="relative flex-1 overflow-auto p-4 sm:p-6">
 							{/* Background grid for content area */}
 							<div className="grid-bg pointer-events-none fixed inset-0 opacity-20" />
 							<div className="relative">

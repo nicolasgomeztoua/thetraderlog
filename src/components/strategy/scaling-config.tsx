@@ -84,15 +84,15 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6">
 			{/* Scale In Rules */}
 			<div className="space-y-3">
 				<div className="flex items-center justify-between">
-					<h4 className="font-mono text-[11px] text-profit uppercase tracking-wider">
+					<h4 className="font-mono text-[10px] text-profit uppercase tracking-wider sm:text-[11px]">
 						Scale In Rules
 					</h4>
 					<Button
-						className="h-7 font-mono text-xs"
+						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
 						onClick={addScaleIn}
 						size="sm"
 						type="button"
@@ -104,22 +104,22 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 				</div>
 
 				{(scalingRules.scaleIn ?? []).length === 0 ? (
-					<p className="font-mono text-muted-foreground text-sm">
+					<p className="font-mono text-muted-foreground text-xs sm:text-sm">
 						No scale-in rules defined
 					</p>
 				) : (
 					<div className="space-y-2">
 						{(scalingRules.scaleIn ?? []).map((rule, idx) => (
 							<div
-								className="flex items-center gap-3 rounded border border-white/5 bg-white/2 p-3"
+								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scalein-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
-									<span className="font-mono text-[10px] text-muted-foreground uppercase">
+									<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 										Trigger
 									</span>
 									<Input
-										className="font-mono text-sm"
+										className="min-h-[44px] font-mono text-sm sm:min-h-0"
 										onChange={(e) =>
 											updateScaleIn(idx, "trigger", e.target.value)
 										}
@@ -127,33 +127,36 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										value={rule.trigger}
 									/>
 								</div>
-								<div className="w-24 space-y-1">
-									<span className="font-mono text-[10px] text-muted-foreground uppercase">
-										Size %
-									</span>
-									<Input
-										className="font-mono text-sm"
-										onChange={(e) =>
-											updateScaleIn(
-												idx,
-												"sizePercent",
-												parseFloat(e.target.value) || 0,
-											)
-										}
-										step="5"
-										type="number"
-										value={rule.sizePercent}
-									/>
+								<div className="flex items-end gap-2">
+									<div className="flex-1 space-y-1 sm:w-24 sm:flex-initial">
+										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+											Size %
+										</span>
+										<Input
+											className="min-h-[44px] font-mono text-sm sm:min-h-0"
+											inputMode="decimal"
+											onChange={(e) =>
+												updateScaleIn(
+													idx,
+													"sizePercent",
+													parseFloat(e.target.value) || 0,
+												)
+											}
+											step="5"
+											type="number"
+											value={rule.sizePercent}
+										/>
+									</div>
+									<Button
+										className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-8 sm:w-8"
+										onClick={() => removeScaleIn(idx)}
+										size="icon"
+										type="button"
+										variant="ghost"
+									>
+										<Trash2 className="h-4 w-4" />
+									</Button>
 								</div>
-								<Button
-									className="mt-5 h-8 w-8 text-muted-foreground hover:text-loss"
-									onClick={() => removeScaleIn(idx)}
-									size="icon"
-									type="button"
-									variant="ghost"
-								>
-									<Trash2 className="h-4 w-4" />
-								</Button>
 							</div>
 						))}
 					</div>
@@ -163,11 +166,11 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 			{/* Scale Out Rules */}
 			<div className="space-y-3">
 				<div className="flex items-center justify-between">
-					<h4 className="font-mono text-[11px] text-loss uppercase tracking-wider">
+					<h4 className="font-mono text-[10px] text-loss uppercase tracking-wider sm:text-[11px]">
 						Scale Out Rules
 					</h4>
 					<Button
-						className="h-7 font-mono text-xs"
+						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
 						onClick={addScaleOut}
 						size="sm"
 						type="button"
@@ -179,22 +182,22 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 				</div>
 
 				{(scalingRules.scaleOut ?? []).length === 0 ? (
-					<p className="font-mono text-muted-foreground text-sm">
+					<p className="font-mono text-muted-foreground text-xs sm:text-sm">
 						No scale-out rules defined
 					</p>
 				) : (
 					<div className="space-y-2">
 						{(scalingRules.scaleOut ?? []).map((rule, idx) => (
 							<div
-								className="flex items-center gap-3 rounded border border-white/5 bg-white/2 p-3"
+								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scaleout-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
-									<span className="font-mono text-[10px] text-muted-foreground uppercase">
+									<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 										Trigger
 									</span>
 									<Input
-										className="font-mono text-sm"
+										className="min-h-[44px] font-mono text-sm sm:min-h-0"
 										onChange={(e) =>
 											updateScaleOut(idx, "trigger", e.target.value)
 										}
@@ -202,33 +205,36 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										value={rule.trigger}
 									/>
 								</div>
-								<div className="w-24 space-y-1">
-									<span className="font-mono text-[10px] text-muted-foreground uppercase">
-										Size %
-									</span>
-									<Input
-										className="font-mono text-sm"
-										onChange={(e) =>
-											updateScaleOut(
-												idx,
-												"sizePercent",
-												parseFloat(e.target.value) || 0,
-											)
-										}
-										step="5"
-										type="number"
-										value={rule.sizePercent}
-									/>
+								<div className="flex items-end gap-2">
+									<div className="flex-1 space-y-1 sm:w-24 sm:flex-initial">
+										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+											Size %
+										</span>
+										<Input
+											className="min-h-[44px] font-mono text-sm sm:min-h-0"
+											inputMode="decimal"
+											onChange={(e) =>
+												updateScaleOut(
+													idx,
+													"sizePercent",
+													parseFloat(e.target.value) || 0,
+												)
+											}
+											step="5"
+											type="number"
+											value={rule.sizePercent}
+										/>
+									</div>
+									<Button
+										className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-8 sm:w-8"
+										onClick={() => removeScaleOut(idx)}
+										size="icon"
+										type="button"
+										variant="ghost"
+									>
+										<Trash2 className="h-4 w-4" />
+									</Button>
 								</div>
-								<Button
-									className="mt-5 h-8 w-8 text-muted-foreground hover:text-loss"
-									onClick={() => removeScaleOut(idx)}
-									size="icon"
-									type="button"
-									variant="ghost"
-								>
-									<Trash2 className="h-4 w-4" />
-								</Button>
 							</div>
 						))}
 					</div>

@@ -469,28 +469,28 @@ function ChartTerminal({
 	return (
 		<div className="overflow-hidden rounded border border-border bg-card">
 			{/* Terminal header */}
-			<div className="flex items-center justify-between border-border border-b bg-secondary px-4 py-2">
-				<div className="flex items-center gap-2">
-					<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
-					<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
-					<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+			<div className="flex items-center justify-between border-border border-b bg-secondary px-3 py-2 sm:px-4">
+				<div className="flex items-center gap-1.5 sm:gap-2">
+					<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+					<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+					<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 				</div>
 				<div className="text-center">
-					<span className="font-mono text-[10px] text-muted-foreground">
+					<span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">
 						{title.toLowerCase().replace(/\s+/g, "-")}
 					</span>
 				</div>
-				<div className="w-14" />
+				<div className="w-10 sm:w-14" />
 			</div>
 			{/* Chart header */}
-			<div className="border-border border-b px-4 py-3">
+			<div className="border-border border-b px-3 py-2 sm:px-4 sm:py-3">
 				<h3 className="font-medium text-sm">{title}</h3>
 				<p className="font-mono text-[10px] text-muted-foreground">
 					{description}
 				</p>
 			</div>
 			{/* Chart content */}
-			<div className="p-4">{children}</div>
+			<div className="p-3 sm:p-4">{children}</div>
 		</div>
 	);
 }
@@ -550,7 +550,7 @@ function TimeTab() {
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6">
 			{/* Calendar Heatmap */}
 			<ChartTerminal
 				description="Daily P&L over the last year"
@@ -560,7 +560,7 @@ function TimeTab() {
 			</ChartTerminal>
 
 			{/* Day of Week & Hour Analysis */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description="Performance breakdown by weekday"
 					title="Day of Week"
@@ -577,7 +577,7 @@ function TimeTab() {
 			</div>
 
 			{/* Session & Monthly Analysis */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description="Performance by trading session"
 					title="Trading Sessions"
@@ -677,9 +677,9 @@ function RiskTab() {
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6">
 			{/* Risk metrics cards */}
-			<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				<MetricCard
 					colorClass="text-loss"
 					description={`Peak P&L: ${formatCurrency(riskMetrics.peakPnl)}`}
@@ -797,7 +797,7 @@ function RiskTab() {
 			</ChartTerminal>
 
 			{/* R-Multiple Distribution + Risk/Reward Analysis - side by side */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description="Distribution of trades by R-multiple"
 					title="R-Multiple Distribution"
@@ -842,7 +842,7 @@ function RiskTab() {
 			</div>
 
 			{/* Risk of Ruin and Kelly - side by side */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description={`Probability of hitting ${riskMetrics.ruinThresholdPercent.toFixed(0)}% drawdown`}
 					title="Risk of Ruin"
@@ -933,9 +933,9 @@ function SymbolsTab() {
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6">
 			{/* Top row: Table and Distribution */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description="Performance metrics for each traded symbol"
 					title="Symbol Performance"
@@ -1034,7 +1034,7 @@ function BehaviorTab() {
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6">
 			{/* Behavioral Metrics Summary */}
 			<BehavioralMetrics
 				disciplineScore={behavioralData?.disciplineScore ?? 100}
@@ -1045,7 +1045,7 @@ function BehaviorTab() {
 			/>
 
 			{/* Streak and Revenge Trading Analysis */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description="Win/loss streak patterns and distribution"
 					title="Streak Analysis"
@@ -1107,7 +1107,7 @@ function BehaviorTab() {
 			</div>
 
 			{/* Overtrading and Holding Time Analysis */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description="Performance by daily trade count"
 					title="Overtrading Analysis"
@@ -1253,15 +1253,17 @@ export default function AnalyticsPage() {
 	const isFilterDataLoading = strategiesLoading || tagsLoading;
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-4 sm:space-y-6">
 			{/* Header */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
 				<div>
-					<span className="mb-2 block font-mono text-primary text-xs uppercase tracking-wider">
+					<span className="mb-1 block font-mono text-[10px] text-primary uppercase tracking-wider sm:mb-2 sm:text-xs">
 						Performance
 					</span>
-					<h1 className="font-bold text-3xl tracking-tight">Analytics</h1>
-					<p className="mt-1 font-mono text-muted-foreground text-sm">
+					<h1 className="font-bold text-2xl tracking-tight sm:text-3xl">
+						Analytics
+					</h1>
+					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
 						Analyze your trading performance with professional metrics
 					</p>
 				</div>
@@ -1287,47 +1289,49 @@ export default function AnalyticsPage() {
 			/>
 
 			{/* Tab Navigation */}
-			<Tabs className="space-y-6" defaultValue="overview">
-				<TabsList className="bg-secondary/50">
-					<TabsTrigger
-						className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-						value="overview"
-					>
-						Overview
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-						value="time"
-					>
-						Time
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-						value="risk"
-					>
-						Risk
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-						value="symbols"
-					>
-						Symbols
-					</TabsTrigger>
-					<TabsTrigger
-						className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-						value="behavior"
-					>
-						Behavior
-					</TabsTrigger>
-				</TabsList>
+			<Tabs className="space-y-4 sm:space-y-6" defaultValue="overview">
+				<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+					<TabsList className="inline-flex w-auto min-w-full bg-secondary/50 sm:w-full">
+						<TabsTrigger
+							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							value="overview"
+						>
+							Overview
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							value="time"
+						>
+							Time
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							value="risk"
+						>
+							Risk
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							value="symbols"
+						>
+							Symbols
+						</TabsTrigger>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							value="behavior"
+						>
+							Behavior
+						</TabsTrigger>
+					</TabsList>
+				</div>
 
 				{/* Overview Tab */}
-				<TabsContent className="space-y-6" value="overview">
+				<TabsContent className="space-y-4 sm:space-y-6" value="overview">
 					{/* Stats Overview */}
 					<StatsOverview />
 
 					{/* Charts */}
-					<div className="grid gap-6 lg:grid-cols-2">
+					<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 						<ChartTerminal
 							description="Breakdown of trade outcomes"
 							title="Win/Loss Distribution"
@@ -1354,22 +1358,22 @@ export default function AnalyticsPage() {
 				</TabsContent>
 
 				{/* Time Tab */}
-				<TabsContent className="space-y-6" value="time">
+				<TabsContent className="space-y-4 sm:space-y-6" value="time">
 					<TimeTab />
 				</TabsContent>
 
 				{/* Risk Tab */}
-				<TabsContent className="space-y-6" value="risk">
+				<TabsContent className="space-y-4 sm:space-y-6" value="risk">
 					<RiskTab />
 				</TabsContent>
 
 				{/* Symbols Tab */}
-				<TabsContent className="space-y-6" value="symbols">
+				<TabsContent className="space-y-4 sm:space-y-6" value="symbols">
 					<SymbolsTab />
 				</TabsContent>
 
 				{/* Behavior Tab */}
-				<TabsContent className="space-y-6" value="behavior">
+				<TabsContent className="space-y-4 sm:space-y-6" value="behavior">
 					<BehaviorTab />
 				</TabsContent>
 			</Tabs>

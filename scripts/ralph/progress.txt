@@ -1,421 +1,314 @@
-# Ralph Progress Log - Daily Journal Feature
-# Started: 2026-01-11
+# Ralph Progress Log
+Started: Wed Jan 14 18:20:29 +01 2026
 ---
 
 ## Codebase Patterns
-- Database schema: src/server/db/schema.ts (single source of truth)
-- Constants: src/lib/constants/ (never hardcode values)
-- tRPC routers: src/server/api/routers/
-- UI components: src/components/ui/ (Shadcn + Terminal design)
-- Colors: Chartreuse #d4ff00 (primary), Ice Blue #00d4ff (AI), Green #00ff88 (profit), Red #ff3b3b (loss)
-- Always run `bun run check` and `bun run build` before committing
+- Mobile breakpoint is 768px, detected via `useIsMobile` hook in `src/hooks/use-mobile.ts`
+- shadcn Sidebar component already renders as Sheet drawer on mobile (via radix Sheet)
+- Touch target minimum is 44px (iOS/Android accessibility guidelines)
+- Use `min-h-[44px]` for touch-friendly interactive elements
+- Responsive padding pattern: `p-4 sm:p-6` or `p-3 sm:p-4` (less padding on mobile)
+- Dropdown width can match trigger using `w-[var(--radix-dropdown-menu-trigger-width)]`
+- Number inputs should use `inputMode="decimal"` for mobile numeric keyboard
 
 ---
 
-## Learnings
-
-(Ralph will add learnings here as stories are completed)
-
----
-
-## 2026-01-11 - US-001
-- Added ID generators for daily journal entities (dj, ct, ja prefixes)
-- Files changed: src/lib/shared/id.ts
+## 2026-01-14 - US-001 Protected Layout Mobile Polish
+- What was implemented:
+  - Made main content padding responsive (p-4 sm:p-6 in layout.tsx)
+  - Improved account selector trigger touch target (min-h-[44px])
+  - Improved all dropdown menu item touch targets (min-h-[44px] py-2.5)
+  - Made dropdown content match trigger width for better mobile UX
+  - Applied same improvements to "Add Trade" dropdown
+- Files changed:
+  - src/app/(protected)/layout.tsx
+  - src/app/(protected)/_components/app-sidebar.tsx
 - **Learnings for future iterations:**
-  - ID generators follow pattern: `createId("prefix")` returning `prefix-{nanoid}`
-  - All entity IDs have 2-character prefixes (us=user, ac=account, dj=dailyJournal, etc.)
+  - shadcn Sidebar component already has excellent mobile support built-in (Sheet drawer on mobile)
+  - `useIsMobile` hook returns true when viewport < 768px
+  - SidebarTrigger toggles Sheet drawer on mobile automatically
+  - Biome enforces CSS class sorting (useSortedClasses rule)
 ---
 
-## 2026-01-11 - US-002
-- Added dailyJournals table schema with all required fields
-- Files changed: src/server/db/schema.ts
+## 2026-01-14 - US-002 Dashboard Mobile Responsive Grid
+- What was implemented:
+  - Stats grid responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 (both skeleton and actual)
+  - StartJournalHero stacks vertically on mobile with flex-col sm:flex-row
+  - Responsive padding on hero section: p-4 sm:p-6
+  - Responsive button text: 'Start' on mobile, 'Start My Journal' on desktop
+  - Full-width buttons on mobile (w-full sm:w-auto)
+  - Page title responsive: text-2xl sm:text-3xl
+  - Performance summary key metrics grid stacks on mobile: grid-cols-1 sm:grid-cols-2
+  - Performance summary wrapper grid made explicitly responsive
+- Files changed:
+  - src/app/(protected)/dashboard/page.tsx
 - **Learnings for future iterations:**
-  - Table pattern: use createTable() with third argument for indexes
-  - User FK with cascade delete: `.references(() => users.id, { onDelete: "cascade" })`
-  - Unique index uses uniqueIndex(), regular index uses index()
-  - Relations added to usersRelations (many) and new entity relations (one back to user)
-  - Type exports follow pattern: `export type Entity = typeof table.$inferSelect`
+  - Use conditional spans for mobile/desktop text variants: `<span className="sm:hidden">Short</span><span className="hidden sm:inline">Longer text</span>`
+  - Full-width buttons on mobile with `w-full sm:w-auto` pattern
+  - Always update skeleton/loading states to match responsive patterns of actual content
 ---
 
-## 2026-01-11 - US-003, US-004, US-005
-- Verified checklist templates, checklist checks, and journal attachments schemas already implemented
-- US-003: dailyChecklistTemplates table with id, userId, text, order, isActive, createdAt fields
-- US-004: dailyChecklistChecks table with journalId, templateId, checked, checkedAt (composite PK)
-- US-005: journalAttachments table with id, journalId, url, key, filename, mimeType, size, caption, createdAt
-- All relations properly configured in schema
-- Files verified: src/server/db/schema.ts (already committed in previous iteration)
+## 2026-01-14 - US-003 Journal List Mobile Card View
+- What was implemented:
+  - Created TradeCard component for mobile card view displaying symbol, direction, P&L, date, R-multiple, exit reason, rating, and reviewed status
+  - Created TrashCard component for mobile trash view with restore and delete actions
+  - Filter panel hidden on mobile, replaced with Filter button that opens Sheet drawer
+  - Search bar remains visible at top with filter button adjacent
+  - Bulk actions bar adapts to mobile: icons-only with min-h-[44px] touch targets
+  - ColumnConfig hidden on mobile (wrapped with hidden sm:flex)
+  - Select all header on mobile shows checkbox and trade count
+  - Infinite scroll sentinel and loading indicators work in both views
+- Files changed:
+  - src/app/(protected)/journal/page.tsx
 - **Learnings for future iterations:**
-  - Composite primary key pattern: `primaryKey({ columns: [t.col1, t.col2] })`
-  - Junction/join tables reference both parent tables with cascade delete
-  - All tables need corresponding relations defined for Drizzle ORM
-  - Type exports for both Select and Insert: `Entity` and `NewEntity`
+  - Use `<button>` element for clickable cards instead of `<div role="button">` - Biome enforces semantic elements
+  - For nested interactive elements inside buttons, use biome-ignore comments for a11y rules
+  - Sheet component from shadcn works great for mobile filter drawers
+  - Pattern for icon-only buttons on mobile: `<Icon className="h-3.5 w-3.5 sm:mr-2" /><span className="hidden sm:inline">Label</span>`
+  - Wrap interactive child elements with `onClick={e => e.stopPropagation()}` span to prevent parent click
 ---
 
-## 2026-01-11 - US-006
-- Pushed schema changes to database with `bun run db:push`
-- All four tables created: dailyJournals, dailyChecklistTemplates, dailyChecklistChecks, journalAttachments
-- Fixed biome config to exclude example/config files from linting
-- Files changed: biome.jsonc
+## 2026-01-14 - US-004 Trade Detail Mobile Layout
+- What was implemented:
+  - Added useIsMobile hook for mobile detection
+  - Added isStatsOpen state for Sheet drawer control
+  - Added BarChart3 icon button (md:hidden) in header to open stats drawer
+  - Replaced ResizablePanelGroup with conditional rendering: Sheet drawer for mobile, panels for desktop
+  - ContentPanel displays full-width on mobile
+  - Header made responsive: responsive padding (px-2 sm:px-4), icon-only review button on mobile
+  - Hide Share button on mobile (hidden sm:flex)
+  - Hide Status badge and Imported badge on mobile (hidden sm:inline-flex)
+  - Hide date info line on mobile (hidden sm:block)
+  - Navigation arrows remain accessible with same size
+  - Loading state skeleton adjusted for mobile (hide left panel skeleton on md:hidden)
+- Files changed:
+  - src/app/(protected)/journal/[id]/page.tsx
 - **Learnings for future iterations:**
-  - Biome exclude pattern: `"includes": ["**", "!folder", "!file.json"]` (add `**` first, then negations)
-  - Long PostgreSQL identifier names are automatically truncated (notice, not error)
-  - db:push is safe for new tables - no destructive changes
+  - For split panel pages, conditionally render based on isMobile: Sheet drawer for mobile, ResizablePanelGroup for desktop
+  - Sheet drawer from left side (`side="left"`) works well for stats panels
+  - Use min-w-0 flex-1 on container to allow content to shrink properly on mobile
+  - DialogContent component from shadcn is already mobile-responsive, no changes needed for dialogs
+  - Pattern for conditional mobile/desktop layouts: `{isMobile ? (<MobileComponent />) : (<DesktopComponent />)}`
 ---
 
-## 2026-01-11 - US-007
-- Created dailyJournal router with getByDate query
-- Files changed: src/server/api/routers/dailyJournal.ts, src/server/api/root.ts
+## 2026-01-14 - US-005 New Trade Page Mobile Adaptation
+- What was implemented:
+  - Responsive container spacing: space-y-4 sm:space-y-6 and pb-6 for bottom padding
+  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile, back button with min-h-[44px] min-w-[44px]
+  - All card sections use responsive padding: p-3 sm:p-4
+  - Form grids use tighter spacing on mobile: gap-3 sm:gap-4
+  - All number inputs have inputMode="decimal" for proper mobile numeric keyboard
+  - Submit buttons full-width on mobile: w-full sm:w-auto with min-h-[44px] for touch targets
+  - Button order reversed on mobile (submit first): flex-col-reverse sm:flex-row
+- Files changed:
+  - src/app/(protected)/trade/new/page.tsx
 - **Learnings for future iterations:**
-  - tRPC router pattern: create file in routers/, export router, register in root.ts
-  - Date normalization: use helper function to normalize to midnight UTC for date-based lookups
-  - Auto-create pattern: check if exists, if not insert and re-fetch with relations
-  - TypeScript: Drizzle returning() can return undefined, always guard with `if (!created)`
-  - Queries can include nested relations with `with: { relation: { with: { nested: true } } }`
+  - Use inputMode="decimal" on all number inputs for mobile-optimized numeric keyboard
+  - Pattern for mobile-first button layouts: `flex-col-reverse sm:flex-row` puts primary action at top on mobile
+  - Consistent card padding pattern: `p-3 sm:p-4` reduces cramped feeling on small screens
+  - Gap spacing also should be responsive: `gap-3 sm:gap-4` for form grids
 ---
 
-## 2026-01-11 - US-008
-- Added updateContent mutation for upsert journal content
-- Files changed: src/server/api/routers/dailyJournal.ts
+## 2026-01-14 - US-006 Analytics Page Mobile Layout
+- What was implemented:
+  - Added mobile detection using useIsMobile hook in AnalyticsQueryBar component
+  - Converted filter controls to Sheet drawer on mobile (Filter button opens drawer from right)
+  - Made tab navigation scrollable on mobile with overflow-x-auto and touch-friendly targets (min-h-[40px])
+  - Added responsive stats grid pattern: grid-cols-1 sm:grid-cols-2 lg:grid-cols-4
+  - Added horizontal scroll for HourHeatmap (overflow-x-auto with min-w-[320px])
+  - Made CalendarHeatmap summary stats responsive with flex-wrap gap-3
+  - Made ChartTerminal component responsive (smaller padding/dots on mobile, terminal path hidden on mobile)
+  - Responsive header (text-2xl sm:text-3xl title, description hidden on mobile)
+  - Responsive spacing throughout all tabs (space-y-4 sm:space-y-6, gap-4 sm:gap-6)
+- Files changed:
+  - src/app/(protected)/analytics/page.tsx
+  - src/components/analytics/analytics-query-bar.tsx
+  - src/components/analytics/calendar-heatmap.tsx
+  - src/components/analytics/hour-heatmap.tsx
 - **Learnings for future iterations:**
-  - Upsert pattern: query first to check if exists, then update or insert accordingly
-  - Mutations return the updated/created entity for optimistic updates on frontend
-  - Remember to set updatedAt when updating existing records
+  - For complex filter panels, use Sheet drawer on mobile with shared filterContent JSX variable
+  - Pattern for mobile Sheet with filters: separate state for sheet (isSheetOpen) vs desktop expansion (isExpanded)
+  - Tab bars on mobile: wrap in overflow-x-auto container with -mx-4 px-4 to allow scroll past edge padding
+  - For data-dense components (heatmaps, grids), use min-w-[Xpx] with overflow-x-auto for horizontal scroll
+  - Hide decorative elements on mobile (terminal paths, less important badges) to save space
 ---
 
-## 2026-01-11 - US-009
-- Added getRange query for fetching journals in a date range
-- Files changed: src/server/api/routers/dailyJournal.ts
+## 2026-01-14 - US-007 AI Page Mobile Adaptation
+- What was implemented:
+  - Responsive container spacing: space-y-4 sm:space-y-6
+  - Header responsive: text-2xl sm:text-3xl title, description hidden on mobile, gap-3 for proper spacing
+  - API Keys button icon-only on mobile with sm:mr-2 and hidden sm:inline pattern
+  - API Key notice banner stacks vertically on mobile (flex-col sm:flex-row) with full-width Settings button
+  - Terminal header: dots smaller on mobile (h-2 w-2 sm:h-2.5 sm:w-2.5), terminal path hidden on mobile
+  - Chat content padding responsive (p-3 sm:p-4), example query buttons have min-h-[36px] touch targets
+  - Messages use smaller text on mobile (text-xs sm:text-sm) with break-words and min-w-0 flex-1 to prevent overflow
+  - Loading indicator smaller on mobile (h-3 w-3 sm:h-3.5 sm:w-3.5)
+  - Input area has min-h-[44px] for both input and send button for touch-friendly targets
+- Files changed:
+  - src/app/(protected)/ai/page.tsx
 - **Learnings for future iterations:**
-  - Date range queries: use `gte` and `lte` from drizzle-orm for inclusive date ranges
-  - For calendar display, transform data to include computed flags like `hasContent` to avoid sending full content
-  - Use `columns` option in findMany to limit returned fields when full data isn't needed
+  - For chat interfaces, use `break-words` and `min-w-0 flex-1` to prevent long content from breaking layout
+  - Terminal-style decorative elements (dots, paths) can be smaller or hidden on mobile
+  - Simple chat pages don't need Sheet drawers - just responsive styling is sufficient
+  - For icon-only buttons on mobile, use `min-w-[44px] min-h-[44px]` to ensure proper touch target
 ---
 
-## 2026-01-11 - US-010
-- Added getWithTrades query that returns journal and trades for a specific date
-- Files changed: src/server/api/routers/dailyJournal.ts
+## 2026-01-14 - US-008 Settings Page Mobile Adaptation
+- What was implemented:
+  - Responsive header: text-2xl sm:text-3xl title, description hidden on mobile
+  - Tab bar with horizontal scroll wrapper (-mx-4 px-4 overflow-x-auto) and touch targets (min-h-[40px])
+  - Tab triggers with smaller text on mobile (text-[10px] sm:text-xs) and responsive padding
+  - All Card headers/content use responsive padding: p-4 sm:p-6
+  - Trading sessions row stacks on mobile: name+delete on top, time selectors+color on bottom
+  - Session time selectors have smaller widths on mobile (w-[70px] sm:w-24)
+  - Account groups and accounts cards stack vertically on mobile with responsive gap
+  - Account cards hide less important badges (Linked, Group) on mobile
+  - All action buttons have min-h-[36px] min-w-[36px] for touch targets
+  - AI tab API key inputs have min-h-[44px] with description hidden on mobile
+  - Save footer stacks vertically on mobile with full-width button
+  - TagManager component updated with responsive header and touch-friendly buttons
+  - Loading skeleton has responsive sizes
+- Files changed:
+  - src/app/(protected)/settings/_components/settings-content.tsx
+  - src/app/(protected)/settings/page.tsx
+  - src/components/tags/tag-manager.tsx
 - **Learnings for future iterations:**
-  - For "within a day" queries, use `gte(field, normalizedDate)` AND `lt(field, nextDay)` instead of lte(endOfDay)
-  - Combine auto-create pattern with related entity fetching in a single query method
-  - Filter soft-deleted trades with `isNull(trades.deletedAt)`
-  - Use `orderBy: (table, { asc }) => [asc(table.field)]` for query ordering
+  - For complex multi-tab pages, wrap TabsList in overflow-x-auto container for horizontal scroll
+  - Pattern for session/row editors: stack controls vertically on mobile with related items grouped
+  - Use shrink-0 on fixed-size elements (color indicators, action buttons) to prevent shrinking
+  - DialogFooter can use flex-col-reverse gap-2 sm:flex-row for mobile-first button layouts
+  - Badge counts (like "3 trades") can be shortened on mobile by removing word "trades"
 ---
 
-## 2026-01-11 - US-011
-- Added checklist template CRUD operations: getTemplates, createTemplate, updateTemplate, deleteTemplate
-- Files changed: src/server/api/routers/dailyJournal.ts
+## 2026-01-14 - US-009 Import Page Mobile Adaptation
+- What was implemented:
+  - Added useIsMobile hook for mobile detection
+  - Progress stepper made responsive: horizontal scroll container, smaller step indicators (h-7 w-7 vs h-8 w-8), step labels always visible with smaller text
+  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile, back button with 44px touch target
+  - Select account step: responsive padding (p-4 sm:p-6), terminal dots smaller on mobile, touch-friendly dropdown (min-h-[44px]), full-width continue button
+  - Upload area: smaller padding on mobile (p-6 vs p-12), mobile-optimized text ("Tap to select CSV file" vs "Drop your CSV file here"), touch-friendly tabs
+  - Mapping section: grid-cols-1 sm:grid-cols-2 for column selectors, all SelectTrigger/SelectItem have min-h-[44px], responsive label text, flex-col-reverse button layout
+  - Preview step: table converts to card view on mobile showing symbol, direction badge, quantity, entry/exit prices in compact format
+  - Complete step: responsive padding, smaller checkmark icon, full-width buttons stacking vertically
+  - All navigation buttons are full-width on mobile with flex-col-reverse sm:flex-row pattern
+- Files changed:
+  - src/app/(protected)/import/page.tsx
 - **Learnings for future iterations:**
-  - User ownership validation pattern: query first to verify user owns entity before update/delete
-  - Auto-order calculation: when order not provided, query existing items and use max(order) + 1
-  - Partial update pattern: build updateData object with only provided fields, skip update if empty
-  - All mutations should throw errors for "not found" cases rather than returning null
+  - For wizard/step flows, progress steppers need horizontal scroll on mobile: wrap in overflow-x-auto container
+  - Preview tables with many columns should convert to card view on mobile using conditional rendering based on isMobile
+  - File upload areas: change text from "Drop file here" to "Tap to select" on mobile for clearer affordance
+  - Terminal-style decorative elements (dots, paths) can be hidden on mobile to save space
 ---
 
-## 2026-01-11 - US-012
-- Added reorderTemplates mutation for bulk order updates with transaction
-- Files changed: src/server/api/routers/dailyJournal.ts
+## 2026-01-14 - US-010 Strategies List Page Mobile Adaptation
+- What was implemented:
+  - Added useIsMobile hook for mobile detection
+  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile
+  - "New Strategy" button icon-only on mobile with 44px touch target
+  - Performance Comparison table wrapped in horizontal scroll container (-mx-4 px-4 overflow-x-auto with min-w-[600px])
+  - Strategy cards grid responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 with gap-3 sm:gap-4
+  - StrategyCard component updated with isMobile prop to make dropdown always visible (no hover required)
+  - StrategyCard padding responsive: p-4 sm:p-5
+  - StrategyCard text sizes responsive: smaller labels (text-[9px] sm:text-[10px]), stats (text-base sm:text-lg)
+  - Dropdown menu items have min-h-[44px] touch targets on mobile
+  - Empty state responsive: smaller padding, icons, and font sizes
+  - Loading skeleton responsive: h-40 sm:h-48
+  - Delete dialog footer buttons stack vertically on mobile with 44px touch targets
+- Files changed:
+  - src/app/(protected)/strategies/page.tsx
+  - src/components/strategy/strategy-card.tsx
 - **Learnings for future iterations:**
-  - Bulk validation pattern: query all owned items once, build Set of ids, check each input id against Set
-  - Use db.transaction() for multi-row updates to ensure atomicity
-  - Return updated data after bulk operations for frontend sync
+  - For card components that use hover-reveal actions, pass isMobile prop to make them always visible on mobile
+  - Pattern for table horizontal scroll on mobile: `-mx-4 px-4 overflow-x-auto` to allow scroll past page padding
+  - Card grids should transition: grid-cols-1 (mobile) → sm:grid-cols-2 (tablet) → lg:grid-cols-3 (desktop)
 ---
 
-## 2026-01-11 - US-013
-- Added daily check operations: getChecks, toggleCheck, bulkUpdateChecks
-- Files changed: src/server/api/routers/dailyJournal.ts
+## 2026-01-14 - US-011 Strategy Detail/Edit Pages Mobile Adaptation
+- What was implemented:
+  - Strategy Detail page: useIsMobile hook for mobile detection
+  - Header responsive: truncating title (truncate class), back button with min-h-[44px] min-w-[44px] touch target
+  - Duplicate button icon-only on mobile using conditional size prop (size={isMobile ? "icon" : "sm"})
+  - Delete dialog footer stacks vertically on mobile (flex-col gap-2 sm:flex-row)
+  - Stats grid responsive: grid-cols-2 sm:grid-cols-4 with smaller text (text-lg sm:text-2xl) and padding (p-3 sm:p-4)
+  - Form card padding responsive: p-4 sm:p-6
+  - New Strategy page: same header pattern, description hidden on mobile (hidden sm:block)
+  - StrategyForm: section tabs in horizontal scroll container (-mx-4 px-4 overflow-x-auto) with smaller touch-friendly tabs (min-h-[36px])
+  - Color picker uses flex-wrap with larger touch targets on mobile (h-9 w-9 sm:h-8 sm:w-8)
+  - Rules section stacks vertically on mobile (flex-col sm:flex-row), delete button repositioned for mobile layout
+  - Submit button full-width on mobile (w-full sm:w-auto, min-h-[44px])
+  - RiskConfig: all grids use grid-cols-1 sm:grid-cols-2, all inputs have min-h-[44px] sm:min-h-0
+  - ScalingConfig: rule rows stack on mobile with responsive gap and touch-friendly delete buttons
+  - TrailingConfig: checkbox has larger size on mobile (h-5 w-5 sm:h-4 sm:w-4), trail stop rows reorganized for mobile
+  - All number inputs use inputMode="decimal" or inputMode="numeric" for proper mobile keyboards
+- Files changed:
+  - src/app/(protected)/strategies/[id]/page.tsx
+  - src/app/(protected)/strategies/new/page.tsx
+  - src/components/strategy/strategy-form.tsx
+  - src/components/strategy/risk-config.tsx
+  - src/components/strategy/scaling-config.tsx
+  - src/components/strategy/trailing-config.tsx
 - **Learnings for future iterations:**
-  - Toggle pattern: if record exists toggle value, if not create with checked=true
-  - Upsert pattern: check existence first, then update or insert
-  - Track checkedAt timestamp - set to new Date() when checked, null when unchecked
-  - Composite primary key access requires both columns in where clause
+  - For complex multi-section forms, wrap tabs in overflow-x-auto with -mx-4 px-4 for horizontal scroll
+  - Pattern for conditional button size: `size={isMobile ? "icon" : "sm"}` with hidden text span
+  - When form rows have multiple controls, reorganize on mobile: stack vertically but keep related items (input + delete) on same row
+  - Checkboxes should be slightly larger on mobile (h-5 w-5) for easier touch interaction
 ---
 
-## 2026-01-11 - US-014
-- Created integration tests for dailyJournal router core operations
-- Files changed: tests/integration/daily-journal/journal.test.ts
+## 2026-01-14 - US-012 Marketing Landing Page Mobile Adaptation
+- What was implemented:
+  - Navbar: Added hamburger menu using Sheet drawer on mobile (md:hidden breakpoint). Simplified mobile auth buttons (just 'Start' + user icon). Navigation links extracted to navLinks constant for DRY code. All interactive elements have 44px touch targets.
+  - Hero: Responsive text sizes (text-3xl sm:text-5xl lg:text-6xl), responsive spacing (py-8 sm:py-12), stats grid changed to grid-cols-2 md:grid-cols-4, CTA buttons full-width on mobile (w-full sm:w-auto), terminal preview responsive with smaller elements on mobile.
+  - Features: Responsive grid (sm:grid-cols-2 lg:grid-cols-3), visual elements hidden on mobile for cleaner look (hidden sm:block), responsive section padding (py-16 sm:py-24 lg:py-32), responsive icon sizes and text.
+  - AI Showcase: Query buttons in horizontal scroll container on mobile, terminal content with responsive text/padding, trust badges stack vertically on mobile (flex-col sm:flex-row).
+  - Pricing: BYOK banner stacks vertically on mobile (flex-col sm:flex-row), pricing cards grid with gap-4 sm:gap-6 lg:grid-cols-3, Pro card shown first on mobile using order-first lg:order-none, all CTAs have min-h-[44px].
+  - CTA: Responsive section padding, buttons full-width on mobile, trust elements stack vertically, shorter terminal text on mobile.
+  - Footer: Link columns in 3-col grid on mobile (grid-cols-3 gap-4), responsive spacing/text sizes, social links have 44px touch targets.
+  - Ticker already uses overflow-hidden so no horizontal scroll issue.
+- Files changed:
+  - src/app/(marketing)/_components/navbar.tsx
+  - src/app/(marketing)/_components/hero.tsx
+  - src/app/(marketing)/_components/features.tsx
+  - src/app/(marketing)/_components/ai-showcase.tsx
+  - src/app/(marketing)/_components/pricing.tsx
+  - src/app/(marketing)/_components/cta.tsx
+  - src/app/(marketing)/_components/footer.tsx
 - **Learnings for future iterations:**
-  - Test file location: tests/integration/{feature}/{domain}.test.ts
-  - setupTrader() provides user + account for basic test setup
-  - Test date normalization by using different times on same day
-  - Test user isolation by creating second user and verifying they can't access first user's data
-  - Use createTestUser() directly for creating additional test users
+  - For marketing pages, use md:hidden breakpoint for hamburger menu (vs sm:hidden for app pages) to keep nav visible longer
+  - Sheet drawer works great for mobile navigation - same pattern as other mobile drawers
+  - For feature grids with visual elements, hide visuals on mobile (hidden sm:block) to keep cards compact
+  - Use order-first on highlighted pricing cards to show them first on mobile stacked layout
+  - Marketing sections should use larger section padding steps: py-16 sm:py-24 lg:py-32
 ---
 
-## 2026-01-11 - US-015
-- Created integration tests for checklist template and check operations
-- Files changed: tests/integration/daily-journal/checklist.test.ts
+## 2026-01-14 - US-013 Fix Marketing Navbar Mobile Menu
+- What was implemented:
+  - Removed navigation links (Features, AI, Pricing) from mobile Sheet drawer
+  - Kept only auth actions in Sheet: SignedOut shows Login + Get Started buttons, SignedIn shows Dashboard link
+  - Hamburger button remains visible on mobile (md:hidden)
+  - All touch targets remain 44px minimum
+  - Sheet drawer maintains Terminal design consistency with font-mono styling
+- Files changed:
+  - src/app/(marketing)/_components/navbar.tsx
 - **Learnings for future iterations:**
-  - Test toggle behavior across multiple calls (on -> off -> on)
-  - Test ownership by having user2 try to access user1's templates
-  - Use beforeAll in nested describe to set up fixtures for specific test groups
-  - Test bulk operations by creating multiple entities and verifying each
+  - For marketing page mobile menus, section links (Features, AI, Pricing) aren't necessary since users can scroll to see them
+  - Keep mobile drawers focused on primary actions (auth) for cleaner UX
+  - Simple change: just removed navLinks.map() and separator div from Sheet content
 ---
 
-## 2026-01-11 - US-016
-- Set up S3 client utility using Bun's built-in S3Client
-- Files changed: src/env.js, src/lib/storage/s3.ts
+## 2026-01-14 - US-014 Fix Trade Detail Chart Interval Buttons Mobile
+- What was implemented:
+  - Added useIsMobile hook to LightweightChartInner component
+  - TimeframeSelector now conditionally renders based on isMobile prop:
+    - Mobile: Select dropdown with min-h-[36px] trigger, min-h-[44px] items for touch targets
+    - Desktop: Button row (unchanged behavior)
+  - Controls bar has tighter gap on mobile (gap-1.5 sm:gap-2)
+  - Symbol badge has smaller padding/text on mobile (px-1.5 sm:px-2, text-[10px] sm:text-xs)
+  - Fit button uses icon-only on mobile (text hidden with sm:inline) with 36px touch target
+  - Extracted CHART_INTERVALS constant for DRY code
+- Files changed:
+  - src/components/trade-detail/tradingview-chart.tsx
 - **Learnings for future iterations:**
-  - Use optional() for env vars that not all users will have configured
-  - Lazy initialization pattern: store client in module-level variable, create on first getS3Client() call
-  - Bun S3Client uses presign() for presigned URLs, supports PUT/GET methods
-  - Export isS3Configured() helper for graceful degradation when S3 not set up
+  - For chart controls that may overflow on mobile, use Select dropdown instead of button row
+  - Pattern for conditional mobile/desktop rendering in same component: pass isMobile prop and render different JSX branches
+  - Chart overlay controls need smaller padding/gaps on mobile while maintaining touch targets
 ---
-
-## 2026-01-11 - US-017
-- Added getUploadUrl mutation for presigned PUT URL generation
-- Files changed: src/server/api/routers/dailyJournal.ts
-- **Learnings for future iterations:**
-  - Use nanoid for unique keys in S3 paths
-  - Key format pattern: `{feature}/{userId}/{date}/{uuid}-{filename}`
-  - Check isS3Configured() at start of mutation and throw descriptive error if not
-  - Return both presignedUrl and key so frontend can use key for confirmUpload
----
-
-## 2026-01-11 - US-018
-- Added confirmUpload mutation to create journalAttachments records after S3 upload
-- Files changed: src/server/api/routers/dailyJournal.ts
-- **Learnings for future iterations:**
-  - Validate user ownership of parent entity (journal) before creating child records (attachment)
-  - Use getPresignedDownloadUrl for URL stored in database - URLs expire, so frontend should regenerate as needed
-  - Schema uses integer for size field, so z.number().int().positive() for validation
-  - caption is nullable in schema, handle optional input with ?? null
----
-
-## 2026-01-11 - US-019
-- Added deleteAttachment mutation for removing journal attachments
-- Files changed: src/server/api/routers/dailyJournal.ts
-- **Learnings for future iterations:**
-  - Validate child ownership through parent: query attachment with { with: { journal: true } }, then check journal.userId
-  - Use same error message for "not found" and "not authorized" to avoid information leakage
-  - Graceful S3 deletion: try/catch around deleteObject, log error but continue with DB deletion
-  - S3 file may have already been deleted or never existed, so don't block database cleanup
----
-
-## 2026-01-11 - US-020
-- Installed Tiptap dependencies for rich text editor
-- Files changed: package.json, bun.lock
-- **Learnings for future iterations:**
-  - Tiptap v3 packages: @tiptap/react, @tiptap/pm, @tiptap/starter-kit for core functionality
-  - Extensions for specific features: @tiptap/extension-link, @tiptap/extension-image, @tiptap/extension-placeholder
-  - Use `bun add` for installing multiple packages in one command
----
-
-## 2026-01-11 - US-021
-- Created daily-journal page layout with resizable panels
-- Files changed: src/app/(protected)/daily-journal/page.tsx
-- **Learnings for future iterations:**
-  - ResizablePanelGroup pattern: use horizontal direction, set defaultSize on each panel
-  - Panel size persistence: use localStorage with getStoredSizes/saveSizes helpers
-  - Use onLayout callback to persist sizes, not direct state updates
-  - Full height layout: use `h-[calc(100vh-4rem)]` to account for nav header
-  - Panel constraints: use minSize/maxSize to prevent unusable layouts
-  - Placeholder pattern: use placeholder cards for components not yet implemented
----
-
-## 2026-01-11 - US-022
-- Created DateNavigation component with prev/next day buttons, Today button, and date picker popover
-- Files changed: src/components/daily-journal/date-navigation.tsx, src/components/ui/calendar.tsx, src/components/ui/popover.tsx, src/app/(protected)/daily-journal/page.tsx, package.json, bun.lock
-- **Learnings for future iterations:**
-  - react-day-picker v9 is used for calendar, integrates with Radix popover
-  - Calendar component uses DayPicker with customized classNames for Terminal styling
-  - Date navigation pattern: prev/next buttons + popover picker + Today shortcut
-  - Use isToday() from date-fns to check if selected date is today
-  - addDays() from date-fns for prev/next day navigation
-  - format() from date-fns for date display formatting
----
-
-## 2026-01-11 - US-023
-- Created CalendarSidebar component with month grid view, P&L colors, and journal indicators
-- Files changed: src/components/daily-journal/calendar-sidebar.tsx, src/app/(protected)/daily-journal/page.tsx
-- **Learnings for future iterations:**
-  - Use analytics.getCalendarData for P&L data (already includes date aggregation)
-  - Use dailyJournal.getRange for journal indicators (hasContent flag)
-  - Month grid pattern: use eachDayOfInterval() + getDay() to get days with padding
-  - Stable React keys for weeks: use first day of week as key, not array index
-  - Color intensity scaling: calculate maxAbsPnl for the visible month, then scale 0.25/0.5/0.75/1
-  - Tooltip pattern: wrap day buttons in Tooltip with TooltipTrigger asChild
-  - getDateStringInTimezone from lib/shared for timezone-aware date strings matching backend
----
-
-## 2026-01-11 - US-024
-- Added Daily Journal nav item to sidebar navigation
-- Files changed: src/app/(protected)/_components/app-sidebar.tsx
-- **Learnings for future iterations:**
-  - Nav items in mainNavItems array with { title, href, icon } structure
-  - Import icons from lucide-react (alphabetically sorted)
-  - Position nav items logically by feature relationship (Daily Journal after Trades)
----
-
-## 2026-01-11 - US-025
-- Created DailyChecklist component with optimistic updates, compliance percentage, settings gear
-- Files changed: src/components/daily-journal/daily-checklist.tsx, src/app/(protected)/daily-journal/page.tsx
-- **Learnings for future iterations:**
-  - Optimistic update pattern for toggles: use setData with updater function, handle both existing and new records
-  - When adding new items in optimistic update, ensure all required fields have non-undefined values (template must be found or skip update)
-  - Label accessibility: use htmlFor on label + id on input, not wrapping label around checkbox (Biome noLabelWithoutControl)
-  - Compliance calculation: filter active templates, count checked, calculate percentage, color by threshold (100%=profit, 75+=primary, <75=muted)
-  - Progress bar: simple div with dynamic width% and color based on compliance level
----
-
-## 2026-01-11 - US-026
-- Created ChecklistSettings modal component for managing checklist templates
-- Files changed: src/components/daily-journal/checklist-settings.tsx, src/app/(protected)/daily-journal/page.tsx
-- **Learnings for future iterations:**
-  - Modal pattern: use Dialog from Radix with open/onOpenChange controlled state
-  - Delete confirmation pattern: track deletingId state, show inline confirmation UI, reset on cancel/success
-  - Edit inline pattern: track editingId + editingText state, show input field inline, handle Enter/Escape keys
-  - Reorder with up/down buttons: calculate new order values by swapping indices, use reorderTemplates mutation
-  - Toggle active: use small colored square button, filled when active, empty when inactive
-  - Group hover pattern: add `group` class to container, use `group-hover:opacity-100` for child elements to reveal on hover
----
-
-## 2026-01-11 - US-027
-- Created EditorToolbar component with formatting buttons for Tiptap rich text editor
-- Files changed: src/components/daily-journal/editor-toolbar.tsx
-- **Learnings for future iterations:**
-  - Tiptap v3 TypeScript: Editor type from @tiptap/react doesn't include extension commands by default
-  - Create custom EditorCommands interface with explicit methods (toggleBold, setLink, setImage, etc.) for type safety
-  - Use `as unknown as EditorCommands` cast on editor.chain().focus() result
-  - Link/Image commands come from extensions, not starter-kit, so they need separate type declarations
-  - Toolbar button pattern: wrap in Tooltip, use cn() for conditional active state styling (bg-primary/20 text-primary)
-  - Popover for link URL input: pre-fill with existing link using editor.getAttributes("link").href
-  - Image upload: use hidden file input triggered by button click, onImageUpload callback for S3 integration
-  - Separator component between button groups for visual organization
----
-
-## 2026-01-11 - US-028
-- Created JournalEditor component with Tiptap rich text editor
-- Files changed: src/components/daily-journal/journal-editor.tsx, src/app/(protected)/daily-journal/page.tsx, tests/integration/daily-journal/checklist.test.ts
-- **Learnings for future iterations:**
-  - Tiptap useEditor: set `immediatelyRender: false` to avoid SSR hydration issues
-  - Auto-save pattern: use debounceTimerRef to track pending saves, track lastSavedContent to avoid redundant saves
-  - Track previous date with ref to detect date changes and reset editor state appropriately
-  - Save status indicator pattern: idle/saving/saved/error states with auto-clear timeout for "saved" status
-  - Image upload flow: getUploadUrl -> PUT to presigned URL -> confirmUpload to record in DB
-  - Placeholder extension: use `emptyEditorClass` with content-[attr(data-placeholder)] CSS trick
-  - Editor content update: only update if not focused and content differs to avoid cursor jumping
----
-
-## 2026-01-11 - US-029
-- Verified markdown shortcuts work in JournalEditor - no code changes needed
-- Files verified: src/components/daily-journal/journal-editor.tsx (StarterKit config)
-- **Learnings for future iterations:**
-  - StarterKit includes all standard markdown input rules by default - no configuration needed
-  - Heading extension: `#`, `##`, `###` + space triggers heading transformation
-  - Bold/Italic extensions: `**text**` and `*text*` patterns (via markInputRule)
-  - BulletList extension: `- ` and `* ` at line start triggers bullet list
-  - OrderedList extension: `1. ` at line start triggers ordered list
-  - Blockquote extension: `> ` at line start triggers blockquote
-  - Input rules are defined in each extension's addInputRules() method
-  - Verification stories may not require code changes - just confirm existing functionality works
----
-
-## 2026-01-11 - US-030
-- Created AttachmentUpload component with drag-and-drop file upload
-- Files changed: src/components/daily-journal/attachment-upload.tsx, src/app/(protected)/daily-journal/page.tsx
-- **Learnings for future iterations:**
-  - Drag-drop zone: use onDragEnter/Leave/Over/Drop with preventDefault(), use section element for accessibility
-  - Upload progress with XMLHttpRequest: addEventListener("progress") gives lengthComputable + loaded/total for progress bar
-  - File validation pattern: define ALLOWED_FILE_TYPES array and MAX_FILE_SIZE constant at top
-  - Biome accessibility: section element is semantic, use aria-label for screen readers
-  - Track uploading files with array of {id, file, progress, error} objects for multiple concurrent uploads
-  - Retry pattern: track file reference so we can retry failed uploads without re-selecting
----
-
-## 2026-01-11 - US-031
-- Created AttachmentGallery component for viewing and managing journal attachments
-- Files changed: src/components/daily-journal/attachment-gallery.tsx, src/app/(protected)/daily-journal/page.tsx
-- **Learnings for future iterations:**
-  - Image lightbox pattern: track lightboxImage state, use dialog role, handle Escape key
-  - Delete confirmation: track deletingId state, show inline overlay for images, inline buttons for files
-  - Biome: external S3 images need biome-ignore for noImgElement since we can't use next/image without domain config
-  - Class sorting: Biome nursery rule requires sorted classes (-translate-x-1/2 before absolute)
-  - Separate images from files: filter by mimeType.startsWith("image/") for different display
-  - formatFileSize helper: convert bytes to B/KB/MB with appropriate precision
----
-
-## 2026-01-11 - US-032
-- Integrated image paste/drop upload into JournalEditor
-- Files changed: src/components/daily-journal/journal-editor.tsx
-- **Learnings for future iterations:**
-  - Paste handler: use clipboardData.items, check item.type.startsWith("image/"), call getAsFile()
-  - Drop handler: use dataTransfer.files, filter for image types
-  - Event listeners on editor: attach to editor.view.dom after editor is ready, cleanup in effect
-  - Cast to EventListener for TypeScript compatibility when attaching native events
-  - Tiptap setImage: use editor.chain().focus().setImage({ src: url }).run()
-  - Reuse existing upload handler (handleImageUpload) for consistency
----
-
-## 2026-01-11 - US-033
-- Created TradesSummary component for viewing trades for selected date
-- Files changed: src/components/daily-journal/trades-summary.tsx, src/app/(protected)/daily-journal/page.tsx
-- **Learnings for future iterations:**
-  - getWithTrades query: returns journal + trades for date, includes account and tags relations
-  - Direction icons: ArrowUpIcon (profit color) for long, ArrowDownIcon (loss color) for short
-  - Trade link pattern: Link to /journal/{trade.id} with hover reveal of ExternalLinkIcon
-  - Stats calculation: useMemo for wins/losses/total, filter by realizedPnl > 0 or < 0
-  - Biome class ordering: font-medium before font-mono (alphabetical)
-  - Multi-line conditional: format as separate lines when condition is long
----
-
-## 2026-01-11 - US-034
-- Created DailyJournalPreview component for compact journal display in trade detail
-- Files changed: src/components/daily-journal/daily-journal-preview.tsx
-- **Learnings for future iterations:**
-  - Preview components need separate queries for templates + checks, not just journal data
-  - Compliance calculation: fetch all active templates, build Map of checked status, count matches
-  - Date normalization: handle both string and Date inputs with useMemo
-  - Different ISO formats: getByDate uses "YYYY-MM-DD", getChecks needs full ISO string
-  - Tiptap editable mode: use `editorProps.editable: () => boolean` or top-level `editable` prop
-  - Link alias: import NextLink from "next/link" when @tiptap/extension-link is also imported
----
-
-## 2026-01-11 - US-035
-- Integrated DailyJournalPreview into trade detail content-panel.tsx
-- Files changed: src/components/trade-detail/content-panel.tsx
-- **Learnings for future iterations:**
-  - Simple integration: import component and replace placeholder content
-  - Use trade.entryTime (Date) as the date prop - DailyJournalPreview accepts both Date and string
-  - Enable editable mode by passing `editable` prop (boolean shorthand)
-  - Existing placeholder content often shows "coming soon" messages - replace entirely
----
-
-## 2026-01-11 - US-036
-- Added getStreak query to dailyJournal router
-- Files changed: src/server/api/routers/dailyJournal.ts
-- **Learnings for future iterations:**
-  - Streak calculation pattern: fetch all journals, filter to those with content, create Set of date strings for O(1) lookup
-  - Count backwards from today, incrementing streak for each consecutive day with content
-  - Use const for Date objects even when mutating (setUTCDate) - Biome only cares about reassignment
-  - toISOString().split("T")[0] gives YYYY-MM-DD format for date comparison
----
-
-## 2026-01-11 - US-037
-- Added getComplianceStats query to dailyJournal router
-- Files changed: src/server/api/routers/dailyJournal.ts
-- **Learnings for future iterations:**
-  - Compliance calculation pattern: fetch active templates (isActive: true), then journals with checks in date range
-  - Filter checks to only count those belonging to currently active templates (user may have deactivated templates)
-  - Return structured data: dailyCompliance array (date, checkedCount, totalTemplates, compliance %), averageCompliance, totalDays
-  - Handle edge case: if no active templates, return null averageCompliance and empty dailyCompliance array
----
-
-## 2026-01-11 - US-038
-- Added streak and compliance UI to CalendarSidebar component
-- Files changed: src/components/daily-journal/calendar-sidebar.tsx
-- **Learnings for future iterations:**
-  - Check actual return type of API queries - streakData returns `{ streak }` not `{ currentStreak }`
-  - Stats display pattern: use Tooltip with icon + number + label, color-code by threshold (orange for streak, green/primary/muted for compliance)
-  - Null check pattern for averageCompliance: `!== null && !== undefined` since 0 is a valid value
-  - Pluralization pattern: `day${count !== 1 ? "s" : ""}` for singular/plural labels
----
-
-## 2026-01-11 - US-039
-- Created barrel export for daily-journal components
-- Files changed: src/components/daily-journal/index.ts
-- **Learnings for future iterations:**
-  - Barrel export pattern: export { ComponentName } from "./component-file" (named exports)
-  - Sort exports alphabetically for consistency and easier maintenance
-  - Use index.ts for barrel exports, not index.tsx
----
-

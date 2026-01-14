@@ -12,7 +12,15 @@ import {
 import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { useTheme } from "@/contexts/theme-context";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
 import {
 	type ChartInterval,
@@ -152,20 +160,58 @@ function generateMockCandles(
 // TIMEFRAME SELECTOR COMPONENT
 // =============================================================================
 
+const CHART_INTERVALS: ChartInterval[] = [
+	"1min",
+	"5min",
+	"15min",
+	"30min",
+	"1h",
+];
+
 function TimeframeSelector({
 	interval,
 	onIntervalChange,
 	disabled,
+	isMobile,
 }: {
 	interval: ChartInterval;
 	onIntervalChange: (interval: ChartInterval) => void;
 	disabled?: boolean;
+	isMobile?: boolean;
 }) {
-	const intervals: ChartInterval[] = ["1min", "5min", "15min", "30min", "1h"];
+	// Mobile: Use dropdown select
+	if (isMobile) {
+		return (
+			<Select
+				disabled={disabled}
+				onValueChange={(value) => onIntervalChange(value as ChartInterval)}
+				value={interval}
+			>
+				<SelectTrigger
+					className="h-7 min-h-[36px] w-auto min-w-[60px] gap-1 border-none bg-white/5 px-2 font-mono text-[10px] uppercase hover:bg-white/10"
+					size="sm"
+				>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					{CHART_INTERVALS.map((tf) => (
+						<SelectItem
+							className="min-h-[44px] font-mono text-xs uppercase"
+							key={tf}
+							value={tf}
+						>
+							{INTERVAL_LABELS[tf]}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+		);
+	}
 
+	// Desktop: Use button row
 	return (
 		<div className="flex items-center gap-1">
-			{intervals.map((tf) => (
+			{CHART_INTERVALS.map((tf) => (
 				<button
 					className={cn(
 						"rounded px-2 py-1 font-mono text-[10px] uppercase transition-colors",
@@ -212,6 +258,9 @@ function LightweightChartInner({
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 	const ohlcSnapLineRef = useRef<IPriceLine | null>(null);
 	const currentSnappedPriceRef = useRef<number | null>(null);
+
+	// Mobile detection
+	const isMobile = useIsMobile();
 
 	// Chart preferences from persistent store
 	const interval = useChartPreferencesStore((s) => s.interval);
@@ -685,28 +734,31 @@ function LightweightChartInner({
 			)}
 
 			{/* Top controls bar */}
-			<div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+			<div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 sm:gap-2">
 				{/* Symbol badge */}
-				<div className="rounded bg-background/80 px-2 py-1 backdrop-blur-sm">
-					<span className="font-bold font-mono text-xs">{symbol}</span>
+				<div className="rounded bg-background/80 px-1.5 py-1 backdrop-blur-sm sm:px-2">
+					<span className="font-bold font-mono text-[10px] sm:text-xs">
+						{symbol}
+					</span>
 				</div>
 
 				{/* Timeframe selector */}
 				<TimeframeSelector
 					disabled={isLoading}
 					interval={interval}
+					isMobile={isMobile}
 					onIntervalChange={setInterval}
 				/>
 
 				{/* Fit to trade button */}
 				<button
-					className="flex items-center gap-1 rounded bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center gap-1 rounded bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground sm:min-h-0 sm:min-w-0"
 					onClick={handleFitToTrade}
 					title="Fit to trade"
 					type="button"
 				>
 					<Maximize2 className="h-3 w-3" />
-					<span>Fit</span>
+					<span className="hidden sm:inline">Fit</span>
 				</button>
 			</div>
 
