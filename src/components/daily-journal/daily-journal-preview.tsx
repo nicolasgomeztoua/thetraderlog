@@ -103,7 +103,10 @@ export function DailyJournalPreview({
 		const checksMap = new Map<string, boolean>();
 		if (checksData?.checks) {
 			for (const check of checksData.checks) {
-				checksMap.set(check.templateId, check.checked);
+				// Only include template-based checks (not forced items)
+				if (check.templateId) {
+					checksMap.set(check.templateId, check.checked);
+				}
 			}
 		}
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { CalendarIcon, Save } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +22,7 @@ import {
 	OUTCOME_OPTIONS,
 	REVIEW_STATUS_OPTIONS,
 } from "@/lib/analytics";
+import { toDateString } from "@/lib/shared";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import type {
 	AnalyticsFilters,
@@ -261,7 +261,7 @@ function DateRangeInput({
 }) {
 	const formatForInput = (date: Date | null) => {
 		if (!date) return "";
-		return format(date, "yyyy-MM-dd");
+		return toDateString(date);
 	};
 
 	return (

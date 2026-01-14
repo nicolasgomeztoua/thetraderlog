@@ -1,12 +1,8 @@
-import { format } from "date-fns";
 import { ChevronDown, X } from "lucide-react";
 import { useMemo } from "react";
-import { QUICK_OUTCOME_OPTIONS } from "@/lib/constants";
-import { cn } from "@/lib/shared";
-import type {
-	AnalyticsFilters,
-	OutcomeFilter,
-} from "@/types/analytics-filters";
+import { cn, formatDateInTimezone, toDateString } from "@/lib/shared";
+import { useSettingsStore } from "@/stores/settings-store";
+import type { AnalyticsFilters } from "@/types/analytics-filters";
 
 // =============================================================================
 // TYPES
@@ -19,8 +15,6 @@ interface QuickFiltersProps {
 	isExpanded: boolean;
 	/** Toggle expanded panel */
 	onToggleExpand: () => void;
-	/** Quick outcome change */
-	onOutcomeChange: (outcome: OutcomeFilter) => void;
 	/** Clear all filters */
 	onClearAll: () => void;
 	/** Whether filters are active (different from defaults) */
@@ -31,15 +25,19 @@ interface QuickFiltersProps {
 // HELPERS
 // =============================================================================
 
-function formatDateRange(start: Date | null, end: Date | null): string {
+function formatDateRange(
+	start: Date | null,
+	end: Date | null,
+	timezone: string,
+): string {
 	if (!start && !end) return "All time";
 
-	const formatDate = (d: Date) => format(d, "MMM d");
+	const formatDate = (d: Date) =>
+		formatDateInTimezone(d, timezone, { format: "MMM d" });
 
 	if (start && end) {
 		const today = new Date();
-		const isEndToday =
-			format(end, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
+		const isEndToday = toDateString(end) === toDateString(today);
 		return `${formatDate(start)} → ${isEndToday ? "Today" : formatDate(end)}`;
 	}
 	if (start) return `From ${formatDate(start)}`;
@@ -55,10 +53,11 @@ export function QuickFilters({
 	filters,
 	isExpanded,
 	onToggleExpand,
-	onOutcomeChange,
 	onClearAll,
 	hasActiveFilters,
 }: QuickFiltersProps) {
+	const { timezone } = useSettingsStore();
+
 	// Format symbol display
 	const symbolDisplay = useMemo(() => {
 		if (filters.symbols.length === 0) return null;
@@ -69,6 +68,7 @@ export function QuickFilters({
 	const dateDisplay = formatDateRange(
 		filters.dateRange.start,
 		filters.dateRange.end,
+		timezone,
 	);
 
 	return (
@@ -114,32 +114,6 @@ export function QuickFilters({
 			<span className="font-mono text-muted-foreground text-xs">
 				{dateDisplay}
 			</span>
-
-			{/* Divider */}
-			<div className="h-5 w-px bg-white/10" />
-
-			{/* Outcome Quick Toggles */}
-			<div className="flex gap-1">
-				{QUICK_OUTCOME_OPTIONS.map((outcome) => (
-					<button
-						className={cn(
-							"rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider transition-all",
-							filters.outcome === outcome
-								? outcome === "win"
-									? "border-profit/40 bg-profit/10 text-profit"
-									: outcome === "loss"
-										? "border-loss/40 bg-loss/10 text-loss"
-										: "border-primary/40 bg-primary/10 text-primary"
-								: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20",
-						)}
-						key={outcome}
-						onClick={() => onOutcomeChange(outcome)}
-						type="button"
-					>
-						{outcome === "all" ? "All" : outcome === "win" ? "Win" : "Loss"}
-					</button>
-				))}
-			</div>
 
 			{/* Spacer */}
 			<div className="flex-1" />

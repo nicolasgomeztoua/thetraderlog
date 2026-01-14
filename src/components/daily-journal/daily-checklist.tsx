@@ -1,12 +1,16 @@
 "use client";
 
-import { format } from "date-fns";
-import { Loader2Icon, SettingsIcon } from "lucide-react";
+import { Loader2Icon, LockIcon, SettingsIcon, ZapIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/shared";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn, formatLocalDate, toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 interface DailyChecklistProps {
@@ -25,6 +29,7 @@ export function DailyChecklist({
 	className,
 }: DailyChecklistProps) {
 	const utils = api.useUtils();
+	const dateString = toDateString(selectedDate);
 
 	// Fetch templates (all active templates for the user)
 	const { data: templates, isLoading: isLoadingTemplates } =
@@ -35,6 +40,10 @@ export function DailyChecklist({
 		api.dailyJournal.getChecks.useQuery({
 			date: selectedDate.toISOString(),
 		});
+
+	// Fetch forced items from getWithTrades
+	const { data: journalData, isLoading: isLoadingJournal } =
+		api.dailyJournal.getWithTrades.useQuery({ date: dateString });
 
 	// Toggle check mutation with optimistic updates
 	const toggleCheck = api.dailyJournal.toggleCheck.useMutation({
@@ -88,8 +97,10 @@ export function DailyChecklist({
 						checks: [
 							...old.checks,
 							{
+								id: `temp-${Date.now()}`, // Temporary ID for optimistic update
 								journalId: old.journalId,
 								templateId: newData.templateId,
+								forcedItemId: null, // Template-based check, not a forced item
 								checked: true,
 								checkedAt: new Date(),
 								template,
@@ -115,6 +126,8 @@ export function DailyChecklist({
 			utils.dailyJournal.getChecks.invalidate({
 				date: selectedDate.toISOString(),
 			});
+			// Update compliance stats in calendar sidebar
+			utils.dailyJournal.getComplianceStats.invalidate();
 		},
 	});
 
@@ -128,25 +141,73 @@ export function DailyChecklist({
 		const map = new Map<string, boolean>();
 		if (!checksData?.checks) return map;
 		for (const check of checksData.checks) {
-			map.set(check.templateId, check.checked);
+			// Only include template-based checks (not forced items)
+			if (check.templateId) {
+				map.set(check.templateId, check.checked);
+			}
 		}
 		return map;
 	}, [checksData?.checks]);
 
-	// Calculate compliance percentage
-	const compliance = useMemo(() => {
-		if (activeTemplates.length === 0) return null;
+	// Extract forced items from journal data
+	const forcedItems = journalData?.forcedItems ?? [];
 
-		const checkedCount = activeTemplates.filter((t) =>
+	// Calculate compliance percentage (including forced items)
+	const compliance = useMemo(() => {
+		const totalItems = activeTemplates.length + forcedItems.length;
+		if (totalItems === 0) return null;
+
+		const templateCheckedCount = activeTemplates.filter((t) =>
 			checksMap.get(t.id),
 		).length;
+		const forcedCheckedCount = forcedItems.filter(
+			(item) => item.checked,
+		).length;
+		const totalChecked = templateCheckedCount + forcedCheckedCount;
 
 		return {
-			checked: checkedCount,
-			total: activeTemplates.length,
-			percentage: Math.round((checkedCount / activeTemplates.length) * 100),
+			checked: totalChecked,
+			total: totalItems,
+			percentage: Math.round((totalChecked / totalItems) * 100),
 		};
-	}, [activeTemplates, checksMap]);
+	}, [activeTemplates, checksMap, forcedItems]);
+
+	// Toggle forced check mutation
+	const toggleForcedCheck = api.dailyJournal.toggleForcedCheck.useMutation({
+		onMutate: async (newData) => {
+			await utils.dailyJournal.getWithTrades.cancel({ date: dateString });
+			const previousData = utils.dailyJournal.getWithTrades.getData({
+				date: dateString,
+			});
+
+			utils.dailyJournal.getWithTrades.setData({ date: dateString }, (old) => {
+				if (!old) return old;
+				return {
+					...old,
+					forcedItems: old.forcedItems.map((item) =>
+						item.id === newData.itemId
+							? { ...item, checked: !item.checked }
+							: item,
+					),
+				};
+			});
+
+			return { previousData };
+		},
+		onError: (_err, _newData, context) => {
+			if (context?.previousData) {
+				utils.dailyJournal.getWithTrades.setData(
+					{ date: dateString },
+					context.previousData,
+				);
+			}
+		},
+		onSettled: () => {
+			utils.dailyJournal.getWithTrades.invalidate({ date: dateString });
+			// Update compliance stats in calendar sidebar
+			utils.dailyJournal.getComplianceStats.invalidate();
+		},
+	});
 
 	const handleToggle = (templateId: string) => {
 		toggleCheck.mutate({
@@ -155,7 +216,17 @@ export function DailyChecklist({
 		});
 	};
 
-	const isLoading = isLoadingTemplates || isLoadingChecks;
+	const handleToggleForcedItem = (itemId: string, autoChecked: boolean) => {
+		// Don't allow toggling auto-checked items
+		if (autoChecked) return;
+
+		toggleForcedCheck.mutate({
+			date: dateString,
+			itemId,
+		});
+	};
+
+	const isLoading = isLoadingTemplates || isLoadingChecks || isLoadingJournal;
 
 	return (
 		<div className={cn("space-y-3", className)}>
@@ -182,23 +253,87 @@ export function DailyChecklist({
 				</div>
 			)}
 
-			{/* Empty state */}
-			{!isLoading && activeTemplates.length === 0 && (
-				<div className="py-4 text-center">
-					<p className="font-mono text-muted-foreground text-xs">
-						No checklist items yet
-					</p>
-					<button
-						className="mt-1 font-mono text-primary text-xs hover:underline"
-						onClick={onOpenSettings}
-						type="button"
-					>
-						Add your first item
-					</button>
+			{/* Empty state - only show if no forced items AND no templates */}
+			{!isLoading &&
+				activeTemplates.length === 0 &&
+				forcedItems.length === 0 && (
+					<div className="py-4 text-center">
+						<p className="font-mono text-muted-foreground text-xs">
+							No checklist items yet
+						</p>
+						<button
+							className="mt-1 font-mono text-primary text-xs hover:underline"
+							onClick={onOpenSettings}
+							type="button"
+						>
+							Add your first item
+						</button>
+					</div>
+				)}
+
+			{/* Forced items (system-level) */}
+			{!isLoading && forcedItems.length > 0 && (
+				<div className="space-y-2">
+					{forcedItems.map((item) => {
+						const checkboxId = `forced-${item.id}`;
+						const isAutoChecked = item.autoChecked;
+
+						return (
+							<div
+								className={cn(
+									"flex items-center gap-2 rounded p-1.5 transition-colors",
+									"border border-primary/20 bg-primary/5",
+									!isAutoChecked && "cursor-pointer hover:bg-primary/10",
+									item.checked && "opacity-75",
+								)}
+								key={item.id}
+							>
+								<Checkbox
+									checked={item.checked}
+									disabled={isAutoChecked || toggleForcedCheck.isPending}
+									id={checkboxId}
+									onCheckedChange={() =>
+										handleToggleForcedItem(item.id, isAutoChecked)
+									}
+								/>
+								<label
+									className={cn(
+										"flex-1 font-mono text-sm",
+										!isAutoChecked && "cursor-pointer",
+										item.checked && "text-muted-foreground line-through",
+									)}
+									htmlFor={checkboxId}
+								>
+									{item.text}
+								</label>
+								{isAutoChecked ? (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<ZapIcon className="h-3 w-3 text-primary" />
+										</TooltipTrigger>
+										<TooltipContent>
+											<p className="font-mono text-xs">
+												Auto-checked based on trade data
+											</p>
+										</TooltipContent>
+									</Tooltip>
+								) : (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<LockIcon className="h-3 w-3 text-muted-foreground" />
+										</TooltipTrigger>
+										<TooltipContent>
+											<p className="font-mono text-xs">System requirement</p>
+										</TooltipContent>
+									</Tooltip>
+								)}
+							</div>
+						);
+					})}
 				</div>
 			)}
 
-			{/* Checklist items */}
+			{/* User template items */}
 			{!isLoading && activeTemplates.length > 0 && (
 				<div className="space-y-2">
 					{activeTemplates.map((template) => {
@@ -276,7 +411,7 @@ export function DailyChecklist({
 			{/* Date indicator for context */}
 			<div className="pt-2 text-center">
 				<span className="font-mono text-[10px] text-muted-foreground/60">
-					{format(selectedDate, "EEEE, MMM d, yyyy")}
+					{formatLocalDate(selectedDate, "EEEE, MMM d, yyyy")}
 				</span>
 			</div>
 		</div>

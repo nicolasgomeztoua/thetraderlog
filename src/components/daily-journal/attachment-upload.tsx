@@ -225,13 +225,27 @@ export function AttachmentUpload({
 	);
 
 	/**
+	 * Check if the drag event contains external files (not internal page elements)
+	 */
+	const hasExternalFiles = useCallback((event: React.DragEvent): boolean => {
+		// Check if drag contains files from outside the browser
+		return event.dataTransfer.types.includes("Files");
+	}, []);
+
+	/**
 	 * Handle drag events
 	 */
-	const handleDragEnter = useCallback((event: React.DragEvent) => {
-		event.preventDefault();
-		event.stopPropagation();
-		setIsDragging(true);
-	}, []);
+	const handleDragEnter = useCallback(
+		(event: React.DragEvent) => {
+			event.preventDefault();
+			event.stopPropagation();
+			// Only activate drop zone for external files
+			if (hasExternalFiles(event)) {
+				setIsDragging(true);
+			}
+		},
+		[hasExternalFiles],
+	);
 
 	const handleDragLeave = useCallback((event: React.DragEvent) => {
 		event.preventDefault();
@@ -242,10 +256,19 @@ export function AttachmentUpload({
 		}
 	}, []);
 
-	const handleDragOver = useCallback((event: React.DragEvent) => {
-		event.preventDefault();
-		event.stopPropagation();
-	}, []);
+	const handleDragOver = useCallback(
+		(event: React.DragEvent) => {
+			event.preventDefault();
+			event.stopPropagation();
+			// Only show drop effect for external files
+			if (hasExternalFiles(event)) {
+				event.dataTransfer.dropEffect = "copy";
+			} else {
+				event.dataTransfer.dropEffect = "none";
+			}
+		},
+		[hasExternalFiles],
+	);
 
 	const handleDrop = useCallback(
 		(event: React.DragEvent) => {
@@ -253,12 +276,17 @@ export function AttachmentUpload({
 			event.stopPropagation();
 			setIsDragging(false);
 
+			// Only process if we have external files
+			if (!hasExternalFiles(event)) {
+				return;
+			}
+
 			const files = event.dataTransfer.files;
 			if (files && files.length > 0) {
 				processFiles(files);
 			}
 		},
-		[processFiles],
+		[processFiles, hasExternalFiles],
 	);
 
 	/**

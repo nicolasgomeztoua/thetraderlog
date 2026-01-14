@@ -1,9 +1,23 @@
 "use client";
 
-import { TrendingDown, TrendingUp } from "lucide-react";
+import {
+	BookOpenIcon,
+	CheckCircle2Icon,
+	Loader2Icon,
+	PlayIcon,
+	TrendingDown,
+	TrendingUp,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
-import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
+import {
+	cn,
+	formatCurrency,
+	getPnLColorClass,
+	toDateString,
+} from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // Circular progress component for gauges
@@ -228,6 +242,105 @@ function StatsGrid() {
 	);
 }
 
+function StartJournalHero() {
+	const router = useRouter();
+	const today = toDateString(new Date());
+
+	const { data: journal, isLoading } = api.dailyJournal.getByDate.useQuery(
+		{ date: today },
+		{ staleTime: 30000 },
+	);
+
+	const utils = api.useUtils();
+	const startDay = api.dailyJournal.startDay.useMutation({
+		onSuccess: () => {
+			// Invalidate all relevant queries so checklist shows forced items immediately
+			utils.dailyJournal.getByDate.invalidate({ date: today });
+			utils.dailyJournal.getWithTrades.invalidate({ date: today });
+			router.push("/daily-journal");
+		},
+	});
+
+	const handleStartJournal = () => {
+		startDay.mutate({ date: today });
+	};
+
+	const isStarted = journal?.dayStartedAt !== null;
+	const isStarting = startDay.isPending;
+
+	if (isLoading) {
+		return (
+			<div className="rounded border border-border bg-card p-6">
+				<div className="flex items-center justify-between">
+					<div>
+						<Skeleton className="mb-2 h-4 w-32" />
+						<Skeleton className="h-6 w-48" />
+					</div>
+					<Skeleton className="h-10 w-40" />
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="rounded border border-primary/30 bg-linear-to-r from-primary/5 to-transparent p-6">
+			<div className="flex items-center justify-between">
+				<div>
+					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+						{new Date().toLocaleDateString("en-US", {
+							weekday: "long",
+							month: "long",
+							day: "numeric",
+						})}
+					</span>
+					{isStarted ? (
+						<div className="mt-1 flex items-center gap-2">
+							<CheckCircle2Icon className="h-5 w-5 text-profit" />
+							<span className="font-mono font-semibold text-lg">
+								Journal Started
+							</span>
+							<span className="font-mono text-muted-foreground text-xs">
+								{journal?.dayStartedAt &&
+									new Date(journal.dayStartedAt).toLocaleTimeString("en-US", {
+										hour: "numeric",
+										minute: "2-digit",
+									})}
+							</span>
+						</div>
+					) : (
+						<p className="mt-1 font-mono text-lg">
+							Ready to start your trading day?
+						</p>
+					)}
+				</div>
+				{isStarted ? (
+					<Button
+						className="font-mono"
+						onClick={() => router.push("/daily-journal")}
+						variant="outline"
+					>
+						<BookOpenIcon className="mr-2 h-4 w-4" />
+						Open Journal
+					</Button>
+				) : (
+					<Button
+						className="font-mono"
+						disabled={isStarting}
+						onClick={handleStartJournal}
+					>
+						{isStarting ? (
+							<Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							<PlayIcon className="mr-2 h-4 w-4" />
+						)}
+						Start My Journal
+					</Button>
+				)}
+			</div>
+		</div>
+	);
+}
+
 function PerformanceSummary() {
 	const { selectedAccountId } = useAccount();
 	const { data: stats } = api.trades.getStats.useQuery({
@@ -334,6 +447,9 @@ export default function DashboardPage() {
 
 	return (
 		<div className="space-y-6">
+			{/* Start Journal Hero */}
+			<StartJournalHero />
+
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>

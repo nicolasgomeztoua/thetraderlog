@@ -158,6 +158,41 @@ export const dailyJournalRouter = createTRPCRouter({
 			return created;
 		}),
 
+	// Start journal for a day (marks the day as actively started)
+	startDay: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // ISO date string
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+
+			// Find or create journal for this date
+			const journal = await findOrCreateJournal(
+				ctx.db,
+				ctx.user.id,
+				normalizedDate,
+			);
+
+			// If already started, return as-is
+			if (journal.dayStartedAt) {
+				return journal;
+			}
+
+			// Set dayStartedAt timestamp
+			const [updated] = await ctx.db
+				.update(dailyJournals)
+				.set({
+					dayStartedAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.where(eq(dailyJournals.id, journal.id))
+				.returning();
+
+			return updated;
+		}),
+
 	// ============================================================================
 	// JOURNAL QUERIES
 	// ============================================================================
@@ -295,10 +330,50 @@ export const dailyJournalRouter = createTRPCRouter({
 				orderBy: (trades, { asc }) => [asc(trades.entryTime)],
 			});
 
+			// Build forced checklist items based on conditions
+			const forcedItems: Array<{
+				id: string;
+				text: string;
+				isForced: true;
+				checked: boolean;
+				autoChecked: boolean;
+			}> = [];
+
+			const hasTrades = tradesForDate.length > 0;
+			const dayStarted = journal?.dayStartedAt !== null;
+
+			// Pre Market Check - show if day started OR has trades
+			if (dayStarted || hasTrades) {
+				// Check if pre-market check exists in checklist checks (uses forcedItemId column)
+				const preMarketCheck = journal?.checklistChecks?.find(
+					(c) => c.forcedItemId === "forced-pre-market",
+				);
+				forcedItems.push({
+					id: "forced-pre-market",
+					text: "Pre Market Check",
+					isForced: true,
+					checked: preMarketCheck?.checked ?? false,
+					autoChecked: false, // Manual toggle
+				});
+			}
+
+			// SL Check - show if has trades, auto-check if ALL trades have stopLoss
+			if (hasTrades) {
+				const allTradesHaveSL = tradesForDate.every((t) => t.stopLoss !== null);
+				forcedItems.push({
+					id: "forced-sl-check",
+					text: "Added SL to all trades",
+					isForced: true,
+					checked: allTradesHaveSL, // Auto-calculated from trade data
+					autoChecked: true, // Can't manually toggle - reflects reality
+				});
+			}
+
 			return {
 				// Generate presigned URLs for attachments on-demand
 				journal: journal ? withPresignedUrls(journal) : journal,
 				trades: tradesForDate,
+				forcedItems,
 			};
 		}),
 
@@ -596,6 +671,72 @@ export const dailyJournalRouter = createTRPCRouter({
 			};
 		}),
 
+	// Toggle a forced checklist item check (e.g., "Pre Market Check")
+	toggleForcedCheck: protectedProcedure
+		.input(
+			z.object({
+				date: z.string(), // YYYY-MM-DD date string
+				itemId: z.string(), // e.g., "forced-pre-market"
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const normalizedDate = normalizeDate(new Date(input.date));
+
+			// Only allow toggling specific forced items (not auto-calculated ones)
+			const allowedForcedItems = ["forced-pre-market"];
+			if (!allowedForcedItems.includes(input.itemId)) {
+				throw new Error("Cannot toggle this item - it is auto-calculated");
+			}
+
+			// Find or create journal for this date
+			const journal = await findOrCreateJournal(
+				ctx.db,
+				ctx.user.id,
+				normalizedDate,
+			);
+
+			// Check if check record exists for this forced item
+			// Forced items use forcedItemId column (not templateId which has FK constraint)
+			const existingCheck = await ctx.db.query.dailyChecklistChecks.findFirst({
+				where: and(
+					eq(dailyChecklistChecks.journalId, journal.id),
+					eq(dailyChecklistChecks.forcedItemId, input.itemId),
+				),
+			});
+
+			if (existingCheck) {
+				// Toggle the check
+				const newChecked = !existingCheck.checked;
+				await ctx.db
+					.update(dailyChecklistChecks)
+					.set({
+						checked: newChecked,
+						checkedAt: newChecked ? new Date() : null,
+					})
+					.where(eq(dailyChecklistChecks.id, existingCheck.id));
+
+				return {
+					journalId: journal.id,
+					itemId: input.itemId,
+					checked: newChecked,
+				};
+			}
+
+			// Create new check (starts as checked since it was unchecked before)
+			await ctx.db.insert(dailyChecklistChecks).values({
+				journalId: journal.id,
+				forcedItemId: input.itemId, // Use forcedItemId for system-level forced items
+				checked: true,
+				checkedAt: new Date(),
+			});
+
+			return {
+				journalId: journal.id,
+				itemId: input.itemId,
+				checked: true,
+			};
+		}),
+
 	// Bulk update checks for a journal
 	bulkUpdateChecks: protectedProcedure
 		.input(
@@ -793,6 +934,9 @@ export const dailyJournalRouter = createTRPCRouter({
 			const startNormalized = normalizeDate(new Date(input.startDate));
 			const endNormalized = normalizeDate(new Date(input.endDate));
 
+			// Get user timezone for trade filtering
+			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+
 			// Get all active templates for this user
 			const templates = await ctx.db.query.dailyChecklistTemplates.findMany({
 				where: and(
@@ -802,17 +946,8 @@ export const dailyJournalRouter = createTRPCRouter({
 				columns: { id: true },
 			});
 
-			// If no active templates, compliance is undefined (or 100%)
-			if (templates.length === 0) {
-				return {
-					dailyCompliance: [],
-					averageCompliance: null,
-					totalDays: 0,
-				};
-			}
-
 			const templateIds = new Set(templates.map((t) => t.id));
-			const totalTemplates = templates.length;
+			const userTemplatesCount = templates.length;
 
 			// Get all journals in the date range with their checks
 			const journals = await ctx.db.query.dailyJournals.findMany({
@@ -826,7 +961,44 @@ export const dailyJournalRouter = createTRPCRouter({
 				},
 			});
 
-			// Calculate compliance per day
+			// Get all trades in the date range to determine which days have trades
+			// Extract YYYY-MM-DD from ISO strings (getDayBoundsInTimezone expects date-only format)
+			const startDateStr = input.startDate.split("T")[0] ?? input.startDate;
+			const endDateStr = input.endDate.split("T")[0] ?? input.endDate;
+
+			const { start: rangeStart } = getDayBoundsInTimezone(
+				startDateStr,
+				userTimezone,
+			);
+			const { end: rangeEnd } = getDayBoundsInTimezone(
+				endDateStr,
+				userTimezone,
+			);
+
+			const allTrades = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.userId, ctx.user.id),
+					gte(trades.entryTime, rangeStart),
+					lt(trades.entryTime, rangeEnd),
+					isNull(trades.deletedAt),
+				),
+				columns: {
+					entryTime: true,
+					stopLoss: true,
+				},
+			});
+
+			// Group trades by date (using user's timezone)
+			const tradesByDate = new Map<string, typeof allTrades>();
+			for (const trade of allTrades) {
+				const dateStr = trade.entryTime.toISOString().split("T")[0];
+				if (!tradesByDate.has(dateStr ?? "")) {
+					tradesByDate.set(dateStr ?? "", []);
+				}
+				tradesByDate.get(dateStr ?? "")?.push(trade);
+			}
+
+			// Calculate compliance per day - ONLY for eligible days
 			const dailyCompliance: Array<{
 				date: Date;
 				checkedCount: number;
@@ -835,25 +1007,64 @@ export const dailyJournalRouter = createTRPCRouter({
 			}> = [];
 
 			for (const journal of journals) {
-				// Count checks that are checked AND belong to active templates
-				const checkedCount = journal.checklistChecks.filter(
-					(check) => check.checked && templateIds.has(check.templateId),
+				const dateStr = journal.date.toISOString().split("T")[0] ?? "";
+				const dayTrades = tradesByDate.get(dateStr) ?? [];
+				const hasTrades = dayTrades.length > 0;
+				const dayStarted = journal.dayStartedAt !== null;
+
+				// ONLY count days where dayStarted OR hasTrades
+				if (!dayStarted && !hasTrades) {
+					continue; // Skip this day - not eligible for compliance
+				}
+
+				// Calculate forced items for this day
+				let forcedItemsCount = 0;
+				let forcedItemsChecked = 0;
+
+				// Pre Market Check - required if dayStarted OR hasTrades
+				if (dayStarted || hasTrades) {
+					forcedItemsCount++;
+					const preMarketCheck = journal.checklistChecks.find(
+						(c) => c.forcedItemId === "forced-pre-market",
+					);
+					if (preMarketCheck?.checked) {
+						forcedItemsChecked++;
+					}
+				}
+
+				// SL Check - required if hasTrades, auto-checked based on data
+				if (hasTrades) {
+					forcedItemsCount++;
+					const allTradesHaveSL = dayTrades.every((t) => t.stopLoss !== null);
+					if (allTradesHaveSL) {
+						forcedItemsChecked++;
+					}
+				}
+
+				// Count user template checks (templateId is nullable now, only count if set)
+				const userCheckedCount = journal.checklistChecks.filter(
+					(check) =>
+						check.checked &&
+						check.templateId !== null &&
+						templateIds.has(check.templateId),
 				).length;
 
+				// Total = user templates + forced items
+				const totalItems = userTemplatesCount + forcedItemsCount;
+				const totalChecked = userCheckedCount + forcedItemsChecked;
+
 				const compliance =
-					totalTemplates > 0
-						? Math.round((checkedCount / totalTemplates) * 100)
-						: 0;
+					totalItems > 0 ? Math.round((totalChecked / totalItems) * 100) : 100;
 
 				dailyCompliance.push({
 					date: journal.date,
-					checkedCount,
-					totalTemplates,
+					checkedCount: totalChecked,
+					totalTemplates: totalItems,
 					compliance,
 				});
 			}
 
-			// Calculate average compliance across all days with journals
+			// Calculate average compliance across eligible days
 			const averageCompliance =
 				dailyCompliance.length > 0
 					? Math.round(

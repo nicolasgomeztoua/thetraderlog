@@ -1,4 +1,20 @@
-import { format } from "date-fns";
+import {
+	addDays,
+	addMonths,
+	eachDayOfInterval,
+	endOfMonth,
+	format,
+	getDay,
+	isAfter,
+	isSameDay,
+	isSameMonth,
+	isToday,
+	startOfDay,
+	startOfMonth,
+	startOfYear,
+	subDays,
+	subMonths,
+} from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 
 // =============================================================================
@@ -89,7 +105,13 @@ export function getMonthStringInTimezone(
 }
 
 /**
- * Format a date for display in the specified timezone
+ * Format a date for display in the specified timezone.
+ *
+ * USE THIS FOR: Trade entry/exit times - moments that occurred at a specific instant
+ * - Displays the time as it was in the user's preferred timezone
+ *
+ * DO NOT USE FOR: Calendar dates, journal dates, date pickers
+ * - Use formatLocalDate() instead for calendar/date-only values
  */
 export function formatDateInTimezone(
 	date: Date | string | null | undefined,
@@ -105,6 +127,29 @@ export function formatDateInTimezone(
 	const formatStr =
 		options.format ?? (options.includeYear !== false ? "MMM d, yyyy" : "MMM d");
 	return formatInTimeZone(d, timezone, formatStr);
+}
+
+/**
+ * Format a date for display WITHOUT timezone conversion.
+ *
+ * USE THIS FOR: Calendar dates, date pickers, journal day displays
+ * - When the Date object already represents a local calendar date
+ * - When showing journal dates (stored as UTC midnight = calendar date)
+ * - Calendar grid day numbers, month headers, date navigation
+ *
+ * DO NOT USE FOR: Trade entry/exit times (use formatDateInTimezone instead)
+ *
+ * WHY THIS EXISTS: Journal dates are stored as UTC midnight (e.g., 2026-01-06T00:00:00Z).
+ * If we convert UTC midnight to EST, it becomes 7pm on Jan 5 - the wrong day!
+ * This function formats the date as-is without timezone shifting.
+ */
+export function formatLocalDate(
+	date: Date | string | null | undefined,
+	formatStr: string,
+): string {
+	if (!date) return "-";
+	const d = typeof date === "string" ? new Date(date) : date;
+	return format(d, formatStr);
 }
 
 /**
@@ -204,4 +249,114 @@ export function getDayBoundsInTimezone(
 	const end = fromZonedTime(`${nextDateString} 00:00:00`, timezone);
 
 	return { start, end };
+}
+
+// =============================================================================
+// DATE ARITHMETIC
+// =============================================================================
+
+/**
+ * Add days to a date
+ */
+export function addDaysToDate(date: Date, days: number): Date {
+	return addDays(date, days);
+}
+
+/**
+ * Subtract days from a date
+ */
+export function subtractDaysFromDate(date: Date, days: number): Date {
+	return subDays(date, days);
+}
+
+/**
+ * Get the start of the year for a date
+ */
+export function getStartOfYear(date: Date): Date {
+	return startOfYear(date);
+}
+
+// =============================================================================
+// DATE COMPARISON
+// =============================================================================
+
+/**
+ * Check if two dates are the same calendar day
+ */
+export function isSameCalendarDay(dateA: Date, dateB: Date): boolean {
+	return isSameDay(dateA, dateB);
+}
+
+/**
+ * Check if two dates are in the same month
+ */
+export function isSameCalendarMonth(dateA: Date, dateB: Date): boolean {
+	return isSameMonth(dateA, dateB);
+}
+
+/**
+ * Check if a date is today
+ */
+export function isTodayDate(date: Date): boolean {
+	return isToday(date);
+}
+
+/**
+ * Check if dateA is after dateB
+ */
+export function isDateAfter(dateA: Date, dateB: Date): boolean {
+	return isAfter(dateA, dateB);
+}
+
+// =============================================================================
+// MONTH ARITHMETIC
+// =============================================================================
+
+/**
+ * Add months to a date
+ */
+export function addMonthsToDate(date: Date, months: number): Date {
+	return addMonths(date, months);
+}
+
+/**
+ * Subtract months from a date
+ */
+export function subtractMonthsFromDate(date: Date, months: number): Date {
+	return subMonths(date, months);
+}
+
+/**
+ * Get the first day of the month
+ */
+export function getStartOfMonth(date: Date): Date {
+	return startOfMonth(date);
+}
+
+/**
+ * Get the last day of the month
+ */
+export function getEndOfMonth(date: Date): Date {
+	return endOfMonth(date);
+}
+
+/**
+ * Get the start of the day (midnight)
+ */
+export function getStartOfDay(date: Date): Date {
+	return startOfDay(date);
+}
+
+/**
+ * Get day of week (0 = Sunday, 6 = Saturday)
+ */
+export function getDayOfWeek(date: Date): number {
+	return getDay(date);
+}
+
+/**
+ * Get all days in an interval
+ */
+export function getDaysInInterval(start: Date, end: Date): Date[] {
+	return eachDayOfInterval({ start, end });
 }

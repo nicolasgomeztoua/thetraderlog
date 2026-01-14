@@ -677,6 +677,7 @@ export const dailyJournals = createTable(
 		date: timestamp("date", { withTimezone: true }).notNull(), // Date of the journal (normalized to midnight)
 		content: text("content"), // Rich text content (HTML from Tiptap)
 		contentFormat: text("content_format").default("html"), // Format: "html", "markdown", etc.
+		dayStartedAt: timestamp("day_started_at", { withTimezone: true }), // When user clicked "Start My Journal"
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -720,17 +721,34 @@ export const dailyChecklistTemplates = createTable(
 export const dailyChecklistChecks = createTable(
 	"daily_checklist_check",
 	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.checklistCheck()),
 		journalId: text("journal_id")
 			.notNull()
 			.references(() => dailyJournals.id, { onDelete: "cascade" }),
-		templateId: text("template_id")
-			.notNull()
-			.references(() => dailyChecklistTemplates.id, { onDelete: "cascade" }),
+		// For user-created template checks (nullable - either templateId OR forcedItemId must be set)
+		templateId: text("template_id").references(
+			() => dailyChecklistTemplates.id,
+			{
+				onDelete: "cascade",
+			},
+		),
+		// For system-level forced checks like "Pre Market Check" (e.g., "forced-pre-market")
+		forcedItemId: text("forced_item_id"),
 		checked: boolean("checked").notNull().default(false),
 		checkedAt: timestamp("checked_at", { withTimezone: true }),
 	},
 	(t) => [
-		primaryKey({ columns: [t.journalId, t.templateId] }),
+		// Unique constraint: one check per journal+template OR journal+forcedItem
+		uniqueIndex("daily_checklist_check_journal_template_idx").on(
+			t.journalId,
+			t.templateId,
+		),
+		uniqueIndex("daily_checklist_check_journal_forced_idx").on(
+			t.journalId,
+			t.forcedItemId,
+		),
 		index("daily_checklist_check_journal_id_idx").on(t.journalId),
 	],
 );
