@@ -23,6 +23,7 @@ import {
 	getDayOfWeekInTimezone,
 	getHourInTimezone,
 	getMonthStringInTimezone,
+	utcHourToLocalHour,
 } from "@/lib/shared";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import {
@@ -200,15 +201,24 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 		});
 	}
 
-	// Sessions filter (uses user timezone)
+	// Sessions filter (session hours stored as UTC, convert to local for comparison)
 	if (filters.sessions && filters.sessions.length > 0) {
-		// Default session definitions (hours in user's local timezone)
-		const sessionDefs: Record<string, { start: number; end: number }> = {
+		// Default session definitions (hours stored as UTC)
+		const sessionDefsUtc: Record<string, { start: number; end: number }> = {
 			asia: { start: 0, end: 8 },
 			london: { start: 8, end: 16 },
 			"new york": { start: 13, end: 21 },
 			new_york: { start: 13, end: 21 },
 		};
+
+		// Convert UTC session hours to local hours for this user
+		const sessionDefs: Record<string, { start: number; end: number }> = {};
+		for (const [key, utcSession] of Object.entries(sessionDefsUtc)) {
+			sessionDefs[key] = {
+				start: utcHourToLocalHour(utcSession.start, options.userTimezone),
+				end: utcHourToLocalHour(utcSession.end, options.userTimezone),
+			};
+		}
 
 		filtered = filtered.filter((trade) => {
 			const hour = getHourInTimezone(trade.entryTime, options.userTimezone);
@@ -738,7 +748,7 @@ export const analyticsRouter = createTRPCRouter({
 	/**
 	 * Get performance breakdown by trading session
 	 * Uses user-configured sessions from settings (defaults to Asia/London/New York if not configured)
-	 * Session hours are interpreted in user's timezone
+	 * Session hours are stored as UTC in database, converted to user's local timezone for comparison
 	 */
 	getPerformanceBySession: protectedProcedure
 		.input(
@@ -840,8 +850,10 @@ export const analyticsRouter = createTRPCRouter({
 				const key = config.name.toLowerCase().replace(/\s+/g, "_");
 				sessions[key] = {
 					name: config.name,
-					start: config.startHour,
-					end: config.endHour,
+					// Convert UTC session hours to user's local timezone for comparison
+					// Session hours are stored as UTC in database, but we compare against local hour
+					start: utcHourToLocalHour(config.startHour, userTimezone),
+					end: utcHourToLocalHour(config.endHour, userTimezone),
 					color: config.color || "#6366f1",
 					pnl: 0,
 					trades: 0,
@@ -2675,15 +2687,15 @@ export const analyticsRouter = createTRPCRouter({
 				};
 			}
 
-			// Group trades by day
+			// Group trades by day (using entry time for consistent daily grouping)
 			const dailyTrades = new Map<
 				string,
 				{ pnl: number; wins: number; losses: number }[]
 			>();
 
 			for (const trade of closedTrades) {
-				if (!trade.exitTime) continue;
-				const dateKey = getDateStringInTimezone(trade.exitTime, userTimezone);
+				if (!trade.entryTime) continue;
+				const dateKey = getDateStringInTimezone(trade.entryTime, userTimezone);
 				const pnl = parsePnl(trade.netPnl);
 				const isWin = pnl > beThreshold;
 				const isLoss = pnl < -beThreshold;
