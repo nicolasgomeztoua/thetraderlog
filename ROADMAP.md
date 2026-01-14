@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** January 4, 2026 (Phase 4 COMPLETE - all 5 tabs + cross-filtering + query builder + presets + export)
+> **Last Updated:** January 14, 2026 (Phase 5.3 Daily Journal COMPLETE)
 
 ---
 
@@ -52,6 +52,8 @@
 | OHLC snapping crosshair | ✅ Done | Trade detail chart (snaps to nearest O/H/L/C) |
 | Multi-day trade data fetching | ✅ Done | Parallel fetch for trades spanning multiple days |
 | Trade Replay | ✅ Done | Trade detail Replay tab (play/pause, speed, scrub, jump by interval) |
+| Daily Journal system | ✅ Done | `/daily-journal` (checklist, editor, attachments, streaks) |
+| S3 attachment infrastructure | ✅ Done | `src/lib/s3.ts` |
 
 ---
 
@@ -315,20 +317,35 @@ Match TradeZella's comprehensive trade tracking page.
 - [ ] Daily P&L summary
 - [ ] Previous/next day navigation
 
-#### 5.2 Working Screenshot Uploads
-- [ ] Cloud storage integration (S3/Cloudinary/Uploadthing)
+#### 5.2 Trade Screenshot Uploads
+- [x] Cloud storage integration (S3) - *shared with Daily Journal*
 - [ ] Multiple screenshots per trade
 - [ ] Screenshot captions
 - [ ] Before/during/after categorization
 - [ ] Screenshot lightbox/gallery view
 - [ ] Delete screenshots
 
-#### 5.3 Daily Notes System
-- [ ] Daily notes table in schema
-- [ ] Notes that apply to entire day
-- [ ] Sync across all trades for day
-- [ ] Pre-market notes section
-- [ ] Post-market notes section
+*Note: S3 infrastructure and attachment patterns from Daily Journal can be reused.*
+
+#### 5.3 Daily Journal System ✅
+- [x] Daily journal schema (dailyJournals table with checks, templates, attachments)
+- [x] DailyChecklist component with template-based checks
+- [x] ChecklistSettings modal for custom checklist items
+- [x] JournalEditor with markdown shortcuts (Tiptap)
+- [x] EditorToolbar component
+- [x] AttachmentUpload + AttachmentGallery with S3 integration
+- [x] TradesSummary component (shows day's trades in journal)
+- [x] DailyJournalPreview integrated into trade detail page
+- [x] Streak tracking and compliance stats UI
+- [x] CalendarSidebar + DateNavigation components
+- [x] Mobile sidebar with drag-and-drop
+- [x] findOrCreateJournal helper (race condition handling)
+
+**New files:**
+- `src/app/(protected)/daily-journal/page.tsx`
+- `src/components/daily-journal/` (11 components)
+- `src/server/api/routers/dailyJournal.ts`
+- `src/lib/s3.ts`
 
 #### 5.4 Chart Integration
 - [x] Lightweight-charts implementation (replaced TradingView widget)
@@ -576,6 +593,12 @@ strategy_rules (id, strategyId, text, order, createdAt)
 candle_cache (id, symbol, interval, date, bars, barCount, source, fetchedAt)
 -- Composite unique index on (symbol, interval, date)
 
+-- Daily Journal ✅ IMPLEMENTED
+daily_journals (id, userId, date, content, createdAt, updatedAt)
+daily_checks (id, journalId, templateId, text, isComplete, order, createdAt)
+checklist_templates (id, userId, text, order, isDefault, createdAt)
+daily_journal_attachments (id, journalId, s3Key, url, filename, contentType, size, createdAt)
+
 -- Notebook
 notebook_entries (id, userId, title, content, templateId, tags, tradeIds, createdAt, updatedAt)
 notebook_templates (id, userId, name, content, isDefault, createdAt)
@@ -626,7 +649,7 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | 2 | Strategy System | 2 weeks | ✅ Complete |
 | 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
 | 4 | Advanced Analytics | 6-8 weeks | ✅ Complete (5 tabs + cross-filtering + query builder + presets + export) |
-| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Screenshot ⏳) |
+| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Daily Journal ✅, Trade Screenshots ⏳) |
 | 6 | Notebook System | 2 weeks | ⏳ Pending |
 | 7 | Trade Replay | 3-4 weeks | ✅ Complete |
 | 8 | Backtesting | 3-4 weeks | ⏳ Pending |
