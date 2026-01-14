@@ -1,14 +1,17 @@
 "use client";
 
 import { CheckCircleIcon, Loader2Icon, MenuIcon, PlayIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AttachmentGallery } from "@/components/daily-journal/attachment-gallery";
 import { AttachmentUpload } from "@/components/daily-journal/attachment-upload";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
-import { JournalEditor } from "@/components/daily-journal/journal-editor";
+import {
+	JournalEditor,
+	type JournalEditorHandle,
+} from "@/components/daily-journal/journal-editor";
 import { TradesSummary } from "@/components/daily-journal/trades-summary";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +72,14 @@ export default function DailyJournalPage() {
 	// Mobile sidebar drawer state
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const isMobile = useMediaQuery("(max-width: 767px)");
+
+	// Editor ref for removing images when attachments are deleted
+	const editorRef = useRef<JournalEditorHandle>(null);
+
+	// Handle attachment deletion - also remove from editor
+	const handleAttachmentDeleted = useCallback((url: string) => {
+		editorRef.current?.removeImageByUrl(url);
+	}, []);
 
 	// Date string for API queries - preserves the calendar date as clicked
 	const dateString = toDateString(selectedDate);
@@ -220,7 +231,11 @@ export default function DailyJournalPage() {
 						<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Journal Entry
 						</span>
-						<JournalEditor key={dateString} selectedDate={selectedDate} />
+						<JournalEditor
+							key={dateString}
+							ref={editorRef}
+							selectedDate={selectedDate}
+						/>
 					</div>
 
 					{/* Attachments */}
@@ -234,6 +249,7 @@ export default function DailyJournalPage() {
 							<AttachmentGallery
 								attachments={journal.attachments}
 								className="mt-4 border-white/5 border-t pt-4"
+								onAttachmentDeleted={handleAttachmentDeleted}
 								selectedDate={selectedDate}
 							/>
 						)}
@@ -291,7 +307,11 @@ export default function DailyJournalPage() {
 								<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 									Journal Entry
 								</span>
-								<JournalEditor key={dateString} selectedDate={selectedDate} />
+								<JournalEditor
+									key={dateString}
+									ref={editorRef}
+									selectedDate={selectedDate}
+								/>
 							</div>
 
 							{/* Attachments */}

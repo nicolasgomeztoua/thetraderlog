@@ -22,6 +22,8 @@ interface AttachmentGalleryProps {
 	attachments: JournalAttachment[];
 	selectedDate: Date;
 	className?: string;
+	/** Called when an attachment is deleted, with the URL of the deleted attachment */
+	onAttachmentDeleted?: (url: string) => void;
 }
 
 // =============================================================================
@@ -57,6 +59,7 @@ export function AttachmentGallery({
 	attachments,
 	selectedDate,
 	className,
+	onAttachmentDeleted,
 }: AttachmentGalleryProps) {
 	const [lightboxImage, setLightboxImage] = useState<JournalAttachment | null>(
 		null,
@@ -81,10 +84,18 @@ export function AttachmentGallery({
 	});
 
 	const handleDelete = useCallback(
-		(id: string) => {
-			deleteAttachment.mutate({ id });
+		(attachment: JournalAttachment) => {
+			deleteAttachment.mutate(
+				{ id: attachment.id },
+				{
+					onSuccess: () => {
+						// Notify parent so editor can remove the image
+						onAttachmentDeleted?.(attachment.url);
+					},
+				},
+			);
 		},
-		[deleteAttachment],
+		[deleteAttachment, onAttachmentDeleted],
 	);
 
 	const handleCancelDelete = useCallback(() => {
@@ -169,7 +180,7 @@ export function AttachmentGallery({
 									<div className="flex gap-1">
 										<Button
 											disabled={deleteAttachment.isPending}
-											onClick={() => handleDelete(attachment.id)}
+											onClick={() => handleDelete(attachment)}
 											size="sm"
 											variant="destructive"
 										>
@@ -237,7 +248,7 @@ export function AttachmentGallery({
 									<div className="flex items-center gap-1">
 										<Button
 											disabled={deleteAttachment.isPending}
-											onClick={() => handleDelete(attachment.id)}
+											onClick={() => handleDelete(attachment)}
 											size="icon-sm"
 											variant="destructive"
 										>
