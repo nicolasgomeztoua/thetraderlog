@@ -2075,10 +2075,12 @@ export const analyticsRouter = createTRPCRouter({
 			const allSymbols = new Set<string>();
 
 			for (const trade of closedTrades) {
-				if (!trade.exitTime) continue;
-
 				const symbol = trade.symbol;
-				const monthKey = getMonthStringInTimezone(trade.exitTime, userTimezone);
+				// Use timezone-aware month extraction based on entry time
+				const monthKey = getMonthStringInTimezone(
+					trade.entryTime,
+					userTimezone,
+				);
 				const pnl = parsePnl(trade.netPnl);
 
 				allSymbols.add(symbol);
