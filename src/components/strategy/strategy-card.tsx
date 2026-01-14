@@ -11,7 +11,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/shared";
+import { cn, formatCurrency } from "@/lib/shared";
 
 interface StrategyCardProps {
 	strategy: {
@@ -182,11 +182,7 @@ export function StrategyCard({
 								stats.totalPnl >= 0 ? "text-profit" : "text-loss",
 							)}
 						>
-							{stats.totalPnl >= 0 ? "+" : ""}$
-							{Math.abs(stats.totalPnl).toLocaleString("en-US", {
-								minimumFractionDigits: 2,
-								maximumFractionDigits: 2,
-							})}
+							{formatCurrency(stats.totalPnl)}
 						</span>
 					</div>
 				</div>
