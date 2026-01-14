@@ -3072,8 +3072,8 @@ export const analyticsRouter = createTRPCRouter({
 			// Overtrading Tendency (based on daily trade count variance)
 			const dailyTrades = new Map<string, number>();
 			for (const trade of closedTrades) {
-				if (!trade.exitTime) continue;
-				const dateKey = getDateStringInTimezone(trade.exitTime, userTimezone);
+				if (!trade.entryTime) continue;
+				const dateKey = getDateStringInTimezone(trade.entryTime, userTimezone);
 				dailyTrades.set(dateKey, (dailyTrades.get(dateKey) || 0) + 1);
 			}
 
