@@ -283,7 +283,7 @@ function StartJournalHero() {
 	}
 
 	return (
-		<div className="rounded border border-primary/30 bg-gradient-to-r from-primary/5 to-transparent p-6">
+		<div className="rounded border border-primary/30 bg-linear-to-r from-primary/5 to-transparent p-6">
 			<div className="flex items-center justify-between">
 				<div>
 					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
