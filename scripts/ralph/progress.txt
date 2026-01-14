@@ -294,3 +294,21 @@ Started: Wed Jan 14 18:20:29 +01 2026
   - Keep mobile drawers focused on primary actions (auth) for cleaner UX
   - Simple change: just removed navLinks.map() and separator div from Sheet content
 ---
+
+## 2026-01-14 - US-014 Fix Trade Detail Chart Interval Buttons Mobile
+- What was implemented:
+  - Added useIsMobile hook to LightweightChartInner component
+  - TimeframeSelector now conditionally renders based on isMobile prop:
+    - Mobile: Select dropdown with min-h-[36px] trigger, min-h-[44px] items for touch targets
+    - Desktop: Button row (unchanged behavior)
+  - Controls bar has tighter gap on mobile (gap-1.5 sm:gap-2)
+  - Symbol badge has smaller padding/text on mobile (px-1.5 sm:px-2, text-[10px] sm:text-xs)
+  - Fit button uses icon-only on mobile (text hidden with sm:inline) with 36px touch target
+  - Extracted CHART_INTERVALS constant for DRY code
+- Files changed:
+  - src/components/trade-detail/tradingview-chart.tsx
+- **Learnings for future iterations:**
+  - For chart controls that may overflow on mobile, use Select dropdown instead of button row
+  - Pattern for conditional mobile/desktop rendering in same component: pass isMobile prop and render different JSX branches
+  - Chart overlay controls need smaller padding/gaps on mobile while maintaining touch targets
+---

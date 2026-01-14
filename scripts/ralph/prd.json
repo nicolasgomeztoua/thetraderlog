@@ -265,7 +265,8 @@
         "Verify in browser at 375px viewport"
       ],
       "priority": 14,
-      "passes": false
+      "passes": true,
+      "notes": "Added useIsMobile hook to LightweightChartInner component. TimeframeSelector now conditionally renders: Select dropdown on mobile (with min-h-[36px] trigger, min-h-[44px] items for touch targets) or button row on desktop. Controls bar has tighter gap on mobile (gap-1.5 sm:gap-2). Symbol badge has smaller padding/text on mobile. Fit button uses icon-only on mobile with min-h-[36px] touch target."
     }
   ]
 }
