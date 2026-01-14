@@ -384,6 +384,88 @@ export function getDaysInInterval(start: Date, end: Date): Date[] {
 // =============================================================================
 
 /**
+ * Get the day of week (0 = Sunday, 6 = Saturday) from a YYYY-MM-DD date string.
+ *
+ * This function works directly with date strings, avoiding Date object timezone issues.
+ * It uses the Zeller-like algorithm to calculate the day of week from year/month/day.
+ *
+ * USE THIS FOR: Calendar grid alignment, week calculations on date strings
+ * - When you already have YYYY-MM-DD strings and need day of week
+ * - When browser timezone may differ from display timezone
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @returns Day of week: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+ *
+ * @example
+ * getDayOfWeekFromDateString("2026-01-14") // Wednesday = 3
+ * getDayOfWeekFromDateString("2026-01-18") // Sunday = 0
+ */
+export function getDayOfWeekFromDateString(dateStr: string): number {
+	const [yearStr, monthStr, dayStr] = dateStr.split("-");
+	const year = Number.parseInt(yearStr ?? "0", 10);
+	const month = Number.parseInt(monthStr ?? "1", 10);
+	const day = Number.parseInt(dayStr ?? "1", 10);
+
+	// Use UTC to avoid timezone interference
+	const utcDate = new Date(Date.UTC(year, month - 1, day));
+	return utcDate.getUTCDay();
+}
+
+/**
+ * Get the month (0 = January, 11 = December) from a YYYY-MM-DD date string.
+ *
+ * This function extracts the month directly from the string without Date object conversion.
+ *
+ * USE THIS FOR: Month label display, grouping by month on date strings
+ * - Calendar month headers
+ * - Month boundary detection in date arrays
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @returns Month: 0 = January, 1 = February, ..., 11 = December
+ *
+ * @example
+ * getMonthFromDateString("2026-01-14") // 0 (January)
+ * getMonthFromDateString("2026-12-25") // 11 (December)
+ */
+export function getMonthFromDateString(dateStr: string): number {
+	const monthStr = dateStr.split("-")[1];
+	return Number.parseInt(monthStr ?? "1", 10) - 1;
+}
+
+/**
+ * Format a YYYY-MM-DD date string for display without timezone conversion.
+ *
+ * This function parses the date string and formats it using date-fns format patterns.
+ * It interprets the date as UTC to avoid any timezone shifting.
+ *
+ * USE THIS FOR: Displaying date strings from generateDateStringsInTimezone()
+ * - Tooltip text on calendar heatmaps
+ * - Date display in UI where the source is already a date string
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @param formatStr - date-fns format pattern (e.g., "MMM d, yyyy", "EEEE", "d")
+ * @returns Formatted date string
+ *
+ * @example
+ * formatDateString("2026-01-14", "MMM d, yyyy") // "Jan 14, 2026"
+ * formatDateString("2026-01-14", "EEEE") // "Wednesday"
+ * formatDateString("2026-01-14", "d") // "14"
+ */
+export function formatDateString(dateStr: string, formatStr: string): string {
+	const [yearStr, monthStr, dayStr] = dateStr.split("-");
+	const year = Number.parseInt(yearStr ?? "0", 10);
+	const month = Number.parseInt(monthStr ?? "1", 10);
+	const day = Number.parseInt(dayStr ?? "1", 10);
+
+	// Create UTC date and format it
+	// Using UTC ensures the date displays as the string intended, not shifted
+	const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+
+	// Format in UTC timezone to avoid local timezone interference
+	return formatInTimeZone(utcDate, "UTC", formatStr);
+}
+
+/**
  * Generate an array of YYYY-MM-DD date strings relative to "today" in the user's timezone.
  *
  * This function avoids Date object timezone ambiguity by:
