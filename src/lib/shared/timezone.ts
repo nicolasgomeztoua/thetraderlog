@@ -217,6 +217,24 @@ export function getTimezoneOffset(timezone: string, date?: Date): number {
 }
 
 /**
+ * Convert a UTC hour (0-23) to a local hour in the specified timezone.
+ * Useful for converting session definitions stored as UTC to local hours.
+ *
+ * @example
+ * // UTC hour 14 in EST (UTC-5) should be hour 9
+ * utcHourToLocalHour(14, "America/New_York") // Returns 9
+ *
+ * // UTC hour 0 in PST (UTC-8) should be hour 16 (previous day)
+ * utcHourToLocalHour(0, "America/Los_Angeles") // Returns 16
+ */
+export function utcHourToLocalHour(utcHour: number, timezone: string): number {
+	const offset = getTimezoneOffset(timezone);
+	let localHour = (utcHour + offset) % 24;
+	if (localHour < 0) localHour += 24;
+	return Math.floor(localHour);
+}
+
+/**
  * Get the UTC start and end of a day in a specific timezone
  * Useful for querying trades that fall within a specific calendar day
  *
@@ -359,4 +377,69 @@ export function getDayOfWeek(date: Date): number {
  */
 export function getDaysInInterval(start: Date, end: Date): Date[] {
 	return eachDayOfInterval({ start, end });
+}
+
+// =============================================================================
+// DATE STRING GENERATION (Timezone-Safe)
+// =============================================================================
+
+/**
+ * Generate an array of YYYY-MM-DD date strings relative to "today" in the user's timezone.
+ *
+ * This function avoids Date object timezone ambiguity by:
+ * 1. Determining "today" in the user's timezone using formatInTimeZone
+ * 2. Performing date arithmetic on YYYY-MM-DD strings directly
+ * 3. Never creating intermediate Date objects that could shift days
+ *
+ * USE THIS FOR: Calendar grid generation, date range selections, heatmaps
+ * - When you need an array of date strings for display
+ * - When the browser timezone may differ from user's preferred timezone
+ *
+ * @param startOffset - Days before today (negative) or after today (positive) to start
+ * @param endOffset - Days before today (negative) or after today (positive) to end
+ * @param timezone - IANA timezone string (e.g., "America/New_York")
+ * @returns Array of YYYY-MM-DD strings from startOffset to endOffset inclusive
+ *
+ * @example
+ * // Generate dates for a week centered on today
+ * generateDateStringsInTimezone(-3, 3, "America/New_York")
+ * // Returns: ["2026-01-11", "2026-01-12", "2026-01-13", "2026-01-14", "2026-01-15", "2026-01-16", "2026-01-17"]
+ *
+ * @example
+ * // Generate last 365 days for a heatmap
+ * generateDateStringsInTimezone(-364, 0, "Pacific/Auckland")
+ */
+export function generateDateStringsInTimezone(
+	startOffset: number,
+	endOffset: number,
+	timezone: string,
+): string[] {
+	// Get "today" in the user's timezone as a YYYY-MM-DD string
+	const todayString = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+
+	// Parse the date string components
+	const [yearStr, monthStr, dayStr] = todayString.split("-");
+	const year = Number.parseInt(yearStr ?? "0", 10);
+	const month = Number.parseInt(monthStr ?? "1", 10) - 1; // 0-indexed
+	const day = Number.parseInt(dayStr ?? "1", 10);
+
+	// Create a UTC date for "today" to perform arithmetic
+	// Using UTC avoids any local timezone interference
+	const todayUTC = Date.UTC(year, month, day);
+
+	const result: string[] = [];
+	for (let offset = startOffset; offset <= endOffset; offset++) {
+		// Add offset days in milliseconds
+		const targetMs = todayUTC + offset * 24 * 60 * 60 * 1000;
+		const targetDate = new Date(targetMs);
+
+		// Extract UTC components (safe since we started with UTC)
+		const y = targetDate.getUTCFullYear();
+		const m = String(targetDate.getUTCMonth() + 1).padStart(2, "0");
+		const d = String(targetDate.getUTCDate()).padStart(2, "0");
+
+		result.push(`${y}-${m}-${d}`);
+	}
+
+	return result;
 }
