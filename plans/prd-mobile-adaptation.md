@@ -253,6 +253,41 @@ const isMobile = useMediaQuery("(max-width: 767px)");
 
 ---
 
+### US-013: Fix Marketing Navbar Mobile Menu
+
+**Description**: As a mobile user on the landing page, I want the hamburger menu to only show auth actions so that the interface is cleaner and more purposeful.
+
+**Acceptance Criteria**:
+- [ ] Remove section navigation links (Features, AI, Pricing) from mobile Sheet drawer
+- [ ] Keep only auth actions: Login/Get Started buttons when signed out
+- [ ] Keep only Dashboard link when signed in
+- [ ] Hamburger button remains visible on mobile (`md:hidden`)
+- [ ] Sheet drawer styling consistent with Terminal design
+- [ ] Touch targets remain 44px minimum
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser at 375px viewport
+
+---
+
+### US-014: Fix Trade Detail Chart Interval Buttons Mobile
+
+**Description**: As a mobile user viewing a trade detail, I want the chart interval selector to use a dropdown on mobile so that controls don't overflow or overlap.
+
+**Acceptance Criteria**:
+- [ ] Add `useIsMobile` hook to TradingViewChart component
+- [ ] On mobile: Replace TimeframeSelector buttons with a Select/Dropdown showing current interval
+- [ ] Dropdown shows all intervals (1m, 5m, 15m, 30m, 1h) as options
+- [ ] Selected interval displayed in dropdown trigger
+- [ ] On desktop: Keep existing button row (no change)
+- [ ] Controls bar (`absolute top-3 left-3`) layout remains clean on mobile
+- [ ] Fit button remains accessible on mobile
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser at 375px viewport
+
+---
+
 ## Functional Requirements
 
 1. **FR-001**: All pages must be usable at 375px viewport width minimum

@@ -141,50 +141,36 @@ export function Navbar() {
 									Menu
 								</SheetTitle>
 							</SheetHeader>
-							<nav className="mt-8 flex flex-col gap-4">
-								{navLinks.map((link) => (
-									<Link
-										className="flex min-h-[44px] items-center font-mono text-muted-foreground text-sm uppercase tracking-wider transition-colors hover:text-primary"
-										href={link.href}
-										key={link.href}
-										onClick={() => setIsOpen(false)}
-									>
-										{link.label}
+							<nav className="mt-8 flex flex-col gap-3">
+								<SignedOut>
+									<SignInButton mode="modal">
+										<Button
+											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
+											onClick={() => setIsOpen(false)}
+											variant="outline"
+										>
+											Login
+										</Button>
+									</SignInButton>
+									<SignUpButton mode="modal">
+										<Button
+											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
+											onClick={() => setIsOpen(false)}
+										>
+											Get Started
+										</Button>
+									</SignUpButton>
+								</SignedOut>
+								<SignedIn>
+									<Link href="/dashboard" onClick={() => setIsOpen(false)}>
+										<Button
+											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
+											variant="outline"
+										>
+											Dashboard
+										</Button>
 									</Link>
-								))}
-								<div className="mt-4 border-white/10 border-t pt-4">
-									<SignedOut>
-										<div className="flex flex-col gap-3">
-											<SignInButton mode="modal">
-												<Button
-													className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
-													onClick={() => setIsOpen(false)}
-													variant="outline"
-												>
-													Login
-												</Button>
-											</SignInButton>
-											<SignUpButton mode="modal">
-												<Button
-													className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
-													onClick={() => setIsOpen(false)}
-												>
-													Get Started
-												</Button>
-											</SignUpButton>
-										</div>
-									</SignedOut>
-									<SignedIn>
-										<Link href="/dashboard" onClick={() => setIsOpen(false)}>
-											<Button
-												className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
-												variant="outline"
-											>
-												Dashboard
-											</Button>
-										</Link>
-									</SignedIn>
-								</div>
+								</SignedIn>
 							</nav>
 						</SheetContent>
 					</Sheet>

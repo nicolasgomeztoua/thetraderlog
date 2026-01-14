@@ -253,3 +253,29 @@ Started: Wed Jan 14 18:20:29 +01 2026
   - When form rows have multiple controls, reorganize on mobile: stack vertically but keep related items (input + delete) on same row
   - Checkboxes should be slightly larger on mobile (h-5 w-5) for easier touch interaction
 ---
+
+## 2026-01-14 - US-012 Marketing Landing Page Mobile Adaptation
+- What was implemented:
+  - Navbar: Added hamburger menu using Sheet drawer on mobile (md:hidden breakpoint). Simplified mobile auth buttons (just 'Start' + user icon). Navigation links extracted to navLinks constant for DRY code. All interactive elements have 44px touch targets.
+  - Hero: Responsive text sizes (text-3xl sm:text-5xl lg:text-6xl), responsive spacing (py-8 sm:py-12), stats grid changed to grid-cols-2 md:grid-cols-4, CTA buttons full-width on mobile (w-full sm:w-auto), terminal preview responsive with smaller elements on mobile.
+  - Features: Responsive grid (sm:grid-cols-2 lg:grid-cols-3), visual elements hidden on mobile for cleaner look (hidden sm:block), responsive section padding (py-16 sm:py-24 lg:py-32), responsive icon sizes and text.
+  - AI Showcase: Query buttons in horizontal scroll container on mobile, terminal content with responsive text/padding, trust badges stack vertically on mobile (flex-col sm:flex-row).
+  - Pricing: BYOK banner stacks vertically on mobile (flex-col sm:flex-row), pricing cards grid with gap-4 sm:gap-6 lg:grid-cols-3, Pro card shown first on mobile using order-first lg:order-none, all CTAs have min-h-[44px].
+  - CTA: Responsive section padding, buttons full-width on mobile, trust elements stack vertically, shorter terminal text on mobile.
+  - Footer: Link columns in 3-col grid on mobile (grid-cols-3 gap-4), responsive spacing/text sizes, social links have 44px touch targets.
+  - Ticker already uses overflow-hidden so no horizontal scroll issue.
+- Files changed:
+  - src/app/(marketing)/_components/navbar.tsx
+  - src/app/(marketing)/_components/hero.tsx
+  - src/app/(marketing)/_components/features.tsx
+  - src/app/(marketing)/_components/ai-showcase.tsx
+  - src/app/(marketing)/_components/pricing.tsx
+  - src/app/(marketing)/_components/cta.tsx
+  - src/app/(marketing)/_components/footer.tsx
+- **Learnings for future iterations:**
+  - For marketing pages, use md:hidden breakpoint for hamburger menu (vs sm:hidden for app pages) to keep nav visible longer
+  - Sheet drawer works great for mobile navigation - same pattern as other mobile drawers
+  - For feature grids with visual elements, hide visuals on mobile (hidden sm:block) to keep cards compact
+  - Use order-first on highlighted pricing cards to show them first on mobile stacked layout
+  - Marketing sections should use larger section padding steps: py-16 sm:py-24 lg:py-32
+---

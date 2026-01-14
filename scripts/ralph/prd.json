@@ -226,8 +226,45 @@
         "Verify in browser at 375px viewport"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Navbar: hamburger menu using Sheet drawer on mobile (md:hidden), simplified auth (just 'Start' button + user icon on mobile). Hero: responsive text sizes (text-3xl sm:text-5xl lg:text-6xl), stats grid grid-cols-2 md:grid-cols-4, CTA buttons full-width on mobile w-full sm:w-auto, terminal preview responsive with smaller elements on mobile. Features: responsive grid sm:grid-cols-2 lg:grid-cols-3, visual elements hidden on mobile for cleaner look, responsive section padding py-16 sm:py-24 lg:py-32. AI Showcase: query buttons horizontal scroll on mobile, terminal content responsive text/padding, trust badges stack vertically on mobile. Pricing: BYOK banner stacks vertically, pricing cards grid gap-4 sm:gap-6 lg:grid-cols-3, Pro card shown first on mobile using order-first lg:order-none. CTA: responsive section padding, buttons full-width on mobile, trust elements stack vertically. Footer: link columns 3-col grid on mobile, responsive spacing/text sizes, social links have 44px touch targets. Ticker uses overflow-hidden (already doesn't cause horizontal scroll)."
+    },
+    {
+      "id": "US-013",
+      "title": "Fix Marketing Navbar Mobile Menu",
+      "description": "As a mobile user on the landing page, I want the hamburger menu to only show auth actions so that the interface is cleaner and more purposeful.",
+      "acceptanceCriteria": [
+        "Remove section navigation links (Features, AI, Pricing) from mobile Sheet drawer",
+        "Keep only auth actions: Login/Get Started buttons when signed out",
+        "Keep only Dashboard link when signed in",
+        "Hamburger button remains visible on mobile (md:hidden)",
+        "Sheet drawer styling consistent with Terminal design",
+        "Touch targets remain 44px minimum",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 13,
+      "passes": false
+    },
+    {
+      "id": "US-014",
+      "title": "Fix Trade Detail Chart Interval Buttons Mobile",
+      "description": "As a mobile user viewing a trade detail, I want the chart interval selector to use a dropdown on mobile so that controls don't overflow or overlap.",
+      "acceptanceCriteria": [
+        "Add useIsMobile hook to TradingViewChart component",
+        "On mobile: Replace TimeframeSelector buttons with a Select/Dropdown showing current interval",
+        "Dropdown shows all intervals (1m, 5m, 15m, 30m, 1h) as options",
+        "Selected interval displayed in dropdown trigger",
+        "On desktop: Keep existing button row (no change)",
+        "Controls bar (absolute top-3 left-3) layout remains clean on mobile",
+        "Fit button remains accessible on mobile",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 14,
+      "passes": false
     }
   ]
 }
