@@ -1,0 +1,233 @@
+{
+  "project": "EdgeJournal",
+  "branchName": "ralph/mobile-adaptation",
+  "description": "Full mobile adaptation of all webapp pages following Daily Journal reference pattern",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Protected Layout Mobile Polish",
+      "description": "As a mobile user, I want the app shell (sidebar, header) to work well on mobile so that navigation is seamless.",
+      "acceptanceCriteria": [
+        "Verify shadcn Sidebar component responsive behavior works correctly",
+        "Main content padding responsive: p-4 sm:p-6 in layout.tsx",
+        "Header height appropriate for mobile (touch-friendly)",
+        "SidebarTrigger (hamburger) properly positioned and accessible",
+        "Account selector dropdown usable on mobile (proper touch targets)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Responsive padding p-4 sm:p-6 added to layout.tsx. Touch targets improved for account selector and dropdown items (min-h-[44px]). Sidebar component already has excellent mobile support with Sheet drawer on mobile."
+    },
+    {
+      "id": "US-002",
+      "title": "Dashboard Mobile Responsive Grid",
+      "description": "As a mobile user, I want the dashboard stats grid to stack properly on mobile so that I can view my trading metrics without horizontal scroll.",
+      "acceptanceCriteria": [
+        "Stats grid uses responsive classes: grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5",
+        "Performance summary grid stacks on mobile: grid-cols-1 sm:grid-cols-2",
+        "StartJournalHero stacks vertically on mobile with flex-col sm:flex-row",
+        "Button text variants: 'Start' on mobile (sm:hidden), 'Start My Journal' on desktop (hidden sm:inline)",
+        "Page title responsive: text-2xl sm:text-3xl",
+        "Responsive padding on cards where needed",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Stats grid made responsive with grid-cols-1 sm:grid-cols-2 lg:grid-cols-5. StartJournalHero uses flex-col sm:flex-row with responsive padding. Button text uses conditional spans for mobile/desktop variants. Page title responsive with text-2xl sm:text-3xl. Performance summary key metrics grid stacks on mobile."
+    },
+    {
+      "id": "US-003",
+      "title": "Journal List Mobile Card View",
+      "description": "As a mobile user, I want the trade list to display in a mobile-friendly card format so that I can browse and manage my trades on my phone.",
+      "acceptanceCriteria": [
+        "Add useMediaQuery hook for mobile detection",
+        "On mobile: Replace table with card-based list view showing key fields (symbol, direction, P&L, date)",
+        "Card view includes tap to navigate to trade detail",
+        "Filter panel collapses into a Sheet drawer on mobile (button to open filters)",
+        "Search bar remains visible at top",
+        "Bulk actions bar adapts to mobile (icons only or smaller buttons)",
+        "Column config hidden on mobile (not needed for card view)",
+        "Trash tab also uses card view on mobile",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Uses existing useIsMobile hook (breakpoint 768px). Mobile card view shows symbol, direction, P&L, date, R-multiple, exit reason, rating, and reviewed status. Filter button opens Sheet drawer on right. Bulk actions use icon-only on mobile. ColumnConfig hidden on mobile. TrashCard component for trash tab mobile view. All interactive card areas are semantic buttons with proper a11y."
+    },
+    {
+      "id": "US-004",
+      "title": "Trade Detail Mobile Layout",
+      "description": "As a mobile user, I want the trade detail page to show a mobile-friendly layout with a drawer for stats so that I can review trades on my phone.",
+      "acceptanceCriteria": [
+        "Add useMediaQuery hook and sidebarOpen state",
+        "Add mobile menu button (md:hidden) in header to open stats drawer",
+        "Replace ResizablePanelGroup with Sheet drawer for StatsPanel on mobile",
+        "ContentPanel displays full-width on mobile",
+        "Header actions responsive: hide less important actions on mobile or use icon-only",
+        "Navigation arrows remain accessible",
+        "Dialogs (close trade, delete) work correctly on mobile",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Uses useIsMobile hook for detection. Stats drawer opens from left via Sheet component with BarChart3 icon trigger in header. ContentPanel full-width on mobile. Header made responsive: icon-only for review button, hide Share button, hide Status/Imported badges on mobile. Navigation arrows remain accessible. Dialogs unchanged (work correctly on mobile as Dialog component is already responsive)."
+    },
+    {
+      "id": "US-005",
+      "title": "New Trade Page Mobile Adaptation",
+      "description": "As a mobile user, I want to add trades on mobile so that I can log trades immediately after taking them.",
+      "acceptanceCriteria": [
+        "Form fields stack vertically on mobile",
+        "Input fields full-width on mobile",
+        "Date/time pickers work on mobile",
+        "Number inputs have proper mobile keyboards (inputmode='decimal')",
+        "Submit button sticky at bottom or easily accessible",
+        "Responsive padding throughout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Responsive padding p-3 sm:p-4 on all card sections. Form grids use gap-3 sm:gap-4 for tighter mobile spacing. All number inputs have inputMode='decimal' for proper mobile keyboard. Submit buttons full-width on mobile with w-full sm:w-auto and min-h-[44px] for touch targets. Buttons reversed order on mobile (submit first with flex-col-reverse sm:flex-row). Header text responsive with text-xl sm:text-2xl and description hidden on mobile. Back button has proper touch target (min-h-[44px] min-w-[44px])."
+    },
+    {
+      "id": "US-006",
+      "title": "Analytics Page Mobile Layout",
+      "description": "As a mobile user, I want the analytics page to be usable on mobile with a simplified layout so that I can view my trading performance metrics.",
+      "acceptanceCriteria": [
+        "Add useMediaQuery hook for mobile detection",
+        "Filter controls collapse into Sheet drawer on mobile (button to open filters)",
+        "Tab navigation works on mobile (horizontal scroll on tab bar if needed)",
+        "Charts resize responsively (AgCharts should handle this)",
+        "Stats grids stack: grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+        "Heatmap components scroll horizontally if needed with overflow-x-auto",
+        "Calendar heatmap shows in scrollable container on mobile",
+        "Simplify dense data displays for mobile readability",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Uses useIsMobile hook for mobile detection. Filter controls convert to Sheet drawer on mobile with Filter button. Tab bar has horizontal scroll with touch-friendly targets (min-h-[40px]). Stats grids use grid-cols-1 sm:grid-cols-2 lg:grid-cols-4. HourHeatmap has overflow-x-auto with min-w-[320px]. CalendarHeatmap summary stats wrap with flex-wrap. ChartTerminal has responsive padding (p-3 sm:p-4). Header has responsive text sizes and description hidden on mobile. Responsive spacing throughout all tabs."
+    },
+    {
+      "id": "US-007",
+      "title": "AI Page Mobile Adaptation",
+      "description": "As a mobile user, I want the AI assistant page to work on mobile so that I can get AI-powered insights on my phone.",
+      "acceptanceCriteria": [
+        "Review current AI page structure and apply responsive patterns",
+        "Apply responsive padding: p-4 sm:p-6",
+        "Chat/input interface works on mobile (full-width input)",
+        "Results/insights display stacks vertically",
+        "Any side panels convert to Sheet drawers if present",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Responsive spacing throughout (space-y-4 sm:space-y-6). Header made responsive: text-2xl sm:text-3xl title, description hidden on mobile, API Keys button icon-only on mobile. API Key notice banner stacks vertically on mobile with full-width Settings button. Terminal header dots smaller on mobile, terminal path hidden on mobile. Chat content padding responsive (p-3 sm:p-4), example query buttons have min-h-[36px] touch targets. Messages use smaller text on mobile (text-xs sm:text-sm) with break-words for long content. Input area has min-h-[44px] for touch-friendly input and send button."
+    },
+    {
+      "id": "US-008",
+      "title": "Settings Page Mobile Adaptation",
+      "description": "As a mobile user, I want the settings page to display properly on mobile so that I can manage my account settings.",
+      "acceptanceCriteria": [
+        "Form layouts stack on mobile: flex-col sm:flex-row",
+        "Input fields full-width on mobile",
+        "Buttons properly sized for touch (min 44px height)",
+        "Any tabs or sections work on mobile",
+        "Responsive padding throughout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Tab bar has horizontal scroll with touch-friendly targets (min-h-[40px], smaller text on mobile). Header responsive (text-2xl sm:text-3xl, description hidden on mobile). All card sections have responsive padding (p-4 sm:p-6). Trading sessions row stacks on mobile with time/color controls on separate row. Account cards stack on mobile with badges wrapping. Action buttons have min-h-[36px] min-w-[36px] for touch targets. API key inputs have min-h-[44px]. Save footer stacks vertically on mobile with full-width button. TagManager also updated with responsive header and touch-friendly buttons."
+    },
+    {
+      "id": "US-009",
+      "title": "Import Page Mobile Adaptation",
+      "description": "As a mobile user, I want the import page to work on mobile so that I can upload trades from my phone if needed.",
+      "acceptanceCriteria": [
+        "File upload area works on mobile (tap to select)",
+        "Form fields stack vertically",
+        "Progress indicators visible",
+        "Results/preview table scrolls horizontally or converts to cards",
+        "Responsive padding throughout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Uses useIsMobile hook for mobile detection. Progress stepper has horizontal scroll with smaller step indicators on mobile. Header responsive with text-xl sm:text-2xl title, description hidden on mobile, back button with 44px touch target. Select account step has responsive padding, touch-friendly dropdown (min-h-[44px]), full-width continue button. Upload area has smaller padding on mobile (p-6 vs p-12), mobile-optimized text ('Tap to select' vs 'Drop file'), touch-friendly tab triggers. Mapping section has grid-cols-1 sm:grid-cols-2 for column selectors, all SelectTrigger items have min-h-[44px] touch targets. Preview converts table to card view on mobile showing symbol, direction, qty, entry/exit prices. Navigation buttons full-width with flex-col-reverse sm:flex-row. Complete step has responsive padding and full-width buttons stacking on mobile."
+    },
+    {
+      "id": "US-010",
+      "title": "Strategies List Page Mobile Adaptation",
+      "description": "As a mobile user, I want to view and manage my trading strategies on mobile.",
+      "acceptanceCriteria": [
+        "Strategy cards/list stacks vertically on mobile",
+        "Add strategy button accessible",
+        "Strategy actions (edit, delete) accessible via dropdown",
+        "Responsive grid: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Uses useIsMobile hook for mobile detection. Header responsive with text-xl sm:text-2xl title, description hidden on mobile. New Strategy button icon-only on mobile with 44px touch target. Performance Comparison table has horizontal scroll on mobile (-mx-4 px-4 overflow-x-auto with min-w-[600px]). Strategy cards grid responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 with gap-3 sm:gap-4. StrategyCard updated: isMobile prop makes dropdown always visible (no hover required), responsive padding p-4 sm:p-5, smaller text sizes on mobile, touch-friendly dropdown items (min-h-[44px]). Empty state responsive with smaller padding and icons. Delete dialog buttons have proper touch targets and stack vertically on mobile."
+    },
+    {
+      "id": "US-011",
+      "title": "Strategy Detail/Edit Pages Mobile Adaptation",
+      "description": "As a mobile user, I want to view and edit strategy details on mobile.",
+      "acceptanceCriteria": [
+        "Form fields stack vertically on mobile",
+        "Color picker works on mobile",
+        "Stats display stacks on mobile",
+        "Associated trades list responsive",
+        "New strategy page also responsive",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Strategy Detail page: useIsMobile hook added. Header responsive with truncating title, back button with 44px touch target, Duplicate button icon-only on mobile, Delete dialog footer stacks vertically. Stats grid responsive: grid-cols-2 sm:grid-cols-4 with smaller text/padding on mobile. Form card has responsive padding (p-4 sm:p-6). New Strategy page: same header pattern with responsive title and hidden description on mobile. StrategyForm: section tabs have horizontal scroll on mobile with smaller touch-friendly tabs, color picker uses flex-wrap with larger touch targets, rules section stacks vertically with delete button repositioned, submit button full-width on mobile. RiskConfig/ScalingConfig/TrailingConfig: all grids use grid-cols-1 sm:grid-cols-2, all inputs have min-h-[44px] and inputMode for mobile keyboards, all action buttons have proper touch targets."
+    },
+    {
+      "id": "US-012",
+      "title": "Marketing Landing Page Mobile Adaptation",
+      "description": "As a mobile user visiting the landing page, I want a properly responsive experience so that I can learn about the product and sign up.",
+      "acceptanceCriteria": [
+        "Header/nav collapses to hamburger menu on mobile",
+        "Hero section stacks vertically, responsive text sizes",
+        "Feature sections stack on mobile",
+        "CTA buttons full-width on mobile",
+        "Footer stacks on mobile",
+        "Ticker component doesn't cause horizontal scroll",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at 375px viewport"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -27,6 +28,7 @@ export default function StrategyDetailPage() {
 	const params = useParams();
 	const router = useRouter();
 	const strategyId = params.id as string;
+	const isMobile = useIsMobile();
 
 	const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -94,8 +96,8 @@ export default function StrategyDetailPage() {
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="mx-auto w-[95%] max-w-4xl space-y-6 py-6">
-				<Skeleton className="h-10 w-64" />
+			<div className="mx-auto w-[95%] max-w-4xl space-y-4 py-4 sm:space-y-6 sm:py-6">
+				<Skeleton className="h-10 w-48 sm:w-64" />
 				<Skeleton className="h-24" />
 				<Skeleton className="h-96" />
 			</div>
@@ -105,13 +107,13 @@ export default function StrategyDetailPage() {
 	// Not found
 	if (!strategy) {
 		return (
-			<div className="flex flex-col items-center justify-center py-24">
-				<AlertTriangle className="mb-4 h-12 w-12 text-muted-foreground" />
-				<h2 className="font-semibold text-xl">Strategy not found</h2>
-				<p className="mb-4 text-muted-foreground">
+			<div className="flex flex-col items-center justify-center px-4 py-16 sm:py-24">
+				<AlertTriangle className="mb-4 h-10 w-10 text-muted-foreground sm:h-12 sm:w-12" />
+				<h2 className="font-semibold text-lg sm:text-xl">Strategy not found</h2>
+				<p className="mb-4 text-center text-muted-foreground text-sm sm:text-base">
 					This strategy doesn&apos;t exist or you don&apos;t have access.
 				</p>
-				<Button asChild>
+				<Button asChild className="min-h-[44px]">
 					<Link href="/strategies">Back to Strategies</Link>
 				</Button>
 			</div>
@@ -127,45 +129,54 @@ export default function StrategyDetailPage() {
 	}));
 
 	return (
-		<div className="mx-auto w-[95%] max-w-4xl space-y-8 py-6">
+		<div className="mx-auto w-[95%] max-w-4xl space-y-4 py-4 sm:space-y-8 sm:py-6">
 			{/* Header */}
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-3">
-					<Button asChild className="h-8 w-8" size="icon" variant="ghost">
+			<div className="flex items-center justify-between gap-2">
+				<div className="flex min-w-0 items-center gap-2 sm:gap-3">
+					<Button
+						asChild
+						className="min-h-[44px] min-w-[44px] shrink-0 sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
+						size="icon"
+						variant="ghost"
+					>
 						<Link href="/strategies">
 							<ArrowLeft className="h-4 w-4" />
 						</Link>
 					</Button>
-					<div className="flex items-center gap-3">
+					<div className="flex min-w-0 items-center gap-2 sm:gap-3">
 						<div
-							className="h-4 w-4 rounded"
+							className="h-3 w-3 shrink-0 rounded sm:h-4 sm:w-4"
 							style={{ backgroundColor: strategy.color ?? "#d4ff00" }}
 						/>
-						<h1 className="font-bold text-2xl tracking-tight">
+						<h1 className="truncate font-bold text-lg tracking-tight sm:text-2xl">
 							{strategy.name}
 						</h1>
 					</div>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex shrink-0 items-center gap-1 sm:gap-2">
 					<Button
-						className="font-mono text-xs"
+						className="min-h-[36px] min-w-[36px] font-mono text-xs sm:min-h-0 sm:min-w-0"
 						onClick={() => duplicateMutation.mutate({ id: strategyId })}
-						size="sm"
+						size={isMobile ? "icon" : "sm"}
 						variant="outline"
 					>
-						<Copy className="mr-2 h-3 w-3" />
-						Duplicate
+						<Copy className="h-3.5 w-3.5 sm:mr-2 sm:h-3 sm:w-3" />
+						<span className="hidden sm:inline">Duplicate</span>
 					</Button>
 					<AlertDialog onOpenChange={setDeleteOpen} open={deleteOpen}>
 						<AlertDialogTrigger asChild>
-							<Button className="h-8 w-8" size="icon" variant="ghost">
+							<Button
+								className="min-h-[36px] min-w-[36px] sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
+								size="icon"
+								variant="ghost"
+							>
 								<Trash2 className="h-4 w-4 text-muted-foreground transition-colors hover:text-loss" />
 							</Button>
 						</AlertDialogTrigger>
-						<AlertDialogContent className="border-border bg-background">
+						<AlertDialogContent className="mx-4 border-border bg-background sm:mx-0">
 							<AlertDialogHeader>
-								<AlertDialogTitle className="font-mono uppercase tracking-wider">
+								<AlertDialogTitle className="font-mono text-sm uppercase tracking-wider sm:text-base">
 									Delete Strategy
 								</AlertDialogTitle>
 								<AlertDialogDescription className="font-mono text-xs">
@@ -174,12 +185,12 @@ export default function StrategyDetailPage() {
 									from all associated trades.
 								</AlertDialogDescription>
 							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel className="font-mono text-xs">
+							<AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+								<AlertDialogCancel className="min-h-[44px] font-mono text-xs sm:min-h-0">
 									Cancel
 								</AlertDialogCancel>
 								<AlertDialogAction
-									className="bg-loss font-mono text-xs hover:bg-loss/90"
+									className="min-h-[44px] bg-loss font-mono text-xs hover:bg-loss/90 sm:min-h-0"
 									disabled={deleteMutation.isPending}
 									onClick={(e) => {
 										e.preventDefault();
@@ -199,35 +210,35 @@ export default function StrategyDetailPage() {
 
 			{/* Stats summary */}
 			{stats && stats.totalTrades > 0 && (
-				<div className="grid grid-cols-4 gap-4">
-					<div className="rounded border border-white/5 bg-white/2 p-4">
-						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+				<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+					<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Trades
 						</div>
-						<div className="mt-1 font-bold font-mono text-2xl">
+						<div className="mt-1 font-bold font-mono text-lg sm:text-2xl">
 							{stats.totalTrades}
 						</div>
 					</div>
-					<div className="rounded border border-white/5 bg-white/2 p-4">
-						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+					<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Win Rate
 						</div>
 						<div
 							className={cn(
-								"mt-1 font-bold font-mono text-2xl",
+								"mt-1 font-bold font-mono text-lg sm:text-2xl",
 								stats.winRate >= 50 ? "text-profit" : "text-loss",
 							)}
 						>
 							{stats.winRate.toFixed(0)}%
 						</div>
 					</div>
-					<div className="rounded border border-white/5 bg-white/2 p-4">
-						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+					<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Total P&L
 						</div>
 						<div
 							className={cn(
-								"mt-1 font-bold font-mono text-2xl",
+								"mt-1 font-bold font-mono text-lg sm:text-2xl",
 								stats.totalPnl >= 0 ? "text-profit" : "text-loss",
 							)}
 						>
@@ -238,13 +249,13 @@ export default function StrategyDetailPage() {
 							})}
 						</div>
 					</div>
-					<div className="rounded border border-white/5 bg-white/2 p-4">
-						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+					<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Profit Factor
 						</div>
 						<div
 							className={cn(
-								"mt-1 font-bold font-mono text-2xl",
+								"mt-1 font-bold font-mono text-lg sm:text-2xl",
 								stats.profitFactor >= 1 ? "text-profit" : "text-loss",
 							)}
 						>
@@ -255,7 +266,7 @@ export default function StrategyDetailPage() {
 			)}
 
 			{/* Form */}
-			<div className="rounded border border-white/5 bg-white/2 p-6">
+			<div className="rounded border border-white/5 bg-white/2 p-4 sm:p-6">
 				<StrategyForm
 					initialData={{
 						name: strategy.name,

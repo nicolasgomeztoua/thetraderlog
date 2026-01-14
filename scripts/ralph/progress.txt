@@ -179,3 +179,77 @@ Started: Wed Jan 14 18:20:29 +01 2026
   - DialogFooter can use flex-col-reverse gap-2 sm:flex-row for mobile-first button layouts
   - Badge counts (like "3 trades") can be shortened on mobile by removing word "trades"
 ---
+
+## 2026-01-14 - US-009 Import Page Mobile Adaptation
+- What was implemented:
+  - Added useIsMobile hook for mobile detection
+  - Progress stepper made responsive: horizontal scroll container, smaller step indicators (h-7 w-7 vs h-8 w-8), step labels always visible with smaller text
+  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile, back button with 44px touch target
+  - Select account step: responsive padding (p-4 sm:p-6), terminal dots smaller on mobile, touch-friendly dropdown (min-h-[44px]), full-width continue button
+  - Upload area: smaller padding on mobile (p-6 vs p-12), mobile-optimized text ("Tap to select CSV file" vs "Drop your CSV file here"), touch-friendly tabs
+  - Mapping section: grid-cols-1 sm:grid-cols-2 for column selectors, all SelectTrigger/SelectItem have min-h-[44px], responsive label text, flex-col-reverse button layout
+  - Preview step: table converts to card view on mobile showing symbol, direction badge, quantity, entry/exit prices in compact format
+  - Complete step: responsive padding, smaller checkmark icon, full-width buttons stacking vertically
+  - All navigation buttons are full-width on mobile with flex-col-reverse sm:flex-row pattern
+- Files changed:
+  - src/app/(protected)/import/page.tsx
+- **Learnings for future iterations:**
+  - For wizard/step flows, progress steppers need horizontal scroll on mobile: wrap in overflow-x-auto container
+  - Preview tables with many columns should convert to card view on mobile using conditional rendering based on isMobile
+  - File upload areas: change text from "Drop file here" to "Tap to select" on mobile for clearer affordance
+  - Terminal-style decorative elements (dots, paths) can be hidden on mobile to save space
+---
+
+## 2026-01-14 - US-010 Strategies List Page Mobile Adaptation
+- What was implemented:
+  - Added useIsMobile hook for mobile detection
+  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile
+  - "New Strategy" button icon-only on mobile with 44px touch target
+  - Performance Comparison table wrapped in horizontal scroll container (-mx-4 px-4 overflow-x-auto with min-w-[600px])
+  - Strategy cards grid responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 with gap-3 sm:gap-4
+  - StrategyCard component updated with isMobile prop to make dropdown always visible (no hover required)
+  - StrategyCard padding responsive: p-4 sm:p-5
+  - StrategyCard text sizes responsive: smaller labels (text-[9px] sm:text-[10px]), stats (text-base sm:text-lg)
+  - Dropdown menu items have min-h-[44px] touch targets on mobile
+  - Empty state responsive: smaller padding, icons, and font sizes
+  - Loading skeleton responsive: h-40 sm:h-48
+  - Delete dialog footer buttons stack vertically on mobile with 44px touch targets
+- Files changed:
+  - src/app/(protected)/strategies/page.tsx
+  - src/components/strategy/strategy-card.tsx
+- **Learnings for future iterations:**
+  - For card components that use hover-reveal actions, pass isMobile prop to make them always visible on mobile
+  - Pattern for table horizontal scroll on mobile: `-mx-4 px-4 overflow-x-auto` to allow scroll past page padding
+  - Card grids should transition: grid-cols-1 (mobile) → sm:grid-cols-2 (tablet) → lg:grid-cols-3 (desktop)
+---
+
+## 2026-01-14 - US-011 Strategy Detail/Edit Pages Mobile Adaptation
+- What was implemented:
+  - Strategy Detail page: useIsMobile hook for mobile detection
+  - Header responsive: truncating title (truncate class), back button with min-h-[44px] min-w-[44px] touch target
+  - Duplicate button icon-only on mobile using conditional size prop (size={isMobile ? "icon" : "sm"})
+  - Delete dialog footer stacks vertically on mobile (flex-col gap-2 sm:flex-row)
+  - Stats grid responsive: grid-cols-2 sm:grid-cols-4 with smaller text (text-lg sm:text-2xl) and padding (p-3 sm:p-4)
+  - Form card padding responsive: p-4 sm:p-6
+  - New Strategy page: same header pattern, description hidden on mobile (hidden sm:block)
+  - StrategyForm: section tabs in horizontal scroll container (-mx-4 px-4 overflow-x-auto) with smaller touch-friendly tabs (min-h-[36px])
+  - Color picker uses flex-wrap with larger touch targets on mobile (h-9 w-9 sm:h-8 sm:w-8)
+  - Rules section stacks vertically on mobile (flex-col sm:flex-row), delete button repositioned for mobile layout
+  - Submit button full-width on mobile (w-full sm:w-auto, min-h-[44px])
+  - RiskConfig: all grids use grid-cols-1 sm:grid-cols-2, all inputs have min-h-[44px] sm:min-h-0
+  - ScalingConfig: rule rows stack on mobile with responsive gap and touch-friendly delete buttons
+  - TrailingConfig: checkbox has larger size on mobile (h-5 w-5 sm:h-4 sm:w-4), trail stop rows reorganized for mobile
+  - All number inputs use inputMode="decimal" or inputMode="numeric" for proper mobile keyboards
+- Files changed:
+  - src/app/(protected)/strategies/[id]/page.tsx
+  - src/app/(protected)/strategies/new/page.tsx
+  - src/components/strategy/strategy-form.tsx
+  - src/components/strategy/risk-config.tsx
+  - src/components/strategy/scaling-config.tsx
+  - src/components/strategy/trailing-config.tsx
+- **Learnings for future iterations:**
+  - For complex multi-section forms, wrap tabs in overflow-x-auto with -mx-4 px-4 for horizontal scroll
+  - Pattern for conditional button size: `size={isMobile ? "icon" : "sm"}` with hidden text span
+  - When form rows have multiple controls, reorganize on mobile: stack vertically but keep related items (input + delete) on same row
+  - Checkboxes should be slightly larger on mobile (h-5 w-5) for easier touch interaction
+---
