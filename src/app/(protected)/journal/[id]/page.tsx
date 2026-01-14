@@ -2,6 +2,7 @@
 
 import {
 	AlertTriangle,
+	BarChart3,
 	Check,
 	CheckCircle2,
 	ChevronLeft,
@@ -35,8 +36,15 @@ import {
 	ResizablePanel,
 	ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useTimezone } from "@/hooks/use-timezone";
 import { cn, formatDate } from "@/lib/shared";
 import { calculateAllStats } from "@/lib/trades";
@@ -82,9 +90,11 @@ export default function TradeDetailPage() {
 	const router = useRouter();
 	const tradeId = params.id as string;
 	const { timezone } = useTimezone();
+	const isMobile = useIsMobile();
 
 	const [isClosing, setIsClosing] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [isStatsOpen, setIsStatsOpen] = useState(false);
 	const [closeData, setCloseData] = useState({
 		exitPrice: "",
 		exitDate: new Date().toISOString().split("T")[0],
@@ -263,12 +273,12 @@ export default function TradeDetailPage() {
 	if (isLoading) {
 		return (
 			<div className="flex h-[calc(100vh-4rem)] flex-col">
-				<div className="flex items-center justify-between border-border border-b px-4 py-3">
-					<Skeleton className="h-8 w-48" />
-					<Skeleton className="h-8 w-32" />
+				<div className="flex items-center justify-between border-border border-b px-3 py-2 sm:px-4 sm:py-3">
+					<Skeleton className="h-8 w-32 sm:w-48" />
+					<Skeleton className="h-8 w-20 sm:w-32" />
 				</div>
 				<div className="flex flex-1">
-					<div className="w-[30%] border-border border-r p-4">
+					<div className="hidden w-[30%] border-border border-r p-4 md:block">
 						<Skeleton className="h-full" />
 					</div>
 					<div className="flex-1 p-4">
@@ -302,18 +312,23 @@ export default function TradeDetailPage() {
 			{/* ================================================================
 			    HEADER BAR
 			    ================================================================ */}
-			<div className="flex shrink-0 items-center justify-between border-border border-b bg-background px-4 py-2">
+			<div className="flex shrink-0 items-center justify-between border-border border-b bg-background px-2 py-2 sm:px-4">
 				{/* Left: Menu + Nav + Symbol */}
-				<div className="flex items-center gap-3">
-					{/* Menu button */}
-					<Button asChild className="h-8 w-8" size="icon" variant="ghost">
+				<div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-3">
+					{/* Menu button - back to journal */}
+					<Button
+						asChild
+						className="h-8 w-8 shrink-0"
+						size="icon"
+						variant="ghost"
+					>
 						<Link href="/journal">
 							<Menu className="h-4 w-4" />
 						</Link>
 					</Button>
 
 					{/* Prev/Next navigation */}
-					<div className="flex items-center gap-1">
+					<div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
 						{prevTrade ? (
 							<Button asChild className="h-7 w-7" size="icon" variant="ghost">
 								<Link href={`/journal/${prevTrade.id}`}>
@@ -339,78 +354,86 @@ export default function TradeDetailPage() {
 					</div>
 
 					{/* Symbol & Date */}
-					<div className="flex items-center gap-3">
-						<div>
-							<div className="flex items-center gap-2">
-								<span className="font-bold font-mono text-lg tracking-tight">
-									{trade.symbol}
-								</span>
+					<div className="min-w-0 flex-1">
+						<div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+							<span className="font-bold font-mono text-base tracking-tight sm:text-lg">
+								{trade.symbol}
+							</span>
+							<Badge
+								className={cn(
+									"font-mono text-[9px] uppercase",
+									trade.direction === "long"
+										? "border-profit/30 text-profit"
+										: "border-loss/30 text-loss",
+								)}
+								variant="outline"
+							>
+								{trade.direction}
+							</Badge>
+							<Badge
+								className="hidden font-mono text-[9px] uppercase sm:inline-flex"
+								variant={trade.status === "open" ? "secondary" : "outline"}
+							>
+								{trade.status === "open" ? (
+									<Clock className="mr-1 h-2.5 w-2.5" />
+								) : (
+									<Check className="mr-1 h-2.5 w-2.5" />
+								)}
+								{trade.status}
+							</Badge>
+							{isImported && (
 								<Badge
-									className={cn(
-										"font-mono text-[9px] uppercase",
-										trade.direction === "long"
-											? "border-profit/30 text-profit"
-											: "border-loss/30 text-loss",
-									)}
+									className="hidden border-accent/30 font-mono text-[9px] text-accent uppercase sm:inline-flex"
 									variant="outline"
 								>
-									{trade.direction}
+									<Import className="mr-1 h-2.5 w-2.5" />
+									Imported
 								</Badge>
-								<Badge
-									className="font-mono text-[9px] uppercase"
-									variant={trade.status === "open" ? "secondary" : "outline"}
-								>
-									{trade.status === "open" ? (
-										<Clock className="mr-1 h-2.5 w-2.5" />
-									) : (
-										<Check className="mr-1 h-2.5 w-2.5" />
-									)}
-									{trade.status}
-								</Badge>
-								{isImported && (
-									<Badge
-										className="border-accent/30 font-mono text-[9px] text-accent uppercase"
-										variant="outline"
-									>
-										<Import className="mr-1 h-2.5 w-2.5" />
-										Imported
-									</Badge>
-								)}
-							</div>
-							<p className="font-mono text-[10px] text-muted-foreground">
-								{formatDate(
-									trade.entryTime,
-									{
-										weekday: "short",
-										month: "short",
-										day: "numeric",
-										year: "numeric",
-									},
-									timezone,
-								)}
-								{stats?.duration && (
-									<span className="text-muted-foreground/50">
-										{" "}
-										· {stats.duration}
-									</span>
-								)}
-								{trade.account?.name && (
-									<span className="text-muted-foreground/50">
-										{" "}
-										· {trade.account.name}
-									</span>
-								)}
-							</p>
+							)}
 						</div>
+						<p className="hidden font-mono text-[10px] text-muted-foreground sm:block">
+							{formatDate(
+								trade.entryTime,
+								{
+									weekday: "short",
+									month: "short",
+									day: "numeric",
+									year: "numeric",
+								},
+								timezone,
+							)}
+							{stats?.duration && (
+								<span className="text-muted-foreground/50">
+									{" "}
+									· {stats.duration}
+								</span>
+							)}
+							{trade.account?.name && (
+								<span className="text-muted-foreground/50">
+									{" "}
+									· {trade.account.name}
+								</span>
+							)}
+						</p>
 					</div>
 				</div>
 
 				{/* Right: Actions */}
-				<div className="flex items-center gap-2">
-					{/* Mark as reviewed */}
+				<div className="flex shrink-0 items-center gap-1 sm:gap-2">
+					{/* Stats drawer button - mobile only */}
+					<Button
+						className="h-8 w-8 md:hidden"
+						onClick={() => setIsStatsOpen(true)}
+						size="icon"
+						variant="ghost"
+					>
+						<BarChart3 className="h-4 w-4" />
+					</Button>
+
+					{/* Mark as reviewed - icon only on mobile */}
 					<button
 						className={cn(
-							"flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors",
+							"flex min-h-[44px] items-center gap-1.5 rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:min-h-0 sm:px-3",
 							trade.isReviewed
 								? "bg-profit/10 text-profit"
 								: "text-muted-foreground hover:bg-white/5",
@@ -424,15 +447,22 @@ export default function TradeDetailPage() {
 						type="button"
 					>
 						{trade.isReviewed ? (
-							<CheckCircle2 className="h-3.5 w-3.5" />
+							<CheckCircle2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
 						) : (
-							<Clock className="h-3.5 w-3.5" />
+							<Clock className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
 						)}
-						{trade.isReviewed ? "Reviewed" : "Mark as reviewed"}
+						<span className="hidden sm:inline">
+							{trade.isReviewed ? "Reviewed" : "Mark as reviewed"}
+						</span>
 					</button>
 
-					{/* Share button (placeholder) */}
-					<Button className="h-8 w-8" disabled size="icon" variant="ghost">
+					{/* Share button (placeholder) - hidden on mobile */}
+					<Button
+						className="hidden h-8 w-8 sm:flex"
+						disabled
+						size="icon"
+						variant="ghost"
+					>
 						<Share2 className="h-4 w-4" />
 					</Button>
 
@@ -449,119 +479,225 @@ export default function TradeDetailPage() {
 			</div>
 
 			{/* ================================================================
-			    RESIZABLE PANELS
+			    RESIZABLE PANELS (Desktop) / Full-width Content (Mobile)
 			    ================================================================ */}
-			<ResizablePanelGroup
-				className="h-full min-h-0 flex-1"
-				direction="horizontal"
-				onLayout={handleLayoutChange}
-			>
-				{/* LEFT PANEL - Stats */}
-				<ResizablePanel
-					className="min-w-0 overflow-hidden border-border border-r"
-					defaultSize={panelSizes[0]}
-					maxSize={70}
-					minSize={10}
+			{isMobile ? (
+				// Mobile: Full-width content panel + Sheet drawer for stats
+				<>
+					<div className="min-h-0 flex-1 overflow-hidden">
+						<ContentPanel
+							onUpdateField={updateField}
+							trade={{
+								id: trade.id,
+								symbol: trade.symbol,
+								direction: trade.direction,
+								status: trade.status,
+								instrumentType: trade.instrumentType,
+								entryPrice: trade.entryPrice,
+								exitPrice: trade.exitPrice,
+								entryTime: trade.entryTime,
+								exitTime: trade.exitTime,
+								stopLoss: trade.stopLoss,
+								takeProfit: trade.takeProfit,
+								wasTrailed: trade.wasTrailed,
+								trailedStopLoss: trade.trailedStopLoss,
+								notes: trade.notes,
+								tradeTags: trade.tradeTags,
+								executions: trade.executions,
+								maePrice: trade.maePrice,
+								mfePrice: trade.mfePrice,
+								quantity: trade.quantity,
+							}}
+						/>
+					</div>
+
+					{/* Stats Sheet Drawer (Mobile) */}
+					<Sheet onOpenChange={setIsStatsOpen} open={isStatsOpen}>
+						<SheetContent
+							className="w-[85%] overflow-hidden p-0 sm:max-w-md"
+							side="left"
+						>
+							<SheetHeader className="border-border border-b px-4 py-3">
+								<SheetTitle className="font-mono text-sm uppercase tracking-wider">
+									Trade Stats
+								</SheetTitle>
+							</SheetHeader>
+							<div className="h-[calc(100%-57px)] overflow-hidden">
+								<StatsPanel
+									onUpdateField={updateField}
+									onUpdateRating={(rating) => updateRating(rating)}
+									pendingRating={pendingRating}
+									stats={
+										stats ?? {
+											points: null,
+											ticks: null,
+											pips: null,
+											ticksPerContract: null,
+											grossPnl: null,
+											roi: null,
+											duration: null,
+											rMultiple: null,
+											plannedRR: null,
+										}
+									}
+									trade={{
+										id: trade.id,
+										symbol: trade.symbol,
+										direction: trade.direction,
+										status: trade.status,
+										instrumentType: trade.instrumentType,
+										quantity: trade.quantity,
+										entryPrice: trade.entryPrice,
+										exitPrice: trade.exitPrice,
+										entryTime: trade.entryTime,
+										exitTime: trade.exitTime,
+										stopLoss: trade.stopLoss,
+										takeProfit: trade.takeProfit,
+										fees: trade.fees,
+										netPnl: trade.netPnl,
+										rating: trade.rating,
+										strategyId: trade.strategyId,
+										wasTrailed: trade.wasTrailed,
+										trailedStopLoss: trade.trailedStopLoss,
+										emotionalState: trade.emotionalState,
+										exitReason: trade.exitReason,
+										tradeTags: trade.tradeTags,
+										maePrice: trade.maePrice,
+										mfePrice: trade.mfePrice,
+										maeAmount: trade.maeAmount,
+										mfeAmount: trade.mfeAmount,
+										marketDataQuality: trade.marketDataQuality,
+										executions: trade.executions?.map((e) => ({
+											id: e.id,
+											executionType: e.executionType as
+												| "entry"
+												| "exit"
+												| "scale_in"
+												| "scale_out",
+											price: e.price,
+											quantity: e.quantity,
+											executedAt: e.executedAt,
+											fees: e.fees,
+											realizedPnl: e.realizedPnl,
+											notes: e.notes,
+										})),
+									}}
+								/>
+							</div>
+						</SheetContent>
+					</Sheet>
+				</>
+			) : (
+				// Desktop: Resizable panels
+				<ResizablePanelGroup
+					className="h-full min-h-0 flex-1"
+					direction="horizontal"
+					onLayout={handleLayoutChange}
 				>
-					<StatsPanel
-						onUpdateField={updateField}
-						onUpdateRating={(rating) => updateRating(rating)}
-						pendingRating={pendingRating}
-						stats={
-							stats ?? {
-								points: null,
-								ticks: null,
-								pips: null,
-								ticksPerContract: null,
-								grossPnl: null,
-								roi: null,
-								duration: null,
-								rMultiple: null,
-								plannedRR: null,
+					{/* LEFT PANEL - Stats */}
+					<ResizablePanel
+						className="min-w-0 overflow-hidden border-border border-r"
+						defaultSize={panelSizes[0]}
+						maxSize={70}
+						minSize={10}
+					>
+						<StatsPanel
+							onUpdateField={updateField}
+							onUpdateRating={(rating) => updateRating(rating)}
+							pendingRating={pendingRating}
+							stats={
+								stats ?? {
+									points: null,
+									ticks: null,
+									pips: null,
+									ticksPerContract: null,
+									grossPnl: null,
+									roi: null,
+									duration: null,
+									rMultiple: null,
+									plannedRR: null,
+								}
 							}
-						}
-						trade={{
-							id: trade.id,
-							symbol: trade.symbol,
-							direction: trade.direction,
-							status: trade.status,
-							instrumentType: trade.instrumentType,
-							quantity: trade.quantity,
-							entryPrice: trade.entryPrice,
-							exitPrice: trade.exitPrice,
-							entryTime: trade.entryTime,
-							exitTime: trade.exitTime,
-							stopLoss: trade.stopLoss,
-							takeProfit: trade.takeProfit,
-							fees: trade.fees,
-							netPnl: trade.netPnl,
-							rating: trade.rating,
-							strategyId: trade.strategyId,
-							// Risk management
-							wasTrailed: trade.wasTrailed,
-							trailedStopLoss: trade.trailedStopLoss,
-							// Context
-							emotionalState: trade.emotionalState,
-							exitReason: trade.exitReason,
-							tradeTags: trade.tradeTags,
-							// MAE/MFE Analysis
-							maePrice: trade.maePrice,
-							mfePrice: trade.mfePrice,
-							maeAmount: trade.maeAmount,
-							mfeAmount: trade.mfeAmount,
-							marketDataQuality: trade.marketDataQuality,
-							executions: trade.executions?.map((e) => ({
-								id: e.id,
-								executionType: e.executionType as
-									| "entry"
-									| "exit"
-									| "scale_in"
-									| "scale_out",
-								price: e.price,
-								quantity: e.quantity,
-								executedAt: e.executedAt,
-								fees: e.fees,
-								realizedPnl: e.realizedPnl,
-								notes: e.notes,
-							})),
-						}}
-					/>
-				</ResizablePanel>
+							trade={{
+								id: trade.id,
+								symbol: trade.symbol,
+								direction: trade.direction,
+								status: trade.status,
+								instrumentType: trade.instrumentType,
+								quantity: trade.quantity,
+								entryPrice: trade.entryPrice,
+								exitPrice: trade.exitPrice,
+								entryTime: trade.entryTime,
+								exitTime: trade.exitTime,
+								stopLoss: trade.stopLoss,
+								takeProfit: trade.takeProfit,
+								fees: trade.fees,
+								netPnl: trade.netPnl,
+								rating: trade.rating,
+								strategyId: trade.strategyId,
+								wasTrailed: trade.wasTrailed,
+								trailedStopLoss: trade.trailedStopLoss,
+								emotionalState: trade.emotionalState,
+								exitReason: trade.exitReason,
+								tradeTags: trade.tradeTags,
+								maePrice: trade.maePrice,
+								mfePrice: trade.mfePrice,
+								maeAmount: trade.maeAmount,
+								mfeAmount: trade.mfeAmount,
+								marketDataQuality: trade.marketDataQuality,
+								executions: trade.executions?.map((e) => ({
+									id: e.id,
+									executionType: e.executionType as
+										| "entry"
+										| "exit"
+										| "scale_in"
+										| "scale_out",
+									price: e.price,
+									quantity: e.quantity,
+									executedAt: e.executedAt,
+									fees: e.fees,
+									realizedPnl: e.realizedPnl,
+									notes: e.notes,
+								})),
+							}}
+						/>
+					</ResizablePanel>
 
-				<ResizableHandle withHandle />
+					<ResizableHandle withHandle />
 
-				{/* RIGHT PANEL - Content */}
-				<ResizablePanel
-					className="min-w-0 overflow-hidden"
-					defaultSize={panelSizes[1]}
-					minSize={20}
-				>
-					<ContentPanel
-						onUpdateField={updateField}
-						trade={{
-							id: trade.id,
-							symbol: trade.symbol,
-							direction: trade.direction,
-							status: trade.status,
-							instrumentType: trade.instrumentType,
-							entryPrice: trade.entryPrice,
-							exitPrice: trade.exitPrice,
-							entryTime: trade.entryTime,
-							exitTime: trade.exitTime,
-							stopLoss: trade.stopLoss,
-							takeProfit: trade.takeProfit,
-							wasTrailed: trade.wasTrailed,
-							trailedStopLoss: trade.trailedStopLoss,
-							notes: trade.notes,
-							tradeTags: trade.tradeTags,
-							executions: trade.executions,
-							maePrice: trade.maePrice,
-							mfePrice: trade.mfePrice,
-							quantity: trade.quantity,
-						}}
-					/>
-				</ResizablePanel>
-			</ResizablePanelGroup>
+					{/* RIGHT PANEL - Content */}
+					<ResizablePanel
+						className="min-w-0 overflow-hidden"
+						defaultSize={panelSizes[1]}
+						minSize={20}
+					>
+						<ContentPanel
+							onUpdateField={updateField}
+							trade={{
+								id: trade.id,
+								symbol: trade.symbol,
+								direction: trade.direction,
+								status: trade.status,
+								instrumentType: trade.instrumentType,
+								entryPrice: trade.entryPrice,
+								exitPrice: trade.exitPrice,
+								entryTime: trade.entryTime,
+								exitTime: trade.exitTime,
+								stopLoss: trade.stopLoss,
+								takeProfit: trade.takeProfit,
+								wasTrailed: trade.wasTrailed,
+								trailedStopLoss: trade.trailedStopLoss,
+								notes: trade.notes,
+								tradeTags: trade.tradeTags,
+								executions: trade.executions,
+								maePrice: trade.maePrice,
+								mfePrice: trade.mfePrice,
+								quantity: trade.quantity,
+							}}
+						/>
+					</ResizablePanel>
+				</ResizablePanelGroup>
+			)}
 
 			{/* ================================================================
 			    DIALOGS

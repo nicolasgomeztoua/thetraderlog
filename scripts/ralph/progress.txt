@@ -46,3 +46,23 @@ Started: Wed Jan 14 18:20:29 +01 2026
   - Full-width buttons on mobile with `w-full sm:w-auto` pattern
   - Always update skeleton/loading states to match responsive patterns of actual content
 ---
+
+## 2026-01-14 - US-003 Journal List Mobile Card View
+- What was implemented:
+  - Created TradeCard component for mobile card view displaying symbol, direction, P&L, date, R-multiple, exit reason, rating, and reviewed status
+  - Created TrashCard component for mobile trash view with restore and delete actions
+  - Filter panel hidden on mobile, replaced with Filter button that opens Sheet drawer
+  - Search bar remains visible at top with filter button adjacent
+  - Bulk actions bar adapts to mobile: icons-only with min-h-[44px] touch targets
+  - ColumnConfig hidden on mobile (wrapped with hidden sm:flex)
+  - Select all header on mobile shows checkbox and trade count
+  - Infinite scroll sentinel and loading indicators work in both views
+- Files changed:
+  - src/app/(protected)/journal/page.tsx
+- **Learnings for future iterations:**
+  - Use `<button>` element for clickable cards instead of `<div role="button">` - Biome enforces semantic elements
+  - For nested interactive elements inside buttons, use biome-ignore comments for a11y rules
+  - Sheet component from shadcn works great for mobile filter drawers
+  - Pattern for icon-only buttons on mobile: `<Icon className="h-3.5 w-3.5 sm:mr-2" /><span className="hidden sm:inline">Label</span>`
+  - Wrap interactive child elements with `onClick={e => e.stopPropagation()}` span to prevent parent click
+---
