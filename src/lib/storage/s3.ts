@@ -1,5 +1,8 @@
 import { env } from "@/env";
 
+// Declare Bun global for TypeScript - only available in Bun runtime
+declare const Bun: unknown | undefined;
+
 /**
  * S3-compatible storage client for file uploads.
  * Uses Bun's built-in S3Client for native performance.
@@ -24,7 +27,7 @@ interface BunS3Client {
 
 // Check if running in Bun
 function isBunRuntime(): boolean {
-	return typeof globalThis.Bun !== "undefined";
+	return typeof Bun !== "undefined";
 }
 
 // Check if S3 is configured
