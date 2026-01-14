@@ -7,17 +7,8 @@ import {
 	SignUpButton,
 	UserButton,
 } from "@clerk/nextjs";
-import { Menu } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "@/components/ui/sheet";
 
 const navLinks = [
 	{ href: "#features", label: "Features" },
@@ -26,8 +17,6 @@ const navLinks = [
 ];
 
 export function Navbar() {
-	const [isOpen, setIsOpen] = useState(false);
-
 	return (
 		<header className="fixed top-0 z-50 w-full border-white/5 border-b bg-background/80 backdrop-blur-xl">
 			<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
@@ -69,7 +58,7 @@ export function Navbar() {
 					))}
 				</nav>
 
-				{/* Auth & Mobile Menu */}
+				{/* Auth */}
 				<div className="flex items-center gap-2 sm:gap-3">
 					{/* Desktop Auth */}
 					<div className="hidden items-center gap-3 sm:flex">
@@ -122,58 +111,6 @@ export function Navbar() {
 							<UserButton afterSignOutUrl="/" />
 						</SignedIn>
 					</div>
-
-					{/* Mobile Menu */}
-					<Sheet onOpenChange={setIsOpen} open={isOpen}>
-						<SheetTrigger asChild className="md:hidden">
-							<Button
-								aria-label="Open menu"
-								className="min-h-[44px] min-w-[44px]"
-								size="icon"
-								variant="ghost"
-							>
-								<Menu className="h-5 w-5" />
-							</Button>
-						</SheetTrigger>
-						<SheetContent className="w-[280px] sm:w-[320px]" side="right">
-							<SheetHeader>
-								<SheetTitle className="font-mono text-sm uppercase tracking-wider">
-									Menu
-								</SheetTitle>
-							</SheetHeader>
-							<nav className="mt-8 flex flex-col gap-3">
-								<SignedOut>
-									<SignInButton mode="modal">
-										<Button
-											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
-											onClick={() => setIsOpen(false)}
-											variant="outline"
-										>
-											Login
-										</Button>
-									</SignInButton>
-									<SignUpButton mode="modal">
-										<Button
-											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
-											onClick={() => setIsOpen(false)}
-										>
-											Get Started
-										</Button>
-									</SignUpButton>
-								</SignedOut>
-								<SignedIn>
-									<Link href="/dashboard" onClick={() => setIsOpen(false)}>
-										<Button
-											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
-											variant="outline"
-										>
-											Dashboard
-										</Button>
-									</Link>
-								</SignedIn>
-							</nav>
-						</SheetContent>
-					</Sheet>
 				</div>
 			</div>
 		</header>
