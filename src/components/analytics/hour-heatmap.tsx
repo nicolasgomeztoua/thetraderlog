@@ -96,7 +96,7 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 	return (
 		<div className={cn("space-y-4", className)}>
 			{/* Best/Worst indicators */}
-			<div className="flex gap-4 font-mono text-xs">
+			<div className="flex flex-wrap gap-3 font-mono text-xs sm:gap-4">
 				{bestHour && (
 					<div className="flex items-center gap-2">
 						<span className="text-muted-foreground">Best Hour:</span>
@@ -115,10 +115,10 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 				)}
 			</div>
 
-			{/* 24-hour grid - 2 rows of 12 */}
-			<div className="space-y-4">
+			{/* 24-hour grid - 2 rows of 12, scrollable on mobile */}
+			<div className="space-y-4 overflow-x-auto">
 				{/* AM Hours (0-11) */}
-				<div>
+				<div className="min-w-[320px]">
 					<div className="mb-2 font-mono text-[10px] text-muted-foreground">
 						AM ({timezoneAbbr})
 					</div>
@@ -129,7 +129,7 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 									<div className="flex flex-col items-center gap-1">
 										<div
 											className={cn(
-												"h-8 w-full rounded transition-colors",
+												"h-8 w-full min-w-[24px] rounded transition-colors",
 												hourData.trades > 0
 													? getPnLColor(hourData.pnl, maxAbsPnl)
 													: "bg-secondary/30",
@@ -179,7 +179,7 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 				</div>
 
 				{/* PM Hours (12-23) */}
-				<div>
+				<div className="min-w-[320px]">
 					<div className="mb-2 font-mono text-[10px] text-muted-foreground">
 						PM ({timezoneAbbr})
 					</div>
@@ -190,7 +190,7 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 									<div className="flex flex-col items-center gap-1">
 										<div
 											className={cn(
-												"h-8 w-full rounded transition-colors",
+												"h-8 w-full min-w-[24px] rounded transition-colors",
 												hourData.trades > 0
 													? getPnLColor(hourData.pnl, maxAbsPnl)
 													: "bg-secondary/30",

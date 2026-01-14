@@ -1,8 +1,16 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { Filter, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/shared";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import { HowFilters } from "./how-filters";
@@ -66,8 +74,12 @@ export function AnalyticsQueryBar({
 		setActivePresetId,
 	} = useAnalyticsFilterStore();
 
-	// Expanded panel state
+	// Mobile detection
+	const isMobile = useIsMobile();
+
+	// Expanded panel state (desktop) / Sheet state (mobile)
 	const [isExpanded, setIsExpanded] = useState(false);
+	const [isSheetOpen, setIsSheetOpen] = useState(false);
 
 	// Hydration state - prevents mismatch between server (default filters) and client (persisted filters)
 	const [hasMounted, setHasMounted] = useState(false);
@@ -78,7 +90,7 @@ export function AnalyticsQueryBar({
 	// Manage presets dialog state
 	const [managePresetsOpen, setManagePresetsOpen] = useState(false);
 
-	// Enter preview mode when expanding
+	// Enter preview mode when expanding (desktop)
 	const handleToggleExpand = useCallback(() => {
 		if (!isExpanded) {
 			enterPreviewMode();
@@ -90,10 +102,24 @@ export function AnalyticsQueryBar({
 		}
 	}, [isExpanded, enterPreviewMode, discardPreviewFilters]);
 
-	// Apply preview filters and collapse
+	// Handle mobile sheet open/close
+	const handleSheetOpenChange = useCallback(
+		(open: boolean) => {
+			if (open) {
+				enterPreviewMode();
+			} else {
+				discardPreviewFilters();
+			}
+			setIsSheetOpen(open);
+		},
+		[enterPreviewMode, discardPreviewFilters],
+	);
+
+	// Apply preview filters and collapse (desktop) or close sheet (mobile)
 	const handleApply = useCallback(() => {
 		applyPreviewFilters();
 		setIsExpanded(false);
+		setIsSheetOpen(false);
 	}, [applyPreviewFilters]);
 
 	// Reset preview filters to defaults
@@ -113,53 +139,137 @@ export function AnalyticsQueryBar({
 		}
 	}, [isPreviewMode, isExpanded]);
 
-	// The filters to display in the expanded panel
-	const displayFilters = isExpanded ? previewFilters : filters;
+	// The filters to display in the expanded panel or sheet
+	const displayFilters = isExpanded || isSheetOpen ? previewFilters : filters;
+
+	// Shared filter content (used in both desktop panel and mobile sheet)
+	const filterContent = (
+		<div className="space-y-4">
+			{/* WHAT */}
+			<WhatFilters
+				isLoading={isLoading}
+				onStrategiesChange={(s) => setPreviewFilter("strategies", s)}
+				onSymbolsChange={(s) => setPreviewFilter("symbols", s)}
+				onTagsChange={(t) => setPreviewFilter("tags", t)}
+				selectedStrategies={displayFilters.strategies}
+				selectedSymbols={displayFilters.symbols}
+				selectedTags={displayFilters.tags}
+				strategies={strategies}
+				symbols={symbols}
+				tags={tags}
+			/>
+
+			{/* WHEN */}
+			<WhenFilters
+				dateRange={displayFilters.dateRange}
+				onDateRangeChange={(range) => setPreviewFilter("dateRange", range)}
+				onDaysChange={(days) => setPreviewFilter("daysOfWeek", days)}
+				onHoursChange={(hours) => setPreviewFilter("hours", hours)}
+				onSessionsChange={(s) => setPreviewFilter("sessions", s)}
+				selectedDays={displayFilters.daysOfWeek}
+				selectedHours={displayFilters.hours}
+				selectedSessions={displayFilters.sessions}
+				sessions={sessions}
+			/>
+
+			{/* HOW */}
+			<HowFilters
+				onPositionSizeChange={(range) =>
+					setPreviewFilter("positionSizeRange", range)
+				}
+				onRMultipleChange={(range) => setPreviewFilter("rMultipleRange", range)}
+				positionSizeRange={displayFilters.positionSizeRange}
+				rMultipleRange={displayFilters.rMultipleRange}
+			/>
+
+			{/* RESULT */}
+			<ResultFilters
+				onOutcomeChange={(o) => setPreviewFilter("outcome", o)}
+				onReviewedChange={(r) => setPreviewFilter("reviewed", r)}
+				outcome={displayFilters.outcome}
+				reviewed={displayFilters.reviewed}
+			/>
+
+			{/* Presets */}
+			<div className="flex items-center justify-end border-white/5 border-t pt-4">
+				<PresetSelector
+					activePresetId={activePresetId}
+					onManageClick={() => setManagePresetsOpen(true)}
+					onPresetSelect={setActivePresetId}
+				/>
+			</div>
+		</div>
+	);
 
 	return (
 		<div className="space-y-0">
-			{/* Quick Filters Bar (Always Visible) */}
-			<QuickFilters
-				filters={filters}
-				hasActiveFilters={hasMounted && hasActiveFilters()}
-				isExpanded={isExpanded}
-				onClearAll={handleClearAll}
-				onToggleExpand={handleToggleExpand}
-			/>
+			{/* Mobile: Filter button + Sheet */}
+			{isMobile ? (
+				<div className="flex items-center gap-2 rounded border border-white/10 bg-white/2 px-3 py-2">
+					{/* Quick summary */}
+					<div className="flex flex-1 items-center gap-2 overflow-hidden">
+						<span className="font-mono text-muted-foreground text-xs">$</span>
+						<span className="font-mono text-[10px] text-primary uppercase tracking-widest">
+							QUERY
+						</span>
+						<div className="h-4 w-px bg-white/10" />
+						<span className="truncate font-mono text-muted-foreground text-xs">
+							{hasMounted && hasActiveFilters()
+								? "Filters active"
+								: "All trades"}
+						</span>
+					</div>
 
-			{/* Expanded Panel */}
-			<div
-				className={cn(
-					"overflow-hidden transition-all duration-300 ease-out",
-					isExpanded ? "mt-0 max-h-[2000px] opacity-100" : "max-h-0 opacity-0",
-				)}
-			>
-				<div className="rounded-b border border-white/10 border-t-0 bg-white/1">
-					{/* Terminal Header */}
-					<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-3">
-						<div className="flex items-center gap-3">
-							{/* Traffic light dots */}
-							<div className="flex gap-1.5">
-								<div className="size-2.5 rounded-full bg-[#ff5f57]" />
-								<div className="size-2.5 rounded-full bg-[#febc2e]" />
-								<div className="size-2.5 rounded-full bg-[#28c840]" />
-							</div>
-							<span className="font-mono text-[10px] text-muted-foreground">
-								edgejournal — analytics query terminal
-							</span>
-						</div>
+					{/* Clear button (if filters active) */}
+					{hasMounted && hasActiveFilters() && (
+						<button
+							className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded border border-white/10 font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-white/20 hover:text-foreground"
+							onClick={handleClearAll}
+							type="button"
+						>
+							Clear
+						</button>
+					)}
 
-						<div className="flex items-center gap-3">
-							{/* Trade Count */}
-							<TradeCountBadge
-								accountId={accountId}
-								usePreviewFilters={isExpanded}
-							/>
+					{/* Filter Sheet Trigger */}
+					<Sheet onOpenChange={handleSheetOpenChange} open={isSheetOpen}>
+						<SheetTrigger asChild>
+							<button
+								className={cn(
+									"flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border px-3 font-mono text-xs uppercase tracking-wider transition-all",
+									isSheetOpen
+										? "border-primary/40 bg-primary/10 text-primary"
+										: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground",
+								)}
+								type="button"
+							>
+								<Filter className="size-4" />
+								<span className="xs:inline hidden">Filters</span>
+							</button>
+						</SheetTrigger>
+						<SheetContent
+							className="flex w-full flex-col overflow-y-auto sm:max-w-md"
+							side="right"
+						>
+							<SheetHeader className="border-white/5 border-b pb-4">
+								<div className="flex items-center justify-between">
+									<SheetTitle className="font-mono text-sm">
+										Filter Trades
+									</SheetTitle>
+									<TradeCountBadge
+										accountId={accountId}
+										usePreviewFilters={isSheetOpen}
+									/>
+								</div>
+							</SheetHeader>
 
-							{/* Action Buttons */}
-							<div className="flex items-center gap-2">
+							{/* Filter content */}
+							<div className="flex-1 overflow-y-auto py-4">{filterContent}</div>
+
+							{/* Action buttons - sticky at bottom */}
+							<div className="flex items-center gap-2 border-white/5 border-t pt-4">
 								<Button
-									className="h-7 gap-1.5 px-2.5 font-mono text-xs"
+									className="min-h-[44px] flex-1 gap-1.5 font-mono text-xs"
 									onClick={handleReset}
 									size="sm"
 									variant="ghost"
@@ -168,78 +278,86 @@ export function AnalyticsQueryBar({
 									Reset
 								</Button>
 								<Button
-									className="h-7 px-4 font-mono text-xs"
+									className="min-h-[44px] flex-1 font-mono text-xs"
 									onClick={handleApply}
 									size="sm"
 								>
 									Apply Filters
 								</Button>
 							</div>
-						</div>
-					</div>
-
-					{/* Filter Sections */}
-					<div className="space-y-4 p-4">
-						{/* WHAT */}
-						<WhatFilters
-							isLoading={isLoading}
-							onStrategiesChange={(s) => setPreviewFilter("strategies", s)}
-							onSymbolsChange={(s) => setPreviewFilter("symbols", s)}
-							onTagsChange={(t) => setPreviewFilter("tags", t)}
-							selectedStrategies={displayFilters.strategies}
-							selectedSymbols={displayFilters.symbols}
-							selectedTags={displayFilters.tags}
-							strategies={strategies}
-							symbols={symbols}
-							tags={tags}
-						/>
-
-						{/* WHEN */}
-						<WhenFilters
-							dateRange={displayFilters.dateRange}
-							onDateRangeChange={(range) =>
-								setPreviewFilter("dateRange", range)
-							}
-							onDaysChange={(days) => setPreviewFilter("daysOfWeek", days)}
-							onHoursChange={(hours) => setPreviewFilter("hours", hours)}
-							onSessionsChange={(s) => setPreviewFilter("sessions", s)}
-							selectedDays={displayFilters.daysOfWeek}
-							selectedHours={displayFilters.hours}
-							selectedSessions={displayFilters.sessions}
-							sessions={sessions}
-						/>
-
-						{/* HOW */}
-						<HowFilters
-							onPositionSizeChange={(range) =>
-								setPreviewFilter("positionSizeRange", range)
-							}
-							onRMultipleChange={(range) =>
-								setPreviewFilter("rMultipleRange", range)
-							}
-							positionSizeRange={displayFilters.positionSizeRange}
-							rMultipleRange={displayFilters.rMultipleRange}
-						/>
-
-						{/* RESULT */}
-						<ResultFilters
-							onOutcomeChange={(o) => setPreviewFilter("outcome", o)}
-							onReviewedChange={(r) => setPreviewFilter("reviewed", r)}
-							outcome={displayFilters.outcome}
-							reviewed={displayFilters.reviewed}
-						/>
-
-						{/* Presets */}
-						<div className="flex items-center justify-end border-white/5 border-t pt-4">
-							<PresetSelector
-								activePresetId={activePresetId}
-								onManageClick={() => setManagePresetsOpen(true)}
-								onPresetSelect={setActivePresetId}
-							/>
-						</div>
-					</div>
+						</SheetContent>
+					</Sheet>
 				</div>
-			</div>
+			) : (
+				/* Desktop: Original QuickFilters + Expandable Panel */
+				<>
+					<QuickFilters
+						filters={filters}
+						hasActiveFilters={hasMounted && hasActiveFilters()}
+						isExpanded={isExpanded}
+						onClearAll={handleClearAll}
+						onToggleExpand={handleToggleExpand}
+					/>
+
+					{/* Expanded Panel */}
+					<div
+						className={cn(
+							"overflow-hidden transition-all duration-300 ease-out",
+							isExpanded
+								? "mt-0 max-h-[2000px] opacity-100"
+								: "max-h-0 opacity-0",
+						)}
+					>
+						<div className="rounded-b border border-white/10 border-t-0 bg-white/1">
+							{/* Terminal Header */}
+							<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-3">
+								<div className="flex items-center gap-3">
+									{/* Traffic light dots */}
+									<div className="flex gap-1.5">
+										<div className="size-2.5 rounded-full bg-[#ff5f57]" />
+										<div className="size-2.5 rounded-full bg-[#febc2e]" />
+										<div className="size-2.5 rounded-full bg-[#28c840]" />
+									</div>
+									<span className="font-mono text-[10px] text-muted-foreground">
+										edgejournal — analytics query terminal
+									</span>
+								</div>
+
+								<div className="flex items-center gap-3">
+									{/* Trade Count */}
+									<TradeCountBadge
+										accountId={accountId}
+										usePreviewFilters={isExpanded}
+									/>
+
+									{/* Action Buttons */}
+									<div className="flex items-center gap-2">
+										<Button
+											className="h-7 gap-1.5 px-2.5 font-mono text-xs"
+											onClick={handleReset}
+											size="sm"
+											variant="ghost"
+										>
+											<RotateCcw className="size-3" />
+											Reset
+										</Button>
+										<Button
+											className="h-7 px-4 font-mono text-xs"
+											onClick={handleApply}
+											size="sm"
+										>
+											Apply Filters
+										</Button>
+									</div>
+								</div>
+							</div>
+
+							{/* Filter Sections */}
+							<div className="p-4">{filterContent}</div>
+						</div>
+					</div>
+				</>
+			)}
 
 			{/* Manage Presets Dialog */}
 			<ManagePresetsDialog
