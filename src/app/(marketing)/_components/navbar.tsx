@@ -7,15 +7,32 @@ import {
 	SignUpButton,
 	UserButton,
 } from "@clerk/nextjs";
+import { Menu } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
+
+const navLinks = [
+	{ href: "#features", label: "Features" },
+	{ href: "#ai", label: "AI" },
+	{ href: "#pricing", label: "Pricing" },
+];
 
 export function Navbar() {
+	const [isOpen, setIsOpen] = useState(false);
+
 	return (
 		<header className="fixed top-0 z-50 w-full border-white/5 border-b bg-background/80 backdrop-blur-xl">
-			<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+			<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
 				{/* Logo */}
-				<Link className="group flex items-center gap-3" href="/">
+				<Link className="group flex items-center gap-2 sm:gap-3" href="/">
 					<div className="relative flex h-8 w-8 items-center justify-center">
 						{/* Logo mark - stylized E */}
 						<svg
@@ -39,61 +56,138 @@ export function Navbar() {
 					</span>
 				</Link>
 
-				{/* Navigation */}
+				{/* Desktop Navigation */}
 				<nav className="hidden items-center gap-8 md:flex">
-					<Link
-						className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors hover:text-primary"
-						href="#features"
-					>
-						Features
-					</Link>
-					<Link
-						className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors hover:text-primary"
-						href="#ai"
-					>
-						AI
-					</Link>
-					<Link
-						className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors hover:text-primary"
-						href="#pricing"
-					>
-						Pricing
-					</Link>
+					{navLinks.map((link) => (
+						<Link
+							className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors hover:text-primary"
+							href={link.href}
+							key={link.href}
+						>
+							{link.label}
+						</Link>
+					))}
 				</nav>
 
-				{/* Auth */}
-				<div className="flex items-center gap-3">
-					<SignedOut>
-						<SignInButton mode="modal">
+				{/* Auth & Mobile Menu */}
+				<div className="flex items-center gap-2 sm:gap-3">
+					{/* Desktop Auth */}
+					<div className="hidden items-center gap-3 sm:flex">
+						<SignedOut>
+							<SignInButton mode="modal">
+								<Button
+									className="font-mono text-xs uppercase tracking-wider"
+									size="sm"
+									variant="ghost"
+								>
+									Login
+								</Button>
+							</SignInButton>
+							<SignUpButton mode="modal">
+								<Button
+									className="font-mono text-xs uppercase tracking-wider"
+									size="sm"
+								>
+									Get Started
+								</Button>
+							</SignUpButton>
+						</SignedOut>
+						<SignedIn>
+							<Link href="/dashboard">
+								<Button
+									className="font-mono text-xs uppercase tracking-wider"
+									size="sm"
+									variant="ghost"
+								>
+									Dashboard
+								</Button>
+							</Link>
+							<UserButton afterSignOutUrl="/" />
+						</SignedIn>
+					</div>
+
+					{/* Mobile Auth - Simplified */}
+					<div className="flex items-center gap-2 sm:hidden">
+						<SignedOut>
+							<SignUpButton mode="modal">
+								<Button
+									className="min-h-[44px] font-mono text-xs uppercase tracking-wider"
+									size="sm"
+								>
+									Start
+								</Button>
+							</SignUpButton>
+						</SignedOut>
+						<SignedIn>
+							<UserButton afterSignOutUrl="/" />
+						</SignedIn>
+					</div>
+
+					{/* Mobile Menu */}
+					<Sheet onOpenChange={setIsOpen} open={isOpen}>
+						<SheetTrigger asChild className="md:hidden">
 							<Button
-								className="font-mono text-xs uppercase tracking-wider"
-								size="sm"
+								aria-label="Open menu"
+								className="min-h-[44px] min-w-[44px]"
+								size="icon"
 								variant="ghost"
 							>
-								Login
+								<Menu className="h-5 w-5" />
 							</Button>
-						</SignInButton>
-						<SignUpButton mode="modal">
-							<Button
-								className="font-mono text-xs uppercase tracking-wider"
-								size="sm"
-							>
-								Get Started
-							</Button>
-						</SignUpButton>
-					</SignedOut>
-					<SignedIn>
-						<Link href="/dashboard">
-							<Button
-								className="font-mono text-xs uppercase tracking-wider"
-								size="sm"
-								variant="ghost"
-							>
-								Dashboard
-							</Button>
-						</Link>
-						<UserButton afterSignOutUrl="/" />
-					</SignedIn>
+						</SheetTrigger>
+						<SheetContent className="w-[280px] sm:w-[320px]" side="right">
+							<SheetHeader>
+								<SheetTitle className="font-mono text-sm uppercase tracking-wider">
+									Menu
+								</SheetTitle>
+							</SheetHeader>
+							<nav className="mt-8 flex flex-col gap-4">
+								{navLinks.map((link) => (
+									<Link
+										className="flex min-h-[44px] items-center font-mono text-muted-foreground text-sm uppercase tracking-wider transition-colors hover:text-primary"
+										href={link.href}
+										key={link.href}
+										onClick={() => setIsOpen(false)}
+									>
+										{link.label}
+									</Link>
+								))}
+								<div className="mt-4 border-white/10 border-t pt-4">
+									<SignedOut>
+										<div className="flex flex-col gap-3">
+											<SignInButton mode="modal">
+												<Button
+													className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
+													onClick={() => setIsOpen(false)}
+													variant="outline"
+												>
+													Login
+												</Button>
+											</SignInButton>
+											<SignUpButton mode="modal">
+												<Button
+													className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
+													onClick={() => setIsOpen(false)}
+												>
+													Get Started
+												</Button>
+											</SignUpButton>
+										</div>
+									</SignedOut>
+									<SignedIn>
+										<Link href="/dashboard" onClick={() => setIsOpen(false)}>
+											<Button
+												className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider"
+												variant="outline"
+											>
+												Dashboard
+											</Button>
+										</Link>
+									</SignedIn>
+								</div>
+							</nav>
+						</SheetContent>
+					</Sheet>
 				</div>
 			</div>
 		</header>

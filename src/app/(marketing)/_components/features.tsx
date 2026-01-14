@@ -181,58 +181,60 @@ const features = [
 
 export function Features() {
 	return (
-		<section className="relative py-32" id="features">
+		<section className="relative py-16 sm:py-24 lg:py-32" id="features">
 			{/* Background */}
 			<div className="grid-bg absolute inset-0 opacity-50" />
 
-			<div className="relative mx-auto max-w-6xl px-6">
+			<div className="relative mx-auto max-w-6xl px-4 sm:px-6">
 				{/* Section header */}
-				<div className="mb-20 max-w-2xl">
-					<span className="mb-4 inline-block font-mono text-primary text-xs uppercase tracking-wider">
+				<div className="mb-10 max-w-2xl sm:mb-16 lg:mb-20">
+					<span className="mb-3 inline-block font-mono text-[10px] text-primary uppercase tracking-wider sm:mb-4 sm:text-xs">
 						Features
 					</span>
-					<h2 className="font-bold text-4xl leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+					<h2 className="font-bold text-2xl leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
 						Everything you need to{" "}
 						<span className="text-primary">find your edge</span>
 					</h2>
-					<p className="mt-6 font-mono text-base text-muted-foreground">
+					<p className="mt-4 font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
 						A complete toolkit for serious traders who want to consistently
 						improve.
 					</p>
 				</div>
 
-				{/* Bento grid */}
-				<div className="grid gap-4 md:grid-cols-3">
+				{/* Bento grid - responsive: single column on mobile, 2 on tablet, 3 on desktop */}
+				<div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
 					{features.map((feature) => (
 						<div
 							className={`group relative overflow-hidden rounded border transition-all duration-300 ${
 								feature.highlight
 									? "border-primary/20 bg-primary/2 hover:border-primary/40"
 									: "border-white/5 bg-white/1 hover:border-white/10"
-							} p-6 ${feature.className}`}
+							} p-4 sm:p-6 ${feature.className.includes("md:col-span-2") ? "sm:col-span-2 lg:col-span-2" : ""}`}
 							key={feature.title}
 						>
 							{/* Icon */}
 							<div
-								className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded ${
+								className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded sm:mb-4 sm:h-10 sm:w-10 ${
 									feature.highlight ? "bg-primary/10" : "bg-white/5"
 								}`}
 							>
 								<feature.icon
-									className={`h-5 w-5 ${
+									className={`h-4 w-4 sm:h-5 sm:w-5 ${
 										feature.highlight ? "text-primary" : "text-muted-foreground"
 									}`}
 								/>
 							</div>
 
 							{/* Content */}
-							<h3 className="font-semibold text-lg">{feature.title}</h3>
-							<p className="mt-2 font-mono text-muted-foreground text-sm leading-relaxed">
+							<h3 className="font-semibold text-base sm:text-lg">
+								{feature.title}
+							</h3>
+							<p className="mt-1.5 font-mono text-muted-foreground text-xs leading-relaxed sm:mt-2 sm:text-sm">
 								{feature.description}
 							</p>
 
-							{/* Visual element */}
-							{feature.visual}
+							{/* Visual element - hidden on mobile for cleaner look */}
+							<div className="hidden sm:block">{feature.visual}</div>
 
 							{/* Hover glow effect for highlighted cards */}
 							{feature.highlight && (
