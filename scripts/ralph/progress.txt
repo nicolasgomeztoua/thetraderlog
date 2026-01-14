@@ -132,3 +132,23 @@ Started: Wed Jan 14 18:20:29 +01 2026
   - For data-dense components (heatmaps, grids), use min-w-[Xpx] with overflow-x-auto for horizontal scroll
   - Hide decorative elements on mobile (terminal paths, less important badges) to save space
 ---
+
+## 2026-01-14 - US-007 AI Page Mobile Adaptation
+- What was implemented:
+  - Responsive container spacing: space-y-4 sm:space-y-6
+  - Header responsive: text-2xl sm:text-3xl title, description hidden on mobile, gap-3 for proper spacing
+  - API Keys button icon-only on mobile with sm:mr-2 and hidden sm:inline pattern
+  - API Key notice banner stacks vertically on mobile (flex-col sm:flex-row) with full-width Settings button
+  - Terminal header: dots smaller on mobile (h-2 w-2 sm:h-2.5 sm:w-2.5), terminal path hidden on mobile
+  - Chat content padding responsive (p-3 sm:p-4), example query buttons have min-h-[36px] touch targets
+  - Messages use smaller text on mobile (text-xs sm:text-sm) with break-words and min-w-0 flex-1 to prevent overflow
+  - Loading indicator smaller on mobile (h-3 w-3 sm:h-3.5 sm:w-3.5)
+  - Input area has min-h-[44px] for both input and send button for touch-friendly targets
+- Files changed:
+  - src/app/(protected)/ai/page.tsx
+- **Learnings for future iterations:**
+  - For chat interfaces, use `break-words` and `min-w-0 flex-1` to prevent long content from breaking layout
+  - Terminal-style decorative elements (dots, paths) can be smaller or hidden on mobile
+  - Simple chat pages don't need Sheet drawers - just responsive styling is sufficient
+  - For icon-only buttons on mobile, use `min-w-[44px] min-h-[44px]` to ensure proper touch target
+---
