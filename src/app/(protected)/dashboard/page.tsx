@@ -176,7 +176,7 @@ function StatsGrid() {
 
 	if (isLoading) {
 		return (
-			<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
 				{[...Array(5)].map((_, i) => (
 					<div
 						className="rounded border border-border bg-secondary p-4"
@@ -194,7 +194,7 @@ function StatsGrid() {
 	if (!stats) return null;
 
 	return (
-		<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+		<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
 			<StatCard
 				icon={stats.totalPnl >= 0 ? TrendingUp : TrendingDown}
 				subtitle={`${stats.totalTrades} trades`}
@@ -270,21 +270,21 @@ function StartJournalHero() {
 
 	if (isLoading) {
 		return (
-			<div className="rounded border border-border bg-card p-6">
-				<div className="flex items-center justify-between">
+			<div className="rounded border border-border bg-card p-4 sm:p-6">
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<Skeleton className="mb-2 h-4 w-32" />
 						<Skeleton className="h-6 w-48" />
 					</div>
-					<Skeleton className="h-10 w-40" />
+					<Skeleton className="h-10 w-full sm:w-40" />
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="rounded border border-primary/30 bg-linear-to-r from-primary/5 to-transparent p-6">
-			<div className="flex items-center justify-between">
+		<div className="rounded border border-primary/30 bg-linear-to-r from-primary/5 to-transparent p-4 sm:p-6">
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						{new Date().toLocaleDateString("en-US", {
@@ -315,16 +315,17 @@ function StartJournalHero() {
 				</div>
 				{isStarted ? (
 					<Button
-						className="font-mono"
+						className="w-full font-mono sm:w-auto"
 						onClick={() => router.push("/daily-journal")}
 						variant="outline"
 					>
 						<BookOpenIcon className="mr-2 h-4 w-4" />
-						Open Journal
+						<span className="sm:hidden">Journal</span>
+						<span className="hidden sm:inline">Open Journal</span>
 					</Button>
 				) : (
 					<Button
-						className="font-mono"
+						className="w-full font-mono sm:w-auto"
 						disabled={isStarting}
 						onClick={handleStartJournal}
 					>
@@ -333,7 +334,8 @@ function StartJournalHero() {
 						) : (
 							<PlayIcon className="mr-2 h-4 w-4" />
 						)}
-						Start My Journal
+						<span className="sm:hidden">Start</span>
+						<span className="hidden sm:inline">Start My Journal</span>
 					</Button>
 				)}
 			</div>
@@ -395,7 +397,7 @@ function PerformanceSummary() {
 				</div>
 
 				{/* Key Metrics */}
-				<div className="grid grid-cols-2 gap-4 pt-2">
+				<div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
 					<div>
 						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Gross Profit
@@ -456,7 +458,7 @@ export default function DashboardPage() {
 					<span className="mb-2 block font-mono text-primary text-xs uppercase tracking-wider">
 						Dashboard
 					</span>
-					<h1 className="font-bold text-3xl tracking-tight">
+					<h1 className="font-bold text-2xl tracking-tight sm:text-3xl">
 						Trading Overview
 					</h1>
 					{selectedAccount && (
@@ -477,7 +479,7 @@ export default function DashboardPage() {
 			<StatsGrid />
 
 			{/* Performance Summary */}
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
 				<PerformanceSummary />
 			</div>
 		</div>
