@@ -11,3 +11,47 @@ Started: Running P&L Chart feature
 - Market data fetched via api.marketData.getFullDayChartData
 
 ---
+
+## 2026-01-15 - US-001
+- What was implemented: Added `runningPnl` entry to CHART_DIMENSIONS constant with { height: 200, strokeWidth: 1.5 }
+- Files changed: src/lib/analytics/constants.ts
+- **Learnings for future iterations:**
+  - CHART_DIMENSIONS follows a simple object pattern, each key has dimension-specific props
+  - Adding new chart dimensions is straightforward - just add a new key with height/size values
+---
+
+## 2026-01-15 - US-002
+- What was implemented: Created Running P&L Chart component with AG Charts area visualization
+- Files changed: src/components/trade-detail/running-pnl-chart.tsx (new file)
+- Key features implemented:
+  - Fetches market data via api.marketData.getFullDayChartData
+  - buildPnlTimeSeries() function that filters bars from entry to exit, calculates P&L at each bar close
+  - Tracks quantity changes from scale-in/scale-out executions
+  - Accumulates realized P&L from exits
+  - AG Charts area series with time X-axis (HH:mm), currency Y-axis
+  - Profit green / loss red fill colors using ANALYTICS_COLORS
+  - Custom tooltip showing time and P&L with profit/loss coloring
+  - Summary stats row: Final P&L, Peak P&L, Max Drawdown
+  - Loading state with Loader2 spinner
+  - Empty state when no market data available
+  - Handles open trades (no exitTime) by showing up to last available bar
+- **Learnings for future iterations:**
+  - When iterating through an array with index checks, TypeScript requires explicit undefined checks even with length guard
+  - Solution: assign array element to a variable before the while condition to satisfy type checker
+  - AG Charts tooltip renderer uses inline HTML strings with style attributes for coloring
+  - The buildPnlTimeSeries pattern can be reused for similar P&L visualization needs
+---
+
+## 2026-01-15 - US-003
+- What was implemented: Integrated RunningPnlChart component into content-panel.tsx
+- Files changed: src/components/trade-detail/content-panel.tsx
+- Key changes:
+  - Removed CandlestickChart import (no longer needed after removing placeholder)
+  - Added RunningPnlChart import
+  - Replaced placeholder content with RunningPnlChart component
+  - Passed all required props: symbol, direction, instrumentType, entryTime, exitTime, entryPrice, executions
+  - Maintained existing TabsContent styling (m-0 flex-1 p-4)
+- **Learnings for future iterations:**
+  - When removing placeholder content, also remove unused imports (CandlestickChart from lucide-react)
+  - The execution mapping pattern in content-panel is consistent - map execution array to extract relevant fields
+---
