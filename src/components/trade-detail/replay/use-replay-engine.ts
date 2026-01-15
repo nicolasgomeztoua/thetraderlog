@@ -1,21 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChartBar } from "@/lib/market-data";
-import { calculateForexPnL, calculateFuturesPnL } from "@/lib/market-data";
 import { toUnixTimestamp } from "@/lib/shared";
+import { calculateRunningPnlAtTime, type Execution } from "@/lib/trades";
 import type { ReplaySpeed } from "@/stores/replay-preferences-store";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-export interface ReplayExecution {
-	id: string;
-	executionType: "entry" | "exit" | "scale_in" | "scale_out";
-	price: string;
-	quantity: string;
-	executedAt: Date | string;
-	realizedPnl?: string | null;
-}
+// Re-export Execution type for consumers that use replay engine
+export type ReplayExecution = Execution;
 
 export interface ReplayState {
 	isPlaying: boolean;
@@ -168,10 +162,12 @@ export function useReplayEngine({
 		return execTs <= currentTime;
 	});
 
-	// Calculate running P&L using proper point/pip values
-	const runningPnl = calculateRunningPnl(
+	// Calculate running P&L using shared utility
+	const lastBar = visibleBars[visibleBars.length - 1];
+	const currentPrice = lastBar?.close ?? 0;
+	const runningPnl = calculateRunningPnlAtTime(
 		visibleExecutions,
-		visibleBars,
+		currentPrice,
 		direction,
 		symbol,
 		instrumentType,
@@ -264,43 +260,4 @@ export function useReplayEngine({
 		reset,
 		changeSpeed,
 	};
-}
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-function calculateRunningPnl(
-	visibleExecutions: ReplayExecution[],
-	visibleBars: ChartBar[],
-	direction: "long" | "short",
-	symbol: string,
-	instrumentType: "futures" | "forex",
-): number {
-	if (visibleExecutions.length === 0 || visibleBars.length === 0) {
-		return 0;
-	}
-
-	// Find the entry execution
-	const entryExec = visibleExecutions.find((e) => e.executionType === "entry");
-	if (!entryExec) return 0;
-
-	const entry = parseFloat(entryExec.price);
-	const quantity = parseFloat(entryExec.quantity);
-	const currentPrice = visibleBars[visibleBars.length - 1]?.close ?? entry;
-
-	// Calculate unrealized P&L using proper point/pip values
-	const unrealizedPnl =
-		instrumentType === "futures"
-			? calculateFuturesPnL(symbol, entry, currentPrice, quantity, direction)
-			: calculateForexPnL(symbol, entry, currentPrice, quantity, direction);
-
-	// Sum realized P&L from scale-outs and exits
-	const realizedPnl = visibleExecutions
-		.filter(
-			(e) => e.executionType === "exit" || e.executionType === "scale_out",
-		)
-		.reduce((sum, e) => sum + (parseFloat(e.realizedPnl ?? "0") || 0), 0);
-
-	return unrealizedPnl + realizedPnl;
 }
