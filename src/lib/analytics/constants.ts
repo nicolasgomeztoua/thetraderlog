@@ -160,6 +160,7 @@ export const CHART_DIMENSIONS = {
 	equityCurve: { height: 280, strokeWidth: 2, markerSize: 5 },
 	monthly: { height: 240, strokeWidth: 2, markerSize: 6 },
 	riskGauge: { size: 200, strokeWidth: 14, innerOffset: 20, outerOffset: 8 },
+	runningPnl: { height: 200, strokeWidth: 1.5 },
 } as const;
 
 // ============================================================================
