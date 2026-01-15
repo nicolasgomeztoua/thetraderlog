@@ -1,17 +1,12 @@
 "use client";
 
 import { CheckCircleIcon, Loader2Icon, MenuIcon, PlayIcon } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AttachmentGallery } from "@/components/daily-journal/attachment-gallery";
-import { AttachmentUpload } from "@/components/daily-journal/attachment-upload";
+import { useEffect, useState } from "react";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
-import {
-	JournalEditor,
-	type JournalEditorHandle,
-} from "@/components/daily-journal/journal-editor";
+import { JournalEditor } from "@/components/daily-journal/journal-editor";
 import { TradesSummary } from "@/components/daily-journal/trades-summary";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,14 +67,6 @@ export default function DailyJournalPage() {
 	// Mobile sidebar drawer state
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const isMobile = useMediaQuery("(max-width: 767px)");
-
-	// Editor ref for removing images when attachments are deleted
-	const editorRef = useRef<JournalEditorHandle>(null);
-
-	// Handle attachment deletion - also remove from editor
-	const handleAttachmentDeleted = useCallback((url: string) => {
-		editorRef.current?.removeImageByUrl(url);
-	}, []);
 
 	// Date string for API queries - preserves the calendar date as clicked
 	const dateString = toDateString(selectedDate);
@@ -226,34 +213,13 @@ export default function DailyJournalPage() {
 			{/* Main Content Area */}
 			{isMobile ? (
 				/* Mobile Layout - Editor Only */
-				<div className="flex-1 overflow-y-auto p-4">
+				<div className="flex min-h-0 flex-1 flex-col p-4">
 					{/* Journal Editor */}
-					<div className="mb-4 rounded border border-white/5 bg-white/1 p-4">
-						<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+					<div className="flex min-h-0 flex-1 flex-col rounded border border-white/5 bg-white/1 p-4">
+						<span className="mb-3 block shrink-0 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Journal Entry
 						</span>
-						<JournalEditor
-							key={dateString}
-							ref={editorRef}
-							selectedDate={selectedDate}
-						/>
-					</div>
-
-					{/* Attachments */}
-					<div className="rounded border border-white/5 bg-white/1 p-4">
-						<AttachmentUpload
-							journalId={journal?.id}
-							selectedDate={selectedDate}
-						/>
-						{/* Gallery */}
-						{journal?.attachments && journal.attachments.length > 0 && (
-							<AttachmentGallery
-								attachments={journal.attachments}
-								className="mt-4 border-white/5 border-t pt-4"
-								onAttachmentDeleted={handleAttachmentDeleted}
-								selectedDate={selectedDate}
-							/>
-						)}
+						<JournalEditor key={dateString} selectedDate={selectedDate} />
 					</div>
 				</div>
 			) : (
@@ -296,39 +262,19 @@ export default function DailyJournalPage() {
 
 					<ResizableHandle withHandle />
 
-					{/* RIGHT PANEL - Editor and Attachments (70%) */}
+					{/* RIGHT PANEL - Editor (70%) */}
 					<ResizablePanel
 						className="min-w-0 overflow-hidden"
 						defaultSize={panelSizes[1]}
 						minSize={30}
 					>
-						<div className="h-full overflow-y-auto p-4">
+						<div className="flex h-full min-h-0 flex-col p-4">
 							{/* Journal Editor */}
-							<div className="mb-4 rounded border border-white/5 bg-white/1 p-4">
-								<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+							<div className="flex min-h-0 flex-1 flex-col rounded border border-white/5 bg-white/1 p-4">
+								<span className="mb-3 block shrink-0 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 									Journal Entry
 								</span>
-								<JournalEditor
-									key={dateString}
-									ref={editorRef}
-									selectedDate={selectedDate}
-								/>
-							</div>
-
-							{/* Attachments */}
-							<div className="rounded border border-white/5 bg-white/1 p-4">
-								<AttachmentUpload
-									journalId={journal?.id}
-									selectedDate={selectedDate}
-								/>
-								{/* Gallery */}
-								{journal?.attachments && journal.attachments.length > 0 && (
-									<AttachmentGallery
-										attachments={journal.attachments}
-										className="mt-4 border-white/5 border-t pt-4"
-										selectedDate={selectedDate}
-									/>
-								)}
+								<JournalEditor key={dateString} selectedDate={selectedDate} />
 							</div>
 						</div>
 					</ResizablePanel>

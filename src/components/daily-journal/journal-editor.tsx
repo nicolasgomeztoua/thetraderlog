@@ -8,14 +8,7 @@ import TaskList from "@tiptap/extension-task-list";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { AlertCircleIcon, CheckCircleIcon, Loader2Icon } from "lucide-react";
-import {
-	forwardRef,
-	useCallback,
-	useEffect,
-	useImperativeHandle,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EditorBubbleMenu } from "@/components/daily-journal/editor-bubble-menu";
@@ -26,11 +19,6 @@ import { api } from "@/trpc/react";
 
 interface JournalEditorProps {
 	selectedDate: Date;
-}
-
-export interface JournalEditorHandle {
-	/** Remove all images with the given URL from the editor */
-	removeImageByUrl: (url: string) => void;
 }
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -60,16 +48,14 @@ const EDITOR_EXTENSIONS = [
  * Rich text editor for daily journal entries.
  * Auto-saves content with 500ms debounce.
  */
-export const JournalEditor = forwardRef<
-	JournalEditorHandle,
-	JournalEditorProps
->(function JournalEditor({ selectedDate }, ref) {
+export function JournalEditor({ selectedDate }: JournalEditorProps) {
 	const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const savedIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
 		null,
 	);
 	const lastSavedContentRef = useRef<string | null>(null);
+	const imageInputRef = useRef<HTMLInputElement>(null);
 
 	const utils = api.useUtils();
 
@@ -111,7 +97,7 @@ export const JournalEditor = forwardRef<
 		extensions: EDITOR_EXTENSIONS,
 		editorProps: {
 			attributes: {
-				class: "min-h-[300px] px-4 py-3 focus:outline-none",
+				class: "h-full px-4 py-3 focus:outline-none",
 			},
 			handleKeyDown: (_view, event) => {
 				// Capture Cmd/Ctrl+B before it bubbles to app
@@ -145,37 +131,6 @@ export const JournalEditor = forwardRef<
 		},
 		immediatelyRender: false,
 	});
-
-	// Expose imperative handle for parent to remove images
-	useImperativeHandle(
-		ref,
-		() => ({
-			removeImageByUrl: (url: string) => {
-				if (!editor) return;
-
-				const { state, view } = editor;
-				const { tr } = state;
-				const nodesToRemove: number[] = [];
-
-				// Find all images with this URL
-				state.doc.descendants((node, pos) => {
-					if (node.type.name === "image" && node.attrs.src === url) {
-						nodesToRemove.push(pos);
-					}
-				});
-
-				// Remove from end to start to preserve positions
-				nodesToRemove.reverse().forEach((pos) => {
-					tr.delete(pos, pos + 1);
-				});
-
-				if (nodesToRemove.length > 0) {
-					view.dispatch(tr);
-				}
-			},
-		}),
-		[editor],
-	);
 
 	// Load content when journal data arrives (key prop handles date changes)
 	useEffect(() => {
@@ -412,28 +367,63 @@ export const JournalEditor = forwardRef<
 		};
 	}, [editor, handlePaste, handleDrop]);
 
+	// Listen for slash command image insert event
+	useEffect(() => {
+		const handleInsertImageCommand = () => {
+			imageInputRef.current?.click();
+		};
+
+		window.addEventListener(
+			"journal-editor:insert-image",
+			handleInsertImageCommand,
+		);
+
+		return () => {
+			window.removeEventListener(
+				"journal-editor:insert-image",
+				handleInsertImageCommand,
+			);
+		};
+	}, []);
+
+	// Handle file input change for slash command image upload
+	const handleFileInputChange = useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>) => {
+			const file = event.target.files?.[0];
+			if (file) {
+				handleImageInsert(file);
+			}
+			// Reset input so the same file can be selected again
+			event.target.value = "";
+		},
+		[handleImageInsert],
+	);
+
 	// Show loading until journal data arrives (key prop causes remount, so we wait for fresh data)
 	if (isLoadingJournal || !journal) {
 		return (
-			<div className="flex min-h-[300px] items-center justify-center">
+			<div className="flex min-h-0 flex-1 items-center justify-center">
 				<Loader2Icon className="size-6 animate-spin text-muted-foreground" />
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex flex-col">
+		<div className="flex min-h-0 flex-1 flex-col">
 			{/* Toolbar */}
 			<EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
 
 			{/* Editor content */}
-			<div className="rounded-b border border-white/10 border-t-0 bg-white/1">
-				<EditorContent editor={editor} />
+			<div className="flex min-h-0 flex-1 flex-col rounded-b border border-white/10 border-t-0 bg-white/1">
+				<EditorContent
+					className="min-h-0 flex-1 overflow-y-auto"
+					editor={editor}
+				/>
 				{editor && <EditorBubbleMenu editor={editor} />}
 			</div>
 
 			{/* Save status indicator */}
-			<div className="mt-2 flex h-5 items-center justify-end">
+			<div className="mt-2 flex h-5 shrink-0 items-center justify-end">
 				{saveStatus === "saving" && (
 					<div className="flex items-center gap-1.5 font-mono text-muted-foreground text-xs">
 						<Loader2Icon className="size-3 animate-spin" />
@@ -453,6 +443,15 @@ export const JournalEditor = forwardRef<
 					</div>
 				)}
 			</div>
+
+			{/* Hidden file input for slash command image upload */}
+			<input
+				accept="image/*"
+				className="hidden"
+				onChange={handleFileInputChange}
+				ref={imageInputRef}
+				type="file"
+			/>
 		</div>
 	);
-});
+}

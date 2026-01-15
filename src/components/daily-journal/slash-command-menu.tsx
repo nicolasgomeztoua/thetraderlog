@@ -10,6 +10,7 @@ import {
 	Heading1Icon,
 	Heading2Icon,
 	Heading3Icon,
+	ImageIcon,
 	ListIcon,
 	ListOrderedIcon,
 	MinusIcon,
@@ -164,6 +165,17 @@ const COMMANDS: CommandItem[] = [
 		icon: <MinusIcon className="size-4" />,
 		command: (editor, range) => {
 			runCommand(editor, range, { type: "horizontalRule" });
+		},
+	},
+	{
+		title: "Image",
+		description: "Upload an image",
+		icon: <ImageIcon className="size-4" />,
+		command: (editor, range) => {
+			// Delete the slash command text first
+			editor.chain().focus().deleteRange(range).run();
+			// Dispatch custom event to trigger file picker in JournalEditor
+			window.dispatchEvent(new CustomEvent("journal-editor:insert-image"));
 		},
 	},
 ];

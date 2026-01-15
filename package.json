@@ -16,6 +16,7 @@
 		"dev": "bun run --bun next dev --turbo",
 		"preview": "bun run --bun next build && bun run --bun next start",
 		"start": "bun run --bun next start",
+		"ralph": "./scripts/ralph/ralph.sh",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:integration": "vitest run",
