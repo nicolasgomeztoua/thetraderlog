@@ -140,3 +140,27 @@ Started: Wed Jan 14 22:34:43 +01 2026
   - Use `toDateString()` only for browser-local Date objects (calendar clicks)
   - The decision tree in TIMEZONE_SYSTEM.md is now comprehensive for all date handling cases
 ---
+
+## 2026-01-15 - US-011
+- **What was implemented:** Created integration tests for calendar heatmap timezone utilities
+- **Files changed:**
+  - Created `tests/integration/analytics/calendar-heatmap.test.ts`
+- **Test coverage:**
+  - `generateDateStringsInTimezone()` for Pacific/Auckland (UTC+12/+13) and America/Los_Angeles (UTC-8)
+  - `getDayOfWeekFromDateString()` for week alignment (Sunday=0 through Saturday=6)
+  - `getMonthFromDateString()` for month labels (0=January through 11=December)
+  - `formatDateString()` for tooltip display formatting
+  - Year boundary handling (Dec 31 / Jan 1 transitions)
+  - Week alignment to Sunday for calendar grid generation
+  - Month transition detection for label positioning
+  - Edge cases: leap years, DST transitions, single-digit days/months
+- **Test structure:**
+  - 6 main describe blocks covering each utility function and integration scenarios
+  - Tests verify consecutive date generation, chronological ordering, format validity
+  - Tests simulate CalendarHeatmap week padding logic to verify Sunday alignment
+- **Learnings for future iterations:**
+  - These tests don't need database fixtures since they test pure utility functions
+  - Still use truncateAllTables() for consistency with other tests in the directory
+  - Test known dates (e.g., "2026-01-18 is Sunday") to verify day-of-week calculations
+  - Year boundary tests can use offsets like -370 to -360 to test dates from ~1 year ago
+---

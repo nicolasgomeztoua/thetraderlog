@@ -187,8 +187,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/analytics/calendar-heatmap.test.ts with comprehensive tests for all timezone utility functions used by CalendarHeatmap: 1) generateDateStringsInTimezone for Pacific/Auckland (+12/+13) and America/Los_Angeles (-8), 2) getDayOfWeekFromDateString for week alignment (Sunday=0), 3) getMonthFromDateString for month labels, 4) formatDateString for tooltip display, 5) Year boundary handling (Dec 31/Jan 1), 6) Week alignment to Sunday for calendar grid, 7) Month transition detection, 8) Edge cases (leap years, DST). Tests pass typecheck and build."
     },
     {
       "id": "US-012",
