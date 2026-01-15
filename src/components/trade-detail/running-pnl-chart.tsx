@@ -232,13 +232,12 @@ export function RunningPnlChart({
 	className,
 }: RunningPnlChartProps) {
 	// Fetch market data
+	// Note: entryTime is guaranteed to be truthy when query is enabled
 	const { data: chartData, isLoading } =
 		api.marketData.getFullDayChartData.useQuery(
 			{
 				symbol,
-				entryTime: entryTime
-					? new Date(entryTime).toISOString()
-					: new Date().toISOString(),
+				entryTime: entryTime ? new Date(entryTime).toISOString() : "",
 				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
 			},
 			{
