@@ -220,14 +220,5 @@ export function RunningPnlTab({
 		);
 	}
 
-	return (
-		<RunningPnlChart
-			className={cn("h-full", className)}
-			data={pnlData}
-			direction={direction}
-			executions={allExecutions}
-			instrumentType={instrumentType}
-			symbol={symbol}
-		/>
-	);
+	return <RunningPnlChart className={cn("h-full", className)} data={pnlData} />;
 }

@@ -163,10 +163,23 @@ export function useReplayEngine({
 	});
 
 	// Calculate running P&L using shared utility
+	// Use exit price once we've passed exit time for accuracy
 	const lastBar = visibleBars[visibleBars.length - 1];
-	const currentPrice = lastBar?.close ?? 0;
+	const exitExec = executions.find((e) => e.executionType === "exit");
+	const exitTs = exitExec ? toUnixTimestamp(exitExec.executedAt) : null;
+	const exitPrice = exitExec ? parseFloat(exitExec.price) : null;
+	const isAtOrPastExit = exitTs !== null && currentTime >= exitTs;
+
+	const currentPrice =
+		isAtOrPastExit && exitPrice !== null ? exitPrice : (lastBar?.close ?? 0);
+
+	// Exclude exit execution from P&L calc - we want "P&L at this price while still holding"
+	const executionsForPnl = isAtOrPastExit
+		? visibleExecutions.filter((e) => e.executionType !== "exit")
+		: visibleExecutions;
+
 	const runningPnl = calculateRunningPnlAtTime(
-		visibleExecutions,
+		executionsForPnl,
 		currentPrice,
 		direction,
 		symbol,

@@ -93,7 +93,7 @@ export function TradeReplay({
 			: aggregateBars(rawChartData.bars, interval);
 	}, [rawChartData, interval]);
 
-	// Convert executions to replay format - include synthetic entry from trade data
+	// Convert executions to replay format - include synthetic entry/exit from trade data
 	const replayExecutions: ReplayExecution[] = useMemo(() => {
 		const execs: ReplayExecution[] = [];
 
@@ -121,8 +121,21 @@ export function TradeReplay({
 			})),
 		);
 
+		// Add synthetic exit execution if trade is closed but no exit in executions
+		const hasExitExecution = execs.some((e) => e.executionType === "exit");
+		if (!hasExitExecution && exitTime && _exitPrice) {
+			execs.push({
+				id: "exit-synthetic",
+				executionType: "exit",
+				price: _exitPrice,
+				quantity: quantity ?? "1",
+				executedAt: exitTime,
+				realizedPnl: null,
+			});
+		}
+
 		return execs;
-	}, [executions, entryTime, entryPrice, quantity]);
+	}, [executions, entryTime, entryPrice, exitTime, _exitPrice, quantity]);
 
 	// Initialize replay engine
 	const replay = useReplayEngine({

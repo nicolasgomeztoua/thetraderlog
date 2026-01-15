@@ -188,7 +188,7 @@ export function AppSidebar() {
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
 						align="start"
-						className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[240px]"
+						className="w-(--radix-dropdown-menu-trigger-width) min-w-[240px]"
 					>
 						{accounts.length === 0 ? (
 							<DropdownMenuItem asChild className="min-h-[44px] py-3">
@@ -339,7 +339,7 @@ export function AppSidebar() {
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
 						align="start"
-						className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px]"
+						className="w-(--radix-dropdown-menu-trigger-width) min-w-[200px]"
 					>
 						<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
 							<Link

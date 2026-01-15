@@ -192,5 +192,30 @@ export function generateRunningPnlSeries(
 		});
 	}
 
+	// Add final point at exact exit time with exit price
+	// This ensures the series ends at the precise exit moment, not the last bar before exit
+	if (exitTime !== null && exitPrice !== null) {
+		const lastPoint = pnlSeries[pnlSeries.length - 1];
+		// Only add if exit time is different from last point (avoid duplicates)
+		if (!lastPoint || lastPoint.time !== exitTime) {
+			// Exclude the exit execution - we want P&L "just before exit" at exit price
+			// This gives correct P&L since remaining position isn't 0 yet
+			const executionsBeforeExit = executions.filter(
+				(e) => e.executionType !== "exit",
+			);
+			const finalPnl = calculateRunningPnlAtTime(
+				executionsBeforeExit,
+				exitPrice,
+				direction,
+				symbol,
+				instrumentType,
+			);
+			pnlSeries.push({
+				time: exitTime,
+				pnl: finalPnl,
+			});
+		}
+	}
+
 	return pnlSeries;
 }

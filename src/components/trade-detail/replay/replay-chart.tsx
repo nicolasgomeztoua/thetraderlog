@@ -128,6 +128,12 @@ function ReplayChartInner({
 				timeVisible: true,
 				secondsVisible: false,
 			},
+			localization: {
+				timeFormatter: (time: number) => {
+					const date = new Date(time * 1000);
+					return formatTime(date, { includeSeconds: false });
+				},
+			},
 		});
 
 		chartRef.current = chart;
@@ -176,7 +182,7 @@ function ReplayChartInner({
 			chartRef.current = null;
 			seriesRef.current = null;
 		};
-	}, [colors, stopLoss, takeProfit]);
+	}, [colors, stopLoss, takeProfit, formatTime]);
 
 	// Update chart data as replay progresses
 	useEffect(() => {
