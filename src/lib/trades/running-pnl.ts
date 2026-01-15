@@ -123,6 +123,9 @@ export function calculateRunningPnlAtTime(
  * Returns one P&L point per bar, calculating the unrealized + realized P&L
  * at each bar's close price.
  *
+ * For closed trades (with an exit execution), the series stops at the exit time
+ * and uses the exit price for the final P&L calculation.
+ *
  * @param options - Bars, executions, and trade parameters
  * @returns Array of { time, pnl } points for charting
  */
@@ -141,6 +144,11 @@ export function generateRunningPnlSeries(
 
 	const entryTime = toUnixTimestamp(entryExec.executedAt);
 
+	// Find the exit execution (if trade is closed) to determine when P&L tracking stops
+	const exitExec = executions.find((e) => e.executionType === "exit");
+	const exitTime = exitExec ? toUnixTimestamp(exitExec.executedAt) : null;
+	const exitPrice = exitExec ? parseFloat(exitExec.price) : null;
+
 	// Generate P&L for each bar at or after entry
 	const pnlSeries: RunningPnlPoint[] = [];
 
@@ -150,16 +158,29 @@ export function generateRunningPnlSeries(
 			continue;
 		}
 
+		// For closed trades, stop after exit time
+		if (exitTime !== null && bar.time > exitTime) {
+			break;
+		}
+
 		// Get executions visible at this bar's time
 		const visibleExecutions = executions.filter((exec) => {
 			const execTs = toUnixTimestamp(exec.executedAt);
 			return execTs <= bar.time;
 		});
 
+		// Determine price to use for P&L calculation:
+		// - At or after exit: use exit price for accuracy
+		// - Before exit: use bar's close price
+		const priceForPnl =
+			exitTime !== null && exitPrice !== null && bar.time >= exitTime
+				? exitPrice
+				: bar.close;
+
 		// Calculate P&L at this point
 		const pnl = calculateRunningPnlAtTime(
 			visibleExecutions,
-			bar.close,
+			priceForPnl,
 			direction,
 			symbol,
 			instrumentType,

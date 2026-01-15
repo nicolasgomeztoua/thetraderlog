@@ -591,3 +591,210 @@ describe("generateRunningPnlSeries", () => {
 		expect(series[2]).toEqual({ time: 1200, pnl: -500 }); // 10 pts loss
 	});
 });
+
+// =============================================================================
+// EXIT TIME BOUNDARY TESTS
+// =============================================================================
+
+describe("generateRunningPnlSeries - Exit time boundary", () => {
+	it("should stop P&L series at exit time for closed trades", () => {
+		const entryTime = 1000;
+		const exitTime = 1200;
+
+		const bars: ChartBar[] = [
+			createBar(1000, 5000), // at entry
+			createBar(1100, 5010), // during trade
+			createBar(1200, 5020), // at exit
+			createBar(1300, 5030), // after exit - should NOT be included
+			createBar(1400, 5040), // after exit - should NOT be included
+		];
+
+		const executions: Execution[] = [
+			createExecution("1", "entry", "5000", "1", entryTime),
+			createExecution("2", "exit", "5020", "1", exitTime, "1000"),
+		];
+
+		const options: RunningPnlOptions = {
+			bars,
+			executions,
+			direction: "long",
+			symbol: "ES",
+			instrumentType: "futures",
+		};
+
+		const series = generateRunningPnlSeries(options);
+
+		// Should only include bars up to and including exit time
+		expect(series).toHaveLength(3);
+		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
+		expect(series[1]).toEqual({ time: 1100, pnl: 500 });
+		expect(series[2]).toEqual({ time: 1200, pnl: 1000 }); // Final P&L at exit
+	});
+
+	it("should use exit price for final P&L point", () => {
+		const entryTime = 1000;
+		const exitTime = 1200;
+
+		const bars: ChartBar[] = [
+			createBar(1000, 5000), // at entry
+			createBar(1100, 5010), // during trade
+			// Bar close is 5025 but exit was at 5020 - should use exit price
+			createBar(1200, 5025),
+		];
+
+		const executions: Execution[] = [
+			createExecution("1", "entry", "5000", "1", entryTime),
+			// Exit at 5020, not at bar close of 5025
+			createExecution("2", "exit", "5020", "1", exitTime, "1000"),
+		];
+
+		const options: RunningPnlOptions = {
+			bars,
+			executions,
+			direction: "long",
+			symbol: "ES",
+			instrumentType: "futures",
+		};
+
+		const series = generateRunningPnlSeries(options);
+
+		expect(series).toHaveLength(3);
+		// Final P&L should be $1000 (20 pts × $50), using exit price 5020
+		// NOT $1250 (25 pts × $50) from bar close
+		expect(series[2]).toEqual({ time: 1200, pnl: 1000 });
+	});
+
+	it("should continue chart for open trades without exit", () => {
+		const entryTime = 1000;
+
+		const bars: ChartBar[] = [
+			createBar(1000, 5000), // at entry
+			createBar(1100, 5010), // during trade
+			createBar(1200, 5020), // still open
+			createBar(1300, 5030), // still open - should be included
+		];
+
+		// No exit execution - trade is still open
+		const executions: Execution[] = [
+			createExecution("1", "entry", "5000", "1", entryTime),
+		];
+
+		const options: RunningPnlOptions = {
+			bars,
+			executions,
+			direction: "long",
+			symbol: "ES",
+			instrumentType: "futures",
+		};
+
+		const series = generateRunningPnlSeries(options);
+
+		// Should include all bars since trade is still open
+		expect(series).toHaveLength(4);
+		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
+		expect(series[1]).toEqual({ time: 1100, pnl: 500 });
+		expect(series[2]).toEqual({ time: 1200, pnl: 1000 });
+		expect(series[3]).toEqual({ time: 1300, pnl: 1500 });
+	});
+
+	it("should handle exit before last bar (no matching exit bar)", () => {
+		const entryTime = 1000;
+		const exitTime = 1150; // Between bar timestamps
+
+		const bars: ChartBar[] = [
+			createBar(1000, 5000), // at entry
+			createBar(1100, 5010), // before exit
+			// Exit happened at 1150, but next bar is 1200
+			createBar(1200, 5025), // after exit - should NOT be included
+		];
+
+		const executions: Execution[] = [
+			createExecution("1", "entry", "5000", "1", entryTime),
+			createExecution("2", "exit", "5015", "1", exitTime, "750"),
+		];
+
+		const options: RunningPnlOptions = {
+			bars,
+			executions,
+			direction: "long",
+			symbol: "ES",
+			instrumentType: "futures",
+		};
+
+		const series = generateRunningPnlSeries(options);
+
+		// Should include bars up to exit time (1000 and 1100)
+		// Bar at 1200 is after exit (1150), so excluded
+		expect(series).toHaveLength(2);
+		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
+		expect(series[1]).toEqual({ time: 1100, pnl: 500 }); // 10 pts × $50
+	});
+
+	it("should handle short trade exit correctly", () => {
+		const entryTime = 1000;
+		const exitTime = 1200;
+
+		const bars: ChartBar[] = [
+			createBar(1000, 5000), // at entry
+			createBar(1100, 4990), // profit for short
+			createBar(1200, 4980), // at exit
+			createBar(1300, 4970), // after exit - should NOT be included
+		];
+
+		const executions: Execution[] = [
+			createExecution("1", "entry", "5000", "1", entryTime),
+			createExecution("2", "exit", "4980", "1", exitTime, "1000"),
+		];
+
+		const options: RunningPnlOptions = {
+			bars,
+			executions,
+			direction: "short",
+			symbol: "ES",
+			instrumentType: "futures",
+		};
+
+		const series = generateRunningPnlSeries(options);
+
+		expect(series).toHaveLength(3);
+		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
+		expect(series[1]).toEqual({ time: 1100, pnl: 500 }); // 10 pts profit
+		expect(series[2]).toEqual({ time: 1200, pnl: 1000 }); // 20 pts profit at exit
+	});
+
+	it("should handle scale-outs with exit correctly", () => {
+		const entryTime = 1000;
+		const scaleOutTime = 1100;
+		const exitTime = 1200;
+
+		const bars: ChartBar[] = [
+			createBar(1000, 5000), // at entry
+			createBar(1100, 5010), // at scale-out
+			createBar(1200, 5020), // at exit
+			createBar(1300, 5030), // after exit - should NOT be included
+		];
+
+		const executions: Execution[] = [
+			createExecution("1", "entry", "5000", "2", entryTime),
+			createExecution("2", "scale_out", "5010", "1", scaleOutTime, "500"),
+			createExecution("3", "exit", "5020", "1", exitTime, "1000"),
+		];
+
+		const options: RunningPnlOptions = {
+			bars,
+			executions,
+			direction: "long",
+			symbol: "ES",
+			instrumentType: "futures",
+		};
+
+		const series = generateRunningPnlSeries(options);
+
+		expect(series).toHaveLength(3);
+		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
+		// At scale-out: $500 realized + $500 unrealized (1 remaining × 10 pts) = $1000
+		expect(series[1]).toEqual({ time: 1100, pnl: 1000 });
+		// At exit: $500 (first scale-out) + $1000 (final exit) = $1500 realized, 0 unrealized
+		expect(series[2]).toEqual({ time: 1200, pnl: 1500 });
+	});
+});
