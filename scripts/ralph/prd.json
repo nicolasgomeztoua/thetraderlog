@@ -11,7 +11,8 @@
         "Add `runningPnl` entry to `CHART_DIMENSIONS` in src/lib/analytics/constants.ts",
         "Values: { height: 200, strokeWidth: 1.5 }",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Build passes (bun run build)",
+        "Verify in browser: attachment section no longer visible"
       ],
       "priority": 1,
       "passes": true,
@@ -36,7 +37,8 @@
         "Reference: src/components/analytics/equity-curve.tsx for AG Charts pattern",
         "Reference: src/components/trade-detail/replay/use-replay-engine.ts:273-306 for P&L calculation",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Build passes (bun run build)",
+        "Verify in browser: editor fills available vertical space in right panel"
       ],
       "priority": 2,
       "passes": true,
