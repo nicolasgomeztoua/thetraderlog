@@ -134,8 +134,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/analytics/timezone-grouping.test.ts with comprehensive tests for: 1) Trade entry time grouping (11 PM EST case), 2) getCalendarData date accuracy, 3) getOvertradingAnalysis consistency with calendar data, 4) Daily journal trade grouping, 5) Pacific/Auckland timezone edge cases. Tests pass typecheck and build; full test run requires Docker."
     },
     {
       "id": "US-008",

@@ -80,3 +80,23 @@ Started: Wed Jan 14 22:34:43 +01 2026
   - When auditing for date grouping issues, search for all uses of timezone utility functions (getMonthStringInTimezone, getDateStringInTimezone, etc.)
   - The `exitTime` null check was redundant in getSymbolTrend since we already filter for closed trades with netPnl
 ---
+
+## 2026-01-15 - US-010
+- **What was implemented:** Created integration tests for timezone date grouping
+- **Files changed:**
+  - Created `tests/integration/analytics/timezone-grouping.test.ts`
+- **Test coverage:**
+  - Trade entered 11 PM EST closed next day appears on entry date (EST)
+  - getCalendarData returns correct dates for user timezone
+  - getOvertradingAnalysis matches calendar data for same days
+  - Daily journal trade grouping respects user timezone
+  - Pacific timezone (UTC-8) edge cases
+  - Pacific/Auckland (UTC+13) ahead-of-UTC edge cases
+  - Cross-procedure consistency (calendar vs overtrading analysis)
+- **Learnings for future iterations:**
+  - getOvertradingAnalysis returns `byTradeCount` (array of buckets with tradeCount, days, etc.) not `totalTrades` - derive totals from buckets
+  - Use existing `timezone.test.ts` as pattern reference - it has similar setup patterns
+  - Docker must be running for integration tests (Testcontainers PostgreSQL)
+  - Pattern: use `createTestUser()` + `createTestAccount()` + insert `userSettings` to set specific timezone
+  - Testing "11 PM EST closed next day" scenario: use UTC timestamp that's next day in UTC but same day in user TZ
+---
