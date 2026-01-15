@@ -20,6 +20,7 @@ interface RunningPnlTabProps {
 	instrumentType: "futures" | "forex";
 	entryPrice: string | null;
 	entryTime: Date | string | null;
+	exitPrice?: string | null;
 	exitTime?: Date | string | null;
 	quantity?: string | null;
 	executions?: Array<{
@@ -47,6 +48,7 @@ export function RunningPnlTab({
 	instrumentType,
 	entryPrice,
 	entryTime,
+	exitPrice,
 	exitTime,
 	quantity,
 	executions = [],
@@ -84,7 +86,7 @@ export function RunningPnlTab({
 			: aggregateBars(rawChartData.bars, interval);
 	}, [rawChartData, interval]);
 
-	// Build executions array with synthetic entry (matching replay pattern)
+	// Build executions array with synthetic entry/exit (matching replay pattern)
 	const allExecutions: Execution[] = useMemo(() => {
 		const execs: Execution[] = [];
 
@@ -112,8 +114,22 @@ export function RunningPnlTab({
 			})),
 		);
 
+		// Add synthetic exit execution if trade is closed but no exit in executions
+		// This ensures generateRunningPnlSeries knows when to stop
+		const hasExitExecution = execs.some((e) => e.executionType === "exit");
+		if (!hasExitExecution && exitTime && exitPrice) {
+			execs.push({
+				id: "exit-synthetic",
+				executionType: "exit",
+				price: exitPrice,
+				quantity: quantity ?? "1",
+				executedAt: exitTime,
+				realizedPnl: null,
+			});
+		}
+
 		return execs;
-	}, [executions, entryTime, entryPrice, quantity]);
+	}, [executions, entryTime, entryPrice, exitTime, exitPrice, quantity]);
 
 	// Generate running P&L series
 	const pnlData = useMemo(() => {

@@ -107,6 +107,22 @@ Add an interactive running P&L (profit/loss) area chart to the trade detail page
 - [ ] All tests pass (`bun run test`)
 - [ ] Typecheck passes (`bun run check`)
 
+### US-006: Fix - Stop P&L Calculation at Trade Exit
+**Description**: As a trader, I want the running P&L chart to stop at my exit price so that the final P&L is accurate and doesn't continue showing price movement after I closed the trade.
+
+**Bug**: `generateRunningPnlSeries` currently continues calculating P&L for bars AFTER the trade has exited, using post-exit bar prices which gives incorrect final P&L.
+
+**Acceptance Criteria**:
+- [ ] `generateRunningPnlSeries` stops generating points after exit execution time
+- [ ] Final P&L point uses exit price (not subsequent bar prices)
+- [ ] For closed trades, chart ends at exit time with correct realized P&L
+- [ ] For open trades (no exit), chart continues to last bar as before
+- [ ] Update tests to verify exit time boundary behavior
+- [ ] All tests pass (`bun run test`)
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser: closed trade P&L matches trade stats
+
 ## Functional Requirements
 
 1. **FR-001**: Running P&L must calculate unrealized P&L at each bar's close price

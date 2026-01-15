@@ -199,6 +199,7 @@ export function ContentPanel({
 							quantity: exec.quantity,
 							realizedPnl: exec.realizedPnl,
 						}))}
+						exitPrice={trade.exitPrice}
 						exitTime={trade.exitTime}
 						instrumentType={trade.instrumentType}
 						quantity={trade.quantity}
