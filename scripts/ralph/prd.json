@@ -114,6 +114,25 @@
       "priority": 6,
       "passes": true,
       "notes": "Created RunningPnlTab component that fetches OHLC data using same endpoint as TradeReplay (getFullDayChartData). Generates P&L series with generateRunningPnlSeries utility. Shows loading/error/no-data states. Chart fills full tab height. Executions passed through to chart for marker rendering."
+    },
+    {
+      "id": "US-006",
+      "title": "Fix: Stop P&L Calculation at Trade Exit",
+      "description": "As a trader, I want the running P&L chart to stop at my exit price so that the final P&L is accurate and doesn't continue showing price movement after I closed the trade.",
+      "acceptanceCriteria": [
+        "generateRunningPnlSeries stops generating points after exit execution time",
+        "Final P&L point uses exit price (not subsequent bar prices)",
+        "For closed trades, chart ends at exit time with correct realized P&L",
+        "For open trades (no exit), chart continues to last bar as before",
+        "Update tests to verify exit time boundary behavior",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: closed trade P&L matches trade stats"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Modified generateRunningPnlSeries to detect exit execution and stop after exit time. Uses exit price for final P&L accuracy. Added 6 new tests for exit time boundary behavior. Typecheck passes. Tests require Docker/Orbstack to run."
     }
   ]
 }

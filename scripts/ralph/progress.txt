@@ -133,3 +133,31 @@ Started: Thu Jan 15 15:31:55 +01 2026
   - Error handling: show specific error message from query.error for debugging
   - TabsContent p-0 for full-bleed chart display (no padding)
 ---
+
+## 2026-01-15 - US-006
+- Fixed running P&L calculation to stop at trade exit time
+- File: src/lib/trades/running-pnl.ts (updated generateRunningPnlSeries)
+- Implementation details:
+  - Modified generateRunningPnlSeries to detect exit execution
+  - Added exitTime tracking: find exit execution and extract timestamp
+  - Added exitPrice tracking: use exit price for final P&L accuracy
+  - Stops generating P&L points for bars after exit time (break out of loop)
+  - Uses exit price (not bar close) when calculating P&L at exit time
+  - Open trades (no exit execution) continue to work as before
+- Test file: tests/integration/running-pnl.test.ts (updated)
+- Added 6 new test cases for exit time boundary:
+  - "should stop P&L series at exit time for closed trades"
+  - "should use exit price for final P&L point"
+  - "should continue chart for open trades without exit"
+  - "should handle exit before last bar (no matching exit bar)"
+  - "should handle short trade exit correctly"
+  - "should handle scale-outs with exit correctly"
+- Files changed:
+  - src/lib/trades/running-pnl.ts (updated)
+  - tests/integration/running-pnl.test.ts (updated)
+- **Learnings for future iterations:**
+  - Exit execution is identified by executionType === "exit"
+  - For closed trades, P&L should stop at exit, not continue tracking bar prices
+  - Use exit price for accurate final P&L (bar close may differ from actual exit price)
+  - Open trades (no exit) handled by null checks on exitTime/exitPrice
+---
