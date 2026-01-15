@@ -94,16 +94,26 @@ const trades = await db.query.trades.findMany({
 
 ### Frontend Date Handling
 
-#### `toDateString(date)`
+#### `toDateString(date)` ⚠️ FRONTEND ONLY
 **Use for:** Sending calendar-selected dates to the backend.
+**DO NOT use for:** Backend date grouping or trade timestamp conversion.
 
 ```typescript
-// User clicks "Jan 6" in calendar
+// FRONTEND: User clicks "Jan 6" in calendar
 const dateString = toDateString(selectedDate); // "2026-01-06"
 // Backend handles timezone conversion
 ```
 
-**Why not `getDateStringInTimezone`?** If user's browser is in PST but their preference is EST, using `getDateStringInTimezone` would convert the PST date to EST, which is wrong. The calendar already shows the correct date - just preserve it.
+**Migration guidance for backend code:**
+```typescript
+// ❌ WRONG - Don't use in src/server/
+const dateStr = toDateString(new Date(trade.entryTime));
+
+// ✅ CORRECT - Use getDateStringInTimezone for backend
+const dateStr = getDateStringInTimezone(trade.entryTime, userTimezone);
+```
+
+**Why frontend-only?** `toDateString()` uses the browser's local timezone. On the backend (Node.js), there is no "browser timezone" - it would use the server's timezone, which is typically UTC or an arbitrary data center timezone. Backend code must use the user's configured timezone setting.
 
 #### `formatLocalDate(date, format)`
 **Use for:** Displaying calendar dates, journal dates (stored as UTC midnight).
@@ -224,7 +234,21 @@ const dateString = toDateString(selectedDate);
 // Backend handles timezone conversion
 ```
 
-### Mistake 4: Converting Journal Dates to User Timezone
+### Mistake 4: Using toDateString on the Backend
+
+```typescript
+// WRONG - toDateString uses server timezone, not user timezone
+// In src/server/api/routers/analytics.ts:
+const dateStr = toDateString(new Date(trade.entryTime));
+
+// CORRECT - use user's configured timezone
+const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+const dateStr = getDateStringInTimezone(trade.entryTime, userTimezone);
+```
+
+**Why?** `toDateString()` is a frontend utility that uses the local timezone. On a server, "local timezone" is the server's timezone (often UTC or a data center's timezone), which has no relation to the user's actual timezone. Always use `getDateStringInTimezone()` with the user's configured timezone on the backend.
+
+### Mistake 5: Converting Journal Dates to User Timezone
 
 ```typescript
 // WRONG - shows wrong day (Jan 5, 2026 7:00 PM)

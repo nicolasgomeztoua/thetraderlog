@@ -24,16 +24,30 @@ import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 /**
  * Convert a Date to a YYYY-MM-DD string, preserving the local calendar date.
  *
- * USE THIS for frontend → backend API calls when the user clicks a date in the calendar.
- * The backend will handle timezone conversion using the user's preferred timezone.
+ * **FRONTEND ONLY** - This function is intended for sending calendar dates to the backend.
  *
- * DO NOT USE getDateStringInTimezone() for this purpose - that causes double conversion
- * when the user's browser timezone differs from their preferred timezone.
+ * @deprecated FOR BACKEND USE - Do not use in server-side code (src/server/).
+ * For grouping trades or timestamps by date on the backend, use:
+ * - `getDateStringInTimezone(trade.entryTime, userTimezone)` for trade timestamps
+ * - Backend receives the date string from frontend and uses `getDayBoundsInTimezone()`
+ *
+ * WHY: This function uses the browser's local timezone, which may differ from the user's
+ * preferred timezone setting. Backend date grouping must respect the user's configured
+ * timezone, not the browser's timezone.
+ *
+ * FRONTEND USAGE (valid):
+ * - User clicks a calendar date → send to backend as a date string
+ * - Backend handles timezone conversion using the user's preferred timezone
  *
  * @example
- * // User clicks "Jan 6" in calendar → Date object is Jan 6 00:00 local time
+ * // FRONTEND: User clicks "Jan 6" in calendar → Date object is Jan 6 00:00 local time
  * const dateString = toDateString(selectedDate); // "2026-01-06"
  * // Backend uses getDayBoundsInTimezone("2026-01-06", userTimezone) to query
+ *
+ * @example
+ * // BACKEND: DO NOT DO THIS - use getDateStringInTimezone instead
+ * // ❌ toDateString(new Date(trade.entryTime))
+ * // ✅ getDateStringInTimezone(trade.entryTime, userTimezone)
  */
 export function toDateString(date: Date): string {
 	return format(date, "yyyy-MM-dd");
