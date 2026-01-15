@@ -100,3 +100,43 @@ Started: Wed Jan 14 22:34:43 +01 2026
   - Pattern: use `createTestUser()` + `createTestAccount()` + insert `userSettings` to set specific timezone
   - Testing "11 PM EST closed next day" scenario: use UTC timestamp that's next day in UTC but same day in user TZ
 ---
+
+## 2026-01-15 - US-008
+- **What was implemented:** Refactored CalendarHeatmap to use date strings instead of Date objects
+- **Files changed:**
+  - Modified `src/components/analytics/calendar-heatmap.tsx`
+- **Key changes:**
+  - Replaced Date-based week generation with `generateDateStringsInTimezone()`
+  - Used `getDayOfWeekFromDateString()` for week alignment (Sunday start)
+  - Used `getMonthFromDateString()` for month labels
+  - Used `formatDateString()` for tooltip display
+  - All dates are now YYYY-MM-DD strings that match backend format directly
+- **Learnings for future iterations:**
+  - Pattern: Use padding dates from earlier window for week alignment instead of empty strings (avoids array index key issues)
+  - generateDateStringsInTimezone() can generate dates outside the display window for padding purposes
+  - When working with date strings, use the timezone utility functions consistently - no Date object conversion needed
+  - CalendarHeatmap now works correctly when browser TZ differs from user TZ since all date logic is string-based
+---
+
+## 2026-01-15 - US-009
+- **What was implemented:** Audited and fixed calendar-sidebar.tsx timezone consistency
+- **Files changed:**
+  - Modified `src/components/daily-journal/calendar-sidebar.tsx` - fixed journal date lookup, added documentation
+  - Modified `src/lib/shared/timezone.ts` - added `getUTCDateString()` utility
+  - Modified `docs/TIMEZONE_SYSTEM.md` - documented new utility and updated decision tree
+  - Modified `src/components/AGENTS.md` - added patterns and decisions
+- **Bug found and fixed:**
+  - Journal date lookups used `toDateString(new Date(journal.date))` which converts to local time
+  - In browsers behind UTC (e.g., PST), UTC midnight timestamps shift to previous day
+  - Fix: Added `getUTCDateString()` to extract date directly from UTC
+- **Key clarification:**
+  - Calendar sidebar intentionally uses browser-local dates for grid generation
+  - User clicks on "Jan 15" as shown → they want Jan 15's data
+  - Backend handles timezone via `getDayBoundsInTimezone()`
+  - This is correct behavior, not a bug
+- **Learnings for future iterations:**
+  - UTC midnight timestamps (like journal.date) represent calendar dates, not moments in time
+  - Use `getUTCDateString()` for lookup maps from UTC midnight dates
+  - Use `toDateString()` only for browser-local Date objects (calendar clicks)
+  - The decision tree in TIMEZONE_SYSTEM.md is now comprehensive for all date handling cases
+---

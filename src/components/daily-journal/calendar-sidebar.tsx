@@ -24,6 +24,7 @@ import {
 	getEndOfMonth,
 	getStartOfDay,
 	getStartOfMonth,
+	getUTCDateString,
 	isDateAfter,
 	isSameCalendarDay,
 	isSameCalendarMonth,
@@ -64,7 +65,24 @@ function getPnLColorClass(pnl: number, maxAbsPnl: number): string {
 }
 
 /**
- * Calendar sidebar with month view, P&L colors, and journal indicators
+ * Calendar sidebar with month view, P&L colors, and journal indicators.
+ *
+ * ## Timezone Design:
+ *
+ * This component intentionally uses browser-local dates for the calendar grid.
+ * When a user clicks on a date, they want "that calendar day" as shown in their browser.
+ *
+ * **Date Lookups (P&L and Journals):**
+ * - P&L data from backend uses `getDateStringInTimezone(trade.entryTime, userTimezone)`,
+ *   which returns YYYY-MM-DD strings based on trade entry time in the user's preferred timezone.
+ * - Journal data is stored as UTC midnight (e.g., 2026-01-15T00:00:00Z = "January 15th").
+ *   We use `getUTCDateString()` to extract the date directly from UTC to avoid shifting.
+ * - Calendar grid cells use `toDateString(day)` for lookups, matching both data sources.
+ *
+ * **Why browser-local for calendar grid:**
+ * The calendar shows dates in the user's current browser timezone. If they click "Jan 15",
+ * they expect to see Jan 15's data. The backend then converts this date string to the
+ * appropriate UTC bounds using `getDayBoundsInTimezone()`.
  */
 export function CalendarSidebar({
 	selectedDate,
@@ -118,8 +136,9 @@ export function CalendarSidebar({
 		const map = new Map<string, boolean>();
 		if (!journalData) return map;
 		for (const journal of journalData) {
-			// Convert journal date to YYYY-MM-DD string
-			const dateStr = toDateString(new Date(journal.date));
+			// Journal dates are stored as UTC midnight - extract the date directly from UTC
+			// Using toDateString() would convert to local time, shifting the date in some timezones
+			const dateStr = getUTCDateString(journal.date);
 			map.set(dateStr, journal.hasContent);
 		}
 		return map;

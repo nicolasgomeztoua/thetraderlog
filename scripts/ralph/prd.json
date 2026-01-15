@@ -153,8 +153,8 @@
         "Verify in browser with different timezone settings"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Refactored CalendarHeatmap to use string-based date handling. Replaced Date objects with generateDateStringsInTimezone() for calendar grid generation. Uses getDayOfWeekFromDateString() for week alignment, getMonthFromDateString() for month labels, and formatDateString() for tooltip display. All dates are now YYYY-MM-DD strings that match backend format directly."
     },
     {
       "id": "US-009",
@@ -169,8 +169,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Audited calendar-sidebar.tsx and found a bug: journal date lookups used toDateString() which converts to local time, causing date shift in browsers behind UTC. Fixed by adding getUTCDateString() utility for extracting dates from UTC midnight timestamps. Added documentation explaining the intentional browser-local calendar approach."
     },
     {
       "id": "US-011",

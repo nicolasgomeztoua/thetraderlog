@@ -50,6 +50,9 @@ Need to work with a date/time?
 │   │
 │   ├─ Backend querying by date? ────────► getDayBoundsInTimezone()
 │   │
+│   ├─ Building lookup map from backend
+│   │   dates (UTC midnight)? ────────────► getUTCDateString() (preserve UTC date)
+│   │
 │   └─ Displaying date-only value? ──────► formatLocalDate()
 │
 └─ Is it for calendar grid generation?
@@ -111,6 +114,18 @@ formatLocalDate(journalDate, "MMM d, yyyy"); // "Jan 6, 2026"
 ```
 
 **Why not `formatDateInTimezone`?** Journal dates are stored as UTC midnight representing a calendar date. Converting to EST would show "Jan 5, 2026 7:00 PM" - the wrong day!
+
+#### `getUTCDateString(date)`
+**Use for:** Extracting the YYYY-MM-DD date string from a UTC midnight timestamp (journal dates).
+
+```typescript
+// Journal date stored as 2026-01-15T00:00:00Z
+// Browser is in PST (UTC-8)
+toDateString(journalDate);    // WRONG: "2026-01-14" (local time shift)
+getUTCDateString(journalDate); // CORRECT: "2026-01-15" (UTC date preserved)
+```
+
+**Why this exists:** When building lookup maps for calendar data, we need the date string to match the calendar grid. Using `toDateString()` on a UTC midnight timestamp would shift the date in browsers behind UTC (e.g., PST interprets 2026-01-15T00:00:00Z as Jan 14 at 4 PM local). This function extracts the intended calendar date directly from UTC.
 
 ### Time Display
 

@@ -39,6 +39,31 @@ export function toDateString(date: Date): string {
 	return format(date, "yyyy-MM-dd");
 }
 
+/**
+ * Extract the YYYY-MM-DD date string from a UTC midnight timestamp.
+ *
+ * USE THIS for dates stored as UTC midnight (e.g., journal dates, calendar dates).
+ * These dates represent a specific calendar day, not a moment in time.
+ *
+ * DO NOT USE for trade timestamps - use getDateStringInTimezone() instead.
+ *
+ * WHY THIS EXISTS:
+ * Journal dates are stored as UTC midnight (e.g., 2026-01-15T00:00:00.000Z).
+ * Using toDateString() would convert to local time first, causing the date to shift
+ * when the browser is behind UTC (e.g., UTC midnight becomes "Jan 14" in PST).
+ * This function extracts the intended date directly from UTC.
+ *
+ * @example
+ * // Journal date stored as 2026-01-15T00:00:00.000Z
+ * // Browser is in PST (UTC-8)
+ * toDateString(journalDate); // WRONG: "2026-01-14" (local time)
+ * getUTCDateString(journalDate); // CORRECT: "2026-01-15" (UTC date)
+ */
+export function getUTCDateString(date: Date | string): string {
+	const d = typeof date === "string" ? new Date(date) : date;
+	return d.toISOString().split("T")[0] ?? "";
+}
+
 // =============================================================================
 // TIMEZONE CONVERSION UTILITIES
 // =============================================================================
