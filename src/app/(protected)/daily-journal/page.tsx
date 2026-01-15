@@ -213,10 +213,10 @@ export default function DailyJournalPage() {
 			{/* Main Content Area */}
 			{isMobile ? (
 				/* Mobile Layout - Editor Only */
-				<div className="flex-1 overflow-y-auto p-4">
+				<div className="flex min-h-0 flex-1 flex-col p-4">
 					{/* Journal Editor */}
-					<div className="rounded border border-white/5 bg-white/1 p-4">
-						<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+					<div className="flex min-h-0 flex-1 flex-col rounded border border-white/5 bg-white/1 p-4">
+						<span className="mb-3 block shrink-0 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Journal Entry
 						</span>
 						<JournalEditor key={dateString} selectedDate={selectedDate} />
@@ -268,10 +268,10 @@ export default function DailyJournalPage() {
 						defaultSize={panelSizes[1]}
 						minSize={30}
 					>
-						<div className="h-full overflow-y-auto p-4">
+						<div className="flex h-full min-h-0 flex-col p-4">
 							{/* Journal Editor */}
-							<div className="rounded border border-white/5 bg-white/1 p-4">
-								<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+							<div className="flex min-h-0 flex-1 flex-col rounded border border-white/5 bg-white/1 p-4">
+								<span className="mb-3 block shrink-0 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 									Journal Entry
 								</span>
 								<JournalEditor key={dateString} selectedDate={selectedDate} />

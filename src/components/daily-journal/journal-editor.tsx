@@ -111,7 +111,7 @@ export const JournalEditor = forwardRef<
 		extensions: EDITOR_EXTENSIONS,
 		editorProps: {
 			attributes: {
-				class: "min-h-[300px] px-4 py-3 focus:outline-none",
+				class: "h-full px-4 py-3 focus:outline-none",
 			},
 			handleKeyDown: (_view, event) => {
 				// Capture Cmd/Ctrl+B before it bubbles to app
@@ -415,25 +415,28 @@ export const JournalEditor = forwardRef<
 	// Show loading until journal data arrives (key prop causes remount, so we wait for fresh data)
 	if (isLoadingJournal || !journal) {
 		return (
-			<div className="flex min-h-[300px] items-center justify-center">
+			<div className="flex min-h-0 flex-1 items-center justify-center">
 				<Loader2Icon className="size-6 animate-spin text-muted-foreground" />
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex flex-col">
+		<div className="flex min-h-0 flex-1 flex-col">
 			{/* Toolbar */}
 			<EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
 
 			{/* Editor content */}
-			<div className="rounded-b border border-white/10 border-t-0 bg-white/1">
-				<EditorContent editor={editor} />
+			<div className="flex min-h-0 flex-1 flex-col rounded-b border border-white/10 border-t-0 bg-white/1">
+				<EditorContent
+					className="min-h-0 flex-1 overflow-y-auto"
+					editor={editor}
+				/>
 				{editor && <EditorBubbleMenu editor={editor} />}
 			</div>
 
 			{/* Save status indicator */}
-			<div className="mt-2 flex h-5 items-center justify-end">
+			<div className="mt-2 flex h-5 shrink-0 items-center justify-end">
 				{saveStatus === "saving" && (
 					<div className="flex items-center gap-1.5 font-mono text-muted-foreground text-xs">
 						<Loader2Icon className="size-3 animate-spin" />
