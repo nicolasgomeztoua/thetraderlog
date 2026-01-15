@@ -274,6 +274,27 @@ export function utcHourToLocalHour(utcHour: number, timezone: string): number {
 }
 
 /**
+ * Convert a local hour (0-23) in the specified timezone to a UTC hour.
+ * Useful for storing session definitions in UTC after user edits them in local time.
+ *
+ * @example
+ * // Local hour 9 in EST (UTC-5) should be UTC hour 14
+ * localHourToUtcHour(9, "America/New_York") // Returns 14
+ *
+ * // Local hour 16 in PST (UTC-8) should be UTC hour 0
+ * localHourToUtcHour(16, "America/Los_Angeles") // Returns 0
+ */
+export function localHourToUtcHour(
+	localHour: number,
+	timezone: string,
+): number {
+	const offset = getTimezoneOffset(timezone);
+	let utcHour = (localHour - offset) % 24;
+	if (utcHour < 0) utcHour += 24;
+	return Math.floor(utcHour);
+}
+
+/**
  * Get the UTC start and end of a day in a specific timezone
  * Useful for querying trades that fall within a specific calendar day
  *

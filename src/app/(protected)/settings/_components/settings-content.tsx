@@ -64,42 +64,12 @@ import {
 	formatTimeInTimezone,
 	getTimezoneAbbreviation,
 	getTimezoneOffset,
+	localHourToUtcHour,
 	PRESET_COLORS,
+	utcHourToLocalHour,
 } from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
-
-/**
- * Get the UTC offset in hours for a timezone.
- * Positive offset means ahead of UTC (e.g., Tokyo +9).
- * Negative offset means behind UTC (e.g., New York -5).
- */
-function getTimezoneOffsetHours(timezone: string): number {
-	const now = new Date();
-	const utcDate = new Date(now.toLocaleString("en-US", { timeZone: "UTC" }));
-	const tzDate = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
-	return Math.round((tzDate.getTime() - utcDate.getTime()) / (1000 * 60 * 60));
-}
-
-/**
- * Convert a UTC hour (0-23) to local hour in the given timezone.
- */
-function utcHourToLocal(utcHour: number, timezone: string): number {
-	const offset = getTimezoneOffsetHours(timezone);
-	let localHour = (utcHour + offset) % 24;
-	if (localHour < 0) localHour += 24;
-	return localHour;
-}
-
-/**
- * Convert a local hour (0-23) to UTC hour.
- */
-function localHourToUtc(localHour: number, timezone: string): number {
-	const offset = getTimezoneOffsetHours(timezone);
-	let utcHour = (localHour - offset) % 24;
-	if (utcHour < 0) utcHour += 24;
-	return utcHour;
-}
 
 /**
  * Convert trading sessions from UTC to local timezone hours.
@@ -110,8 +80,8 @@ function sessionsToLocal(
 ): TradingSession[] {
 	return sessions.map((s) => ({
 		...s,
-		startHour: utcHourToLocal(s.startHour, timezone),
-		endHour: utcHourToLocal(s.endHour, timezone),
+		startHour: utcHourToLocalHour(s.startHour, timezone),
+		endHour: utcHourToLocalHour(s.endHour, timezone),
 	}));
 }
 
@@ -124,8 +94,8 @@ function sessionsToUtc(
 ): TradingSession[] {
 	return sessions.map((s) => ({
 		...s,
-		startHour: localHourToUtc(s.startHour, timezone),
-		endHour: localHourToUtc(s.endHour, timezone),
+		startHour: localHourToUtcHour(s.startHour, timezone),
+		endHour: localHourToUtcHour(s.endHour, timezone),
 	}));
 }
 
