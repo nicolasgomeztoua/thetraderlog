@@ -83,3 +83,53 @@ Started: Thu Jan 15 15:31:55 +01 2026
   - Chart height should use flex-1 with 100% height style for full tab fill
   - Markers can be conditionally shown based on data density (chartData.length <= 50)
 ---
+
+## 2026-01-15 - US-003
+- Added execution markers as scatter series to RunningPnlChart
+- File: src/components/trade-detail/running-pnl-chart.tsx (updated)
+- Implementation details:
+  - Entry markers: chartreuse (#d4ff00) diamond shape, size 14
+  - Exit markers: ice blue (#00d4ff) circle shape, size 12
+  - Scale-in markers: chartreuse triangle, size 10 (smaller than entry)
+  - Scale-out markers: ice blue square, size 10 (smaller than exit)
+  - Each execution type rendered as separate scatter series (on top of area chart)
+  - Tooltips show: execution type (colored), timestamp, price, quantity, P&L at that point
+  - P&L at execution point calculated using calculateRunningPnlAtTime() utility
+  - Markers positioned at correct time (timeLabel) and P&L value on Y-axis
+- New props added to RunningPnlChart:
+  - executions?: Execution[] - trade executions to display
+  - direction?: "long" | "short" - for P&L calculation
+  - symbol?: string - trading symbol (ES, EUR/USD, etc.)
+  - instrumentType?: "futures" | "forex" - for P&L calculation
+- Files changed:
+  - src/components/trade-detail/running-pnl-chart.tsx (updated)
+- **Learnings for future iterations:**
+  - AG Charts scatter series uses `type: "scatter"` with separate data array per series
+  - Each scatter series needs its own data, xKey, yKey, marker config, and tooltip renderer
+  - Marker shapes: "diamond", "circle", "triangle", "square" supported by AG Charts
+  - Multiple scatter series can be layered on top of area series for annotations
+  - Use different colors and sizes to distinguish entry/exit vs scale operations
+  - Execution markers disabled automatic area markers to avoid visual clutter
+---
+
+## 2026-01-15 - US-004
+- Integrated Running P&L chart with Trade Detail Content Panel
+- Created new component: src/components/trade-detail/running-pnl-tab.tsx
+- Implementation details:
+  - Replaced placeholder "coming soon" content in running-pnl tab
+  - Uses same data fetching pattern as TradeReplay (api.marketData.getFullDayChartData)
+  - Uses same interval preference store (useChartPreferencesStore) for bar aggregation
+  - Generates P&L series using generateRunningPnlSeries utility
+  - Creates synthetic entry execution from trade data (matching replay pattern)
+  - Passes executions to RunningPnlChart for marker rendering
+  - Shows loading state (spinner), error state (message), no-data state
+  - Chart fills available tab space (h-full, p-0 on TabsContent)
+- Files changed:
+  - src/components/trade-detail/running-pnl-tab.tsx (new)
+  - src/components/trade-detail/content-panel.tsx (updated import and tab content)
+- **Learnings for future iterations:**
+  - Match data fetching patterns across related components for consistency
+  - Synthetic entry execution pattern ensures P&L calculation works even without TradeExecution records
+  - Error handling: show specific error message from query.error for debugging
+  - TabsContent p-0 for full-bleed chart display (no padding)
+---
