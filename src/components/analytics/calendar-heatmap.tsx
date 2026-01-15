@@ -4,7 +4,14 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn, formatCurrency, getDateStringInTimezone } from "@/lib/shared";
+import {
+	cn,
+	formatCurrency,
+	formatDateString,
+	generateDateStringsInTimezone,
+	getDayOfWeekFromDateString,
+	getMonthFromDateString,
+} from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 
 interface CalendarDay {
@@ -81,30 +88,39 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 		return Math.max(...data.map((d) => Math.abs(d.pnl)));
 	}, [data]);
 
-	// Generate last 52 weeks of dates
+	// Generate last 52 weeks of dates using timezone-aware string generation
 	const weeks = useMemo(() => {
-		const result: Date[][] = [];
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
+		// Generate 365 days of date strings (364 days back to today)
+		const allDates = generateDateStringsInTimezone(-364, 0, tz);
 
-		// Start from 52 weeks ago, aligned to Sunday
-		const start = new Date(today);
-		start.setDate(start.getDate() - 364);
-		// Align to the nearest Sunday before
-		start.setDate(start.getDate() - start.getDay());
+		// Find the day of week for the first date to calculate Sunday alignment
+		const firstDateDayOfWeek = getDayOfWeekFromDateString(
+			allDates[0] ?? "2026-01-01",
+		);
 
-		const currentDate = new Date(start);
-		let currentWeek: Date[] = [];
+		// Calculate padding dates (days before our data starts)
+		// These are dates before our 364-day window, used for week alignment
+		const paddingDates = generateDateStringsInTimezone(
+			-364 - firstDateDayOfWeek,
+			-365,
+			tz,
+		);
 
-		while (currentDate <= today) {
-			currentWeek.push(new Date(currentDate));
+		const result: string[][] = [];
+		let currentWeek: string[] = [];
+
+		// Add padding dates for alignment to Sunday (if first date isn't Sunday)
+		for (const padDate of paddingDates) {
+			currentWeek.push(padDate);
+		}
+
+		for (const dateStr of allDates) {
+			currentWeek.push(dateStr);
 
 			if (currentWeek.length === 7) {
 				result.push(currentWeek);
 				currentWeek = [];
 			}
-
-			currentDate.setDate(currentDate.getDate() + 1);
 		}
 
 		// Add remaining days
@@ -113,7 +129,7 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 		}
 
 		return result;
-	}, []);
+	}, [tz]);
 
 	// Get month labels with their positions
 	const monthLabels = useMemo(() => {
@@ -124,11 +140,11 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 			const week = weeks[i];
 			if (!week || week.length === 0) continue;
 
-			// Use the first day of the week to determine month
-			const firstDay = week[0];
+			// Use the first non-empty day of the week to determine month
+			const firstDay = week.find((d) => d !== "");
 			if (!firstDay) continue;
 
-			const month = firstDay.getMonth();
+			const month = getMonthFromDateString(firstDay);
 			if (month !== lastMonth) {
 				const monthName = MONTHS[month];
 				if (monthName) {
@@ -223,26 +239,21 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 						{/* Weeks grid */}
 						<div className="flex gap-[3px]">
 							{weeks.map((week, weekIndex) => {
-								// Use first day of week for unique key
-								const firstDayKey = week[0]
-									? getDateStringInTimezone(week[0], tz)
-									: `w${weekIndex}`;
+								// Use first non-empty day of week for unique key
+								const firstDayKey =
+									week.find((d) => d !== "") ?? `w${weekIndex}`;
 								return (
 									<div
 										className="flex flex-col gap-[3px]"
 										key={`week-${firstDayKey}`}
 									>
-										{week.map((date) => {
-											// Use timezone-aware date string to match backend format
-											const dateKey = getDateStringInTimezone(date, tz);
-											const dayData = dataMap.get(dateKey);
+										{week.map((dateStr) => {
+											// Use date string directly to match backend format
+											const dayData = dataMap.get(dateStr);
 											const hasTrades = dayData && dayData.trades > 0;
 
-											// Use date + time for truly unique key (handles DST edge cases)
-											const uniqueKey = `${dateKey}-${date.getTime()}`;
-
 											return (
-												<Tooltip key={uniqueKey}>
+												<Tooltip key={dateStr}>
 													<TooltipTrigger asChild>
 														<div
 															className={cn(
@@ -260,12 +271,7 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 													>
 														<div className="font-mono text-xs">
 															<div className="mb-1 text-muted-foreground">
-																{date.toLocaleDateString("en-US", {
-																	weekday: "short",
-																	month: "short",
-																	day: "numeric",
-																	year: "numeric",
-																})}
+																{formatDateString(dateStr, "EEE, MMM d, yyyy")}
 															</div>
 															{hasTrades ? (
 																<>

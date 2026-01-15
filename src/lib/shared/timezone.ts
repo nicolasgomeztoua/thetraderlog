@@ -24,19 +24,58 @@ import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 /**
  * Convert a Date to a YYYY-MM-DD string, preserving the local calendar date.
  *
- * USE THIS for frontend → backend API calls when the user clicks a date in the calendar.
- * The backend will handle timezone conversion using the user's preferred timezone.
+ * **FRONTEND ONLY** - This function is intended for sending calendar dates to the backend.
  *
- * DO NOT USE getDateStringInTimezone() for this purpose - that causes double conversion
- * when the user's browser timezone differs from their preferred timezone.
+ * @deprecated FOR BACKEND USE - Do not use in server-side code (src/server/).
+ * For grouping trades or timestamps by date on the backend, use:
+ * - `getDateStringInTimezone(trade.entryTime, userTimezone)` for trade timestamps
+ * - Backend receives the date string from frontend and uses `getDayBoundsInTimezone()`
+ *
+ * WHY: This function uses the browser's local timezone, which may differ from the user's
+ * preferred timezone setting. Backend date grouping must respect the user's configured
+ * timezone, not the browser's timezone.
+ *
+ * FRONTEND USAGE (valid):
+ * - User clicks a calendar date → send to backend as a date string
+ * - Backend handles timezone conversion using the user's preferred timezone
  *
  * @example
- * // User clicks "Jan 6" in calendar → Date object is Jan 6 00:00 local time
+ * // FRONTEND: User clicks "Jan 6" in calendar → Date object is Jan 6 00:00 local time
  * const dateString = toDateString(selectedDate); // "2026-01-06"
  * // Backend uses getDayBoundsInTimezone("2026-01-06", userTimezone) to query
+ *
+ * @example
+ * // BACKEND: DO NOT DO THIS - use getDateStringInTimezone instead
+ * // ❌ toDateString(new Date(trade.entryTime))
+ * // ✅ getDateStringInTimezone(trade.entryTime, userTimezone)
  */
 export function toDateString(date: Date): string {
 	return format(date, "yyyy-MM-dd");
+}
+
+/**
+ * Extract the YYYY-MM-DD date string from a UTC midnight timestamp.
+ *
+ * USE THIS for dates stored as UTC midnight (e.g., journal dates, calendar dates).
+ * These dates represent a specific calendar day, not a moment in time.
+ *
+ * DO NOT USE for trade timestamps - use getDateStringInTimezone() instead.
+ *
+ * WHY THIS EXISTS:
+ * Journal dates are stored as UTC midnight (e.g., 2026-01-15T00:00:00.000Z).
+ * Using toDateString() would convert to local time first, causing the date to shift
+ * when the browser is behind UTC (e.g., UTC midnight becomes "Jan 14" in PST).
+ * This function extracts the intended date directly from UTC.
+ *
+ * @example
+ * // Journal date stored as 2026-01-15T00:00:00.000Z
+ * // Browser is in PST (UTC-8)
+ * toDateString(journalDate); // WRONG: "2026-01-14" (local time)
+ * getUTCDateString(journalDate); // CORRECT: "2026-01-15" (UTC date)
+ */
+export function getUTCDateString(date: Date | string): string {
+	const d = typeof date === "string" ? new Date(date) : date;
+	return d.toISOString().split("T")[0] ?? "";
 }
 
 // =============================================================================
@@ -217,6 +256,45 @@ export function getTimezoneOffset(timezone: string, date?: Date): number {
 }
 
 /**
+ * Convert a UTC hour (0-23) to a local hour in the specified timezone.
+ * Useful for converting session definitions stored as UTC to local hours.
+ *
+ * @example
+ * // UTC hour 14 in EST (UTC-5) should be hour 9
+ * utcHourToLocalHour(14, "America/New_York") // Returns 9
+ *
+ * // UTC hour 0 in PST (UTC-8) should be hour 16 (previous day)
+ * utcHourToLocalHour(0, "America/Los_Angeles") // Returns 16
+ */
+export function utcHourToLocalHour(utcHour: number, timezone: string): number {
+	const offset = getTimezoneOffset(timezone);
+	let localHour = (utcHour + offset) % 24;
+	if (localHour < 0) localHour += 24;
+	return Math.floor(localHour);
+}
+
+/**
+ * Convert a local hour (0-23) in the specified timezone to a UTC hour.
+ * Useful for storing session definitions in UTC after user edits them in local time.
+ *
+ * @example
+ * // Local hour 9 in EST (UTC-5) should be UTC hour 14
+ * localHourToUtcHour(9, "America/New_York") // Returns 14
+ *
+ * // Local hour 16 in PST (UTC-8) should be UTC hour 0
+ * localHourToUtcHour(16, "America/Los_Angeles") // Returns 0
+ */
+export function localHourToUtcHour(
+	localHour: number,
+	timezone: string,
+): number {
+	const offset = getTimezoneOffset(timezone);
+	let utcHour = (localHour - offset) % 24;
+	if (utcHour < 0) utcHour += 24;
+	return Math.floor(utcHour);
+}
+
+/**
  * Get the UTC start and end of a day in a specific timezone
  * Useful for querying trades that fall within a specific calendar day
  *
@@ -359,4 +437,151 @@ export function getDayOfWeek(date: Date): number {
  */
 export function getDaysInInterval(start: Date, end: Date): Date[] {
 	return eachDayOfInterval({ start, end });
+}
+
+// =============================================================================
+// DATE STRING GENERATION (Timezone-Safe)
+// =============================================================================
+
+/**
+ * Get the day of week (0 = Sunday, 6 = Saturday) from a YYYY-MM-DD date string.
+ *
+ * This function works directly with date strings, avoiding Date object timezone issues.
+ * It uses the Zeller-like algorithm to calculate the day of week from year/month/day.
+ *
+ * USE THIS FOR: Calendar grid alignment, week calculations on date strings
+ * - When you already have YYYY-MM-DD strings and need day of week
+ * - When browser timezone may differ from display timezone
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @returns Day of week: 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+ *
+ * @example
+ * getDayOfWeekFromDateString("2026-01-14") // Wednesday = 3
+ * getDayOfWeekFromDateString("2026-01-18") // Sunday = 0
+ */
+export function getDayOfWeekFromDateString(dateStr: string): number {
+	const [yearStr, monthStr, dayStr] = dateStr.split("-");
+	const year = Number.parseInt(yearStr ?? "0", 10);
+	const month = Number.parseInt(monthStr ?? "1", 10);
+	const day = Number.parseInt(dayStr ?? "1", 10);
+
+	// Use UTC to avoid timezone interference
+	const utcDate = new Date(Date.UTC(year, month - 1, day));
+	return utcDate.getUTCDay();
+}
+
+/**
+ * Get the month (0 = January, 11 = December) from a YYYY-MM-DD date string.
+ *
+ * This function extracts the month directly from the string without Date object conversion.
+ *
+ * USE THIS FOR: Month label display, grouping by month on date strings
+ * - Calendar month headers
+ * - Month boundary detection in date arrays
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @returns Month: 0 = January, 1 = February, ..., 11 = December
+ *
+ * @example
+ * getMonthFromDateString("2026-01-14") // 0 (January)
+ * getMonthFromDateString("2026-12-25") // 11 (December)
+ */
+export function getMonthFromDateString(dateStr: string): number {
+	const monthStr = dateStr.split("-")[1];
+	return Number.parseInt(monthStr ?? "1", 10) - 1;
+}
+
+/**
+ * Format a YYYY-MM-DD date string for display without timezone conversion.
+ *
+ * This function parses the date string and formats it using date-fns format patterns.
+ * It interprets the date as UTC to avoid any timezone shifting.
+ *
+ * USE THIS FOR: Displaying date strings from generateDateStringsInTimezone()
+ * - Tooltip text on calendar heatmaps
+ * - Date display in UI where the source is already a date string
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @param formatStr - date-fns format pattern (e.g., "MMM d, yyyy", "EEEE", "d")
+ * @returns Formatted date string
+ *
+ * @example
+ * formatDateString("2026-01-14", "MMM d, yyyy") // "Jan 14, 2026"
+ * formatDateString("2026-01-14", "EEEE") // "Wednesday"
+ * formatDateString("2026-01-14", "d") // "14"
+ */
+export function formatDateString(dateStr: string, formatStr: string): string {
+	const [yearStr, monthStr, dayStr] = dateStr.split("-");
+	const year = Number.parseInt(yearStr ?? "0", 10);
+	const month = Number.parseInt(monthStr ?? "1", 10);
+	const day = Number.parseInt(dayStr ?? "1", 10);
+
+	// Create UTC date and format it
+	// Using UTC ensures the date displays as the string intended, not shifted
+	const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+
+	// Format in UTC timezone to avoid local timezone interference
+	return formatInTimeZone(utcDate, "UTC", formatStr);
+}
+
+/**
+ * Generate an array of YYYY-MM-DD date strings relative to "today" in the user's timezone.
+ *
+ * This function avoids Date object timezone ambiguity by:
+ * 1. Determining "today" in the user's timezone using formatInTimeZone
+ * 2. Performing date arithmetic on YYYY-MM-DD strings directly
+ * 3. Never creating intermediate Date objects that could shift days
+ *
+ * USE THIS FOR: Calendar grid generation, date range selections, heatmaps
+ * - When you need an array of date strings for display
+ * - When the browser timezone may differ from user's preferred timezone
+ *
+ * @param startOffset - Days before today (negative) or after today (positive) to start
+ * @param endOffset - Days before today (negative) or after today (positive) to end
+ * @param timezone - IANA timezone string (e.g., "America/New_York")
+ * @returns Array of YYYY-MM-DD strings from startOffset to endOffset inclusive
+ *
+ * @example
+ * // Generate dates for a week centered on today
+ * generateDateStringsInTimezone(-3, 3, "America/New_York")
+ * // Returns: ["2026-01-11", "2026-01-12", "2026-01-13", "2026-01-14", "2026-01-15", "2026-01-16", "2026-01-17"]
+ *
+ * @example
+ * // Generate last 365 days for a heatmap
+ * generateDateStringsInTimezone(-364, 0, "Pacific/Auckland")
+ */
+export function generateDateStringsInTimezone(
+	startOffset: number,
+	endOffset: number,
+	timezone: string,
+): string[] {
+	// Get "today" in the user's timezone as a YYYY-MM-DD string
+	const todayString = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd");
+
+	// Parse the date string components
+	const [yearStr, monthStr, dayStr] = todayString.split("-");
+	const year = Number.parseInt(yearStr ?? "0", 10);
+	const month = Number.parseInt(monthStr ?? "1", 10) - 1; // 0-indexed
+	const day = Number.parseInt(dayStr ?? "1", 10);
+
+	// Create a UTC date for "today" to perform arithmetic
+	// Using UTC avoids any local timezone interference
+	const todayUTC = Date.UTC(year, month, day);
+
+	const result: string[] = [];
+	for (let offset = startOffset; offset <= endOffset; offset++) {
+		// Add offset days in milliseconds
+		const targetMs = todayUTC + offset * 24 * 60 * 60 * 1000;
+		const targetDate = new Date(targetMs);
+
+		// Extract UTC components (safe since we started with UTC)
+		const y = targetDate.getUTCFullYear();
+		const m = String(targetDate.getUTCMonth() + 1).padStart(2, "0");
+		const d = String(targetDate.getUTCDate()).padStart(2, "0");
+
+		result.push(`${y}-${m}-${d}`);
+	}
+
+	return result;
 }

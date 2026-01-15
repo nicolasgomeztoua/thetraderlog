@@ -95,6 +95,7 @@ export default function DailyJournalPage() {
 	const startDay = api.dailyJournal.startDay.useMutation({
 		onSuccess: () => {
 			utils.dailyJournal.getByDate.invalidate({ date: dateString });
+			utils.dailyJournal.getWithTrades.invalidate({ date: dateString });
 		},
 	});
 

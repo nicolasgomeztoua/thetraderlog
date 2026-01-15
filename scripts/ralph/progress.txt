@@ -1,314 +1,205 @@
 # Ralph Progress Log
-Started: Wed Jan 14 18:20:29 +01 2026
+Started: Wed Jan 14 22:34:43 +01 2026
 ---
 
 ## Codebase Patterns
-- Mobile breakpoint is 768px, detected via `useIsMobile` hook in `src/hooks/use-mobile.ts`
-- shadcn Sidebar component already renders as Sheet drawer on mobile (via radix Sheet)
-- Touch target minimum is 44px (iOS/Android accessibility guidelines)
-- Use `min-h-[44px]` for touch-friendly interactive elements
-- Responsive padding pattern: `p-4 sm:p-6` or `p-3 sm:p-4` (less padding on mobile)
-- Dropdown width can match trigger using `w-[var(--radix-dropdown-menu-trigger-width)]`
-- Number inputs should use `inputMode="decimal"` for mobile numeric keyboard
+- Use `getDateStringInTimezone(trade.entryTime, userTimezone)` for date grouping
+- Always group trades by ENTRY TIME, not exit time
+- Frontend sends date strings via `toDateString()`, backend converts via `getDayBoundsInTimezone()`
+- Timezone utilities are in `src/lib/shared/timezone.ts`
+- User timezone fetched via `getUserTimezone(ctx.db, ctx.user.id)` helper
 
 ---
 
-## 2026-01-14 - US-001 Protected Layout Mobile Polish
-- What was implemented:
-  - Made main content padding responsive (p-4 sm:p-6 in layout.tsx)
-  - Improved account selector trigger touch target (min-h-[44px])
-  - Improved all dropdown menu item touch targets (min-h-[44px] py-2.5)
-  - Made dropdown content match trigger width for better mobile UX
-  - Applied same improvements to "Add Trade" dropdown
-- Files changed:
-  - src/app/(protected)/layout.tsx
-  - src/app/(protected)/_components/app-sidebar.tsx
+## 2026-01-14 - US-001
+- **What was implemented:** Created comprehensive timezone system documentation
+- **Files changed:**
+  - Created `docs/TIMEZONE_SYSTEM.md`
 - **Learnings for future iterations:**
-  - shadcn Sidebar component already has excellent mobile support built-in (Sheet drawer on mobile)
-  - `useIsMobile` hook returns true when viewport < 768px
-  - SidebarTrigger toggles Sheet drawer on mobile automatically
-  - Biome enforces CSS class sorting (useSortedClasses rule)
+  - Documentation should include a decision tree for quick reference
+  - Include both correct and incorrect code examples to make patterns clear
+  - The codebase has two different date handling patterns: trade timestamps (UTC converted to user TZ) vs calendar dates (stored as UTC midnight, displayed as-is)
 ---
 
-## 2026-01-14 - US-002 Dashboard Mobile Responsive Grid
-- What was implemented:
-  - Stats grid responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 (both skeleton and actual)
-  - StartJournalHero stacks vertically on mobile with flex-col sm:flex-row
-  - Responsive padding on hero section: p-4 sm:p-6
-  - Responsive button text: 'Start' on mobile, 'Start My Journal' on desktop
-  - Full-width buttons on mobile (w-full sm:w-auto)
-  - Page title responsive: text-2xl sm:text-3xl
-  - Performance summary key metrics grid stacks on mobile: grid-cols-1 sm:grid-cols-2
-  - Performance summary wrapper grid made explicitly responsive
-- Files changed:
-  - src/app/(protected)/dashboard/page.tsx
+## 2026-01-14 - US-006
+- **What was implemented:** Created timezone-aware date string generator function
+- **Files changed:**
+  - Modified `src/lib/shared/timezone.ts` - added `generateDateStringsInTimezone()`
 - **Learnings for future iterations:**
-  - Use conditional spans for mobile/desktop text variants: `<span className="sm:hidden">Short</span><span className="hidden sm:inline">Longer text</span>`
-  - Full-width buttons on mobile with `w-full sm:w-auto` pattern
-  - Always update skeleton/loading states to match responsive patterns of actual content
+  - Use UTC arithmetic to avoid Date object timezone ambiguity when generating date strings
+  - Pattern: get "today" in user timezone via formatInTimeZone, then do all arithmetic in UTC milliseconds
+  - Auto-exports work via `export * from "./timezone"` in index.ts - no need to manually add new exports
+  - DST handling: using Date.UTC + ms arithmetic sidesteps DST issues because we never touch local time
 ---
 
-## 2026-01-14 - US-003 Journal List Mobile Card View
-- What was implemented:
-  - Created TradeCard component for mobile card view displaying symbol, direction, P&L, date, R-multiple, exit reason, rating, and reviewed status
-  - Created TrashCard component for mobile trash view with restore and delete actions
-  - Filter panel hidden on mobile, replaced with Filter button that opens Sheet drawer
-  - Search bar remains visible at top with filter button adjacent
-  - Bulk actions bar adapts to mobile: icons-only with min-h-[44px] touch targets
-  - ColumnConfig hidden on mobile (wrapped with hidden sm:flex)
-  - Select all header on mobile shows checkbox and trade count
-  - Infinite scroll sentinel and loading indicators work in both views
-- Files changed:
-  - src/app/(protected)/journal/page.tsx
+## 2026-01-14 - US-007
+- **What was implemented:** Created date string display utilities for calendar rendering
+- **Files changed:**
+  - Modified `src/lib/shared/timezone.ts` - added `getDayOfWeekFromDateString()`, `getMonthFromDateString()`, `formatDateString()`
 - **Learnings for future iterations:**
-  - Use `<button>` element for clickable cards instead of `<div role="button">` - Biome enforces semantic elements
-  - For nested interactive elements inside buttons, use biome-ignore comments for a11y rules
-  - Sheet component from shadcn works great for mobile filter drawers
-  - Pattern for icon-only buttons on mobile: `<Icon className="h-3.5 w-3.5 sm:mr-2" /><span className="hidden sm:inline">Label</span>`
-  - Wrap interactive child elements with `onClick={e => e.stopPropagation()}` span to prevent parent click
+  - Pattern for day-of-week from date string: parse to UTC Date, use getUTCDay() - avoids timezone shifting
+  - Pattern for month from date string: just parse the string directly with split("-") - no Date object needed
+  - Pattern for formatting date strings: create UTC Date at noon (12:00) and use formatInTimeZone with "UTC" timezone
+  - Setting noon (12:00) UTC avoids edge cases where midnight might shift to adjacent day in some implementations
 ---
 
-## 2026-01-14 - US-004 Trade Detail Mobile Layout
-- What was implemented:
-  - Added useIsMobile hook for mobile detection
-  - Added isStatsOpen state for Sheet drawer control
-  - Added BarChart3 icon button (md:hidden) in header to open stats drawer
-  - Replaced ResizablePanelGroup with conditional rendering: Sheet drawer for mobile, panels for desktop
-  - ContentPanel displays full-width on mobile
-  - Header made responsive: responsive padding (px-2 sm:px-4), icon-only review button on mobile
-  - Hide Share button on mobile (hidden sm:flex)
-  - Hide Status badge and Imported badge on mobile (hidden sm:inline-flex)
-  - Hide date info line on mobile (hidden sm:block)
-  - Navigation arrows remain accessible with same size
-  - Loading state skeleton adjusted for mobile (hide left panel skeleton on md:hidden)
-- Files changed:
-  - src/app/(protected)/journal/[id]/page.tsx
+## 2026-01-15 - US-003
+- **What was implemented:** Fixed getOvertradingAnalysis to group trades by entry time instead of exit time
+- **Files changed:**
+  - Modified `src/server/api/routers/analytics.ts` - changed date grouping from `trade.exitTime` to `trade.entryTime`
 - **Learnings for future iterations:**
-  - For split panel pages, conditionally render based on isMobile: Sheet drawer for mobile, ResizablePanelGroup for desktop
-  - Sheet drawer from left side (`side="left"`) works well for stats panels
-  - Use min-w-0 flex-1 on container to allow content to shrink properly on mobile
-  - DialogContent component from shadcn is already mobile-responsive, no changes needed for dialogs
-  - Pattern for conditional mobile/desktop layouts: `{isMobile ? (<MobileComponent />) : (<DesktopComponent />)}`
+  - PRD procedure names may not exactly match actual codebase names (PRD said "getOvertradeMetrics" but actual is "getOvertradingAnalysis")
+  - userTimezone is typically fetched alongside beThreshold in analytics procedures - check for existing fetches before adding new ones
+  - When changing exitTime to entryTime for grouping, also update the null check condition
 ---
 
-## 2026-01-14 - US-005 New Trade Page Mobile Adaptation
-- What was implemented:
-  - Responsive container spacing: space-y-4 sm:space-y-6 and pb-6 for bottom padding
-  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile, back button with min-h-[44px] min-w-[44px]
-  - All card sections use responsive padding: p-3 sm:p-4
-  - Form grids use tighter spacing on mobile: gap-3 sm:gap-4
-  - All number inputs have inputMode="decimal" for proper mobile numeric keyboard
-  - Submit buttons full-width on mobile: w-full sm:w-auto with min-h-[44px] for touch targets
-  - Button order reversed on mobile (submit first): flex-col-reverse sm:flex-row
-- Files changed:
-  - src/app/(protected)/trade/new/page.tsx
+## 2026-01-15 - US-004
+- **What was implemented:** Fixed getBehavioralPatterns to group trades by entry time instead of exit time
+- **Files changed:**
+  - Modified `src/server/api/routers/analytics.ts` - changed date grouping in "Overtrading Tendency" from `trade.exitTime` to `trade.entryTime`
 - **Learnings for future iterations:**
-  - Use inputMode="decimal" on all number inputs for mobile-optimized numeric keyboard
-  - Pattern for mobile-first button layouts: `flex-col-reverse sm:flex-row` puts primary action at top on mobile
-  - Consistent card padding pattern: `p-3 sm:p-4` reduces cramped feeling on small screens
-  - Gap spacing also should be responsive: `gap-3 sm:gap-4` for form grids
+  - PRD procedure names may not match actual codebase names (PRD said "getPsychometrics" but actual is "getBehavioralPatterns")
+  - Similar pattern to US-003: search for `exitTime` usages when looking for date grouping issues
+  - The "Overtrading Tendency" calculation in getBehavioralPatterns is the only place in that procedure that groups by date
 ---
 
-## 2026-01-14 - US-006 Analytics Page Mobile Layout
-- What was implemented:
-  - Added mobile detection using useIsMobile hook in AnalyticsQueryBar component
-  - Converted filter controls to Sheet drawer on mobile (Filter button opens drawer from right)
-  - Made tab navigation scrollable on mobile with overflow-x-auto and touch-friendly targets (min-h-[40px])
-  - Added responsive stats grid pattern: grid-cols-1 sm:grid-cols-2 lg:grid-cols-4
-  - Added horizontal scroll for HourHeatmap (overflow-x-auto with min-w-[320px])
-  - Made CalendarHeatmap summary stats responsive with flex-wrap gap-3
-  - Made ChartTerminal component responsive (smaller padding/dots on mobile, terminal path hidden on mobile)
-  - Responsive header (text-2xl sm:text-3xl title, description hidden on mobile)
-  - Responsive spacing throughout all tabs (space-y-4 sm:space-y-6, gap-4 sm:gap-6)
-- Files changed:
-  - src/app/(protected)/analytics/page.tsx
-  - src/components/analytics/analytics-query-bar.tsx
-  - src/components/analytics/calendar-heatmap.tsx
-  - src/components/analytics/hour-heatmap.tsx
+## 2026-01-15 - US-005
+- **What was implemented:** Audited all analytics date grouping procedures
+- **Files changed:**
+  - Modified `src/server/api/routers/analytics.ts` - fixed `getSymbolTrend` to use entryTime instead of exitTime for month grouping
+- **Audit results:**
+  - ✅ getCalendarData - uses `getDateStringInTimezone(trade.entryTime, userTimezone)`
+  - ✅ getPerformanceByDayOfWeek - uses `getDayOfWeekInTimezone(trade.entryTime, userTimezone)`
+  - ✅ getPerformanceByHour - uses `getHourInTimezone(trade.entryTime, userTimezone)`
+  - ✅ getPerformanceBySession - uses `getHourInTimezone(trade.entryTime, userTimezone)`
+  - ✅ getPerformanceByMonth - uses `getMonthStringInTimezone(trade.entryTime, userTimezone)`
+  - ℹ️ getEquityCurve - uses exitTime intentionally (plots cumulative P&L at trade close time, not date grouping)
+  - 🔧 getSymbolTrend - FIXED: was using exitTime for month grouping, changed to entryTime
 - **Learnings for future iterations:**
-  - For complex filter panels, use Sheet drawer on mobile with shared filterContent JSX variable
-  - Pattern for mobile Sheet with filters: separate state for sheet (isSheetOpen) vs desktop expansion (isExpanded)
-  - Tab bars on mobile: wrap in overflow-x-auto container with -mx-4 px-4 to allow scroll past edge padding
-  - For data-dense components (heatmaps, grids), use min-w-[Xpx] with overflow-x-auto for horizontal scroll
-  - Hide decorative elements on mobile (terminal paths, less important badges) to save space
+  - Equity curve is an exception to the "entry time for grouping" rule - it plots P&L at the moment of trade realization (exit)
+  - When auditing for date grouping issues, search for all uses of timezone utility functions (getMonthStringInTimezone, getDateStringInTimezone, etc.)
+  - The `exitTime` null check was redundant in getSymbolTrend since we already filter for closed trades with netPnl
 ---
 
-## 2026-01-14 - US-007 AI Page Mobile Adaptation
-- What was implemented:
-  - Responsive container spacing: space-y-4 sm:space-y-6
-  - Header responsive: text-2xl sm:text-3xl title, description hidden on mobile, gap-3 for proper spacing
-  - API Keys button icon-only on mobile with sm:mr-2 and hidden sm:inline pattern
-  - API Key notice banner stacks vertically on mobile (flex-col sm:flex-row) with full-width Settings button
-  - Terminal header: dots smaller on mobile (h-2 w-2 sm:h-2.5 sm:w-2.5), terminal path hidden on mobile
-  - Chat content padding responsive (p-3 sm:p-4), example query buttons have min-h-[36px] touch targets
-  - Messages use smaller text on mobile (text-xs sm:text-sm) with break-words and min-w-0 flex-1 to prevent overflow
-  - Loading indicator smaller on mobile (h-3 w-3 sm:h-3.5 sm:w-3.5)
-  - Input area has min-h-[44px] for both input and send button for touch-friendly targets
-- Files changed:
-  - src/app/(protected)/ai/page.tsx
+## 2026-01-15 - US-010
+- **What was implemented:** Created integration tests for timezone date grouping
+- **Files changed:**
+  - Created `tests/integration/analytics/timezone-grouping.test.ts`
+- **Test coverage:**
+  - Trade entered 11 PM EST closed next day appears on entry date (EST)
+  - getCalendarData returns correct dates for user timezone
+  - getOvertradingAnalysis matches calendar data for same days
+  - Daily journal trade grouping respects user timezone
+  - Pacific timezone (UTC-8) edge cases
+  - Pacific/Auckland (UTC+13) ahead-of-UTC edge cases
+  - Cross-procedure consistency (calendar vs overtrading analysis)
 - **Learnings for future iterations:**
-  - For chat interfaces, use `break-words` and `min-w-0 flex-1` to prevent long content from breaking layout
-  - Terminal-style decorative elements (dots, paths) can be smaller or hidden on mobile
-  - Simple chat pages don't need Sheet drawers - just responsive styling is sufficient
-  - For icon-only buttons on mobile, use `min-w-[44px] min-h-[44px]` to ensure proper touch target
+  - getOvertradingAnalysis returns `byTradeCount` (array of buckets with tradeCount, days, etc.) not `totalTrades` - derive totals from buckets
+  - Use existing `timezone.test.ts` as pattern reference - it has similar setup patterns
+  - Docker must be running for integration tests (Testcontainers PostgreSQL)
+  - Pattern: use `createTestUser()` + `createTestAccount()` + insert `userSettings` to set specific timezone
+  - Testing "11 PM EST closed next day" scenario: use UTC timestamp that's next day in UTC but same day in user TZ
 ---
 
-## 2026-01-14 - US-008 Settings Page Mobile Adaptation
-- What was implemented:
-  - Responsive header: text-2xl sm:text-3xl title, description hidden on mobile
-  - Tab bar with horizontal scroll wrapper (-mx-4 px-4 overflow-x-auto) and touch targets (min-h-[40px])
-  - Tab triggers with smaller text on mobile (text-[10px] sm:text-xs) and responsive padding
-  - All Card headers/content use responsive padding: p-4 sm:p-6
-  - Trading sessions row stacks on mobile: name+delete on top, time selectors+color on bottom
-  - Session time selectors have smaller widths on mobile (w-[70px] sm:w-24)
-  - Account groups and accounts cards stack vertically on mobile with responsive gap
-  - Account cards hide less important badges (Linked, Group) on mobile
-  - All action buttons have min-h-[36px] min-w-[36px] for touch targets
-  - AI tab API key inputs have min-h-[44px] with description hidden on mobile
-  - Save footer stacks vertically on mobile with full-width button
-  - TagManager component updated with responsive header and touch-friendly buttons
-  - Loading skeleton has responsive sizes
-- Files changed:
-  - src/app/(protected)/settings/_components/settings-content.tsx
-  - src/app/(protected)/settings/page.tsx
-  - src/components/tags/tag-manager.tsx
+## 2026-01-15 - US-008
+- **What was implemented:** Refactored CalendarHeatmap to use date strings instead of Date objects
+- **Files changed:**
+  - Modified `src/components/analytics/calendar-heatmap.tsx`
+- **Key changes:**
+  - Replaced Date-based week generation with `generateDateStringsInTimezone()`
+  - Used `getDayOfWeekFromDateString()` for week alignment (Sunday start)
+  - Used `getMonthFromDateString()` for month labels
+  - Used `formatDateString()` for tooltip display
+  - All dates are now YYYY-MM-DD strings that match backend format directly
 - **Learnings for future iterations:**
-  - For complex multi-tab pages, wrap TabsList in overflow-x-auto container for horizontal scroll
-  - Pattern for session/row editors: stack controls vertically on mobile with related items grouped
-  - Use shrink-0 on fixed-size elements (color indicators, action buttons) to prevent shrinking
-  - DialogFooter can use flex-col-reverse gap-2 sm:flex-row for mobile-first button layouts
-  - Badge counts (like "3 trades") can be shortened on mobile by removing word "trades"
+  - Pattern: Use padding dates from earlier window for week alignment instead of empty strings (avoids array index key issues)
+  - generateDateStringsInTimezone() can generate dates outside the display window for padding purposes
+  - When working with date strings, use the timezone utility functions consistently - no Date object conversion needed
+  - CalendarHeatmap now works correctly when browser TZ differs from user TZ since all date logic is string-based
 ---
 
-## 2026-01-14 - US-009 Import Page Mobile Adaptation
-- What was implemented:
-  - Added useIsMobile hook for mobile detection
-  - Progress stepper made responsive: horizontal scroll container, smaller step indicators (h-7 w-7 vs h-8 w-8), step labels always visible with smaller text
-  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile, back button with 44px touch target
-  - Select account step: responsive padding (p-4 sm:p-6), terminal dots smaller on mobile, touch-friendly dropdown (min-h-[44px]), full-width continue button
-  - Upload area: smaller padding on mobile (p-6 vs p-12), mobile-optimized text ("Tap to select CSV file" vs "Drop your CSV file here"), touch-friendly tabs
-  - Mapping section: grid-cols-1 sm:grid-cols-2 for column selectors, all SelectTrigger/SelectItem have min-h-[44px], responsive label text, flex-col-reverse button layout
-  - Preview step: table converts to card view on mobile showing symbol, direction badge, quantity, entry/exit prices in compact format
-  - Complete step: responsive padding, smaller checkmark icon, full-width buttons stacking vertically
-  - All navigation buttons are full-width on mobile with flex-col-reverse sm:flex-row pattern
-- Files changed:
-  - src/app/(protected)/import/page.tsx
+## 2026-01-15 - US-009
+- **What was implemented:** Audited and fixed calendar-sidebar.tsx timezone consistency
+- **Files changed:**
+  - Modified `src/components/daily-journal/calendar-sidebar.tsx` - fixed journal date lookup, added documentation
+  - Modified `src/lib/shared/timezone.ts` - added `getUTCDateString()` utility
+  - Modified `docs/TIMEZONE_SYSTEM.md` - documented new utility and updated decision tree
+  - Modified `src/components/AGENTS.md` - added patterns and decisions
+- **Bug found and fixed:**
+  - Journal date lookups used `toDateString(new Date(journal.date))` which converts to local time
+  - In browsers behind UTC (e.g., PST), UTC midnight timestamps shift to previous day
+  - Fix: Added `getUTCDateString()` to extract date directly from UTC
+- **Key clarification:**
+  - Calendar sidebar intentionally uses browser-local dates for grid generation
+  - User clicks on "Jan 15" as shown → they want Jan 15's data
+  - Backend handles timezone via `getDayBoundsInTimezone()`
+  - This is correct behavior, not a bug
 - **Learnings for future iterations:**
-  - For wizard/step flows, progress steppers need horizontal scroll on mobile: wrap in overflow-x-auto container
-  - Preview tables with many columns should convert to card view on mobile using conditional rendering based on isMobile
-  - File upload areas: change text from "Drop file here" to "Tap to select" on mobile for clearer affordance
-  - Terminal-style decorative elements (dots, paths) can be hidden on mobile to save space
+  - UTC midnight timestamps (like journal.date) represent calendar dates, not moments in time
+  - Use `getUTCDateString()` for lookup maps from UTC midnight dates
+  - Use `toDateString()` only for browser-local Date objects (calendar clicks)
+  - The decision tree in TIMEZONE_SYSTEM.md is now comprehensive for all date handling cases
 ---
 
-## 2026-01-14 - US-010 Strategies List Page Mobile Adaptation
-- What was implemented:
-  - Added useIsMobile hook for mobile detection
-  - Header responsive: text-xl sm:text-2xl title, description hidden on mobile
-  - "New Strategy" button icon-only on mobile with 44px touch target
-  - Performance Comparison table wrapped in horizontal scroll container (-mx-4 px-4 overflow-x-auto with min-w-[600px])
-  - Strategy cards grid responsive: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 with gap-3 sm:gap-4
-  - StrategyCard component updated with isMobile prop to make dropdown always visible (no hover required)
-  - StrategyCard padding responsive: p-4 sm:p-5
-  - StrategyCard text sizes responsive: smaller labels (text-[9px] sm:text-[10px]), stats (text-base sm:text-lg)
-  - Dropdown menu items have min-h-[44px] touch targets on mobile
-  - Empty state responsive: smaller padding, icons, and font sizes
-  - Loading skeleton responsive: h-40 sm:h-48
-  - Delete dialog footer buttons stack vertically on mobile with 44px touch targets
-- Files changed:
-  - src/app/(protected)/strategies/page.tsx
-  - src/components/strategy/strategy-card.tsx
+## 2026-01-15 - US-011
+- **What was implemented:** Created integration tests for calendar heatmap timezone utilities
+- **Files changed:**
+  - Created `tests/integration/analytics/calendar-heatmap.test.ts`
+- **Test coverage:**
+  - `generateDateStringsInTimezone()` for Pacific/Auckland (UTC+12/+13) and America/Los_Angeles (UTC-8)
+  - `getDayOfWeekFromDateString()` for week alignment (Sunday=0 through Saturday=6)
+  - `getMonthFromDateString()` for month labels (0=January through 11=December)
+  - `formatDateString()` for tooltip display formatting
+  - Year boundary handling (Dec 31 / Jan 1 transitions)
+  - Week alignment to Sunday for calendar grid generation
+  - Month transition detection for label positioning
+  - Edge cases: leap years, DST transitions, single-digit days/months
+- **Test structure:**
+  - 6 main describe blocks covering each utility function and integration scenarios
+  - Tests verify consecutive date generation, chronological ordering, format validity
+  - Tests simulate CalendarHeatmap week padding logic to verify Sunday alignment
 - **Learnings for future iterations:**
-  - For card components that use hover-reveal actions, pass isMobile prop to make them always visible on mobile
-  - Pattern for table horizontal scroll on mobile: `-mx-4 px-4 overflow-x-auto` to allow scroll past page padding
-  - Card grids should transition: grid-cols-1 (mobile) → sm:grid-cols-2 (tablet) → lg:grid-cols-3 (desktop)
+  - These tests don't need database fixtures since they test pure utility functions
+  - Still use truncateAllTables() for consistency with other tests in the directory
+  - Test known dates (e.g., "2026-01-18 is Sunday") to verify day-of-week calculations
+  - Year boundary tests can use offsets like -370 to -360 to test dates from ~1 year ago
 ---
 
-## 2026-01-14 - US-011 Strategy Detail/Edit Pages Mobile Adaptation
-- What was implemented:
-  - Strategy Detail page: useIsMobile hook for mobile detection
-  - Header responsive: truncating title (truncate class), back button with min-h-[44px] min-w-[44px] touch target
-  - Duplicate button icon-only on mobile using conditional size prop (size={isMobile ? "icon" : "sm"})
-  - Delete dialog footer stacks vertically on mobile (flex-col gap-2 sm:flex-row)
-  - Stats grid responsive: grid-cols-2 sm:grid-cols-4 with smaller text (text-lg sm:text-2xl) and padding (p-3 sm:p-4)
-  - Form card padding responsive: p-4 sm:p-6
-  - New Strategy page: same header pattern, description hidden on mobile (hidden sm:block)
-  - StrategyForm: section tabs in horizontal scroll container (-mx-4 px-4 overflow-x-auto) with smaller touch-friendly tabs (min-h-[36px])
-  - Color picker uses flex-wrap with larger touch targets on mobile (h-9 w-9 sm:h-8 sm:w-8)
-  - Rules section stacks vertically on mobile (flex-col sm:flex-row), delete button repositioned for mobile layout
-  - Submit button full-width on mobile (w-full sm:w-auto, min-h-[44px])
-  - RiskConfig: all grids use grid-cols-1 sm:grid-cols-2, all inputs have min-h-[44px] sm:min-h-0
-  - ScalingConfig: rule rows stack on mobile with responsive gap and touch-friendly delete buttons
-  - TrailingConfig: checkbox has larger size on mobile (h-5 w-5 sm:h-4 sm:w-4), trail stop rows reorganized for mobile
-  - All number inputs use inputMode="decimal" or inputMode="numeric" for proper mobile keyboards
-- Files changed:
-  - src/app/(protected)/strategies/[id]/page.tsx
-  - src/app/(protected)/strategies/new/page.tsx
-  - src/components/strategy/strategy-form.tsx
-  - src/components/strategy/risk-config.tsx
-  - src/components/strategy/scaling-config.tsx
-  - src/components/strategy/trailing-config.tsx
+## 2026-01-15 - US-012
+- **What was implemented:** Deprecated toDateString() for backend use
+- **Files changed:**
+  - Modified `src/lib/shared/timezone.ts` - added @deprecated JSDoc with migration guidance
+  - Modified `docs/TIMEZONE_SYSTEM.md` - added "⚠️ FRONTEND ONLY" marker and "Mistake 4" section
+- **Key changes:**
+  - toDateString() now has comprehensive JSDoc deprecation notice for backend use
+  - Migration guidance points to getDateStringInTimezone() for backend trade grouping
+  - Explains why: browser timezone vs user's configured timezone setting
+  - Verified no backend usages exist in src/server/ (already clean)
 - **Learnings for future iterations:**
-  - For complex multi-section forms, wrap tabs in overflow-x-auto with -mx-4 px-4 for horizontal scroll
-  - Pattern for conditional button size: `size={isMobile ? "icon" : "sm"}` with hidden text span
-  - When form rows have multiple controls, reorganize on mobile: stack vertically but keep related items (input + delete) on same row
-  - Checkboxes should be slightly larger on mobile (h-5 w-5) for easier touch interaction
+  - The @deprecated JSDoc tag serves as documentation, not enforcement - consider ESLint rule for strict enforcement
+  - toDateString is valid for frontend calendar clicks → backend; backend should never call it directly
+  - Pattern established: frontend sends date strings, backend uses getDayBoundsInTimezone() to interpret them
 ---
 
-## 2026-01-14 - US-012 Marketing Landing Page Mobile Adaptation
-- What was implemented:
-  - Navbar: Added hamburger menu using Sheet drawer on mobile (md:hidden breakpoint). Simplified mobile auth buttons (just 'Start' + user icon). Navigation links extracted to navLinks constant for DRY code. All interactive elements have 44px touch targets.
-  - Hero: Responsive text sizes (text-3xl sm:text-5xl lg:text-6xl), responsive spacing (py-8 sm:py-12), stats grid changed to grid-cols-2 md:grid-cols-4, CTA buttons full-width on mobile (w-full sm:w-auto), terminal preview responsive with smaller elements on mobile.
-  - Features: Responsive grid (sm:grid-cols-2 lg:grid-cols-3), visual elements hidden on mobile for cleaner look (hidden sm:block), responsive section padding (py-16 sm:py-24 lg:py-32), responsive icon sizes and text.
-  - AI Showcase: Query buttons in horizontal scroll container on mobile, terminal content with responsive text/padding, trust badges stack vertically on mobile (flex-col sm:flex-row).
-  - Pricing: BYOK banner stacks vertically on mobile (flex-col sm:flex-row), pricing cards grid with gap-4 sm:gap-6 lg:grid-cols-3, Pro card shown first on mobile using order-first lg:order-none, all CTAs have min-h-[44px].
-  - CTA: Responsive section padding, buttons full-width on mobile, trust elements stack vertically, shorter terminal text on mobile.
-  - Footer: Link columns in 3-col grid on mobile (grid-cols-3 gap-4), responsive spacing/text sizes, social links have 44px touch targets.
-  - Ticker already uses overflow-hidden so no horizontal scroll issue.
-- Files changed:
-  - src/app/(marketing)/_components/navbar.tsx
-  - src/app/(marketing)/_components/hero.tsx
-  - src/app/(marketing)/_components/features.tsx
-  - src/app/(marketing)/_components/ai-showcase.tsx
-  - src/app/(marketing)/_components/pricing.tsx
-  - src/app/(marketing)/_components/cta.tsx
-  - src/app/(marketing)/_components/footer.tsx
+## 2026-01-15 - US-013
+- **What was implemented:** Added Timezone Debug Info card to Settings Trading tab
+- **Files changed:**
+  - Modified `src/app/(protected)/settings/_components/settings-content.tsx`
+- **Key changes:**
+  - Added new "Timezone Info" card between Trading Preferences and Trading Sessions cards
+  - Shows timezone name with abbreviation (e.g., "America/New_York (EST)")
+  - Shows UTC offset (e.g., "UTC-5")
+  - Shows live updating current time (updates every second) with primary accent color
+  - Shows today's date in the selected timezone
+  - Uses Terminal design system: monospace fonts, uppercase tracking labels, tabular-nums for time
+  - Added Globe icon from lucide-react for the card header
+- **Implementation details:**
+  - Added `currentTime` state with 1-second interval for live updates
+  - Used existing timezone utilities: `getTimezoneAbbreviation`, `getTimezoneOffset`, `formatTimeInTimezone`, `formatDateInTimezone`
+  - All display respects the currently selected timezone from settings state (not just saved value)
 - **Learnings for future iterations:**
-  - For marketing pages, use md:hidden breakpoint for hamburger menu (vs sm:hidden for app pages) to keep nav visible longer
-  - Sheet drawer works great for mobile navigation - same pattern as other mobile drawers
-  - For feature grids with visual elements, hide visuals on mobile (hidden sm:block) to keep cards compact
-  - Use order-first on highlighted pricing cards to show them first on mobile stacked layout
-  - Marketing sections should use larger section padding steps: py-16 sm:py-24 lg:py-32
----
-
-## 2026-01-14 - US-013 Fix Marketing Navbar Mobile Menu
-- What was implemented:
-  - Removed navigation links (Features, AI, Pricing) from mobile Sheet drawer
-  - Kept only auth actions in Sheet: SignedOut shows Login + Get Started buttons, SignedIn shows Dashboard link
-  - Hamburger button remains visible on mobile (md:hidden)
-  - All touch targets remain 44px minimum
-  - Sheet drawer maintains Terminal design consistency with font-mono styling
-- Files changed:
-  - src/app/(marketing)/_components/navbar.tsx
-- **Learnings for future iterations:**
-  - For marketing page mobile menus, section links (Features, AI, Pricing) aren't necessary since users can scroll to see them
-  - Keep mobile drawers focused on primary actions (auth) for cleaner UX
-  - Simple change: just removed navLinks.map() and separator div from Sheet content
----
-
-## 2026-01-14 - US-014 Fix Trade Detail Chart Interval Buttons Mobile
-- What was implemented:
-  - Added useIsMobile hook to LightweightChartInner component
-  - TimeframeSelector now conditionally renders based on isMobile prop:
-    - Mobile: Select dropdown with min-h-[36px] trigger, min-h-[44px] items for touch targets
-    - Desktop: Button row (unchanged behavior)
-  - Controls bar has tighter gap on mobile (gap-1.5 sm:gap-2)
-  - Symbol badge has smaller padding/text on mobile (px-1.5 sm:px-2, text-[10px] sm:text-xs)
-  - Fit button uses icon-only on mobile (text hidden with sm:inline) with 36px touch target
-  - Extracted CHART_INTERVALS constant for DRY code
-- Files changed:
-  - src/components/trade-detail/tradingview-chart.tsx
-- **Learnings for future iterations:**
-  - For chart controls that may overflow on mobile, use Select dropdown instead of button row
-  - Pattern for conditional mobile/desktop rendering in same component: pass isMobile prop and render different JSX branches
-  - Chart overlay controls need smaller padding/gaps on mobile while maintaining touch targets
+  - Settings page has a complex local state pattern - changes are tracked in `settings` state and only persisted on save
+  - Timezone debug info should reflect the *selected* timezone (from settings state), not saved value, so users can preview before saving
+  - Use `tabular-nums` class for time display to prevent layout shift as digits change
+  - Pattern: setInterval in useEffect with cleanup for live updates
 ---

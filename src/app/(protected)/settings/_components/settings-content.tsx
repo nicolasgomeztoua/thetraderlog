@@ -9,6 +9,7 @@ import {
 	Eye,
 	EyeOff,
 	FolderOpen,
+	Globe,
 	Key,
 	Link2,
 	Loader2,
@@ -56,41 +57,19 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
-import { ACCOUNT_TYPE_COLORS, cn, PRESET_COLORS } from "@/lib/shared";
+import {
+	ACCOUNT_TYPE_COLORS,
+	cn,
+	formatDateInTimezone,
+	formatTimeInTimezone,
+	getTimezoneAbbreviation,
+	getTimezoneOffset,
+	localHourToUtcHour,
+	PRESET_COLORS,
+	utcHourToLocalHour,
+} from "@/lib/shared";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
-
-/**
- * Get the UTC offset in hours for a timezone.
- * Positive offset means ahead of UTC (e.g., Tokyo +9).
- * Negative offset means behind UTC (e.g., New York -5).
- */
-function getTimezoneOffsetHours(timezone: string): number {
-	const now = new Date();
-	const utcDate = new Date(now.toLocaleString("en-US", { timeZone: "UTC" }));
-	const tzDate = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
-	return Math.round((tzDate.getTime() - utcDate.getTime()) / (1000 * 60 * 60));
-}
-
-/**
- * Convert a UTC hour (0-23) to local hour in the given timezone.
- */
-function utcHourToLocal(utcHour: number, timezone: string): number {
-	const offset = getTimezoneOffsetHours(timezone);
-	let localHour = (utcHour + offset) % 24;
-	if (localHour < 0) localHour += 24;
-	return localHour;
-}
-
-/**
- * Convert a local hour (0-23) to UTC hour.
- */
-function localHourToUtc(localHour: number, timezone: string): number {
-	const offset = getTimezoneOffsetHours(timezone);
-	let utcHour = (localHour - offset) % 24;
-	if (utcHour < 0) utcHour += 24;
-	return utcHour;
-}
 
 /**
  * Convert trading sessions from UTC to local timezone hours.
@@ -101,8 +80,8 @@ function sessionsToLocal(
 ): TradingSession[] {
 	return sessions.map((s) => ({
 		...s,
-		startHour: utcHourToLocal(s.startHour, timezone),
-		endHour: utcHourToLocal(s.endHour, timezone),
+		startHour: utcHourToLocalHour(s.startHour, timezone),
+		endHour: utcHourToLocalHour(s.endHour, timezone),
 	}));
 }
 
@@ -115,8 +94,8 @@ function sessionsToUtc(
 ): TradingSession[] {
 	return sessions.map((s) => ({
 		...s,
-		startHour: localHourToUtc(s.startHour, timezone),
-		endHour: localHourToUtc(s.endHour, timezone),
+		startHour: localHourToUtcHour(s.startHour, timezone),
+		endHour: localHourToUtcHour(s.endHour, timezone),
 	}));
 }
 
@@ -420,6 +399,15 @@ export function SettingsContent() {
 	const [initialSettings, setInitialSettings] = useState<
 		typeof settings | null
 	>(null);
+
+	// Live updating current time for timezone debug info
+	const [currentTime, setCurrentTime] = useState(new Date());
+	useEffect(() => {
+		const interval = setInterval(() => {
+			setCurrentTime(new Date());
+		}, 1000);
+		return () => clearInterval(interval);
+	}, []);
 
 	// Fetch user settings
 	const { data: userSettings } = api.settings.get.useQuery();
@@ -931,6 +919,83 @@ export function SettingsContent() {
 									are classified as breakeven
 								</p>
 							</div>
+						</CardContent>
+					</Card>
+
+					{/* Timezone Debug Info */}
+					<Card>
+						<CardHeader className="p-4 sm:p-6">
+							<CardTitle className="flex items-center gap-2">
+								<Globe className="h-5 w-5" />
+								Timezone Info
+							</CardTitle>
+							<CardDescription className="hidden sm:block">
+								Verify your timezone configuration is correct
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+							<div className="space-y-3 rounded border border-border bg-secondary/50 p-4">
+								{/* Current Timezone */}
+								<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+										Timezone
+									</span>
+									<span className="font-mono text-sm">
+										{settings.timezone}{" "}
+										<span className="text-muted-foreground">
+											({getTimezoneAbbreviation(settings.timezone, currentTime)}
+											)
+										</span>
+									</span>
+								</div>
+
+								{/* UTC Offset */}
+								<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+										UTC Offset
+									</span>
+									<span className="font-mono text-sm">
+										{(() => {
+											const offset = getTimezoneOffset(
+												settings.timezone,
+												currentTime,
+											);
+											const sign = offset >= 0 ? "+" : "";
+											return `UTC${sign}${offset}`;
+										})()}
+									</span>
+								</div>
+
+								<Separator className="my-2" />
+
+								{/* Current Time */}
+								<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+										Current Time
+									</span>
+									<span className="font-mono text-primary text-sm tabular-nums">
+										{formatTimeInTimezone(currentTime, settings.timezone, {
+											includeSeconds: true,
+										})}
+									</span>
+								</div>
+
+								{/* Today's Date */}
+								<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+										Today's Date
+									</span>
+									<span className="font-mono text-sm">
+										{formatDateInTimezone(currentTime, settings.timezone, {
+											format: "EEEE, MMMM d, yyyy",
+										})}
+									</span>
+								</div>
+							</div>
+							<p className="mt-3 text-muted-foreground text-xs">
+								Trades are grouped by entry time in your selected timezone.
+								Ensure this matches your trading schedule.
+							</p>
 						</CardContent>
 					</Card>
 

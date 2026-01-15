@@ -390,6 +390,56 @@ debounceTimerRef.current = setTimeout(() => {
 }, 500);
 ```
 
+### Timezone-Safe Calendar Grid Generation
+**When:** Building calendar grids that need to work when browser TZ differs from user's preferred TZ
+**Problem:** Using Date objects for calendar generation uses browser's timezone, not user's preference
+**Solution:** Use string-based approach with timezone utilities:
+```tsx
+import {
+  generateDateStringsInTimezone,
+  getDayOfWeekFromDateString,
+  getMonthFromDateString,
+  formatDateString,
+} from "@/lib/shared";
+
+// Generate date strings for last 365 days in user's timezone
+const allDates = generateDateStringsInTimezone(-364, 0, userTimezone);
+
+// For week alignment (Sunday start), generate padding dates
+const firstDateDayOfWeek = getDayOfWeekFromDateString(allDates[0]);
+const paddingDates = generateDateStringsInTimezone(
+  -364 - firstDateDayOfWeek,
+  -365,
+  userTimezone
+);
+
+// Use getMonthFromDateString() for month labels
+const month = getMonthFromDateString(dateStr);
+
+// Use formatDateString() for display
+formatDateString(dateStr, "EEE, MMM d, yyyy")
+```
+**Key insight:** Use padding dates from earlier window for week alignment instead of empty strings (avoids array index key linting issues)
+
+### UTC Midnight Date Extraction for Lookup Maps
+**When:** Building lookup maps from backend dates that are stored as UTC midnight (e.g., journal dates)
+**Problem:** Using `toDateString(new Date(backendDate))` converts to local time, causing date shift in browsers behind UTC
+**Solution:**
+```tsx
+import { getUTCDateString } from "@/lib/shared";
+
+// Backend returns journal.date as 2026-01-15T00:00:00.000Z (UTC midnight)
+// In PST browser, toDateString() would give "2026-01-14" (wrong!)
+const dateStr = getUTCDateString(journal.date); // "2026-01-15" (correct)
+```
+**Key insight:** UTC midnight timestamps represent a calendar date, not a moment in time. Extract the date from UTC, don't convert to local.
+
 ## Decisions
 
-<!-- Architectural decisions and rationale -->
+### Calendar Sidebar Uses Browser-Local Dates
+**Choice:** Calendar grid generation uses browser-local Date objects, not user's preferred timezone
+**Why:**
+1. The calendar shows dates in the browser's local timezone
+2. When user clicks "Jan 15", they want Jan 15's data - the displayed date
+3. Backend handles timezone conversion via `getDayBoundsInTimezone(dateString, userTimezone)`
+4. This keeps the calendar intuitive regardless of preferred timezone setting

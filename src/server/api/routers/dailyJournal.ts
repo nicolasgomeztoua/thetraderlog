@@ -1,7 +1,11 @@
 import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { getDayBoundsInTimezone } from "@/lib/shared";
+import {
+	getDateStringInTimezone,
+	getDayBoundsInTimezone,
+	getUTCDateString,
+} from "@/lib/shared";
 import {
 	deleteObject,
 	getPresignedDownloadUrl,
@@ -988,14 +992,14 @@ export const dailyJournalRouter = createTRPCRouter({
 				},
 			});
 
-			// Group trades by date (using user's timezone)
+			// Group trades by date (using user's timezone and entry time)
 			const tradesByDate = new Map<string, typeof allTrades>();
 			for (const trade of allTrades) {
-				const dateStr = trade.entryTime.toISOString().split("T")[0];
-				if (!tradesByDate.has(dateStr ?? "")) {
-					tradesByDate.set(dateStr ?? "", []);
+				const dateStr = getDateStringInTimezone(trade.entryTime, userTimezone);
+				if (!tradesByDate.has(dateStr)) {
+					tradesByDate.set(dateStr, []);
 				}
-				tradesByDate.get(dateStr ?? "")?.push(trade);
+				tradesByDate.get(dateStr)?.push(trade);
 			}
 
 			// Calculate compliance per day - ONLY for eligible days
@@ -1007,7 +1011,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			}> = [];
 
 			for (const journal of journals) {
-				const dateStr = journal.date.toISOString().split("T")[0] ?? "";
+				const dateStr = getUTCDateString(journal.date);
 				const dayTrades = tradesByDate.get(dateStr) ?? [];
 				const hasTrades = dayTrades.length > 0;
 				const dayStarted = journal.dayStartedAt !== null;
