@@ -230,14 +230,13 @@ describe("calculateRunningPnlAtTime - Partial exits", () => {
 	it("should include realized P&L from final exit", () => {
 		// Long 1 ES at 5000
 		// Exit at 5020 for $1000 realized
-		// After exit, unrealized should still calculate from entry
-		// (but in practice, exit means position closed)
+		// After exit, position is closed (0 remaining contracts)
 		const executions: Execution[] = [
 			createExecution("1", "entry", "5000", "1", 1000),
 			createExecution("2", "exit", "5020", "1", 1100, "1000"),
 		];
 
-		// At exit price, should show realized P&L
+		// At exit price, should show only realized P&L (no unrealized since position is flat)
 		const pnl = calculateRunningPnlAtTime(
 			executions,
 			5020, // current price at exit
@@ -246,10 +245,8 @@ describe("calculateRunningPnlAtTime - Partial exits", () => {
 			"futures",
 		);
 
-		// Unrealized (from entry price) + Realized
-		// Note: The function calculates unrealized based on full entry quantity
-		// This is expected behavior for running P&L during trade
-		expect(pnl).toBe(2000); // $1000 unrealized + $1000 realized
+		// After full exit, unrealized = 0, only realized P&L remains
+		expect(pnl).toBe(1000); // $0 unrealized + $1000 realized
 	});
 });
 
@@ -480,10 +477,10 @@ describe("generateRunningPnlSeries", () => {
 		expect(series).toHaveLength(3);
 		// At entry: 0 unrealized, 0 realized
 		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
-		// At scale-out: 10pts × $50 × 2 contracts = $1000 unrealized + $500 realized = $1500
-		expect(series[1]).toEqual({ time: 1100, pnl: 1500 });
-		// After scale-out: 20pts × $50 × 2 contracts = $2000 unrealized + $500 realized = $2500
-		expect(series[2]).toEqual({ time: 1200, pnl: 2500 });
+		// At scale-out: 10pts × $50 × 1 remaining = $500 unrealized + $500 realized = $1000
+		expect(series[1]).toEqual({ time: 1100, pnl: 1000 });
+		// After scale-out: 20pts × $50 × 1 remaining = $1000 unrealized + $500 realized = $1500
+		expect(series[2]).toEqual({ time: 1200, pnl: 1500 });
 	});
 
 	it("should return empty array for empty bars", () => {

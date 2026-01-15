@@ -71,13 +71,37 @@ export function calculateRunningPnlAtTime(
 	if (!entryExec) return 0;
 
 	const entry = parseFloat(entryExec.price);
-	const quantity = parseFloat(entryExec.quantity);
+	const entryQuantity = parseFloat(entryExec.quantity);
 
-	// Calculate unrealized P&L using proper point/pip values
+	// Calculate remaining position after scale-outs/exits
+	const exitsAndScaleOuts = executions.filter(
+		(e) => e.executionType === "exit" || e.executionType === "scale_out",
+	);
+	const exitedQuantity = exitsAndScaleOuts.reduce(
+		(sum, e) => sum + parseFloat(e.quantity),
+		0,
+	);
+	const remainingQuantity = entryQuantity - exitedQuantity;
+
+	// Calculate unrealized P&L using remaining position (not original entry quantity)
 	const unrealizedPnl =
-		instrumentType === "futures"
-			? calculateFuturesPnL(symbol, entry, currentPrice, quantity, direction)
-			: calculateForexPnL(symbol, entry, currentPrice, quantity, direction);
+		remainingQuantity > 0
+			? instrumentType === "futures"
+				? calculateFuturesPnL(
+						symbol,
+						entry,
+						currentPrice,
+						remainingQuantity,
+						direction,
+					)
+				: calculateForexPnL(
+						symbol,
+						entry,
+						currentPrice,
+						remainingQuantity,
+						direction,
+					)
+			: 0;
 
 	// Sum realized P&L from scale-outs and exits
 	const realizedPnl = executions
