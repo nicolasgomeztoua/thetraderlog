@@ -143,12 +143,6 @@ export function RunningPnlChart({
 			return [];
 		}
 
-		// Create a map of timeLabel -> chartData index for positioning
-		const timeLabelMap = new Map<string, ChartDataPoint>();
-		for (const point of chartData) {
-			timeLabelMap.set(point.timeLabel, point);
-		}
-
 		return executions.map((exec) => {
 			const execTime = toUnixTimestamp(exec.executedAt);
 			const date = new Date(execTime * 1000);
@@ -179,7 +173,7 @@ export function RunningPnlChart({
 				time: execTime,
 			};
 		});
-	}, [executions, chartData, direction, symbol, instrumentType, timezone]);
+	}, [executions, direction, symbol, instrumentType, timezone]);
 
 	// Create scatter series configurations for each execution type
 	const createExecutionScatterSeries = useMemo(() => {
