@@ -1,4 +1,3 @@
-import { CandlestickChart } from "lucide-react";
 import { DailyJournalPreview } from "@/components/daily-journal/daily-journal-preview";
 import { TradeTags } from "@/components/tags/tag-selector";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,6 +7,7 @@ import { api } from "@/trpc/react";
 import type { TradeForContentPanel } from "@/types";
 import { EditableTextarea } from "./editable-field";
 import { TradeReplay } from "./replay";
+import { RunningPnlTab } from "./running-pnl-tab";
 import { TradingViewChart } from "./tradingview-chart";
 
 // =============================================================================
@@ -186,14 +186,25 @@ export function ContentPanel({
 				</TabsContent>
 
 				{/* RUNNING P&L TAB */}
-				<TabsContent className="m-0 flex-1 p-4" value="running-pnl">
-					<div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-						<CandlestickChart className="mb-3 h-10 w-10 opacity-50" />
-						<p className="font-mono text-xs">Running P&L Chart</p>
-						<p className="mt-1 font-mono text-[10px] opacity-50">
-							P&L over time coming soon
-						</p>
-					</div>
+				<TabsContent className="m-0 flex-1 p-0" value="running-pnl">
+					<RunningPnlTab
+						direction={trade.direction}
+						entryPrice={trade.entryPrice}
+						entryTime={trade.entryTime}
+						executions={trade.executions?.map((exec) => ({
+							id: exec.id,
+							executionType: exec.executionType,
+							executedAt: exec.executedAt,
+							price: exec.price,
+							quantity: exec.quantity,
+							realizedPnl: exec.realizedPnl,
+						}))}
+						exitPrice={trade.exitPrice}
+						exitTime={trade.exitTime}
+						instrumentType={trade.instrumentType}
+						quantity={trade.quantity}
+						symbol={trade.symbol}
+					/>
 				</TabsContent>
 			</Tabs>
 		</div>

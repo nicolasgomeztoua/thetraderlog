@@ -122,9 +122,9 @@ export default function TradeDetailPage() {
 		{ enabled: !!tradeId },
 	);
 
-	// Adjacent trades for navigation
+	// Adjacent trades for navigation (filtered by same account)
 	const { data: adjacentTrades } = api.trades.getAll.useQuery(
-		{ limit: 100 },
+		{ limit: 100, accountId: trade?.accountId },
 		{ enabled: !!trade },
 	);
 

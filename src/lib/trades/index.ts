@@ -7,4 +7,5 @@
 
 export * from "./calculations";
 export * from "./csv-parsers";
+export * from "./running-pnl";
 export * from "./sort";

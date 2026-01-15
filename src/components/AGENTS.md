@@ -443,3 +443,34 @@ const dateStr = getUTCDateString(journal.date); // "2026-01-15" (correct)
 2. When user clicks "Jan 15", they want Jan 15's data - the displayed date
 3. Backend handles timezone conversion via `getDayBoundsInTimezone(dateString, userTimezone)`
 4. This keeps the calendar intuitive regardless of preferred timezone setting
+
+### AG Charts Scatter Series for Annotations
+**When:** Adding markers/annotations on top of line/area charts (e.g., trade executions on P&L chart)
+**How:**
+```tsx
+// Create separate scatter series for each marker type
+const scatterSeries = {
+  type: "scatter" as const,
+  data: markerData, // Array with same xKey values as main series
+  xKey: "timeLabel",
+  yKey: "pnl",
+  yName: "Entry",
+  marker: {
+    size: 14,
+    fill: "#d4ff00", // Marker color
+    stroke: "#050505", // Border color
+    strokeWidth: 2,
+    shape: "diamond" as const, // Options: "diamond", "circle", "triangle", "square"
+  },
+  tooltip: {
+    renderer: (params) => ({
+      title: "Entry",
+      content: `<div>Price: ${params.datum.price}</div>`,
+    }),
+  },
+};
+
+// Add scatter series after area series in options.series array
+series: [areaSeries, ...scatterSeries]
+```
+**Note:** Each scatter series needs its own data array. Group markers by type and create separate series for each.

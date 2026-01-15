@@ -18,7 +18,7 @@ import {
 	Wallet,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
 
 export function AppSidebar() {
 	const pathname = usePathname();
+	const router = useRouter();
 	const { accounts, selectedAccount, setSelectedAccountId, isLoading } =
 		useAccount();
 	const [mounted, setMounted] = useState(false);
@@ -216,7 +217,10 @@ export function AppSidebar() {
 												<DropdownMenuItem
 													className="flex min-h-[44px] items-center gap-2 py-2.5 pl-6 font-mono text-xs"
 													key={account.id}
-													onClick={() => setSelectedAccountId(account.id)}
+													onClick={() => {
+														setSelectedAccountId(account.id);
+														router.push("/dashboard");
+													}}
 												>
 													<div
 														className={cn(
@@ -269,7 +273,10 @@ export function AppSidebar() {
 														groups.length > 0 && "pl-6",
 													)}
 													key={account.id}
-													onClick={() => setSelectedAccountId(account.id)}
+													onClick={() => {
+														setSelectedAccountId(account.id);
+														router.push("/dashboard");
+													}}
 												>
 													<div
 														className={cn(
