@@ -70,6 +70,7 @@ export const JournalEditor = forwardRef<
 		null,
 	);
 	const lastSavedContentRef = useRef<string | null>(null);
+	const imageInputRef = useRef<HTMLInputElement>(null);
 
 	const utils = api.useUtils();
 
@@ -412,6 +413,38 @@ export const JournalEditor = forwardRef<
 		};
 	}, [editor, handlePaste, handleDrop]);
 
+	// Listen for slash command image insert event
+	useEffect(() => {
+		const handleInsertImageCommand = () => {
+			imageInputRef.current?.click();
+		};
+
+		window.addEventListener(
+			"journal-editor:insert-image",
+			handleInsertImageCommand,
+		);
+
+		return () => {
+			window.removeEventListener(
+				"journal-editor:insert-image",
+				handleInsertImageCommand,
+			);
+		};
+	}, []);
+
+	// Handle file input change for slash command image upload
+	const handleFileInputChange = useCallback(
+		(event: React.ChangeEvent<HTMLInputElement>) => {
+			const file = event.target.files?.[0];
+			if (file) {
+				handleImageInsert(file);
+			}
+			// Reset input so the same file can be selected again
+			event.target.value = "";
+		},
+		[handleImageInsert],
+	);
+
 	// Show loading until journal data arrives (key prop causes remount, so we wait for fresh data)
 	if (isLoadingJournal || !journal) {
 		return (
@@ -456,6 +489,15 @@ export const JournalEditor = forwardRef<
 					</div>
 				)}
 			</div>
+
+			{/* Hidden file input for slash command image upload */}
+			<input
+				accept="image/*"
+				className="hidden"
+				onChange={handleFileInputChange}
+				ref={imageInputRef}
+				type="file"
+			/>
 		</div>
 	);
 });

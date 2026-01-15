@@ -1,227 +1,75 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/timezone-system-unification",
-  "description": "Unify date/timezone handling across the application - all dates in user's selected timezone, trades grouped by entry time",
+  "branchName": "ralph/daily-journal-attachment-removal",
+  "description": "Remove redundant attachment section from Daily Journal, extend editor to fill space, add /image slash command",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Create Timezone System Documentation",
-      "description": "As a developer, I want clear documentation of the timezone system so that future development maintains consistency.",
+      "title": "Remove Attachment Section from Daily Journal Page",
+      "description": "As a trader, I want a cleaner journal interface without the separate attachment section so that I have more space for writing and a simpler experience.",
       "acceptanceCriteria": [
-        "Add TIMEZONE_SYSTEM.md to docs/ directory explaining the principles",
-        "Document which function to use when (decision tree)",
-        "Document the 'entry time for grouping' rule",
-        "Add examples of correct vs incorrect usage",
-        "Typecheck passes (bun run check)"
+        "Remove AttachmentUpload component from daily journal page (both mobile and desktop layouts)",
+        "Remove AttachmentGallery component from daily journal page (both mobile and desktop layouts)",
+        "Remove attachment-related imports from the page",
+        "Remove onAttachmentDeleted callback and editorRef usage for gallery sync",
+        "Existing attachments remain in database (no data deletion)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: attachment section no longer visible"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Created docs/TIMEZONE_SYSTEM.md with principles, decision tree, function reference, common patterns, and common mistakes."
-    },
-    {
-      "id": "US-006",
-      "title": "Create Timezone-Aware Date String Generator",
-      "description": "As a developer, I want a utility function that generates date strings for calendar grids using the user's timezone so that calendars display correctly.",
-      "acceptanceCriteria": [
-        "Add generateDateStringsInTimezone(startOffset, endOffset, timezone) to src/lib/shared/timezone.ts",
-        "Function generates YYYY-MM-DD strings based on user's timezone 'today'",
-        "No Date object timezone ambiguity",
-        "Works correctly across DST transitions",
-        "Export from src/lib/shared/index.ts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": "Added generateDateStringsInTimezone() to timezone.ts. Uses UTC arithmetic to avoid Date object ambiguity. Auto-exported via src/lib/shared/index.ts."
-    },
-    {
-      "id": "US-007",
-      "title": "Create Date String Display Utilities",
-      "description": "As a developer, I want utilities to get display information from YYYY-MM-DD strings so that calendars can render without Date object ambiguity.",
-      "acceptanceCriteria": [
-        "Add getDayOfWeekFromDateString(dateStr) returning 0-6 to timezone.ts",
-        "Add getMonthFromDateString(dateStr) returning 0-11 to timezone.ts",
-        "Add formatDateString(dateStr, format) for display formatting to timezone.ts",
-        "Functions work with YYYY-MM-DD strings directly",
-        "No timezone conversion issues",
-        "Export from src/lib/shared/index.ts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Added getDayOfWeekFromDateString(), getMonthFromDateString(), and formatDateString() to timezone.ts. All use UTC date operations to avoid timezone ambiguity. Auto-exported via src/lib/shared/index.ts."
+      "notes": "Removed AttachmentUpload, AttachmentGallery, editorRef, handleAttachmentDeleted from page.tsx"
     },
     {
       "id": "US-002",
-      "title": "Fix Daily Journal Trade Grouping Bug",
-      "description": "As a trader, I want trades in my daily journal grouped by entry time in my timezone so that trades appear on the correct day.",
+      "title": "Extend Editor to Fill Available Space",
+      "description": "As a trader, I want the journal editor to use the full available height so that I have more writing space without scrolling.",
       "acceptanceCriteria": [
-        "Import getDateStringInTimezone from @/lib/shared in dailyJournal.ts",
-        "Fetch userTimezone using getUserTimezone() helper",
-        "Replace .toISOString().split('T')[0] with getDateStringInTimezone() around line 991-999",
-        "Trade entered 11 PM EST appears on that EST date, not next day",
+        "Editor container uses flex-grow to fill remaining panel space",
+        "Editor maintains proper padding and styling",
+        "Works correctly in both mobile and desktop layouts",
+        "Resizable panel behavior preserved on desktop",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: editor fills available vertical space in right panel"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added flex-1 and min-h-0 to page layout containers. Updated JournalEditor to use flex-1 with h-full on the editor element."
+    },
+    {
+      "id": "US-003",
+      "title": "Add Image Slash Command to Editor",
+      "description": "As a trader, I want to type /image in the editor to upload an image so that I can easily discover and use the image upload feature.",
+      "acceptanceCriteria": [
+        "Add 'Image' option to existing slash command menu",
+        "Selecting /image triggers file picker dialog",
+        "Selected image uploads and inserts at cursor position",
+        "Uses existing handleImageUpload flow (blob preview → S3 upload → URL replacement)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: typing /image shows option, selecting it opens file picker"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Clean Up Unused Attachment Sync Code in Editor",
+      "description": "As a developer, I want to remove the unused removeImageByUrl method from the editor so that the codebase stays clean.",
+      "acceptanceCriteria": [
+        "Remove removeImageByUrl method from JournalEditor component",
+        "Remove related useImperativeHandle ref export if no longer needed",
+        "Remove onAttachmentDeleted prop from editor interface",
+        "Update any TypeScript interfaces/types accordingly",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Fixed getComplianceStats trade grouping in dailyJournal.ts. Replaced .toISOString().split('T')[0] with getDateStringInTimezone(trade.entryTime, userTimezone). User timezone was already being fetched via getUserTimezone()."
-    },
-    {
-      "id": "US-003",
-      "title": "Fix getOvertradeMetrics Entry Time",
-      "description": "As a trader, I want overtrade metrics grouped by entry time so that daily P&L is consistent across all analytics.",
-      "acceptanceCriteria": [
-        "Change date grouping from exitTime to entryTime in getOvertradeMetrics procedure",
-        "Use getDateStringInTimezone(trade.entryTime, userTimezone)",
-        "Ensure userTimezone is fetched if not already available",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Fixed getOvertradingAnalysis (actual procedure name) to use trade.entryTime instead of trade.exitTime for date grouping. User timezone was already being fetched via getUserTimezone()."
-    },
-    {
-      "id": "US-004",
-      "title": "Fix getPsychometrics Entry Time",
-      "description": "As a trader, I want psychometrics grouped by entry time so that daily analysis is consistent.",
-      "acceptanceCriteria": [
-        "Change date grouping from exitTime to entryTime in getPsychometrics procedure",
-        "Use getDateStringInTimezone(trade.entryTime, userTimezone)",
-        "Ensure userTimezone is fetched if not already available",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Fixed getBehavioralPatterns procedure (actual name for 'getPsychometrics') to use trade.entryTime instead of trade.exitTime for date grouping in the Overtrading Tendency calculation. User timezone was already being fetched via getUserTimezone()."
-    },
-    {
-      "id": "US-005",
-      "title": "Audit All Analytics Date Grouping",
-      "description": "As a developer, I want to audit all analytics procedures to ensure they use entry time and user timezone consistently.",
-      "acceptanceCriteria": [
-        "Verify getCalendarData uses entryTime",
-        "Verify getPerformanceByDayOfWeek uses entryTime",
-        "Verify getPerformanceByHour uses entryTime",
-        "Verify getPerformanceBySession uses entryTime",
-        "Verify getPerformanceByMonth uses entryTime",
-        "Verify getEquityCurve uses entryTime",
-        "Fix any procedures using exitTime for date grouping",
-        "All use getDateStringInTimezone(trade.entryTime, userTimezone)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Audited all 6 specified procedures. Found getCalendarData, getPerformanceByDayOfWeek, getPerformanceByHour, getPerformanceBySession, getPerformanceByMonth all correctly use entryTime. getEquityCurve uses exitTime intentionally (equity curve plots cumulative P&L at trade close, not entry). Fixed getSymbolTrend which incorrectly used exitTime for month grouping - changed to entryTime."
-    },
-    {
-      "id": "US-010",
-      "title": "Integration Tests for Timezone Date Grouping",
-      "description": "As a developer, I want integration tests verifying trades are grouped by entry time in user's timezone.",
-      "acceptanceCriteria": [
-        "Test file created: tests/integration/analytics/timezone-grouping.test.ts",
-        "Uses setupTrader() or setupTraderWithTrades() fixtures",
-        "Tests trade entered 11 PM EST closed next day appears on entry date",
-        "Tests getCalendarData returns correct dates for user timezone",
-        "Tests getOvertradeMetrics matches calendar data for same days",
-        "Tests daily journal trade grouping respects user timezone",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Created tests/integration/analytics/timezone-grouping.test.ts with comprehensive tests for: 1) Trade entry time grouping (11 PM EST case), 2) getCalendarData date accuracy, 3) getOvertradingAnalysis consistency with calendar data, 4) Daily journal trade grouping, 5) Pacific/Auckland timezone edge cases. Tests pass typecheck and build; full test run requires Docker."
-    },
-    {
-      "id": "US-008",
-      "title": "Refactor CalendarHeatmap to Use Date Strings",
-      "description": "As a trader, I want the analytics calendar heatmap to display trades on the correct day regardless of my browser's timezone.",
-      "acceptanceCriteria": [
-        "Replace Date-based week generation with string-based approach",
-        "Use generateDateStringsInTimezone() for calendar grid generation",
-        "Use getDayOfWeekFromDateString() for week alignment",
-        "Use getMonthFromDateString() for month labels",
-        "Use formatDateString() for tooltip display",
-        "Works correctly when browser TZ differs from user TZ",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser with different timezone settings"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Refactored CalendarHeatmap to use string-based date handling. Replaced Date objects with generateDateStringsInTimezone() for calendar grid generation. Uses getDayOfWeekFromDateString() for week alignment, getMonthFromDateString() for month labels, and formatDateString() for tooltip display. All dates are now YYYY-MM-DD strings that match backend format directly."
-    },
-    {
-      "id": "US-009",
-      "title": "Verify CalendarSidebar Timezone Consistency",
-      "description": "As a developer, I want to verify the daily journal calendar sidebar uses the user's timezone consistently.",
-      "acceptanceCriteria": [
-        "Audit current implementation in calendar-sidebar.tsx",
-        "Verify date lookups use same format as backend data",
-        "Fix any inconsistencies found between frontend and backend date formats",
-        "Document if browser-local approach is intentional for journal dates",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Audited calendar-sidebar.tsx and found a bug: journal date lookups used toDateString() which converts to local time, causing date shift in browsers behind UTC. Fixed by adding getUTCDateString() utility for extracting dates from UTC midnight timestamps. Added documentation explaining the intentional browser-local calendar approach."
-    },
-    {
-      "id": "US-011",
-      "title": "Integration Tests for Calendar Heatmap",
-      "description": "As a developer, I want integration tests for calendar heatmap timezone edge cases.",
-      "acceptanceCriteria": [
-        "Test file created: tests/integration/analytics/calendar-heatmap.test.ts",
-        "Test date string generation for timezone Pacific/Auckland (+12)",
-        "Test date string generation for timezone America/Los_Angeles (-8)",
-        "Test week alignment starts on Sunday",
-        "Test month label positions are correct",
-        "Test year boundary handling (Dec 31 / Jan 1)",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": "Created tests/integration/analytics/calendar-heatmap.test.ts with comprehensive tests for all timezone utility functions used by CalendarHeatmap: 1) generateDateStringsInTimezone for Pacific/Auckland (+12/+13) and America/Los_Angeles (-8), 2) getDayOfWeekFromDateString for week alignment (Sunday=0), 3) getMonthFromDateString for month labels, 4) formatDateString for tooltip display, 5) Year boundary handling (Dec 31/Jan 1), 6) Week alignment to Sunday for calendar grid, 7) Month transition detection, 8) Edge cases (leap years, DST). Tests pass typecheck and build."
-    },
-    {
-      "id": "US-012",
-      "title": "Deprecate toDateString for Backend",
-      "description": "As a developer, I want to document that toDateString() should not be used for backend date grouping.",
-      "acceptanceCriteria": [
-        "Add JSDoc @deprecated to toDateString() in timezone.ts",
-        "Add comment explaining it's only for frontend calendar selection",
-        "Add migration guidance pointing to getDateStringInTimezone()",
-        "Search codebase for backend usages and fix or document them",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": "Added @deprecated JSDoc to toDateString() with clear migration guidance. Updated TIMEZONE_SYSTEM.md with 'FRONTEND ONLY' marker and added 'Mistake 4: Using toDateString on the Backend' section. Verified no backend usages exist in src/server/ (already clean)."
-    },
-    {
-      "id": "US-013",
-      "title": "Add Timezone Debug Info to Settings",
-      "description": "As a trader, I want to see my current timezone configuration in settings so I can verify it's correct.",
-      "acceptanceCriteria": [
-        "Show current timezone with UTC offset in settings page",
-        "Show current time in selected timezone (updates live)",
-        "Show 'today's date' in selected timezone",
-        "Helps users verify their timezone is set correctly",
-        "Terminal design styling with monospace fonts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": "Added 'Timezone Info' card to Trading tab in Settings. Shows timezone name with abbreviation, UTC offset, live updating current time (updates every second), and today's date. Uses Terminal design system: monospace fonts, uppercase tracking labels, primary accent color for time. Uses existing timezone utilities (getTimezoneAbbreviation, getTimezoneOffset, formatTimeInTimezone, formatDateInTimezone)."
+      "passes": false,
+      "notes": ""
     }
   ]
 }
