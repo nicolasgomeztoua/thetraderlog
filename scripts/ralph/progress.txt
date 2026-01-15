@@ -1,39 +1,23 @@
 # Ralph Progress Log
-Started: Thu Jan 15 13:58:43 +01 2026
+Started: Thu Jan 15 15:31:55 +01 2026
 ---
 
-## 2026-01-15 - US-001
-- **What was implemented:** Removed attachment section from Daily Journal page
-- **Files changed:**
-  - `src/app/(protected)/daily-journal/page.tsx`
-- **Changes:**
-  - Removed AttachmentUpload and AttachmentGallery component imports
-  - Removed attachment section divs from both mobile and desktop layouts
-  - Removed editorRef and handleAttachmentDeleted callback
-  - Removed JournalEditorHandle type import (ref no longer needed)
-  - Simplified JournalEditor mounting (removed ref prop)
-- **Learnings for future iterations:**
-  - When removing a feature that uses refs, remember to also remove the related type imports (e.g., JournalEditorHandle)
-  - The daily journal page has two layouts - mobile and desktop - both need to be updated for UI changes
+## Codebase Patterns
+- P&L calculation functions are in src/lib/market-data/symbols.ts (calculateFuturesPnL, calculateForexPnL, calculatePnL)
+- Replay engine has a local calculateRunningPnl helper that should be extracted for reuse
+- Use toUnixTimestamp from @/lib/shared for timestamp conversion
+- ChartBar type includes { time: number, open: number, high: number, low: number, close: number }
+
 ---
 
-## 2026-01-15 - US-002
-- **What was implemented:** Extended editor to fill available vertical space
-- **Files changed:**
-  - `src/app/(protected)/daily-journal/page.tsx`
-  - `src/components/daily-journal/journal-editor.tsx`
-- **Changes:**
-  - Mobile layout: Changed container from `flex-1 overflow-y-auto` to `flex min-h-0 flex-1 flex-col`
-  - Desktop layout: Changed container from `h-full overflow-y-auto` to `flex h-full min-h-0 flex-col`
-  - Both layouts: Added `flex min-h-0 flex-1 flex-col` to the editor wrapper div
-  - JournalEditor: Changed outer div to `flex min-h-0 flex-1 flex-col`
-  - JournalEditor: Changed editor content wrapper to grow with `flex min-h-0 flex-1 flex-col`
-  - EditorContent: Added `min-h-0 flex-1 overflow-y-auto` classes
-  - Changed editor editorProps class from `min-h-[300px]` to `h-full` for dynamic height
-  - Updated loading state to also use flex-1
+## 2026-01-15 - US-000
+- Audited existing utilities for running P&L calculation
+- Confirmed: calculateFuturesPnL exists in src/lib/market-data/symbols.ts (lines 775-794)
+- Confirmed: calculateForexPnL exists in src/lib/market-data/symbols.ts (lines 805-825)
+- Confirmed: calculateRunningPnl is LOCAL helper in src/components/trade-detail/replay/use-replay-engine.ts (lines 273-306) - needs extraction
 - **Learnings for future iterations:**
-  - To make a component fill available space in a flex container, use `flex-1 min-h-0` combo
-  - The `min-h-0` is critical to allow shrinking below content size in flex containers
-  - When updating layout, remember to also update loading states to maintain consistent sizing
-  - Tiptap EditorContent can accept className prop for additional styling
+  - P&L calculation uses proper point/pip values from FUTURES_SPECS and FOREX_SPECS
+  - calculatePnL is a unified wrapper that delegates to futures/forex functions based on instrumentType
+  - Running P&L = unrealized P&L (current position) + realized P&L (from exits/scale-outs)
+  - The local helper tracks visible executions and bars progressively for replay animation
 ---
