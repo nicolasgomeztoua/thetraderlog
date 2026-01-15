@@ -8,14 +8,7 @@ import TaskList from "@tiptap/extension-task-list";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { AlertCircleIcon, CheckCircleIcon, Loader2Icon } from "lucide-react";
-import {
-	forwardRef,
-	useCallback,
-	useEffect,
-	useImperativeHandle,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EditorBubbleMenu } from "@/components/daily-journal/editor-bubble-menu";
@@ -26,11 +19,6 @@ import { api } from "@/trpc/react";
 
 interface JournalEditorProps {
 	selectedDate: Date;
-}
-
-export interface JournalEditorHandle {
-	/** Remove all images with the given URL from the editor */
-	removeImageByUrl: (url: string) => void;
 }
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -60,10 +48,7 @@ const EDITOR_EXTENSIONS = [
  * Rich text editor for daily journal entries.
  * Auto-saves content with 500ms debounce.
  */
-export const JournalEditor = forwardRef<
-	JournalEditorHandle,
-	JournalEditorProps
->(function JournalEditor({ selectedDate }, ref) {
+export function JournalEditor({ selectedDate }: JournalEditorProps) {
 	const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const savedIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -146,37 +131,6 @@ export const JournalEditor = forwardRef<
 		},
 		immediatelyRender: false,
 	});
-
-	// Expose imperative handle for parent to remove images
-	useImperativeHandle(
-		ref,
-		() => ({
-			removeImageByUrl: (url: string) => {
-				if (!editor) return;
-
-				const { state, view } = editor;
-				const { tr } = state;
-				const nodesToRemove: number[] = [];
-
-				// Find all images with this URL
-				state.doc.descendants((node, pos) => {
-					if (node.type.name === "image" && node.attrs.src === url) {
-						nodesToRemove.push(pos);
-					}
-				});
-
-				// Remove from end to start to preserve positions
-				nodesToRemove.reverse().forEach((pos) => {
-					tr.delete(pos, pos + 1);
-				});
-
-				if (nodesToRemove.length > 0) {
-					view.dispatch(tr);
-				}
-			},
-		}),
-		[editor],
-	);
 
 	// Load content when journal data arrives (key prop handles date changes)
 	useEffect(() => {
@@ -500,4 +454,4 @@ export const JournalEditor = forwardRef<
 			/>
 		</div>
 	);
-});
+}
