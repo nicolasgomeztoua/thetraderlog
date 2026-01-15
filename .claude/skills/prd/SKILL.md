@@ -106,11 +106,65 @@ Each user story MUST be completable in a single Claude Code iteration. Ralph spa
 ## Story Ordering
 
 Order by dependencies (priority number):
-1. Schema/database changes
-2. Backend logic (tRPC routers, utilities)
-3. **Integration tests for backend changes** (MANDATORY)
-4. UI components using the backend
-5. Integration/polish
+1. **Pre-implementation audit** (for features with calculations/utilities)
+2. Schema/database changes
+3. Backend logic (tRPC routers, utilities)
+4. **Integration tests for backend changes** (MANDATORY)
+5. UI components using the backend
+6. Integration/polish
+
+## Pre-Implementation Audit (MANDATORY for calculation-heavy features)
+
+**Any feature involving calculations, data transformations, or utilities MUST start with an audit story.**
+
+This prevents duplicate code and ensures we reuse existing utilities. Without this, AI tends to write new local helpers instead of reusing existing shared code.
+
+### When to Include Audit Story (US-000)
+
+Include when the feature involves:
+- P&L calculations
+- Price/tick/pip conversions
+- Date/time formatting or manipulation
+- Currency formatting
+- Any mathematical calculations
+- Data transformations that might exist elsewhere
+- Running totals, aggregations, or series data
+
+### Audit Story Template
+
+```markdown
+### US-000: Audit Existing Utilities for [Feature]
+**Description**: As a developer, I want to audit existing code before implementing [feature] so that we reuse utilities and avoid duplication.
+
+**Acceptance Criteria**:
+- [ ] Search `src/lib/` for existing relevant utilities
+- [ ] Search components/routers for local helpers doing similar work
+- [ ] Document findings in `scripts/ralph/progress.txt`:
+  - Existing utilities to reuse (with file:line)
+  - Local helpers to extract (with file:line)
+  - New utilities needed
+- [ ] If local helpers found that should be shared, add extraction story
+- [ ] Typecheck passes (`bun run check`)
+
+**Search Commands**:
+```bash
+# Search for relevant exported functions
+grep -rn "export function" src/lib/ | grep -i "[keyword]"
+
+# Search for local helpers in components/hooks
+grep -rn "^function\|^const.*=" src/components/ src/server/api/routers/ | grep -i "[keyword]"
+
+# Check for existing calculations
+grep -rn "calculate\|compute" src/lib/trades/ src/lib/market-data/ src/lib/analytics/
+```
+```
+
+### Example: Running P&L Feature
+
+For a "Running P&L Chart" feature, the audit would find:
+- `calculateFuturesPnL()` in `src/lib/market-data/symbols.ts` ✅ Reuse
+- `calculateRunningPnl()` in `use-replay-engine.ts` ⚠️ Local helper, extract to shared lib
+- No existing `generateRunningPnlSeries()` → Need to create
 
 ## Testing Requirements (MANDATORY)
 

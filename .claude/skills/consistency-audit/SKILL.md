@@ -89,6 +89,38 @@ grep -rn "calculate\|compute\|get.*Value\|format" src/lib/ | grep "export"
 grep -rn "^export const [A-Z]" src/lib/
 ```
 
+### Phase 3b: Local Helper Extraction Audit (CRITICAL)
+**Scope**: `src/components/`, `src/app/`, `src/server/api/routers/`
+
+This phase catches "hidden" utilities - local helper functions that should be extracted to shared libs.
+
+Look for:
+- [ ] Local `function` definitions inside components/hooks that do calculations
+- [ ] Functions named `calculate*`, `compute*`, `format*`, `get*` that aren't imported
+- [ ] Logic that duplicates existing `src/lib/` utilities
+- [ ] Helper functions at bottom of files (after main export)
+
+**Search patterns**:
+```bash
+# Find local calculate/compute functions NOT exported (likely should be shared)
+grep -rn "^function calculate\|^function compute\|^function format\|^function get" src/components/ src/app/ src/server/api/routers/
+
+# Find local const functions (arrow functions) doing calculations
+grep -rn "^const calculate\|^const compute\|^const format" src/components/ src/app/
+
+# Compare against existing lib exports - look for similar names
+grep -rn "^export function" src/lib/trades/ src/lib/market-data/ src/lib/analytics/
+
+# Find helper functions defined INSIDE hooks (useCallback/useMemo with calculation logic)
+grep -rn "useCallback\|useMemo" src/components/ -A 5 | grep "calculate\|compute\|pnl\|P&L"
+```
+
+**Red flags**:
+- Local function with same name as lib/ export (should import instead)
+- Local function doing P&L, R-multiple, or point value calculations
+- Functions with comments like "// Helper" or "// Calculate" that aren't exported
+- Multiple components with similar local helper functions
+
 ### Phase 4: Type Consistency Audit
 **Scope**: `src/types/`, `src/server/db/schema.ts`
 

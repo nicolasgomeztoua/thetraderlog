@@ -236,6 +236,8 @@ touch "$PROCESSED_COMMENTS_FILE"
 
 # Track consecutive cycles with no new comments for early exit
 NO_COMMENTS_COUNT=0
+# Track if Claude has signaled all reviews are complete
+CLAUDE_SIGNALED_COMPLETE=false
 
 for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
     echo ""
@@ -272,14 +274,22 @@ for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
         echo -e "${YELLOW}No new Greptile comments found.${NC}"
         NO_COMMENTS_COUNT=$((NO_COMMENTS_COUNT + 1))
 
-        # Stop if no new comments for 2 consecutive cycles
+        # Early exit conditions:
+        # 1. Claude previously signaled completion AND no new comments = immediate exit
+        # 2. No new comments for 2 consecutive cycles (original behavior)
+        if [ "$CLAUDE_SIGNALED_COMPLETE" = true ]; then
+            echo -e "${GREEN}Claude signaled completion and no new comments. All reviews complete!${NC}"
+            break
+        fi
+
         if [ "$NO_COMMENTS_COUNT" -ge 2 ]; then
             echo -e "${GREEN}No new Greptile comments for 2 consecutive cycles. All reviews complete!${NC}"
             break
         fi
     else
-        # Reset counter when we find new comments
+        # Reset counters when we find new comments
         NO_COMMENTS_COUNT=0
+        CLAUDE_SIGNALED_COMPLETE=false
 
         COMMENT_COUNT=$(echo "$NEW_COMMENTS" | grep -c '^{' || echo "0")
         echo -e "${GREEN}Found $COMMENT_COUNT new Greptile comment(s)! Invoking Claude for review...${NC}"
@@ -294,6 +304,14 @@ for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
         # Mark comments as processed
         echo "$NEW_COMMENTS" | jq -r '.id' >> "$PROCESSED_COMMENTS_FILE"
 
+        # Check if Claude signaled all reviews are complete
+        if echo "$OUTPUT" | grep -q "<review>COMPLETE</review>"; then
+            echo -e "${GREEN}Claude signaled all reviews are addressed.${NC}"
+            CLAUDE_SIGNALED_COMPLETE=true
+            # Skip the wait - immediately check for new comments
+            continue
+        fi
+
         echo -e "${GREEN}Finished processing Greptile comments.${NC}"
     fi
 
@@ -303,8 +321,11 @@ for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
         break
     fi
 
-    echo -e "${YELLOW}Waiting 3 minutes before next check...${NC}"
-    sleep $PR_REVIEW_INTERVAL
+    # Only wait if we haven't signaled completion
+    if [ "$CLAUDE_SIGNALED_COMPLETE" = false ]; then
+        echo -e "${YELLOW}Waiting 3 minutes before next check...${NC}"
+        sleep $PR_REVIEW_INTERVAL
+    fi
 done
 
 # =============================================================================

@@ -99,3 +99,21 @@ Only commit if all checks pass.
 - Be professional but firm when disagreeing
 - If you make fixes, push to the branch after all fixes are done
 - Don't make unnecessary changes just to appease Greptile
+
+## Early Exit Signal
+
+When you have addressed ALL comments in the current batch and believe the PR is ready:
+
+Output this signal at the end of your response:
+```
+<review>COMPLETE</review>
+```
+
+This tells Ralph you're done with this review cycle and it can immediately check for new comments instead of waiting 3 minutes.
+
+**Only use this signal when:**
+- You have responded to every comment in the batch
+- All fixes have been committed and pushed
+- All quality checks pass
+
+If you're unsure or there might be more work needed, don't output the signal - let Ralph wait and check again.

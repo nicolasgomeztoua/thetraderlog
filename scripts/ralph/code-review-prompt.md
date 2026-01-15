@@ -36,15 +36,37 @@ Key checks:
 - Hardcoded secrets
 - Input validation
 
-## Step 3: Consistency Audit
+## Step 3: Consistency Audit (Run Thoroughly)
 
 Read and follow: `.claude/skills/consistency-audit/SKILL.md`
+
+**IMPORTANT**: This is the most common source of tech debt. Run ALL phases including Phase 3b.
 
 Key checks:
 - Duplicate calculations (same logic in multiple places)
 - Hardcoded constants (should be in `src/lib/constants/`)
 - Inconsistent patterns (not matching existing code)
 - Unnecessary complexity
+
+### Critical: Local Helper Extraction Check
+
+Run these commands to find local helpers that should be shared:
+
+```bash
+# Find local calculate/format functions in changed files
+git diff main --name-only | xargs grep -l "function calculate\|function format\|function compute\|function get" 2>/dev/null
+
+# Compare against existing lib exports
+grep -rn "^export function calculate\|^export function format" src/lib/
+
+# Check if new code duplicates existing utilities
+git diff main -- "*.ts" "*.tsx" | grep "^+.*calculate\|^+.*compute" | head -20
+```
+
+If you find:
+- Local function with same name as lib/ export → Import instead of redefine
+- Local calculation function → Consider extracting to `src/lib/`
+- Multiple similar local helpers → Consolidate to shared utility
 
 ## Step 4: General Quality
 
