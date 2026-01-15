@@ -202,8 +202,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added @deprecated JSDoc to toDateString() with clear migration guidance. Updated TIMEZONE_SYSTEM.md with 'FRONTEND ONLY' marker and added 'Mistake 4: Using toDateString on the Backend' section. Verified no backend usages exist in src/server/ (already clean)."
     },
     {
       "id": "US-013",
@@ -220,8 +220,8 @@
         "Verify in browser"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added 'Timezone Info' card to Trading tab in Settings. Shows timezone name with abbreviation, UTC offset, live updating current time (updates every second), and today's date. Uses Terminal design system: monospace fonts, uppercase tracking labels, primary accent color for time. Uses existing timezone utilities (getTimezoneAbbreviation, getTimezoneOffset, formatTimeInTimezone, formatDateInTimezone)."
     }
   ]
 }

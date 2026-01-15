@@ -164,3 +164,42 @@ Started: Wed Jan 14 22:34:43 +01 2026
   - Test known dates (e.g., "2026-01-18 is Sunday") to verify day-of-week calculations
   - Year boundary tests can use offsets like -370 to -360 to test dates from ~1 year ago
 ---
+
+## 2026-01-15 - US-012
+- **What was implemented:** Deprecated toDateString() for backend use
+- **Files changed:**
+  - Modified `src/lib/shared/timezone.ts` - added @deprecated JSDoc with migration guidance
+  - Modified `docs/TIMEZONE_SYSTEM.md` - added "⚠️ FRONTEND ONLY" marker and "Mistake 4" section
+- **Key changes:**
+  - toDateString() now has comprehensive JSDoc deprecation notice for backend use
+  - Migration guidance points to getDateStringInTimezone() for backend trade grouping
+  - Explains why: browser timezone vs user's configured timezone setting
+  - Verified no backend usages exist in src/server/ (already clean)
+- **Learnings for future iterations:**
+  - The @deprecated JSDoc tag serves as documentation, not enforcement - consider ESLint rule for strict enforcement
+  - toDateString is valid for frontend calendar clicks → backend; backend should never call it directly
+  - Pattern established: frontend sends date strings, backend uses getDayBoundsInTimezone() to interpret them
+---
+
+## 2026-01-15 - US-013
+- **What was implemented:** Added Timezone Debug Info card to Settings Trading tab
+- **Files changed:**
+  - Modified `src/app/(protected)/settings/_components/settings-content.tsx`
+- **Key changes:**
+  - Added new "Timezone Info" card between Trading Preferences and Trading Sessions cards
+  - Shows timezone name with abbreviation (e.g., "America/New_York (EST)")
+  - Shows UTC offset (e.g., "UTC-5")
+  - Shows live updating current time (updates every second) with primary accent color
+  - Shows today's date in the selected timezone
+  - Uses Terminal design system: monospace fonts, uppercase tracking labels, tabular-nums for time
+  - Added Globe icon from lucide-react for the card header
+- **Implementation details:**
+  - Added `currentTime` state with 1-second interval for live updates
+  - Used existing timezone utilities: `getTimezoneAbbreviation`, `getTimezoneOffset`, `formatTimeInTimezone`, `formatDateInTimezone`
+  - All display respects the currently selected timezone from settings state (not just saved value)
+- **Learnings for future iterations:**
+  - Settings page has a complex local state pattern - changes are tracked in `settings` state and only persisted on save
+  - Timezone debug info should reflect the *selected* timezone (from settings state), not saved value, so users can preview before saving
+  - Use `tabular-nums` class for time display to prevent layout shift as digits change
+  - Pattern: setInterval in useEffect with cleanup for live updates
+---
