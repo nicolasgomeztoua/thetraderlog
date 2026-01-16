@@ -945,6 +945,45 @@ export const tradesRouter = createTRPCRouter({
 			};
 		}),
 
+	// Get recent trades for dashboard quick view
+	getRecent: protectedProcedure
+		.input(
+			z
+				.object({
+					limit: z.number().min(1).max(10).default(5),
+					accountId: z.string().optional(),
+				})
+				.optional(),
+		)
+		.query(async ({ ctx, input }) => {
+			const limit = input?.limit ?? 5;
+
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				isNull(trades.deletedAt),
+			];
+
+			// Filter by account if specified, otherwise only include trades from active accounts
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			} else {
+				// Only include trades from active accounts when querying across all accounts
+				const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
+				conditions.push(sql`${trades.accountId} IN (${activeAccountIds})`);
+			}
+
+			const items = await ctx.db.query.trades.findMany({
+				where: and(...conditions),
+				orderBy: [desc(trades.entryTime)],
+				limit,
+				with: {
+					account: true,
+				},
+			});
+
+			return items;
+		}),
+
 	// ============================================================================
 	// EXECUTION MANAGEMENT (Partial Exits / Scale In/Out)
 	// ============================================================================
