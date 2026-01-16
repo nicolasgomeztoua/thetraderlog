@@ -5,9 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 import type { TradeForContentPanel } from "@/types";
-import { EditableTextarea } from "./editable-field";
 import { TradeReplay } from "./replay";
 import { RunningPnlTab } from "./running-pnl-tab";
+import { TradeNoteEditor } from "./trade-note-editor";
 import { TradingViewChart } from "./tradingview-chart";
 
 // =============================================================================
@@ -61,10 +61,9 @@ function NotesSection({
 				</TabsList>
 
 				<TabsContent className="mt-4" value="trade-note">
-					<EditableTextarea
-						onChange={(v) => onUpdateField("notes", v || null)}
-						placeholder="Add notes about this trade..."
-						rows={6}
+					<TradeNoteEditor
+						onChange={(v) => onUpdateField("notes", v)}
+						tradeId={trade.id}
 						value={trade.notes}
 					/>
 				</TabsContent>
