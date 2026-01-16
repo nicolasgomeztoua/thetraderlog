@@ -10,6 +10,7 @@ import NextLink from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -186,8 +187,8 @@ export function DailyJournalPreview({
 		immediatelyRender: false,
 	});
 
-	// Handle image upload (only when editable)
-	const handleImageUpload = useCallback(
+	// Handle image upload using journal-specific endpoint (creates attachment records)
+	const uploadImage = useCallback(
 		async (file: File): Promise<string | null> => {
 			if (!editable || !journal) return null;
 
@@ -266,125 +267,11 @@ export function DailyJournalPreview({
 		],
 	);
 
-	// Handle image insert with instant blob preview
-	const handleImageInsert = useCallback(
-		async (file: File) => {
-			if (!editor || !file.type.startsWith("image/") || !editable) return;
-
-			// Create blob URL for instant preview
-			const blobUrl = URL.createObjectURL(file);
-
-			// Insert blob URL immediately for instant feedback
-			editor.chain().focus().setImage({ src: blobUrl }).run();
-
-			// Upload in background
-			const finalUrl = await handleImageUpload(file);
-
-			if (finalUrl) {
-				// Preload the final image before swapping
-				const img = new window.Image();
-				img.src = finalUrl;
-				await new Promise<void>((resolve) => {
-					img.onload = () => resolve();
-					img.onerror = () => resolve(); // Continue even if preload fails
-				});
-
-				// Find and replace blob URL with final URL in editor content
-				const { state, view } = editor;
-				const { tr } = state;
-				let replaced = false;
-
-				state.doc.descendants((node, pos) => {
-					if (node.type.name === "image" && node.attrs.src === blobUrl) {
-						tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: finalUrl });
-						replaced = true;
-						return false; // Stop searching
-					}
-				});
-
-				if (replaced) {
-					view.dispatch(tr);
-				}
-			} else {
-				// Upload failed - remove the blob image from editor
-				const { state, view } = editor;
-				const { tr } = state;
-				let nodePos = -1;
-
-				state.doc.descendants((node, pos) => {
-					if (node.type.name === "image" && node.attrs.src === blobUrl) {
-						nodePos = pos;
-						return false;
-					}
-				});
-
-				if (nodePos >= 0) {
-					tr.delete(nodePos, nodePos + 1);
-					view.dispatch(tr);
-				}
-			}
-
-			// Clean up blob URL
-			URL.revokeObjectURL(blobUrl);
-		},
-		[editor, editable, handleImageUpload],
-	);
-
-	// Handle paste event to catch clipboard images
-	const handlePaste = useCallback(
-		(event: ClipboardEvent) => {
-			if (!editable) return;
-
-			const items = event.clipboardData?.items;
-			if (!items) return;
-
-			for (const item of items) {
-				if (item.type.startsWith("image/")) {
-					event.preventDefault();
-					const file = item.getAsFile();
-					if (file) {
-						handleImageInsert(file);
-					}
-					return;
-				}
-			}
-		},
-		[editable, handleImageInsert],
-	);
-
-	// Handle drop event to catch dropped images
-	const handleDrop = useCallback(
-		(event: DragEvent) => {
-			if (!editor || !editable) return;
-
-			// Handle new file drops
-			const files = event.dataTransfer?.files;
-			if (!files || files.length === 0) return;
-
-			for (const file of files) {
-				if (file.type.startsWith("image/")) {
-					event.preventDefault();
-					handleImageInsert(file);
-					return;
-				}
-			}
-		},
-		[editor, editable, handleImageInsert],
-	);
-
-	// Attach paste and drop event listeners to editor DOM (only when editable)
-	useEffect(() => {
-		if (!editor || !editable) return;
-
-		const editorElement = editor.view.dom;
-		editorElement.addEventListener("paste", handlePaste as EventListener);
-		editorElement.addEventListener("drop", handleDrop as EventListener);
-
-		return () => {
-			editorElement.removeEventListener("paste", handlePaste as EventListener);
-			editorElement.removeEventListener("drop", handleDrop as EventListener);
-		};
-	}, [editor, editable, handlePaste, handleDrop]);
+	// Attach paste/drop handlers for images (only when editable)
+	useTiptapImageHandlers({
+		editor: editable ? editor : null,
+		uploadImage,
+	});
 
 	// Update editor content when journal data changes
 	useEffect(() => {
