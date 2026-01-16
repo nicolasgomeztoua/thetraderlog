@@ -63,7 +63,6 @@ function NotesSection({
 				<TabsContent className="mt-4" value="trade-note">
 					<TradeNoteEditor
 						onChange={(v) => onUpdateField("notes", v)}
-						tradeId={trade.id}
 						value={trade.notes}
 					/>
 				</TabsContent>

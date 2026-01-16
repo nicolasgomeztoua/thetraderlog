@@ -20,8 +20,6 @@ interface TradeNoteEditorProps {
 	value: string | null;
 	/** Callback when content changes */
 	onChange: (value: string | null) => void;
-	/** Trade ID for context (used in S3 key organization) */
-	tradeId: string;
 	/** Additional CSS classes */
 	className?: string;
 }
@@ -62,7 +60,6 @@ const EDITOR_EXTENSIONS = [
 export function TradeNoteEditor({
 	value,
 	onChange,
-	tradeId,
 	className,
 }: TradeNoteEditorProps) {
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -71,9 +68,6 @@ export function TradeNoteEditor({
 
 	// Image upload hook
 	const { uploadImage } = useImageUpload({ context: "trade-notes" });
-
-	// Track tradeId to reset editor when trade changes
-	void tradeId;
 
 	// Initialize Tiptap editor
 	const editor = useEditor({
