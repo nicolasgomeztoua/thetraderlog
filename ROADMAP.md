@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** January 16, 2026 (Running P&L Chart COMPLETE)
+> **Last Updated:** January 16, 2026 (Phase 10 AI Analytics added)
 
 ---
 
@@ -18,10 +18,9 @@
 - [Phase 5: Trade Detail Enhancements](#phase-5-trade-detail-enhancements)
 - [Phase 6: Notebook System](#phase-6-notebook-system)
 - [Phase 7: Trade Replay](#phase-7-trade-replay)
-- [Phase 8: Backtesting](#phase-8-backtesting)
-- [Phase 9: Broker Integrations](#phase-9-broker-integrations)
-- [Phase 10: Mobile Optimization](#phase-10-mobile-optimization)
-- [Phase 11: Educational and Social](#phase-11-educational-and-social)
+- [Phase 8: Broker Integrations](#phase-8-broker-integrations)
+- [Phase 9: Mobile Optimization](#phase-9-mobile-optimization)
+- [Phase 10: AI Analytics](#phase-10-ai-analytics)
 - [Database Schema Changes](#database-schema-changes)
 - [Execution Timeline](#execution-timeline)
 
@@ -295,6 +294,8 @@ Complete 5-tab analytics system (Overview, Time, Risk, Symbols, Behavior) with c
 > **Priority:** MEDIUM | **Dependencies:** Phase 2 | **Estimate:** 2 weeks
 >
 > **Sub-plan:** [./plans/phase-5-trade-detail.md](./plans/phase-5-trade-detail.md)
+>
+> **Status:** ✅ Complete
 
 ### Goal
 Match TradeZella's comprehensive trade tracking page.
@@ -310,12 +311,12 @@ Match TradeZella's comprehensive trade tracking page.
 - [x] Trade Context section (Setup Type, Emotional State)
 - [x] Calculated stats: Points, Ticks, R-Multiple, ROI, Duration
 
-#### 5.1 Trade Notes Image Support
+#### 5.1 Trade Notes Image Support ✅ *(COMPLETED)*
 - [x] S3 infrastructure (shared with Daily Journal)
-- [ ] Drag-and-drop image upload in Trade Notes tab
-- [ ] Paste image from clipboard
-- [ ] Inline image display in notes
-- [ ] Reuse Daily Journal's Tiptap image handling
+- [x] Drag-and-drop image upload in Trade Notes tab
+- [x] Paste image from clipboard
+- [x] Inline image display in notes
+- [x] Reuse Daily Journal's Tiptap image handling
 
 *Note: Leverage existing `AttachmentUpload` patterns and S3 utilities from Daily Journal.*
 
@@ -474,51 +475,18 @@ Tick-by-tick trade replay functionality.
 
 ---
 
-## Phase 8: Backtesting
-
-> **Priority:** LOW | **Dependencies:** Phase 7 | **Estimate:** 3-4 weeks
->
-> **Sub-plan:** [./plans/phase-8-backtesting.md](./plans/phase-8-backtesting.md)
-
-### Goal
-Strategy backtesting with historical data.
-
-### Tasks
-
-#### 8.1 Backtest Data Model
-- [ ] `backtest_sessions` table
-- [ ] `backtest_trades` table
-- [ ] Link to playbooks
-
-#### 8.2 Backtesting Interface
-- [ ] New backtest page (`/backtest`)
-- [ ] Symbol selection
-- [ ] Timeframe selection
-- [ ] Date range selection
-- [ ] Manual trade entry during backtest
-- [ ] Keyboard shortcuts
-
-#### 8.3 Backtest Results
-- [ ] Performance summary
-- [ ] Trade list
-- [ ] Equity curve
-- [ ] Compare to live trading
-- [ ] Export results
-
----
-
-## Phase 9: Broker Integrations
+## Phase 8: Broker Integrations
 
 > **Priority:** MEDIUM | **Dependencies:** None | **Estimate:** 1-2 weeks per parser
 >
-> **Sub-plan:** [./plans/phase-9-brokers.md](./plans/phase-9-brokers.md)
+> **Sub-plan:** [./plans/phase-8-brokers.md](./plans/phase-8-brokers.md)
 
 ### Goal
 Direct broker connections for auto-sync.
 
 ### Tasks
 
-#### 9.1 CSV Parser Expansion
+#### 8.1 CSV Parser Expansion
 - [ ] MT4 parser (complete existing)
 - [ ] MT5 parser
 - [ ] NinjaTrader parser
@@ -532,7 +500,7 @@ Direct broker connections for auto-sync.
 **Files to modify:**
 - `src/lib/csv-parsers/`
 
-#### 9.2 Direct API Integrations (Future)
+#### 8.2 Direct API Integrations (Future)
 - [ ] OAuth flow for brokers
 - [ ] Scheduled sync jobs
 - [ ] Real-time trade detection
@@ -547,18 +515,18 @@ Direct broker connections for auto-sync.
 
 ---
 
-## Phase 10: Mobile Optimization
+## Phase 9: Mobile Optimization
 
 > **Priority:** LOW | **Dependencies:** None | **Estimate:** 2 weeks
 >
-> **Sub-plan:** [./plans/phase-10-mobile.md](./plans/phase-10-mobile.md)
+> **Sub-plan:** [./plans/phase-9-mobile.md](./plans/phase-9-mobile.md)
 
 ### Goal
 Full mobile experience.
 
 ### Tasks
 
-#### 10.1 Responsive Improvements
+#### 9.1 Responsive Improvements
 - [ ] Audit all pages for mobile
 - [ ] Mobile navigation improvements
 - [ ] Mobile trade entry form
@@ -566,7 +534,7 @@ Full mobile experience.
 - [ ] Touch-friendly controls
 - [ ] Swipe gestures
 
-#### 10.2 PWA Features
+#### 9.2 PWA Features
 - [ ] Service worker setup
 - [ ] Offline support
 - [ ] Install prompt
@@ -575,29 +543,85 @@ Full mobile experience.
 
 ---
 
-## Phase 11: Educational and Social
+## Phase 10: AI Analytics (Core Differentiator)
 
-> **Priority:** LOW | **Dependencies:** Phase 5 | **Estimate:** Ongoing
+> **Priority:** HIGHEST | **Dependencies:** Phase 3 | **Estimate:** 10-15 weeks
 >
-> **Sub-plan:** [./plans/phase-11-social.md](./plans/phase-11-social.md)
+> **Sub-plan:** [./plans/phase-10-ai-analytics.md](./plans/phase-10-ai-analytics.md)
 
 ### Goal
-Learning resources and community features.
+Deep AI-powered analysis reports. Users ask ANY question, get professional-grade PDF reports with charts and case studies. 5 reports/month. This is the core differentiator over TradeZella.
+
+### Architecture
+- **Hybrid Database**: Neon (shared: users, candle_cache) + Turso (per-user: trades, journals, strategies)
+- **AI Execution**: Trigger.dev orchestration + Daytona sandboxes for Python
+- **Python Sandbox**: matplotlib, pandas, scipy, plotly for custom analysis & charts
+- **Models**: OpenRouter for Opus/GPT-4.5 flexibility
+- **Output**: PDF reports with custom visualizations, emailed to user
+- **Business Model**: Subscription (you pay API costs)
 
 ### Tasks
 
-#### 11.1 Mentor Mode
-- [ ] Invite mentor (email invite)
-- [ ] Read-only access to account
-- [ ] Mentor can add annotations
-- [ ] Mentor feedback on trades
-- [ ] Revoke access
+#### 10.1 Database Migration (Neon → Turso per-user)
+- [ ] Set up Turso account and parent schema database
+- [ ] Create Clerk webhook to provision user DB on signup
+- [ ] Set up Drizzle for Turso (libsql driver)
+- [ ] Migrate existing user data from Neon to Turso
+- [ ] Update all routers to use user's Turso DB
 
-#### 11.2 Learning Hub (Future)
-- [ ] Trading guides
-- [ ] Video tutorials
-- [ ] Strategy library
-- [ ] Community forums
+#### 10.2 AI Infrastructure
+- [ ] OpenRouter integration (Opus, GPT-4.5)
+- [ ] AI service with streaming support
+- [ ] Credit tracking (5 reports/month, monthly reset)
+- [ ] `ai_reports` and `ai_conversations` tables
+
+#### 10.3 Context Builder & Tools
+- [ ] Context builder (loads strategies, tags, journals)
+- [ ] SQL tools for AI:
+  - `run_query` - read-only SQL on user's Turso
+  - `get_market_data` - candles from shared Neon
+  - `get_trade_details` - deep dive on trades
+- [ ] Tool execution layer (validates read-only)
+
+#### 10.4 Daytona Python Sandbox
+- [ ] Daytona account and SDK integration
+- [ ] Python environment with pre-installed packages:
+  - pandas, numpy, scipy (data analysis)
+  - matplotlib, plotly, seaborn (visualization)
+  - statsmodels (statistical modeling)
+- [ ] `run_python` tool for AI to execute code
+- [ ] Chart output capture (save as images)
+- [ ] Code artifact storage (save code with report)
+- [ ] Sandbox resource limits and timeouts
+
+#### 10.5 Conversation & Clarification
+- [ ] Multi-turn conversation (AI asks clarifying questions)
+- [ ] User can reference specific trades
+- [ ] Conversation persisted in DB
+- [ ] Transition from clarifying → generating report
+
+#### 10.6 Report Generation Pipeline
+- [ ] Trigger.dev task for long-running reports
+- [ ] Compile Python-generated charts into report
+- [ ] PDF compilation (Puppeteer HTML→PDF)
+- [ ] Include code artifacts as appendix
+- [ ] Upload to S3
+- [ ] Email via Resend
+
+#### 10.7 Frontend UI
+- [ ] Redesign `/ai` page
+- [ ] Conversation interface
+- [ ] Report progress indicator (with live updates)
+- [ ] Report history with downloads
+- [ ] Credit usage display (X/5)
+- [ ] Model selection
+- [ ] View code artifacts from reports
+
+#### 10.8 Subscription & Costs
+- [ ] Define pricing tiers
+- [ ] Estimate API costs per report (LLM + Daytona compute)
+- [ ] Stripe integration for subscriptions
+- [ ] Overage handling
 
 ---
 
@@ -627,10 +651,6 @@ dashboard_layouts (id, userId, name, layout, isDefault, createdAt, updatedAt)
 
 -- Filter Presets ✅ IMPLEMENTED (Phase 4)
 filter_presets (id, userId, name, filters, createdAt)
-
--- Backtesting
-backtest_sessions (id, userId, name, symbol, timeframe, startDate, endDate, createdAt)
-backtest_trades (id, sessionId, entryTime, exitTime, entryPrice, exitPrice, direction, quantity, pnl)
 ```
 
 ### Updates to Existing Tables
@@ -665,13 +685,12 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | 2 | Strategy System | 2 weeks | ✅ Complete (2.5 Monte Carlo ⏳) |
 | 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
 | 4 | Advanced Analytics | 6-8 weeks | ✅ Complete (5 tabs + cross-filtering + query builder + presets + export) |
-| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Daily Journal ✅, Running P&L ✅, Notes Images ⏳) |
+| 5 | Trade Detail Enhancements | 2 weeks | ✅ Complete |
 | 6 | Daily Journal System | 3 weeks | ✅ Complete (39 stories, search ⏳) |
 | 7 | Trade Replay | 3-4 weeks | ✅ Complete |
-| 8 | Backtesting | 3-4 weeks | ⏳ Pending |
-| 9.1 | CSV Parsers | 1-2 weeks | ⏳ Pending |
-| 10 | Mobile Optimization | 2 weeks | ⏳ Pending |
-| 11 | Educational/Social | Ongoing | ⏳ Pending |
+| 8 | Broker Integrations | 1-2 weeks per parser | ⏳ Pending |
+| 9 | Mobile Optimization | 2 weeks | ⏳ Pending |
+| 10 | AI Analytics (Core Differentiator) | 8-13 weeks | ⏳ Pending |
 
 **Total: 6-9 months for full feature parity**
 
