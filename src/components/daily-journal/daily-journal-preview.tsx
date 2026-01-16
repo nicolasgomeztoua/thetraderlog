@@ -7,8 +7,10 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { CheckCircle2Icon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
 import NextLink from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
+import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -92,6 +94,10 @@ export function DailyJournalPreview({
 		},
 	});
 
+	// Image upload mutations (only used when editable)
+	const getUploadUrl = api.dailyJournal.getUploadUrl.useMutation();
+	const confirmUpload = api.dailyJournal.confirmUpload.useMutation();
+
 	// Calculate checklist compliance based on all active templates
 	const compliance = useMemo(() => {
 		if (!templates) return null;
@@ -119,7 +125,7 @@ export function DailyJournalPreview({
 		return { checkedCount, total, percentage };
 	}, [templates, checksData]);
 
-	// Initialize Tiptap editor
+	// Initialize Tiptap editor (must be declared before handlers that use it)
 	const editor = useEditor({
 		extensions: [
 			StarterKit.configure({
@@ -179,6 +185,92 @@ export function DailyJournalPreview({
 			}, 500);
 		},
 		immediatelyRender: false,
+	});
+
+	// Handle image upload using journal-specific endpoint (creates attachment records)
+	const uploadImage = useCallback(
+		async (file: File): Promise<string | null> => {
+			if (!editable || !journal) return null;
+
+			const toastId = toast.loading("Uploading... 0%");
+
+			try {
+				// Get presigned upload URL
+				const { presignedUrl, key } = await getUploadUrl.mutateAsync({
+					date: dateString,
+					filename: file.name,
+					mimeType: file.type,
+					size: file.size,
+				});
+
+				toast.loading("Uploading... 10%", { id: toastId });
+
+				// Upload file to S3 using XMLHttpRequest for progress tracking
+				await new Promise<void>((resolve, reject) => {
+					const xhr = new XMLHttpRequest();
+
+					xhr.upload.addEventListener("progress", (event) => {
+						if (event.lengthComputable) {
+							// Map progress: 10-90% for actual upload
+							const percent =
+								Math.round((event.loaded / event.total) * 80) + 10;
+							toast.loading(`Uploading... ${percent}%`, { id: toastId });
+						}
+					});
+
+					xhr.addEventListener("load", () => {
+						if (xhr.status >= 200 && xhr.status < 300) {
+							resolve();
+						} else {
+							reject(new Error(`Upload failed with status ${xhr.status}`));
+						}
+					});
+
+					xhr.addEventListener("error", () => {
+						reject(new Error("Upload failed"));
+					});
+
+					xhr.open("PUT", presignedUrl);
+					xhr.setRequestHeader("Content-Type", file.type);
+					xhr.send(file);
+				});
+
+				toast.loading("Processing... 95%", { id: toastId });
+
+				// Confirm upload and get download URL
+				const attachment = await confirmUpload.mutateAsync({
+					journalId: journal.id,
+					key,
+					filename: file.name,
+					mimeType: file.type,
+					size: file.size,
+				});
+
+				// Invalidate to refresh attachments
+				utils.dailyJournal.getByDate.invalidate({ date: dateString });
+
+				toast.success("Image uploaded", { id: toastId });
+				return attachment.url;
+			} catch (error) {
+				console.error("Image upload failed:", error);
+				toast.error("Upload failed", { id: toastId });
+				return null;
+			}
+		},
+		[
+			editable,
+			journal,
+			dateString,
+			getUploadUrl,
+			confirmUpload,
+			utils.dailyJournal.getByDate,
+		],
+	);
+
+	// Attach paste/drop handlers for images (only when editable)
+	useTiptapImageHandlers({
+		editor: editable ? editor : null,
+		uploadImage,
 	});
 
 	// Update editor content when journal data changes

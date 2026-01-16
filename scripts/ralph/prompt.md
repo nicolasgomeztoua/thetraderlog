@@ -19,7 +19,7 @@ You are an autonomous coding agent working on the EdgeJournal project.
 7. Run quality checks: `bun run check` (Biome) and `bun run build` (TypeScript)
 8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
 9. Update the PRD (`scripts/ralph/prd.json`) to set `passes: true` for the completed story
-10. **Update AGENTS.md if you learned something** - patterns, gotchas, or decisions worth noting (see Compound Engineering section)
+10. **Update AGENTS.md if you discovered something NEW** - this is the ONLY place patterns persist across runs (progress.txt gets archived after each run)
 11. Append your progress to `scripts/ralph/progress.txt`
 
 ## Progress Report Format
@@ -41,7 +41,12 @@ The learnings section is critical - it helps future iterations avoid repeating m
 
 ## Consolidate Patterns
 
-If you discover a **reusable pattern** that future iterations should know, add it to the `## Codebase Patterns` section at the TOP of progress.txt (create it if it doesn't exist):
+If you discover a **reusable pattern** that future iterations should know:
+
+1. Add it to the `## Codebase Patterns` section at TOP of progress.txt (helps remaining iterations in THIS run)
+2. **ALSO add it to the relevant AGENTS.md file** (persists across ALL future runs)
+
+**CRITICAL:** progress.txt gets archived after each run. AGENTS.md is the permanent record.
 
 ```
 ## Codebase Patterns
@@ -110,6 +115,14 @@ If there are still stories with `passes: false`, end your response normally (ano
 ## Compound Engineering (Self-Improving Documentation)
 
 **Read:** `.claude/skills/compound-engineering/SKILL.md`
+
+**CRITICAL:** AGENTS.md files persist across ALL Ralph runs. progress.txt gets archived when the branch changes.
+
+If you discover a valuable pattern, gotcha, or decision:
+- Add to progress.txt → helps remaining iterations in THIS run
+- Add to AGENTS.md → helps ALL future runs on ANY branch
+
+Don't duplicate what's already in AGENTS.md. Only add genuinely NEW learnings.
 
 After completing each story, update the relevant `AGENTS.md` file with learnings:
 
