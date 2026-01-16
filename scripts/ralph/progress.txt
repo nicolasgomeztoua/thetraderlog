@@ -60,3 +60,151 @@ Started: Fri Jan 16 20:44:45 +01 2026
 - `dailyJournal.getStreak` already exists - no need to implement streak logic
 - Dashboard page has helper components (CircularProgress, WinLossBar) that could be extracted to shared components if needed elsewhere
 ---
+
+## 2026-01-16 - US-001: Add Economic Events Database Schema
+- Added eventImpactEnum with values: low, medium, high
+- Added economicEvents table with full schema:
+  - id, name, currency, category, eventTime, actual, forecast, previous, impact, source, fetchedAt
+- Added indexes on eventTime and currency columns for efficient queries
+- Added unique constraint on (name, currency, eventTime) for upsert support
+- Added economicEvent ID generator to src/lib/shared/id.ts ("ee" prefix)
+
+### Files changed
+- src/server/db/schema.ts (economicEvents table, eventImpactEnum, type exports)
+- src/lib/shared/id.ts (economicEvent ID generator)
+
+### Learnings for future iterations:
+- When adding new tables, remember to also add type exports at the end of schema.ts
+- Biome formatter requires multi-element arrays and function arguments to be on separate lines
+- New ID generators need a unique 2-char prefix (ee for economicEvent)
+---
+
+## 2026-01-16 - US-002: Create Economic Calendar Constants
+- Created src/lib/constants/economic-calendar.ts with:
+  - EVENT_IMPACT_COLORS: high (loss/red), medium (yellow), low (muted) with bg/text/border classes
+  - MAJOR_CURRENCIES: USD, EUR, GBP, JPY, CHF, AUD, CAD, NZD
+  - HIGH_IMPACT_KEYWORDS: NFP, FOMC, CPI, GDP, etc. for impact classification
+  - Type exports: EventImpact, MajorCurrency
+- Updated src/lib/constants/index.ts with exports
+
+### Files changed
+- src/lib/constants/economic-calendar.ts (new file)
+- src/lib/constants/index.ts (added exports)
+
+### Learnings for future iterations:
+- Biome requires `type` exports to be sorted after regular exports in the same block
+- Use Terminal design system colors: text-loss for red, text-muted-foreground for gray
+- Constants with 'as const' provide literal types for better type inference
+---
+
+## 2026-01-16 - US-003: Create Economic Calendar tRPC Router
+- Created src/server/api/routers/economicCalendar.ts with two endpoints:
+  - `getTodayEvents`: Returns events within today (UTC bounds), with optional currency/impact filters
+  - `getUpcoming`: Returns events for next N hours (default 24), with configurable limit
+- Both procedures use protectedProcedure for authentication
+- Registered router in src/server/api/root.ts as `economicCalendar`
+
+### Files changed
+- src/server/api/routers/economicCalendar.ts (new file)
+- src/server/api/root.ts (added import and registration)
+
+### Learnings for future iterations:
+- Use `getTodayBoundsUTC()` helper for day-based queries on UTC timestamps
+- Biome prefers single-line Date.UTC calls when arguments fit - don't split across lines unnecessarily
+- For optional input objects in tRPC, chain `.optional()` on the z.object() to allow calling without args
+---
+
+## 2026-01-16 - US-004: Add Recent Trades Endpoint
+- Added getRecent query to src/server/api/routers/trades.ts
+- Accepts limit (default 5, max 10) and optional accountId parameters
+- Returns trades ordered by entryTime descending
+- Uses getActiveAccountsSubquery helper when no accountId specified
+- Includes account relation in response
+
+### Files changed
+- src/server/api/routers/trades.ts (added getRecent query)
+
+### Learnings for future iterations:
+- The getActiveAccountsSubquery helper is available from @/server/api/helpers for filtering to active accounts
+- Use sql template literal to embed subqueries: `sql\`\${trades.accountId} IN (\${subquery})\``
+- Dashboard quick view endpoints should be simple - just return data, let frontend format
+---
+
+## 2026-01-16 - US-005: Integration Tests for Economic Calendar Router
+- Created tests/integration/economic-calendar/economic-calendar.test.ts with 19 tests
+- Tested getTodayEvents:
+  - Returns events within today's date range (excludes yesterday/tomorrow)
+  - Orders events by eventTime ascending
+  - Filters by currency (USD, EUR)
+  - Filters by impact (high, medium, low)
+  - Combines currency and impact filters
+  - Returns empty array when no events match
+- Tested getUpcoming:
+  - Returns events within default 24 hours
+  - Orders events by eventTime ascending
+  - Respects limit parameter (1, 2, etc.)
+  - Respects hoursAhead parameter
+  - Combines hoursAhead and limit
+  - Returns empty array when no upcoming events
+- Tested empty results handling for both endpoints
+
+### Files changed
+- tests/integration/economic-calendar/economic-calendar.test.ts (new file)
+
+### Learnings for future iterations:
+- Use `getTestDb()` from utils to get raw Drizzle DB instance for direct inserts in tests
+- Economic calendar tests insert directly to `schema.economicEvents` rather than using tRPC - no public API for creating events
+- Test structure: insert test data in beforeAll, clear in afterAll with truncateAllTables
+- For date-range tests, use the same date boundary logic as the router (getTodayBoundsUTC)
+---
+
+## 2026-01-16 - US-006: Integration Tests for Trades getRecent
+- Created tests/integration/trades/get-recent.test.ts with 16 tests
+- Tested ordering:
+  - Returns trades ordered by entryTime descending (most recent first)
+- Tested limit parameter:
+  - Respects default limit of 5
+  - Respects custom limit parameter (1, 3, 10)
+  - Enforces maximum limit of 10
+- Tested account filtering:
+  - Filters by accountId when provided
+  - Respects active accounts filter when no accountId specified (excludes inactive)
+  - Includes trades from inactive account when explicitly filtered by accountId
+- Tested empty results:
+  - Returns empty array when no trades exist
+  - Returns empty array when filtering by account with no trades
+- Tested soft-deleted trades:
+  - Excludes soft-deleted trades from results
+- Tested account relation:
+  - Includes account object in response with id and name
+
+### Files changed
+- tests/integration/trades/get-recent.test.ts (new file)
+
+### Learnings for future iterations:
+- Test file structure: create separate users/accounts per describe block for isolation when testing multiple scenarios
+- The getRecent endpoint has a max limit of 10 - test should not exceed this
+- Active accounts filter only applies when NO accountId is specified - explicit accountId bypasses the filter
+- Use separate test users for isolation in empty results and soft-delete test scenarios
+---
+
+## 2026-01-16 - US-007: Create Trigger.dev Economic Calendar Sync Task
+- Created src/trigger/sync-economic-calendar.ts with scheduled cron task (hourly at minute 0)
+- Implemented JBlanked API fetch from /forex-factory/calendar/week/ endpoint
+- Added impact classification using HIGH_IMPACT_KEYWORDS from constants
+- Implemented database upsert using onConflictDoUpdate for (name, currency, eventTime) unique constraint
+- Added graceful handling for missing JBLANKED_API_KEY - logs warning and skips sync
+- Added JBLANKED_API_KEY to src/env.js as optional environment variable
+
+### Files changed
+- src/trigger/sync-economic-calendar.ts (new file)
+- src/env.js (added JBLANKED_API_KEY as optional)
+
+### Learnings for future iterations:
+- Trigger.dev v3 uses `schedules.task()` for scheduled tasks, not regular `task()`
+- For scheduled tasks, cron expression goes directly in the task definition, not in a separate config
+- When accessing env vars in Trigger.dev tasks, use `process.env.X` directly rather than the env.js module (env validation may fail in task runtime)
+- TypeScript strict mode requires explicit null checks for array index access and regex match groups
+- Use onConflictDoUpdate with sql`EXCLUDED.column` syntax to update specific fields on upsert
+- API times in ET need conversion to UTC - add 5 hours for EST (simplification)
+---

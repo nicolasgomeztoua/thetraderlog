@@ -34,8 +34,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Added eventImpactEnum, economicEvents table with all fields, indexes, unique constraint, and ID generator"
     },
     {
       "id": "US-002",
@@ -50,8 +50,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created economic-calendar.ts with EVENT_IMPACT_COLORS, MAJOR_CURRENCIES, HIGH_IMPACT_KEYWORDS and type exports"
     },
     {
       "id": "US-003",
@@ -67,8 +67,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created economicCalendarRouter with getTodayEvents and getUpcoming queries, registered in root.ts"
     },
     {
       "id": "US-004",
@@ -84,8 +84,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Added getRecent query with limit, accountId, active accounts filter, and account relation"
     },
     {
       "id": "US-005",
@@ -102,8 +102,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created 19 tests covering getTodayEvents (date range, currency/impact filters), getUpcoming (limit, hoursAhead), and empty results handling"
     },
     {
       "id": "US-006",
@@ -120,8 +120,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created 16 tests in tests/integration/trades/get-recent.test.ts covering ordering, limit, accountId filter, active accounts filter, empty results, and soft-deleted trades exclusion"
     },
     {
       "id": "US-007",
@@ -140,8 +140,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created sync-economic-calendar.ts with scheduled cron task (hourly), JBlanked API fetch, impact classification using keywords, database upsert, graceful API key handling, and added JBLANKED_API_KEY to env.js"
     },
     {
       "id": "US-008",

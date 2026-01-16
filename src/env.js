@@ -17,6 +17,8 @@ export const env = createEnv({
 		DATABENTO_API_KEY: z.string().min(1),
 		// Trigger.dev for background jobs
 		TRIGGER_SECRET_KEY: z.string().min(1),
+		// JBlanked API for economic calendar data (optional - sync will skip if not set)
+		JBLANKED_API_KEY: z.string().optional(),
 		// S3-compatible storage (optional - for file uploads)
 		S3_ENDPOINT: z.string().url(),
 		S3_REGION: z.string(),
@@ -60,6 +62,7 @@ export const env = createEnv({
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
 		DATABENTO_API_KEY: process.env.DATABENTO_API_KEY,
 		TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
+		JBLANKED_API_KEY: process.env.JBLANKED_API_KEY,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
 		S3_REGION: process.env.S3_REGION,
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
