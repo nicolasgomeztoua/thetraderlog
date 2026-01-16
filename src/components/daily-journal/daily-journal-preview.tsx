@@ -7,7 +7,8 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { CheckCircle2Icon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
 import NextLink from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
@@ -92,6 +93,10 @@ export function DailyJournalPreview({
 		},
 	});
 
+	// Image upload mutations (only used when editable)
+	const getUploadUrl = api.dailyJournal.getUploadUrl.useMutation();
+	const confirmUpload = api.dailyJournal.confirmUpload.useMutation();
+
 	// Calculate checklist compliance based on all active templates
 	const compliance = useMemo(() => {
 		if (!templates) return null;
@@ -119,7 +124,7 @@ export function DailyJournalPreview({
 		return { checkedCount, total, percentage };
 	}, [templates, checksData]);
 
-	// Initialize Tiptap editor
+	// Initialize Tiptap editor (must be declared before handlers that use it)
 	const editor = useEditor({
 		extensions: [
 			StarterKit.configure({
@@ -180,6 +185,206 @@ export function DailyJournalPreview({
 		},
 		immediatelyRender: false,
 	});
+
+	// Handle image upload (only when editable)
+	const handleImageUpload = useCallback(
+		async (file: File): Promise<string | null> => {
+			if (!editable || !journal) return null;
+
+			const toastId = toast.loading("Uploading... 0%");
+
+			try {
+				// Get presigned upload URL
+				const { presignedUrl, key } = await getUploadUrl.mutateAsync({
+					date: dateString,
+					filename: file.name,
+					mimeType: file.type,
+					size: file.size,
+				});
+
+				toast.loading("Uploading... 10%", { id: toastId });
+
+				// Upload file to S3 using XMLHttpRequest for progress tracking
+				await new Promise<void>((resolve, reject) => {
+					const xhr = new XMLHttpRequest();
+
+					xhr.upload.addEventListener("progress", (event) => {
+						if (event.lengthComputable) {
+							// Map progress: 10-90% for actual upload
+							const percent =
+								Math.round((event.loaded / event.total) * 80) + 10;
+							toast.loading(`Uploading... ${percent}%`, { id: toastId });
+						}
+					});
+
+					xhr.addEventListener("load", () => {
+						if (xhr.status >= 200 && xhr.status < 300) {
+							resolve();
+						} else {
+							reject(new Error(`Upload failed with status ${xhr.status}`));
+						}
+					});
+
+					xhr.addEventListener("error", () => {
+						reject(new Error("Upload failed"));
+					});
+
+					xhr.open("PUT", presignedUrl);
+					xhr.setRequestHeader("Content-Type", file.type);
+					xhr.send(file);
+				});
+
+				toast.loading("Processing... 95%", { id: toastId });
+
+				// Confirm upload and get download URL
+				const attachment = await confirmUpload.mutateAsync({
+					journalId: journal.id,
+					key,
+					filename: file.name,
+					mimeType: file.type,
+					size: file.size,
+				});
+
+				// Invalidate to refresh attachments
+				utils.dailyJournal.getByDate.invalidate({ date: dateString });
+
+				toast.success("Image uploaded", { id: toastId });
+				return attachment.url;
+			} catch (error) {
+				console.error("Image upload failed:", error);
+				toast.error("Upload failed", { id: toastId });
+				return null;
+			}
+		},
+		[
+			editable,
+			journal,
+			dateString,
+			getUploadUrl,
+			confirmUpload,
+			utils.dailyJournal.getByDate,
+		],
+	);
+
+	// Handle image insert with instant blob preview
+	const handleImageInsert = useCallback(
+		async (file: File) => {
+			if (!editor || !file.type.startsWith("image/") || !editable) return;
+
+			// Create blob URL for instant preview
+			const blobUrl = URL.createObjectURL(file);
+
+			// Insert blob URL immediately for instant feedback
+			editor.chain().focus().setImage({ src: blobUrl }).run();
+
+			// Upload in background
+			const finalUrl = await handleImageUpload(file);
+
+			if (finalUrl) {
+				// Preload the final image before swapping
+				const img = new window.Image();
+				img.src = finalUrl;
+				await new Promise<void>((resolve) => {
+					img.onload = () => resolve();
+					img.onerror = () => resolve(); // Continue even if preload fails
+				});
+
+				// Find and replace blob URL with final URL in editor content
+				const { state, view } = editor;
+				const { tr } = state;
+				let replaced = false;
+
+				state.doc.descendants((node, pos) => {
+					if (node.type.name === "image" && node.attrs.src === blobUrl) {
+						tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: finalUrl });
+						replaced = true;
+						return false; // Stop searching
+					}
+				});
+
+				if (replaced) {
+					view.dispatch(tr);
+				}
+			} else {
+				// Upload failed - remove the blob image from editor
+				const { state, view } = editor;
+				const { tr } = state;
+				let nodePos = -1;
+
+				state.doc.descendants((node, pos) => {
+					if (node.type.name === "image" && node.attrs.src === blobUrl) {
+						nodePos = pos;
+						return false;
+					}
+				});
+
+				if (nodePos >= 0) {
+					tr.delete(nodePos, nodePos + 1);
+					view.dispatch(tr);
+				}
+			}
+
+			// Clean up blob URL
+			URL.revokeObjectURL(blobUrl);
+		},
+		[editor, editable, handleImageUpload],
+	);
+
+	// Handle paste event to catch clipboard images
+	const handlePaste = useCallback(
+		(event: ClipboardEvent) => {
+			if (!editable) return;
+
+			const items = event.clipboardData?.items;
+			if (!items) return;
+
+			for (const item of items) {
+				if (item.type.startsWith("image/")) {
+					event.preventDefault();
+					const file = item.getAsFile();
+					if (file) {
+						handleImageInsert(file);
+					}
+					return;
+				}
+			}
+		},
+		[editable, handleImageInsert],
+	);
+
+	// Handle drop event to catch dropped images
+	const handleDrop = useCallback(
+		(event: DragEvent) => {
+			if (!editor || !editable) return;
+
+			// Handle new file drops
+			const files = event.dataTransfer?.files;
+			if (!files || files.length === 0) return;
+
+			for (const file of files) {
+				if (file.type.startsWith("image/")) {
+					event.preventDefault();
+					handleImageInsert(file);
+					return;
+				}
+			}
+		},
+		[editor, editable, handleImageInsert],
+	);
+
+	// Attach paste and drop event listeners to editor DOM (only when editable)
+	useEffect(() => {
+		if (!editor || !editable) return;
+
+		const editorElement = editor.view.dom;
+		editorElement.addEventListener("paste", handlePaste as EventListener);
+		editorElement.addEventListener("drop", handleDrop as EventListener);
+
+		return () => {
+			editorElement.removeEventListener("paste", handlePaste as EventListener);
+			editorElement.removeEventListener("drop", handleDrop as EventListener);
+		};
+	}, [editor, editable, handlePaste, handleDrop]);
 
 	// Update editor content when journal data changes
 	useEffect(() => {
