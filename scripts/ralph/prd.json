@@ -1,6 +1,6 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/trade-notes-images",
+  "branchName": "ralph/trade-notes-images-v2",
   "description": "Add drag-and-drop and paste image support to Trade Notes and DailyJournalPreview",
   "userStories": [
     {
@@ -16,7 +16,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

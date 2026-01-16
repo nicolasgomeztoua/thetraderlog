@@ -1,11 +1,65 @@
 # Ralph Progress Log
-Started: Thu Jan 16 2026
+Started: Fri Jan 16 12:16:45 +01 2026
+
+## Codebase Patterns
+- S3 utilities in `src/lib/storage/s3.ts` - use `getPresignedUploadUrl(key)` for presigned PUT URLs
+- S3 only works in Bun runtime (not vitest/Node.js) - use `isS3Configured()` to check
+- Image upload pattern: get presigned URL → upload via XMLHttpRequest → confirm upload
+- Instant blob preview pattern: insert blob URL immediately, upload in background, replace with final URL
+- Tiptap event handlers: attach to `editor.view.dom` with useEffect cleanup
+- Toast progress: `toast.loading("Uploading... X%", { id: toastId })` for progress updates
+
 ---
 
-## Feature: Trade Notes Image Support
+## 2026-01-16 - US-000
+### Audit Existing Image Upload Infrastructure
 
-Add drag-and-drop and paste image support to Trade Notes and DailyJournalPreview.
+**Findings:**
 
-## Codebase Patterns (to be filled during US-000 audit)
+1. **S3 Utilities** (`src/lib/storage/s3.ts`):
+   - `getPresignedUploadUrl(key, expiresIn)` - generates PUT URL for uploads
+   - `getPresignedDownloadUrl(key, expiresIn)` - generates GET URL for downloads
+   - `deleteObject(key)` - deletes S3 object
+   - `objectExists(key)` - checks if object exists
+   - `isS3Configured()` - checks if S3 env vars are set
+   - `getS3Bucket()` - returns configured bucket name
+   - Only works in Bun runtime (throws in vitest/Node.js)
 
+2. **handleImageUpload Pattern** (`journal-editor.tsx:156-232`):
+   - Uses tRPC mutations: `dailyJournal.getUploadUrl`, `dailyJournal.confirmUpload`
+   - Progress tracking via XMLHttpRequest upload events
+   - Toast notifications: "Uploading... X%" → "Processing... 95%" → "Image uploaded"
+   - Returns final URL or null on error
+
+3. **handleImageInsert Pattern** (`journal-editor.tsx:235-296`):
+   - Creates blob URL with `URL.createObjectURL(file)` for instant preview
+   - Inserts blob URL into editor immediately: `editor.chain().focus().setImage({ src: blobUrl }).run()`
+   - Uploads in background via handleImageUpload
+   - Preloads final image, then replaces blob URL in editor content
+   - On failure: removes the blob image node from editor
+   - Cleans up blob URL with `URL.revokeObjectURL(blobUrl)`
+
+4. **handlePaste Pattern** (`journal-editor.tsx:299-316`):
+   - Listens for clipboard events
+   - Iterates `event.clipboardData?.items`
+   - Calls `preventDefault()` for images
+   - Gets file with `item.getAsFile()` and calls `handleImageInsert`
+
+5. **handleDrop Pattern** (`journal-editor.tsx:319-354`):
+   - Supports existing attachments via `application/x-attachment` data transfer
+   - For new files: iterates `event.dataTransfer?.files`
+   - Calls `preventDefault()` for images
+   - Calls `handleImageInsert` for each image file
+
+6. **Event Listener Attachment** (`journal-editor.tsx:357-368`):
+   - useEffect attaches paste/drop listeners to `editor.view.dom`
+   - Returns cleanup function to remove listeners
+
+**Files Changed:** None (audit only)
+
+**Learnings for future iterations:**
+- The journal editor's image handling is comprehensive and well-tested
+- New image upload contexts can reuse the S3 utilities and patterns
+- A generic storage endpoint should avoid creating attachment records (journal does this)
+- The blob preview → upload → replace pattern provides excellent UX
 ---
