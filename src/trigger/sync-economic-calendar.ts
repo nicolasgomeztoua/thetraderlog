@@ -1,4 +1,5 @@
 import { schedules } from "@trigger.dev/sdk/v3";
+import { fromZonedTime } from "date-fns-tz";
 import { sql } from "drizzle-orm";
 import { HIGH_IMPACT_KEYWORDS } from "@/lib/constants/economic-calendar";
 import { db } from "@/server/db";
@@ -130,13 +131,10 @@ function parseEventDate(dateStr: string, timeStr: string): Date | null {
 	const hours = time?.hours ?? 12; // Default to noon for events without specific time
 	const minutes = time?.minutes ?? 0;
 
-	// Events are in ET (Eastern Time) - convert to UTC
-	// This is a simplification; for precise handling, use a timezone library
-	// Forex Factory times are in ET, and ET is UTC-5 (EST) or UTC-4 (EDT)
-	// For simplicity, assume UTC-5 (most conservative)
-	const utcHours = hours + 5;
-
-	return new Date(Date.UTC(year, month, day, utcHours, minutes, 0, 0));
+	// Events are in ET (Eastern Time) - convert to UTC using date-fns-tz
+	// This properly handles DST transitions (EST UTC-5 / EDT UTC-4)
+	const localDate = new Date(year, month, day, hours, minutes, 0, 0);
+	return fromZonedTime(localDate, "America/New_York");
 }
 
 /**
