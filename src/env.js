@@ -23,6 +23,8 @@ export const env = createEnv({
 		S3_ACCESS_KEY_ID: z.string(),
 		S3_SECRET_ACCESS_KEY: z.string(),
 		S3_BUCKET: z.string(),
+		// Public URL for S3 objects (optional - for embedding images in HTML)
+		S3_PUBLIC_URL: z.string().url().optional(),
 	},
 
 	/**
@@ -63,6 +65,7 @@ export const env = createEnv({
 		S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
 		S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
 		S3_BUCKET: process.env.S3_BUCKET,
+		S3_PUBLIC_URL: process.env.S3_PUBLIC_URL,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
