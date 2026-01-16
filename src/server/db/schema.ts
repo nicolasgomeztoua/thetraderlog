@@ -90,6 +90,11 @@ export const dataQualityEnum = pgEnum("data_quality", [
 	"unavailable", // No data found, MAE/MFE not calculated
 	"pending", // Calculation queued but not yet completed
 ]);
+export const eventImpactEnum = pgEnum("event_impact", [
+	"low",
+	"medium",
+	"high",
+]);
 
 // ============================================================================
 // USERS TABLE
@@ -809,6 +814,40 @@ export const candleCache = createTable(
 );
 
 // ============================================================================
+// ECONOMIC EVENTS TABLE (for economic calendar caching)
+// ============================================================================
+
+export const economicEvents = createTable(
+	"economic_event",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.economicEvent()),
+		name: text("name").notNull(), // Event name (e.g., "Non-Farm Payrolls")
+		currency: text("currency").notNull(), // Currency affected (e.g., "USD")
+		category: text("category"), // Optional category (e.g., "Employment")
+		eventTime: timestamp("event_time", { withTimezone: true }).notNull(), // When the event occurs
+		actual: text("actual"), // Actual result (null if not yet released)
+		forecast: text("forecast"), // Forecasted value
+		previous: text("previous"), // Previous period's value
+		impact: eventImpactEnum("impact").notNull(), // Event impact level
+		source: text("source").notNull(), // Data source (e.g., "forex_factory")
+		fetchedAt: timestamp("fetched_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [
+		index("economic_event_event_time_idx").on(t.eventTime),
+		index("economic_event_currency_idx").on(t.currency),
+		uniqueIndex("economic_event_unique_idx").on(
+			t.name,
+			t.currency,
+			t.eventTime,
+		),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -1067,3 +1106,5 @@ export type DailyChecklistCheck = typeof dailyChecklistChecks.$inferSelect;
 export type NewDailyChecklistCheck = typeof dailyChecklistChecks.$inferInsert;
 export type JournalAttachment = typeof journalAttachments.$inferSelect;
 export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
+export type EconomicEvent = typeof economicEvents.$inferSelect;
+export type NewEconomicEvent = typeof economicEvents.$inferInsert;
