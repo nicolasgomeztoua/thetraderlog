@@ -1,138 +1,149 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/running-pnl-chart",
-  "description": "Add running P&L area chart to trade detail page",
+  "branchName": "ralph/trade-notes-images",
+  "description": "Add drag-and-drop and paste image support to Trade Notes and DailyJournalPreview",
   "userStories": [
     {
       "id": "US-000",
-      "title": "Audit Existing Utilities for Running P&L",
-      "description": "As a developer, I want to audit existing code before implementing the running P&L chart so that we reuse utilities and avoid duplication.",
+      "title": "Audit Existing Image Upload Infrastructure",
+      "description": "As a developer, I want to audit existing image upload code so that we reuse utilities and avoid duplication.",
       "acceptanceCriteria": [
-        "Confirm calculateFuturesPnL exists in src/lib/market-data/symbols.ts",
-        "Confirm calculateForexPnL exists in src/lib/market-data/symbols.ts",
-        "Confirm calculateRunningPnl is LOCAL helper in src/components/trade-detail/replay/use-replay-engine.ts (needs extraction)",
+        "Confirm S3 utilities exist in src/lib/storage/s3.ts",
+        "Confirm handleImageUpload pattern in journal-editor.tsx",
+        "Confirm handleImageInsert pattern with blob preview in journal-editor.tsx",
+        "Confirm handlePaste and handleDrop event handlers in journal-editor.tsx",
         "Document findings in scripts/ralph/progress.txt",
         "Typecheck passes (bun run check)"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Audit complete. All P&L functions confirmed at expected locations. calculateRunningPnl needs extraction from replay engine."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-001",
-      "title": "Extract Running P&L Calculation Utility",
-      "description": "As a developer, I want a shared utility function for calculating running P&L so that both the replay feature and running P&L chart can use the same logic.",
+      "title": "Create Generic Image Upload tRPC Endpoint",
+      "description": "As a developer, I want a generic image upload endpoint so that both trade notes and journal preview can upload images without creating attachment records.",
       "acceptanceCriteria": [
-        "Create src/lib/trades/running-pnl.ts with calculateRunningPnlAtTime() function",
-        "Create generateRunningPnlSeries() that returns array of { time: number, pnl: number }",
-        "generateRunningPnlSeries accepts: bars[], executions[], direction, symbol, instrumentType",
-        "Handles partial exits correctly (accumulated realized P&L + current unrealized)",
-        "Reuses calculateFuturesPnL and calculateForexPnL from @/lib/market-data/symbols.ts",
-        "Export functions from src/lib/trades/index.ts",
-        "Update use-replay-engine.ts to import from shared utility (remove local calculateRunningPnl helper)",
+        "Create storage router at src/server/api/routers/storage.ts",
+        "Add getImageUploadUrl mutation accepting filename, mimeType, size, context parameters",
+        "Key format: images/{userId}/{context}/{uuid}-{filename}",
+        "Returns { presignedUrl, publicUrl } (publicUrl for embedding in HTML)",
+        "Uses existing S3 utilities from src/lib/storage/s3.ts",
+        "Uses protectedProcedure for auth",
+        "Router registered in src/server/api/root.ts",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Created src/lib/trades/running-pnl.ts with calculateRunningPnlAtTime() and generateRunningPnlSeries(). Updated use-replay-engine.ts to import from shared utility."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "US-005",
-      "title": "Integration Tests for Running P&L Utility",
-      "description": "As a developer, I want tests for the running P&L calculation utility so that we can verify correct P&L calculations across different scenarios.",
+      "id": "US-007",
+      "title": "Integration Tests for Storage Router",
+      "description": "As a developer, I want integration tests for the storage router so that we verify upload URL generation works correctly.",
       "acceptanceCriteria": [
-        "Test file created: tests/integration/running-pnl.test.ts",
-        "Tests long trade P&L calculation (profit and loss scenarios)",
-        "Tests short trade P&L calculation (profit and loss scenarios)",
-        "Tests partial exit handling (scale-outs with realized P&L)",
-        "Tests both futures (ES, NQ) and forex (EUR/USD) symbols",
-        "Tests empty bars/executions edge cases return empty array or zero",
+        "Test file created: tests/integration/storage.test.ts",
+        "Uses setupTrader() fixture",
+        "Tests getImageUploadUrl returns valid presigned URL structure",
+        "Tests key format includes userId and context",
+        "Tests rejects unauthenticated requests",
         "All tests pass (bun run test)",
         "Typecheck passes (bun run check)"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Created comprehensive test suite covering long/short trades, partial exits, futures (ES, NQ, MES) and forex (EUR/USD, GBP/USD) symbols, edge cases. Typecheck passes. Tests require Docker/Orbstack to run."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Create Running P&L Chart Component",
-      "description": "As a trader, I want to see an area chart showing my trade's P&L over time so that I can visualize how the trade performed throughout its duration.",
+      "title": "Create useImageUpload Hook",
+      "description": "As a developer, I want a reusable hook for image uploads so that any Tiptap editor can support paste/drop images.",
       "acceptanceCriteria": [
-        "Create RunningPnlChart component in src/components/trade-detail/running-pnl-chart.tsx",
-        "Uses AG Charts (ag-charts-react) following MonthlyChart pattern from src/components/analytics/monthly-chart.tsx",
-        "Area chart fills entire tab height (flex-1)",
-        "X-axis shows timestamps in user's timezone using useTimezone hook",
-        "Y-axis shows P&L in dollars with proper formatting",
-        "Split coloring: green fill (#00ff8820) above zero, red fill (#ff3b3b20) below zero",
-        "Uses ANALYTICS_COLORS from src/lib/analytics/constants.ts",
-        "Tooltip shows timestamp and P&L value",
-        "Terminal design system styling (transparent background, monospace labels)",
+        "Create src/hooks/use-image-upload.ts",
+        "Hook accepts context: string parameter (for S3 key organization)",
+        "Exports uploadImage(file: File): Promise<string | null> - returns public URL",
+        "Uses storage.getImageUploadUrl mutation",
+        "Uploads via XMLHttpRequest with progress tracking",
+        "Shows toast notifications (uploading %, success, error)",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Created RunningPnlChart component with AG Charts area chart. Features: split coloring (profit/loss), timezone-aware timestamps via useTimezone, monospace Terminal styling, tooltip with full timestamp and P&L, adaptive label density for large datasets. Browser verification pending - requires US-004 integration first."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Add Execution Markers to Chart",
-      "description": "As a trader, I want to see entry, exit, and scale-in/out points marked on the P&L chart so that I can correlate price action with my trading decisions.",
+      "title": "Create useTiptapImageHandlers Hook",
+      "description": "As a developer, I want a hook that provides paste/drop handlers for Tiptap editors so that image handling is consistent across editors.",
       "acceptanceCriteria": [
-        "Add marker series to RunningPnlChart for executions",
-        "Entry marker: chartreuse (#d4ff00) diamond or triangle shape",
-        "Exit marker: distinct shape (circle or square)",
-        "Scale-in/out markers: smaller version of entry/exit markers",
-        "Hover tooltip shows execution type, price, and quantity",
-        "Markers positioned at correct time and P&L value on chart",
+        "Create src/hooks/use-tiptap-image-handlers.ts",
+        "Hook accepts editor: Editor | null, uploadImage: (file: File) => Promise<string | null>",
+        "Implements handleImageInsert with instant blob preview pattern (from journal-editor)",
+        "Implements handlePaste for clipboard images",
+        "Implements handleDrop for dropped files",
+        "Attaches/detaches event listeners to editor DOM via useEffect",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Added execution markers as scatter series to RunningPnlChart. Entry markers: chartreuse diamond (size 14), Exit markers: ice blue circle (size 12), Scale-in: chartreuse triangle (size 10), Scale-out: ice blue square (size 10). Tooltips show execution type, time, price, quantity, and P&L at execution point. Browser verification pending - requires US-004 integration first."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Integrate Chart with Trade Detail Content Panel",
-      "description": "As a trader, I want the Running P&L tab to display the chart when I select it so that I can view my trade's P&L progression.",
+      "title": "Create TradeNoteEditor Component",
+      "description": "As a trader, I want a minimal rich text editor for trade notes so that I can paste/drop images into my notes.",
       "acceptanceCriteria": [
-        "Replace placeholder content in ContentPanel's running-pnl tab (src/components/trade-detail/content-panel.tsx)",
-        "Fetch OHLC bar data using existing market data tRPC endpoint",
-        "Use same interval logic as trade replay (match bar granularity)",
-        "Show loading state while fetching data",
-        "Handle error states gracefully (show message if data unavailable)",
-        "Chart fills available tab space (full height)",
+        "Create src/components/trade-detail/trade-note-editor.tsx",
+        "Minimal Tiptap: StarterKit + Image + Link + Placeholder (no toolbar)",
+        "Placeholder text: Add notes about this trade... (paste images with Ctrl+V)",
+        "Auto-save on blur or after 500ms debounce",
+        "Uses useImageUpload hook with context trade-notes",
+        "Uses useTiptapImageHandlers hook for paste/drop",
+        "Props: value: string | null, onChange: (value: string | null) => void, tradeId: string",
+        "Terminal design system styling (border-white/10, focus:border-primary/50)",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Created RunningPnlTab component that fetches OHLC data using same endpoint as TradeReplay (getFullDayChartData). Generates P&L series with generateRunningPnlSeries utility. Shows loading/error/no-data states. Chart fills full tab height. Executions passed through to chart for marker rendering."
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Replace EditableTextarea with TradeNoteEditor",
+      "description": "As a trader, I want the Trade Note tab to use the new editor so that I can add images to my notes.",
+      "acceptanceCriteria": [
+        "Update src/components/trade-detail/content-panel.tsx",
+        "Replace EditableTextarea in NotesSection with TradeNoteEditor",
+        "Pass trade.notes, onUpdateField, and trade.id as props",
+        "Existing plain text notes render correctly in Tiptap",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: paste image works, drop image works"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Fix: Stop P&L Calculation at Trade Exit",
-      "description": "As a trader, I want the running P&L chart to stop at my exit price so that the final P&L is accurate and doesn't continue showing price movement after I closed the trade.",
+      "title": "Add Image Handlers to DailyJournalPreview",
+      "description": "As a trader, I want to paste/drop images in the Daily Journal preview (trade detail) so that I can quickly add screenshots.",
       "acceptanceCriteria": [
-        "generateRunningPnlSeries stops generating points after exit execution time",
-        "Final P&L point uses exit price (not subsequent bar prices)",
-        "For closed trades, chart ends at exit time with correct realized P&L",
-        "For open trades (no exit), chart continues to last bar as before",
-        "Update tests to verify exit time boundary behavior",
-        "All tests pass (bun run test)",
+        "Update src/components/daily-journal/daily-journal-preview.tsx",
+        "Add image upload capability using existing dailyJournal.getUploadUrl + confirmUpload pattern",
+        "Add useTiptapImageHandlers hook for paste/drop",
+        "Only enable image handling when editable={true}",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)",
-        "Verify in browser: closed trade P&L matches trade stats"
+        "Verify in browser: paste image works in journal preview"
       ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Modified generateRunningPnlSeries to detect exit execution and stop after exit time. Uses exit price for final P&L accuracy. Added 6 new tests for exit time boundary behavior. Typecheck passes. Tests require Docker/Orbstack to run."
+      "priority": 8,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

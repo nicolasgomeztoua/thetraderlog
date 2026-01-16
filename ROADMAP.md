@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** January 14, 2026 (Phase 5.3 Daily Journal COMPLETE)
+> **Last Updated:** January 16, 2026 (Running P&L Chart COMPLETE)
 
 ---
 
@@ -310,22 +310,14 @@ Match TradeZella's comprehensive trade tracking page.
 - [x] Trade Context section (Setup Type, Emotional State)
 - [x] Calculated stats: Points, Ticks, R-Multiple, ROI, Duration
 
-#### 5.1 Daily Trades Sidebar
-- [ ] Collapsible sidebar component
-- [ ] List all trades for the day
-- [ ] Quick navigation between trades
-- [ ] Daily P&L summary
-- [ ] Previous/next day navigation
+#### 5.1 Trade Notes Image Support
+- [x] S3 infrastructure (shared with Daily Journal)
+- [ ] Drag-and-drop image upload in Trade Notes tab
+- [ ] Paste image from clipboard
+- [ ] Inline image display in notes
+- [ ] Reuse Daily Journal's Tiptap image handling
 
-#### 5.2 Trade Screenshot Uploads
-- [x] Cloud storage integration (S3) - *shared with Daily Journal*
-- [ ] Multiple screenshots per trade
-- [ ] Screenshot captions
-- [ ] Before/during/after categorization
-- [ ] Screenshot lightbox/gallery view
-- [ ] Delete screenshots
-
-*Note: S3 infrastructure and attachment patterns from Daily Journal can be reused.*
+*Note: Leverage existing `AttachmentUpload` patterns and S3 utilities from Daily Journal.*
 
 #### 5.3 Daily Journal System ✅
 - [x] Daily journal schema (dailyJournals table with checks, templates, attachments)
@@ -356,6 +348,17 @@ Match TradeZella's comprehensive trade tracking page.
 - [x] Fit-to-trade button (reset zoom to trade window)
 - [x] Chart preferences persistence (timeframe + zoom via Zustand)
 
+#### 5.6 Running P&L Chart ✅ *(NEW - COMPLETED)*
+- [x] Extract shared running P&L utility (`src/lib/trades/running-pnl.ts`)
+- [x] generateRunningPnlSeries() for charting P&L over time
+- [x] RunningPnlChart component with AG Charts area chart
+- [x] Split coloring: green (profit) / red (loss) fill
+- [x] Execution markers: entry (chartreuse diamond), exit (ice blue circle)
+- [x] Scale-in/out markers with distinct shapes and sizes
+- [x] Integration with ContentPanel's "Running P&L" tab
+- [x] Stop P&L calculation at trade exit for accuracy
+- [x] Comprehensive integration tests (futures + forex)
+
 #### 5.5 MAE/MFE Per-Trade Analysis *(COMPLETED)*
 - [x] Add `maePrice`, `mfePrice`, `maeAmount`, `mfeAmount`, `tradeEfficiency`, `marketDataQuality` fields to trades schema
 - [x] Create `candle_cache` table for cross-user OHLC data deduplication
@@ -368,48 +371,68 @@ Match TradeZella's comprehensive trade tracking page.
 
 ---
 
-## Phase 6: Notebook System
+## Phase 6: Daily Journal System ✅
 
-> **Priority:** MEDIUM | **Dependencies:** Phase 1 | **Estimate:** 2 weeks
+> **Priority:** HIGH | **Dependencies:** Phase 1 | **Estimate:** 3 weeks
 >
-> **Sub-plan:** [./plans/phase-6-notebook.md](./plans/phase-6-notebook.md)
+> **Sub-plan:** [./plans/prd-daily-journal.md](./plans/prd-daily-journal.md)
+>
+> **Status:** ✅ Complete (39 user stories)
 
 ### Goal
-Comprehensive planning and note-taking like TradeZella's Notebook.
+Daily journaling system with rich text editor, file uploads, checklists, and trade integration. Supersedes the original "Notebook System" concept.
 
-### Tasks
+### Completed Features
 
-#### 6.1 Notebook Data Model
-- [ ] `notebook_entries` table
-- [ ] `notebook_templates` table
-- [ ] Tags support for entries
-- [ ] Trade linking support
+#### 6.1 Database Schema ✅
+- [x] `dailyJournals` table (id, userId, date, content, contentFormat)
+- [x] `dailyChecklistTemplates` table (user-defined checklist items)
+- [x] `dailyChecklistChecks` table (daily check tracking)
+- [x] `journalAttachments` table (S3 file references)
 
-#### 6.2 Notebook Pages
-- [ ] Notebook listing (`/notebook`)
-- [ ] Create new entry
-- [ ] Rich text editor (Tiptap or similar)
-- [ ] Entry detail view
-- [ ] Edit/delete entries
+#### 6.2 tRPC Router ✅
+- [x] `getByDate` - fetch/auto-create journal for date
+- [x] `updateContent` - save journal content with upsert
+- [x] `getRange` - fetch journals for calendar display
+- [x] `getWithTrades` - journal + trades for context
+- [x] Template CRUD (create, update, delete, reorder)
+- [x] Check operations (toggle, bulk update)
+- [x] `getStreak` - consecutive journaling days
+- [x] `getComplianceStats` - checklist adherence metrics
 
-**New files:**
-- `src/app/(protected)/notebook/page.tsx`
-- `src/app/(protected)/notebook/new/page.tsx`
-- `src/app/(protected)/notebook/[id]/page.tsx`
+#### 6.3 S3 Storage Integration ✅
+- [x] Presigned upload URLs (`getUploadUrl`)
+- [x] Upload confirmation (`confirmUpload`)
+- [x] Attachment deletion with S3 cleanup
+- [x] Inline image paste/drop in editor
 
-#### 6.3 Pre-Built Templates
-- [ ] Pre-market prep template
-- [ ] Post-market review template
-- [ ] Weekly assessment template
-- [ ] Trade review template
-- [ ] Monthly recap template
+#### 6.4 UI Components ✅
+- [x] `/daily-journal` page with resizable panels
+- [x] `DateNavigation` - prev/next/today/picker
+- [x] `CalendarSidebar` - month grid with P&L colors
+- [x] `DailyChecklist` - toggleable checklist with compliance %
+- [x] `ChecklistSettings` - template management modal
+- [x] `JournalEditor` - Tiptap with auto-save (500ms debounce)
+- [x] `EditorToolbar` - formatting buttons
+- [x] `AttachmentUpload` - drag-drop with progress
+- [x] `AttachmentGallery` - grid view with lightbox
+- [x] `TradesSummary` - day's trades with P&L
+- [x] `DailyJournalPreview` - compact view for trade detail
 
-#### 6.4 Notebook Features
-- [ ] Full-text search
-- [ ] Filter by tags
-- [ ] Link entries to trades
-- [ ] Embed trading stats (auto-populate)
-- [ ] Calendar view of entries
+#### 6.5 Editor Features ✅
+- [x] Markdown shortcuts (#, **, *, -, 1., >)
+- [x] Bold, italic, strikethrough, headings
+- [x] Bullet and ordered lists
+- [x] Link insertion
+- [x] Image paste/drop with S3 upload
+
+#### 6.6 Gamification ✅
+- [x] Journaling streak (consecutive days)
+- [x] Checklist compliance percentage
+- [x] Visual indicators (flame icon, progress bar)
+
+#### 6.7 Future Enhancement
+- [ ] Full-text search across journal entries (PostgreSQL `tsvector`)
 
 ---
 
@@ -593,24 +616,17 @@ strategy_rules (id, strategyId, text, order, createdAt)
 candle_cache (id, symbol, interval, date, bars, barCount, source, fetchedAt)
 -- Composite unique index on (symbol, interval, date)
 
--- Daily Journal ✅ IMPLEMENTED
-daily_journals (id, userId, date, content, createdAt, updatedAt)
-daily_checks (id, journalId, templateId, text, isComplete, order, createdAt)
-checklist_templates (id, userId, text, order, isDefault, createdAt)
-daily_journal_attachments (id, journalId, s3Key, url, filename, contentType, size, createdAt)
-
--- Notebook
-notebook_entries (id, userId, title, content, templateId, tags, tradeIds, createdAt, updatedAt)
-notebook_templates (id, userId, name, content, isDefault, createdAt)
+-- Daily Journal ✅ IMPLEMENTED (Phase 6)
+dailyJournals (id, userId, date, content, contentFormat, createdAt, updatedAt)
+dailyChecklistTemplates (id, userId, text, order, isActive, createdAt)
+dailyChecklistChecks (journalId, templateId, checked, checkedAt) -- composite PK
+journalAttachments (id, journalId, url, key, filename, mimeType, size, caption, createdAt)
 
 -- Dashboard
 dashboard_layouts (id, userId, name, layout, isDefault, createdAt, updatedAt)
 
--- Filter Presets
+-- Filter Presets ✅ IMPLEMENTED (Phase 4)
 filter_presets (id, userId, name, filters, createdAt)
-
--- Daily Notes
-daily_notes (id, userId, date, preMarket, postMarket, createdAt, updatedAt)
 
 -- Backtesting
 backtest_sessions (id, userId, name, symbol, timeframe, startDate, endDate, createdAt)
@@ -646,11 +662,11 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | Phase | Name | Duration | Status |
 |-------|------|----------|--------|
 | 1 | Enhanced Trade Log | 2-3 weeks | ✅ Complete |
-| 2 | Strategy System | 2 weeks | ✅ Complete |
+| 2 | Strategy System | 2 weeks | ✅ Complete (2.5 Monte Carlo ⏳) |
 | 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
 | 4 | Advanced Analytics | 6-8 weeks | ✅ Complete (5 tabs + cross-filtering + query builder + presets + export) |
-| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Daily Journal ✅, Trade Screenshots ⏳) |
-| 6 | Notebook System | 2 weeks | ⏳ Pending |
+| 5 | Trade Detail Enhancements | 2 weeks | 🔄 In Progress (Layout ✅, MAE/MFE ✅, Chart ✅, Replay ✅, Daily Journal ✅, Running P&L ✅, Notes Images ⏳) |
+| 6 | Daily Journal System | 3 weeks | ✅ Complete (39 stories, search ⏳) |
 | 7 | Trade Replay | 3-4 weeks | ✅ Complete |
 | 8 | Backtesting | 3-4 weeks | ⏳ Pending |
 | 9.1 | CSV Parsers | 1-2 weeks | ⏳ Pending |

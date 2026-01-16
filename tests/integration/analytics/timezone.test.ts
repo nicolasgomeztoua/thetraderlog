@@ -383,6 +383,192 @@ describe("Analytics Timezone Handling", () => {
 		});
 	});
 
+describe("Custom Session Configuration", () => {
+		// Test that session filtering uses user-configured sessions from userSettings.tradingSessions
+		// NOT the hardcoded default sessions
+		let caller: TestCaller;
+		let accountId: string;
+
+		beforeAll(async () => {
+			await truncateAllTables();
+			const db = getTestDb();
+
+			const user = await createTestUser();
+
+			// Configure custom sessions with different hours than defaults
+			// Default: Asia 0-8, London 8-16, New York 13-21
+			// Custom: Morning 6-12, Afternoon 12-18, Evening 18-24
+			const customSessions = [
+				{ name: "Morning", startHour: 6, endHour: 12, color: "#00ff00" },
+				{ name: "Afternoon", startHour: 12, endHour: 18, color: "#0000ff" },
+				{ name: "Evening", startHour: 18, endHour: 24, color: "#ff0000" },
+			];
+
+			await db.insert(schema.userSettings).values({
+				userId: user.id,
+				timezone: "UTC", // Use UTC for simplicity
+				tradingSessions: JSON.stringify(customSessions),
+			});
+
+			const account = await createTestAccount(user.id, { isDefault: true });
+			accountId = account.id;
+
+			// Create trades at specific UTC times to test custom sessions
+			// Trade 1: 07:00 UTC (in custom Morning session 6-12)
+			const trade1Time = new Date("2025-01-15T07:00:00Z");
+			await createTestTrade(user.id, account.id, {
+				symbol: "ES",
+				direction: "long",
+				status: "closed",
+				entryPrice: "5000",
+				exitPrice: "5020",
+				quantity: "1",
+				entryTime: trade1Time,
+				exitTime: new Date(trade1Time.getTime() + 30 * 60000),
+				realizedPnl: "1000",
+				netPnl: "995",
+				fees: "5",
+			});
+
+			// Trade 2: 14:00 UTC (in custom Afternoon session 12-18)
+			const trade2Time = new Date("2025-01-15T14:00:00Z");
+			await createTestTrade(user.id, account.id, {
+				symbol: "NQ",
+				direction: "short",
+				status: "closed",
+				entryPrice: "18000",
+				exitPrice: "17980",
+				quantity: "1",
+				entryTime: trade2Time,
+				exitTime: new Date(trade2Time.getTime() + 45 * 60000),
+				realizedPnl: "400",
+				netPnl: "395",
+				fees: "5",
+			});
+
+			// Trade 3: 20:00 UTC (in custom Evening session 18-24)
+			const trade3Time = new Date("2025-01-15T20:00:00Z");
+			await createTestTrade(user.id, account.id, {
+				symbol: "ES",
+				direction: "long",
+				status: "closed",
+				entryPrice: "5000",
+				exitPrice: "4990",
+				quantity: "1",
+				entryTime: trade3Time,
+				exitTime: new Date(trade3Time.getTime() + 20 * 60000),
+				realizedPnl: "-500",
+				netPnl: "-505",
+				fees: "5",
+			});
+
+			// Trade 4: 03:00 UTC (NOT in any custom session - before Morning starts at 6)
+			const trade4Time = new Date("2025-01-15T03:00:00Z");
+			await createTestTrade(user.id, account.id, {
+				symbol: "NQ",
+				direction: "long",
+				status: "closed",
+				entryPrice: "18000",
+				exitPrice: "18010",
+				quantity: "1",
+				entryTime: trade4Time,
+				exitTime: new Date(trade4Time.getTime() + 20 * 60000),
+				realizedPnl: "200",
+				netPnl: "195",
+				fees: "5",
+			});
+
+			caller = await createTestCaller(user.clerkId, user);
+		});
+
+		afterAll(async () => {
+			await truncateAllTables();
+		});
+
+		it("should filter by custom Morning session", async () => {
+			// Custom Morning session: 6-12 UTC
+			// Trade at 07:00 UTC should be included
+			// Trade at 03:00 UTC should NOT be included (default Asia would include it)
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["morning"],
+				},
+			});
+
+			// Only the 07:00 UTC trade should be included
+			expect(result.totalTrades).toBe(1);
+		});
+
+		it("should filter by custom Afternoon session", async () => {
+			// Custom Afternoon session: 12-18 UTC
+			// Trade at 14:00 UTC should be included
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["afternoon"],
+				},
+			});
+
+			expect(result.totalTrades).toBe(1);
+		});
+
+		it("should filter by custom Evening session", async () => {
+			// Custom Evening session: 18-24 UTC
+			// Trade at 20:00 UTC should be included
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["evening"],
+				},
+			});
+
+			expect(result.totalTrades).toBe(1);
+		});
+
+		it("should NOT match default session names when custom sessions configured", async () => {
+			// Filter by "asia" (default session name) should NOT match anything
+			// because user has custom sessions configured
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["asia"],
+				},
+			});
+
+			// No trades should match because "asia" is not a configured session
+			expect(result.totalTrades).toBe(0);
+		});
+
+		it("should filter by multiple custom sessions", async () => {
+			// Filter by Morning and Evening
+			// Should include trades at 07:00 and 20:00 UTC
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["morning", "evening"],
+				},
+			});
+
+			expect(result.totalTrades).toBe(2);
+		});
+
+		it("should exclude trades outside any custom session", async () => {
+			// Trade at 03:00 UTC is before Morning (6-12) starts
+			// When filtering for all custom sessions, this trade should be excluded
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["morning", "afternoon", "evening"],
+				},
+			});
+
+			// 3 trades (07:00, 14:00, 20:00) should be included
+			// 1 trade (03:00) should be excluded
+			expect(result.totalTrades).toBe(3);
+		});
+	});
+
 	describe("getDayBoundsInTimezone utility", () => {
 		it("should return correct UTC bounds for EST timezone", () => {
 			// Jan 6 in EST (UTC-5) should be:
