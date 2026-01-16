@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { getDateStringInTimezone } from "@/lib/shared";
 import {
 	createTestAccount,
 	createTestCaller,
 	createTestTrade,
 	createTestUser,
+	getDateAtLocalTime,
 	getTestDb,
 	schema,
 	type TestCaller,
@@ -21,33 +23,44 @@ import {
  * 2. getCalendarData returns correct dates for user timezone
  * 3. getOvertradingAnalysis matches calendar data for same days
  * 4. Daily journal trade grouping respects user timezone
+ *
+ * NOTE: Uses relative dates (days ago) to prevent tests from going stale.
  */
 describe("Timezone Date Grouping", () => {
 	describe("Trade Grouping by Entry Time", () => {
 		let caller: TestCaller;
 		let accountId: string;
 
+		// Store expected date strings for assertions
+		let day1DateStr: string; // Day with 2 trades
+		let day2DateStr: string; // Day with 1 trade
+
 		beforeAll(async () => {
 			await truncateAllTables();
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "America/New_York";
 
 			// Set user timezone to America/New_York (EST, UTC-5)
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "America/New_York",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 			accountId = account.id;
 
 			// Trade 1: Entered at 11 PM EST (04:00 UTC next day), exited next morning
-			// Date in EST: Jan 15, 2025
-			// Date in UTC: Jan 16, 2025
-			// Should be grouped as Jan 15 (entry date in user's timezone)
-			const trade1EntryTime = new Date("2025-01-16T04:00:00Z"); // 11 PM EST Jan 15
-			const trade1ExitTime = new Date("2025-01-16T12:00:00Z"); // 7 AM EST Jan 16
+			// Should be grouped by entry date in user's timezone
+			const trade1EntryTime = getDateAtLocalTime(8, 23, timezone); // 8 days ago, 11 PM local
+			const trade1ExitTime = new Date(
+				trade1EntryTime.getTime() + 8 * 60 * 60 * 1000,
+			); // +8 hours
+
+			// Store expected date string for Day 1
+			day1DateStr = getDateStringInTimezone(trade1EntryTime, timezone);
+
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -62,12 +75,12 @@ describe("Timezone Date Grouping", () => {
 				fees: "5",
 			});
 
-			// Trade 2: Entered at 10 AM EST (15:00 UTC same day), exited same day
-			// Date in EST: Jan 15, 2025
-			// Date in UTC: Jan 15, 2025
-			// Should be grouped as Jan 15
-			const trade2EntryTime = new Date("2025-01-15T15:00:00Z"); // 10 AM EST Jan 15
-			const trade2ExitTime = new Date("2025-01-15T18:00:00Z"); // 1 PM EST Jan 15
+			// Trade 2: Entered at 10 AM EST same day as trade 1
+			const trade2EntryTime = getDateAtLocalTime(8, 10, timezone); // 8 days ago, 10 AM local
+			const trade2ExitTime = new Date(
+				trade2EntryTime.getTime() + 3 * 60 * 60 * 1000,
+			); // +3 hours
+
 			await createTestTrade(user.id, account.id, {
 				symbol: "NQ",
 				direction: "short",
@@ -82,10 +95,15 @@ describe("Timezone Date Grouping", () => {
 				fees: "5",
 			});
 
-			// Trade 3: Different day - Jan 16 in EST
-			// Entered at 9 AM EST (14:00 UTC)
-			const trade3EntryTime = new Date("2025-01-16T14:00:00Z"); // 9 AM EST Jan 16
-			const trade3ExitTime = new Date("2025-01-16T17:00:00Z"); // 12 PM EST Jan 16
+			// Trade 3: Different day - next day at 9 AM EST
+			const trade3EntryTime = getDateAtLocalTime(7, 9, timezone); // 7 days ago, 9 AM local
+			const trade3ExitTime = new Date(
+				trade3EntryTime.getTime() + 3 * 60 * 60 * 1000,
+			); // +3 hours
+
+			// Store expected date string for Day 2
+			day2DateStr = getDateStringInTimezone(trade3EntryTime, timezone);
+
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -108,21 +126,19 @@ describe("Timezone Date Grouping", () => {
 		});
 
 		it("should group trade entered at 11 PM EST on entry date, not exit date", async () => {
-			// Trade entered at 11 PM EST Jan 15 (04:00 UTC Jan 16)
-			// Should appear in Jan 15 calendar, not Jan 16
+			// Trade entered at 11 PM EST should appear on that day's calendar
 			const calendarData = await caller.analytics.getCalendarData({
 				accountId,
 			});
 
-			// Find Jan 15 entry
-			const jan15 = calendarData.find((d) => d.date === "2025-01-15");
-			const jan16 = calendarData.find((d) => d.date === "2025-01-16");
+			const day1 = calendarData.find((d) => d.date === day1DateStr);
+			const day2 = calendarData.find((d) => d.date === day2DateStr);
 
-			// Jan 15 should have 2 trades (11 PM trade + 10 AM trade)
-			expect(jan15?.trades).toBe(2);
+			// Day 1 should have 2 trades (11 PM trade + 10 AM trade)
+			expect(day1?.trades).toBe(2);
 
-			// Jan 16 should have 1 trade (9 AM trade)
-			expect(jan16?.trades).toBe(1);
+			// Day 2 should have 1 trade (9 AM trade)
+			expect(day2?.trades).toBe(1);
 		});
 
 		it("should match getCalendarData grouping with getOvertradingAnalysis", async () => {
@@ -135,27 +151,22 @@ describe("Timezone Date Grouping", () => {
 			});
 
 			// Get trade counts per day from each
-			const calendarJan15 = calendarData.find((d) => d.date === "2025-01-15");
-			const calendarJan16 = calendarData.find((d) => d.date === "2025-01-16");
+			const calendarDay1 = calendarData.find((d) => d.date === day1DateStr);
+			const calendarDay2 = calendarData.find((d) => d.date === day2DateStr);
 
 			// Verify calendar data
-			// Jan 15 has 2 trades in calendar
-			// Jan 16 has 1 trade in calendar
-			expect(calendarJan15?.trades).toBe(2);
-			expect(calendarJan16?.trades).toBe(1);
+			expect(calendarDay1?.trades).toBe(2);
+			expect(calendarDay2?.trades).toBe(1);
 
 			// In overtrading analysis, byTradeCount groups by number of trades per day
-			// Since Jan 15 has 2 trades and Jan 16 has 1 trade:
-			// - There should be a bucket for tradeCount=2 with 1 day
-			// - There should be a bucket for tradeCount=1 with 1 day
 			const byTradeCount = overtradingData.byTradeCount;
 
 			const bucketFor2Trades = byTradeCount.find((b) => b.tradeCount === 2);
 			const bucketFor1Trade = byTradeCount.find((b) => b.tradeCount === 1);
 
-			// Jan 15 has 2 trades, so there should be 1 day with 2 trades
+			// Day 1 has 2 trades, so there should be 1 day with 2 trades
 			expect(bucketFor2Trades?.days).toBe(1);
-			// Jan 16 has 1 trade, so there should be 1 day with 1 trade
+			// Day 2 has 1 trade, so there should be 1 day with 1 trade
 			expect(bucketFor1Trade?.days).toBe(1);
 		});
 
@@ -164,38 +175,49 @@ describe("Timezone Date Grouping", () => {
 				accountId,
 			});
 
-			// Should have exactly 2 trading days: Jan 15 and Jan 16 (in EST)
+			// Should have exactly 2 trading days
 			const tradingDays = calendarData.filter((d) => d.trades > 0);
 			expect(tradingDays.length).toBe(2);
 
 			// Verify the dates are correct
 			const dates = tradingDays.map((d) => d.date).sort();
-			expect(dates).toContain("2025-01-15");
-			expect(dates).toContain("2025-01-16");
+			expect(dates).toContain(day1DateStr);
+			expect(dates).toContain(day2DateStr);
 		});
 	});
 
 	describe("Daily Journal Trade Grouping", () => {
 		let caller: TestCaller;
+		let entryDateStr: string;
+		let nextDateStr: string;
 
 		beforeAll(async () => {
 			await truncateAllTables();
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "America/New_York";
 
 			// Set user timezone to America/New_York (EST, UTC-5)
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "America/New_York",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 
-			// Trade entered at 11 PM EST Jan 6 = 04:00 UTC Jan 7
-			// Should appear in journal for Jan 6, NOT Jan 7
-			const tradeEntryTime = new Date("2026-01-07T04:00:00Z"); // 11 PM EST Jan 6
-			const tradeExitTime = new Date("2026-01-07T12:00:00Z"); // 7 AM EST Jan 7
+			// Trade entered at 11 PM EST - should appear in that day's journal
+			const tradeEntryTime = getDateAtLocalTime(10, 23, timezone); // 10 days ago, 11 PM
+			const tradeExitTime = new Date(
+				tradeEntryTime.getTime() + 8 * 60 * 60 * 1000,
+			); // +8 hours (next morning)
+
+			// Store expected date strings
+			entryDateStr = getDateStringInTimezone(tradeEntryTime, timezone);
+			// Next day string (for negative test)
+			const nextDay = new Date(tradeEntryTime);
+			nextDay.setDate(nextDay.getDate() + 1);
+			nextDateStr = getDateStringInTimezone(nextDay, timezone);
 
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
@@ -219,10 +241,9 @@ describe("Timezone Date Grouping", () => {
 		});
 
 		it("should include 11 PM EST trade in the entry day journal", async () => {
-			// Query for Jan 6 in user's timezone (EST)
-			// Trade entered at 11 PM EST Jan 6 should be included
+			// Trade entered at 11 PM EST should be in that day's journal
 			const result = await caller.dailyJournal.getWithTrades({
-				date: "2026-01-06",
+				date: entryDateStr,
 			});
 
 			expect(result.trades.length).toBe(1);
@@ -230,10 +251,9 @@ describe("Timezone Date Grouping", () => {
 		});
 
 		it("should NOT include trade in next day journal (exit day)", async () => {
-			// Query for Jan 7 in user's timezone (EST)
-			// Trade was entered Jan 6 EST, so it should NOT appear in Jan 7
+			// Trade should NOT appear in next day's journal
 			const result = await caller.dailyJournal.getWithTrades({
-				date: "2026-01-07",
+				date: nextDateStr,
 			});
 
 			expect(result.trades.length).toBe(0);
@@ -246,18 +266,26 @@ describe("Timezone Date Grouping", () => {
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "America/Los_Angeles";
 
 			// Set user timezone to America/Los_Angeles (PST, UTC-8)
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "America/Los_Angeles",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 
-			// Trade entered at 11 PM PST Jan 15 = 07:00 UTC Jan 16
-			const tradeEntryTime = new Date("2025-01-16T07:00:00Z"); // 11 PM PST Jan 15
-			const tradeExitTime = new Date("2025-01-16T15:00:00Z"); // 7 AM PST Jan 16
+			// Trade entered at 11 PM PST
+			const tradeEntryTime = getDateAtLocalTime(5, 23, timezone); // 5 days ago, 11 PM
+			const tradeExitTime = new Date(
+				tradeEntryTime.getTime() + 8 * 60 * 60 * 1000,
+			); // +8 hours
+
+			const entryDateStr = getDateStringInTimezone(tradeEntryTime, timezone);
+			const nextDay = new Date(tradeEntryTime);
+			nextDay.setDate(nextDay.getDate() + 1);
+			const nextDateStr = getDateStringInTimezone(nextDay, timezone);
 
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
@@ -279,12 +307,12 @@ describe("Timezone Date Grouping", () => {
 				accountId: account.id,
 			});
 
-			// Trade should appear on Jan 15 (entry date in PST), not Jan 16
-			const jan15 = calendarData.find((d) => d.date === "2025-01-15");
-			const jan16 = calendarData.find((d) => d.date === "2025-01-16");
+			// Trade should appear on entry date in PST, not next day
+			const entryDay = calendarData.find((d) => d.date === entryDateStr);
+			const nextDayData = calendarData.find((d) => d.date === nextDateStr);
 
-			expect(jan15?.trades).toBe(1);
-			expect(jan16?.trades ?? 0).toBe(0);
+			expect(entryDay?.trades).toBe(1);
+			expect(nextDayData?.trades ?? 0).toBe(0);
 
 			await truncateAllTables();
 		});
@@ -294,19 +322,27 @@ describe("Timezone Date Grouping", () => {
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "Pacific/Auckland";
 
 			// Set user timezone to Pacific/Auckland (NZDT, UTC+13 in summer)
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "Pacific/Auckland",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 
-			// Trade entered at 11 AM UTC = midnight NZDT next day (Jan 16)
-			// In Auckland, 11:00 UTC on Jan 15 = 00:00 NZDT on Jan 16
-			const tradeEntryTime = new Date("2025-01-15T11:00:00Z");
-			const tradeExitTime = new Date("2025-01-15T15:00:00Z");
+			// Trade at 11 AM UTC - which is midnight in Auckland (next day)
+			const tradeEntryTime = getDateAtLocalTime(5, 0, timezone); // 5 days ago, midnight Auckland
+			const tradeExitTime = new Date(
+				tradeEntryTime.getTime() + 4 * 60 * 60 * 1000,
+			); // +4 hours
+
+			const entryDateStr = getDateStringInTimezone(tradeEntryTime, timezone);
+			// Previous day in Auckland time
+			const prevDay = new Date(tradeEntryTime);
+			prevDay.setDate(prevDay.getDate() - 1);
+			const prevDateStr = getDateStringInTimezone(prevDay, timezone);
 
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
@@ -328,12 +364,12 @@ describe("Timezone Date Grouping", () => {
 				accountId: account.id,
 			});
 
-			// Trade should appear on Jan 16 in NZDT (ahead of UTC)
-			const jan15 = calendarData.find((d) => d.date === "2025-01-15");
-			const jan16 = calendarData.find((d) => d.date === "2025-01-16");
+			// Trade should appear on correct date in Auckland timezone
+			const entryDay = calendarData.find((d) => d.date === entryDateStr);
+			const prevDayData = calendarData.find((d) => d.date === prevDateStr);
 
-			expect(jan15?.trades ?? 0).toBe(0);
-			expect(jan16?.trades).toBe(1);
+			expect(prevDayData?.trades ?? 0).toBe(0);
+			expect(entryDay?.trades).toBe(1);
 
 			await truncateAllTables();
 		});
@@ -342,27 +378,31 @@ describe("Timezone Date Grouping", () => {
 	describe("Calendar and Analytics Date Matching", () => {
 		let caller: TestCaller;
 		let accountId: string;
+		let day1DateStr: string;
+		let day2DateStr: string;
 
 		beforeAll(async () => {
 			await truncateAllTables();
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "America/New_York";
 
 			// Set user timezone to America/New_York
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "America/New_York",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 			accountId = account.id;
 
 			// Create several trades across different days to test grouping
-			// All entry times are in UTC, but should be grouped by EST
 
-			// Day 1: Jan 15, 2025 (EST) - 3 trades
-			// 9 AM EST = 14:00 UTC
+			// Day 1: 3 trades (9 AM, 2 PM, 11 PM)
+			const day1_9am = getDateAtLocalTime(14, 9, timezone);
+			day1DateStr = getDateStringInTimezone(day1_9am, timezone);
+
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -370,14 +410,14 @@ describe("Timezone Date Grouping", () => {
 				entryPrice: "5000",
 				exitPrice: "5010",
 				quantity: "1",
-				entryTime: new Date("2025-01-15T14:00:00Z"),
-				exitTime: new Date("2025-01-15T16:00:00Z"),
+				entryTime: day1_9am,
+				exitTime: new Date(day1_9am.getTime() + 2 * 60 * 60 * 1000),
 				realizedPnl: "500",
 				netPnl: "495",
 				fees: "5",
 			});
 
-			// 2 PM EST = 19:00 UTC
+			const day1_2pm = getDateAtLocalTime(14, 14, timezone);
 			await createTestTrade(user.id, account.id, {
 				symbol: "NQ",
 				direction: "short",
@@ -385,14 +425,15 @@ describe("Timezone Date Grouping", () => {
 				entryPrice: "18000",
 				exitPrice: "17990",
 				quantity: "1",
-				entryTime: new Date("2025-01-15T19:00:00Z"),
-				exitTime: new Date("2025-01-15T20:00:00Z"),
+				entryTime: day1_2pm,
+				exitTime: new Date(day1_2pm.getTime() + 1 * 60 * 60 * 1000),
 				realizedPnl: "200",
 				netPnl: "195",
 				fees: "5",
 			});
 
-			// 11 PM EST = 04:00 UTC next day
+			// 11 PM same day (will be next day in UTC)
+			const day1_11pm = getDateAtLocalTime(14, 23, timezone);
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -400,15 +441,17 @@ describe("Timezone Date Grouping", () => {
 				entryPrice: "5020",
 				exitPrice: "5030",
 				quantity: "1",
-				entryTime: new Date("2025-01-16T04:00:00Z"), // 11 PM EST Jan 15
-				exitTime: new Date("2025-01-16T07:00:00Z"),
+				entryTime: day1_11pm,
+				exitTime: new Date(day1_11pm.getTime() + 3 * 60 * 60 * 1000),
 				realizedPnl: "500",
 				netPnl: "495",
 				fees: "5",
 			});
 
-			// Day 2: Jan 16, 2025 (EST) - 2 trades
-			// 10 AM EST = 15:00 UTC
+			// Day 2: 2 trades (10 AM, 3 PM)
+			const day2_10am = getDateAtLocalTime(13, 10, timezone);
+			day2DateStr = getDateStringInTimezone(day2_10am, timezone);
+
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "short",
@@ -416,14 +459,14 @@ describe("Timezone Date Grouping", () => {
 				entryPrice: "5040",
 				exitPrice: "5060",
 				quantity: "1",
-				entryTime: new Date("2025-01-16T15:00:00Z"),
-				exitTime: new Date("2025-01-16T17:00:00Z"),
+				entryTime: day2_10am,
+				exitTime: new Date(day2_10am.getTime() + 2 * 60 * 60 * 1000),
 				realizedPnl: "-1000",
 				netPnl: "-1005",
 				fees: "5",
 			});
 
-			// 3 PM EST = 20:00 UTC
+			const day2_3pm = getDateAtLocalTime(13, 15, timezone);
 			await createTestTrade(user.id, account.id, {
 				symbol: "NQ",
 				direction: "long",
@@ -431,8 +474,8 @@ describe("Timezone Date Grouping", () => {
 				entryPrice: "18000",
 				exitPrice: "18050",
 				quantity: "1",
-				entryTime: new Date("2025-01-16T20:00:00Z"),
-				exitTime: new Date("2025-01-16T22:00:00Z"),
+				entryTime: day2_3pm,
+				exitTime: new Date(day2_3pm.getTime() + 2 * 60 * 60 * 1000),
 				realizedPnl: "1000",
 				netPnl: "995",
 				fees: "5",
@@ -450,13 +493,13 @@ describe("Timezone Date Grouping", () => {
 				accountId,
 			});
 
-			// Jan 15 should have 3 trades (including 11 PM trade)
-			const jan15 = calendarData.find((d) => d.date === "2025-01-15");
-			expect(jan15?.trades).toBe(3);
+			// Day 1 should have 3 trades (including 11 PM trade)
+			const day1 = calendarData.find((d) => d.date === day1DateStr);
+			expect(day1?.trades).toBe(3);
 
-			// Jan 16 should have 2 trades
-			const jan16 = calendarData.find((d) => d.date === "2025-01-16");
-			expect(jan16?.trades).toBe(2);
+			// Day 2 should have 2 trades
+			const day2 = calendarData.find((d) => d.date === day2DateStr);
+			expect(day2?.trades).toBe(2);
 		});
 
 		it("should have total trades match across procedures", async () => {
@@ -474,8 +517,6 @@ describe("Timezone Date Grouping", () => {
 			);
 
 			// Calculate total trades from overtrading analysis
-			// byTradeCount has buckets, each with tradeCount (trades per day) and days (number of days)
-			// Total trades = sum of (tradeCount * days) for each bucket
 			const overtradingTotal = overtradingData.byTradeCount.reduce(
 				(sum, bucket) => sum + bucket.tradeCount * bucket.days,
 				0,
@@ -500,7 +541,6 @@ describe("Timezone Date Grouping", () => {
 			).length;
 
 			// Get total days traded from overtrading analysis
-			// byTradeCount has buckets, each with a "days" count
 			const overtradingDays = overtradingData.byTradeCount.reduce(
 				(sum, bucket) => sum + bucket.days,
 				0,

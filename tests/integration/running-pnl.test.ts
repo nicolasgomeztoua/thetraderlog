@@ -330,7 +330,7 @@ describe("calculateRunningPnlAtTime - Forex symbols", () => {
 			"forex",
 		);
 
-		expect(pnl).toBe(100);
+		expect(pnl).toBeCloseTo(100, 10);
 	});
 
 	it("should calculate GBP/USD P&L correctly", () => {
@@ -348,7 +348,7 @@ describe("calculateRunningPnlAtTime - Forex symbols", () => {
 			"forex",
 		);
 
-		expect(pnl).toBe(100);
+		expect(pnl).toBeCloseTo(100, 10);
 	});
 
 	it("should scale with lot size for forex", () => {
@@ -366,7 +366,7 @@ describe("calculateRunningPnlAtTime - Forex symbols", () => {
 			"forex",
 		);
 
-		expect(pnl).toBe(100);
+		expect(pnl).toBeCloseTo(100, 10);
 	});
 });
 
@@ -560,7 +560,8 @@ describe("generateRunningPnlSeries", () => {
 
 		expect(series).toHaveLength(2);
 		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
-		expect(series[1]).toEqual({ time: 1100, pnl: 100 }); // 10 pips × $10
+		expect(series[1]?.time).toBe(1100);
+		expect(series[1]?.pnl).toBeCloseTo(100, 10); // 10 pips × $10
 	});
 
 	it("should handle short trades correctly", () => {
@@ -723,11 +724,13 @@ describe("generateRunningPnlSeries - Exit time boundary", () => {
 
 		const series = generateRunningPnlSeries(options);
 
-		// Should include bars up to exit time (1000 and 1100)
+		// Should include bars up to exit time (1000 and 1100) + final exit point
 		// Bar at 1200 is after exit (1150), so excluded
-		expect(series).toHaveLength(2);
+		// Final point at exact exit time (1150) uses exit price for accurate P&L
+		expect(series).toHaveLength(3);
 		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
 		expect(series[1]).toEqual({ time: 1100, pnl: 500 }); // 10 pts × $50
+		expect(series[2]).toEqual({ time: 1150, pnl: 750 }); // Exit: 15 pts × $50
 	});
 
 	it("should handle short trade exit correctly", () => {
