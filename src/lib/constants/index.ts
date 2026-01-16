@@ -9,6 +9,13 @@ export {
 	TRADING_SESSIONS,
 } from "./analytics";
 export {
+	EVENT_IMPACT_COLORS,
+	type EventImpact,
+	HIGH_IMPACT_KEYWORDS,
+	MAJOR_CURRENCIES,
+	type MajorCurrency,
+} from "./economic-calendar";
+export {
 	DEFAULT_TRADE_SORT,
 	NON_SORTABLE_COLUMNS,
 	type SortDirection,
