@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toDateString } from "@/lib/shared";
+import { formatPnL, getPnLColorClass, toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // Journaling streak component with flame icon
@@ -61,6 +61,58 @@ function QuickActionsBar() {
 					Import CSV
 				</Link>
 			</Button>
+		</div>
+	);
+}
+
+// Today's snapshot - quick summary of today's trading activity
+function TodaysSnapshot() {
+	const today = toDateString(new Date());
+
+	const { data, isLoading } = api.dailyJournal.getWithTrades.useQuery(
+		{ date: today },
+		{ staleTime: 30000 },
+	);
+
+	if (isLoading) {
+		return (
+			<div className="rounded border border-border bg-card p-3">
+				<Skeleton className="h-5 w-48" />
+			</div>
+		);
+	}
+
+	const trades = data?.trades ?? [];
+	const tradeCount = trades.length;
+
+	// Calculate total P&L from trades
+	const totalPnL = trades.reduce((sum, trade) => {
+		const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
+		return sum + pnl;
+	}, 0);
+
+	if (tradeCount === 0) {
+		return (
+			<div className="rounded border border-border bg-card p-3">
+				<span className="font-mono text-muted-foreground text-sm">
+					No trades today
+				</span>
+			</div>
+		);
+	}
+
+	return (
+		<div className="rounded border border-border bg-card p-3">
+			<span className="font-mono text-sm">
+				<span className="text-muted-foreground">Today:</span>{" "}
+				<span className="text-foreground">
+					{tradeCount} {tradeCount === 1 ? "trade" : "trades"}
+				</span>
+				<span className="text-muted-foreground">,</span>{" "}
+				<span className={getPnLColorClass(totalPnL)}>
+					{formatPnL(totalPnL)}
+				</span>
+			</span>
 		</div>
 	);
 }
@@ -187,6 +239,9 @@ export default function DashboardPage() {
 					<QuickActionsBar />
 				</div>
 			</div>
+
+			{/* Today's Snapshot */}
+			<TodaysSnapshot />
 		</div>
 	);
 }

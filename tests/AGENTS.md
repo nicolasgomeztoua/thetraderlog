@@ -29,6 +29,17 @@ Example: Trade at `new Date("2025-01-16T04:00:00Z")` is 11 PM EST on Jan 15.
 - Total trades: `sum of (bucket.tradeCount * bucket.days)`
 - Total days: `sum of bucket.days`
 
+### Testing Read-Only Tables (No tRPC Create Mutations)
+**When:** Testing routers that read from tables without public create APIs (e.g., economicEvents)
+**How:** Use `getTestDb()` to get direct database access, then insert test data:
+```typescript
+const db = getTestDb();
+await db.insert(schema.economicEvents).values([
+  { name: "NFP", currency: "USD", eventTime: new Date(), impact: "high", source: "test" },
+]);
+```
+**Note:** Clear test data with `db.delete(schema.tableName)` or `truncateAllTables()`.
+
 ## Gotchas
 
 ### Docker Required for Integration Tests
