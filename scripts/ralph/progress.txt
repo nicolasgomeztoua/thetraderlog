@@ -208,3 +208,40 @@ Started: Fri Jan 16 20:44:45 +01 2026
 - Use onConflictDoUpdate with sql`EXCLUDED.column` syntax to update specific fields on upsert
 - API times in ET need conversion to UTC - add 5 hours for EST (simplification)
 ---
+
+## 2026-01-16 - US-009: Dashboard UI - Today's Snapshot Component
+- Created TodaysSnapshot component in dashboard page
+- Uses dailyJournal.getWithTrades API to fetch today's trades
+- Calculates total P&L by summing trade.netPnl values
+- Displays "Today: X trades, +$Y" or "No trades today" empty state
+- P&L colored using getPnLColorClass (text-profit/text-loss)
+- Loading skeleton shows while data is fetching
+- Compact card styling with rounded border
+
+### Files changed
+- src/app/(protected)/dashboard/page.tsx (added TodaysSnapshot component and imports)
+
+### Learnings for future iterations:
+- Reuse existing utilities: formatPnL and getPnLColorClass from @/lib/shared
+- The dailyJournal.getWithTrades returns trades with netPnl as string (decimal column) - use parseFloat
+- Keep dashboard components simple and focused - single responsibility
+---
+
+## 2026-01-16 - US-010: Dashboard UI - Economic Calendar Widget
+- Created EconomicCalendarWidget component in dashboard page
+- Fetches events using economicCalendar.getTodayEvents API (no filters, shows all events)
+- Displays up to 5 events with: currency badge, event name, and time
+- Color-codes by impact using EVENT_IMPACT_COLORS from @/lib/constants (high=red, medium=yellow, low=gray)
+- Shows "No high-impact events today" empty state when no events
+- Terminal-style card with header showing "Economic Calendar" and ClockIcon
+- Loading skeleton with 3 placeholder items
+
+### Files changed
+- src/app/(protected)/dashboard/page.tsx (added EconomicCalendarWidget component, ClockIcon, EVENT_IMPACT_COLORS import)
+
+### Learnings for future iterations:
+- Import constants from @/lib/constants barrel export
+- Use nullish coalescing for safe access: EVENT_IMPACT_COLORS[event.impact] ?? EVENT_IMPACT_COLORS.low
+- Template literals for dynamic className: `${impactColors.bg} ${impactColors.text}`
+- Use divide-y divide-border for clean separation between list items
+---

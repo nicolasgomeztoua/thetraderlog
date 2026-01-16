@@ -180,8 +180,8 @@
         "Verify in browser: shows correct trade count and P&L"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created TodaysSnapshot component using dailyJournal.getWithTrades API. Shows trade count and total P&L with profit/loss colors, loading skeleton, and 'No trades today' empty state."
     },
     {
       "id": "US-010",
@@ -200,8 +200,8 @@
         "Verify in browser: events display with correct styling"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created EconomicCalendarWidget with clock icon header, currency badge with impact coloring (using EVENT_IMPACT_COLORS), event name, and time. Shows 'No high-impact events today' when empty. Loading skeleton included."
     },
     {
       "id": "US-011",

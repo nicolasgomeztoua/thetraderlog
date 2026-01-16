@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	ArrowRightIcon,
 	BookOpenIcon,
 	CheckCircle2Icon,
 	ClockIcon,
@@ -8,6 +9,7 @@ import {
 	Loader2Icon,
 	PlayIcon,
 	PlusIcon,
+	TrendingUpIcon,
 	UploadIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +17,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EVENT_IMPACT_COLORS } from "@/lib/constants";
-import { formatPnL, getPnLColorClass, toDateString } from "@/lib/shared";
+import {
+	formatDateInTimezone,
+	formatPnL,
+	getPnLColorClass,
+	toDateString,
+} from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // Journaling streak component with flame icon
@@ -209,6 +216,108 @@ function EconomicCalendarWidget() {
 	);
 }
 
+// Recent Trades Widget - displays recent trades with quick navigation
+function RecentTradesWidget() {
+	const { data: trades, isLoading } = api.trades.getRecent.useQuery(
+		{ limit: 5 },
+		{ staleTime: 30000 },
+	);
+
+	if (isLoading) {
+		return (
+			<div className="rounded border border-border bg-card">
+				<div className="flex items-center justify-between border-border border-b p-3">
+					<div className="flex items-center gap-2">
+						<TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
+						<span className="font-mono text-sm">Recent Trades</span>
+					</div>
+				</div>
+				<div className="space-y-3 p-3">
+					{Array.from({ length: 3 }).map((_, i) => (
+						<Skeleton className="h-8 w-full" key={`skeleton-${i.toString()}`} />
+					))}
+				</div>
+			</div>
+		);
+	}
+
+	if (!trades || trades.length === 0) {
+		return (
+			<div className="rounded border border-border bg-card">
+				<div className="flex items-center justify-between border-border border-b p-3">
+					<div className="flex items-center gap-2">
+						<TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
+						<span className="font-mono text-sm">Recent Trades</span>
+					</div>
+				</div>
+				<div className="p-3">
+					<p className="font-mono text-muted-foreground text-sm">
+						No trades yet.{" "}
+						<Link className="text-primary hover:underline" href="/trade/new">
+							Log your first trade
+						</Link>
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="rounded border border-border bg-card">
+			<div className="flex items-center justify-between border-border border-b p-3">
+				<div className="flex items-center gap-2">
+					<TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
+					<span className="font-mono text-sm">Recent Trades</span>
+				</div>
+				<Link
+					className="flex items-center gap-1 font-mono text-primary text-xs hover:underline"
+					href="/journal"
+				>
+					View All
+					<ArrowRightIcon className="h-3 w-3" />
+				</Link>
+			</div>
+			<div className="divide-y divide-border">
+				{trades.map((trade) => {
+					const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
+					const isLong = trade.direction === "long";
+
+					return (
+						<Link
+							className="flex items-center gap-3 p-3 transition-colors hover:bg-muted/50"
+							href={`/journal/${trade.id}`}
+							key={trade.id}
+						>
+							{/* Direction badge */}
+							<span
+								className={`rounded px-1.5 py-0.5 font-mono text-xs ${
+									isLong ? "bg-profit/20 text-profit" : "bg-loss/20 text-loss"
+								}`}
+							>
+								{isLong ? "LONG" : "SHORT"}
+							</span>
+							{/* Symbol */}
+							<span className="font-medium font-mono text-sm">
+								{trade.symbol}
+							</span>
+							{/* Date */}
+							<span className="flex-1 font-mono text-muted-foreground text-xs">
+								{formatDateInTimezone(trade.entryTime, "UTC", {
+									format: "MMM d",
+								})}
+							</span>
+							{/* P&L */}
+							<span className={`font-mono text-sm ${getPnLColorClass(pnl)}`}>
+								{formatPnL(pnl)}
+							</span>
+						</Link>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
 function StartJournalHero() {
 	const router = useRouter();
 	const today = toDateString(new Date());
@@ -335,8 +444,11 @@ export default function DashboardPage() {
 			{/* Today's Snapshot */}
 			<TodaysSnapshot />
 
-			{/* Economic Calendar Widget */}
-			<EconomicCalendarWidget />
+			{/* Two-column grid: Economic Calendar + Recent Trades */}
+			<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+				<EconomicCalendarWidget />
+				<RecentTradesWidget />
+			</div>
 		</div>
 	);
 }
