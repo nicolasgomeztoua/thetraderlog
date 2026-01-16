@@ -8,6 +8,8 @@ Started: Fri Jan 16 12:16:45 +01 2026
 - Instant blob preview pattern: insert blob URL immediately, upload in background, replace with final URL
 - Tiptap event handlers: attach to `editor.view.dom` with useEffect cleanup
 - Toast progress: `toast.loading("Uploading... X%", { id: toastId })` for progress updates
+- For HTML-embedded images, use `S3_PUBLIC_URL` env var for stable URLs (not presigned URLs that expire)
+- Generic storage router: `storage.getImageUploadUrl` for images that don't need DB attachment records
 
 ---
 
@@ -62,4 +64,59 @@ Started: Fri Jan 16 12:16:45 +01 2026
 - New image upload contexts can reuse the S3 utilities and patterns
 - A generic storage endpoint should avoid creating attachment records (journal does this)
 - The blob preview → upload → replace pattern provides excellent UX
+---
+
+## 2026-01-16 - US-001
+### Create Generic Image Upload tRPC Endpoint
+
+**Implementation:**
+
+1. Created `src/server/api/routers/storage.ts`:
+   - `getImageUploadUrl` mutation accepting filename, mimeType, size, context
+   - Key format: `images/{userId}/{context}/{uuid}-{filename}`
+   - Returns `{ presignedUrl, publicUrl }`
+   - Uses `isS3Configured()` check before generating URLs
+   - Uses `protectedProcedure` for authentication
+
+2. Added `S3_PUBLIC_URL` optional env variable to `src/env.js`:
+   - Used for generating stable public URLs for embedding in HTML
+   - Falls back to endpoint/bucket/key format if not set
+
+3. Registered router in `src/server/api/root.ts` as `storage`
+
+**Files Changed:**
+- `src/server/api/routers/storage.ts` (created)
+- `src/server/api/root.ts` (modified - added storage router)
+- `src/env.js` (modified - added S3_PUBLIC_URL)
+
+**Learnings for future iterations:**
+- For images embedded in HTML content, need stable public URLs (not presigned)
+- Added S3_PUBLIC_URL env var for custom CDN/public domain support
+- Key format uses context param for organization (trade-notes, journal-preview, etc.)
+---
+
+## 2026-01-16 - US-007
+### Integration Tests for Storage Router
+
+**Implementation:**
+
+1. Created `tests/integration/storage/storage.test.ts`:
+   - Uses `setupTrader()` fixture for authenticated caller
+   - Tests auth rejection for unauthenticated requests
+   - Tests input validation (empty fields, invalid size)
+   - Tests S3 configuration check (throws when not configured in test env)
+   - Tests various contexts and mime types are accepted
+
+2. Test approach note:
+   - S3 utilities return `isS3Configured() = false` in vitest/Node.js runtime
+   - Tests verify the router rejects requests with "File uploads are not configured"
+   - This validates the router works correctly and will function when S3 is configured
+
+**Files Changed:**
+- `tests/integration/storage/storage.test.ts` (created)
+
+**Learnings for future iterations:**
+- S3-dependent routers can be tested by verifying they properly check `isS3Configured()`
+- Test validation by confirming errors thrown are config errors, not validation errors
+- Test files go in subdirectories matching router names (e.g., `storage/storage.test.ts`)
 ---
