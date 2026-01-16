@@ -3,6 +3,7 @@
 import {
 	BookOpenIcon,
 	CheckCircle2Icon,
+	ClockIcon,
 	FlameIcon,
 	Loader2Icon,
 	PlayIcon,
@@ -13,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EVENT_IMPACT_COLORS } from "@/lib/constants";
 import { formatPnL, getPnLColorClass, toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -113,6 +115,96 @@ function TodaysSnapshot() {
 					{formatPnL(totalPnL)}
 				</span>
 			</span>
+		</div>
+	);
+}
+
+// Economic Calendar Widget - displays today's economic events
+function EconomicCalendarWidget() {
+	const { data: events, isLoading } =
+		api.economicCalendar.getTodayEvents.useQuery(
+			undefined,
+			{ staleTime: 60000 }, // 1 minute stale time
+		);
+
+	// Filter to show only high-impact events by default, show up to 5
+	const displayedEvents = events?.slice(0, 5) ?? [];
+
+	if (isLoading) {
+		return (
+			<div className="rounded border border-border bg-card">
+				<div className="flex items-center justify-between border-border border-b p-3">
+					<div className="flex items-center gap-2">
+						<ClockIcon className="h-4 w-4 text-muted-foreground" />
+						<span className="font-mono text-sm">Economic Calendar</span>
+					</div>
+				</div>
+				<div className="space-y-3 p-3">
+					{Array.from({ length: 3 }).map((_, i) => (
+						<Skeleton className="h-5 w-full" key={`skeleton-${i.toString()}`} />
+					))}
+				</div>
+			</div>
+		);
+	}
+
+	if (displayedEvents.length === 0) {
+		return (
+			<div className="rounded border border-border bg-card">
+				<div className="flex items-center justify-between border-border border-b p-3">
+					<div className="flex items-center gap-2">
+						<ClockIcon className="h-4 w-4 text-muted-foreground" />
+						<span className="font-mono text-sm">Economic Calendar</span>
+					</div>
+				</div>
+				<div className="p-3">
+					<span className="font-mono text-muted-foreground text-sm">
+						No high-impact events today
+					</span>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="rounded border border-border bg-card">
+			<div className="flex items-center justify-between border-border border-b p-3">
+				<div className="flex items-center gap-2">
+					<ClockIcon className="h-4 w-4 text-muted-foreground" />
+					<span className="font-mono text-sm">Economic Calendar</span>
+				</div>
+			</div>
+			<div className="divide-y divide-border">
+				{displayedEvents.map((event) => {
+					const impactColors =
+						EVENT_IMPACT_COLORS[event.impact] ?? EVENT_IMPACT_COLORS.low;
+					const eventTime = new Date(event.eventTime);
+					const timeStr = eventTime.toLocaleTimeString("en-US", {
+						hour: "numeric",
+						minute: "2-digit",
+						hour12: true,
+					});
+
+					return (
+						<div className="flex items-center gap-3 p-3" key={event.id}>
+							{/* Currency badge */}
+							<span
+								className={`rounded px-1.5 py-0.5 font-mono text-xs ${impactColors.bg} ${impactColors.text}`}
+							>
+								{event.currency}
+							</span>
+							{/* Event name */}
+							<span className="flex-1 truncate font-mono text-sm">
+								{event.name}
+							</span>
+							{/* Time */}
+							<span className="font-mono text-muted-foreground text-xs">
+								{timeStr}
+							</span>
+						</div>
+					);
+				})}
+			</div>
 		</div>
 	);
 }
@@ -242,6 +334,9 @@ export default function DashboardPage() {
 
 			{/* Today's Snapshot */}
 			<TodaysSnapshot />
+
+			{/* Economic Calendar Widget */}
+			<EconomicCalendarWidget />
 		</div>
 	);
 }
