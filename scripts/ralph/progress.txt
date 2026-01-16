@@ -245,3 +245,25 @@ Started: Fri Jan 16 20:44:45 +01 2026
 - Template literals for dynamic className: `${impactColors.bg} ${impactColors.text}`
 - Use divide-y divide-border for clean separation between list items
 ---
+
+## 2026-01-16 - US-011: Dashboard UI - Recent Trades Widget
+- Created RecentTradesWidget component in dashboard page
+- Fetches trades using trades.getRecent API with limit 5
+- Displays each trade with: direction badge (LONG/SHORT), symbol, date, P&L
+- Direction badge colored: long=green (bg-profit/20 text-profit), short=red (bg-loss/20 text-loss)
+- P&L colored using getPnLColorClass utility
+- Each trade row is clickable Link, navigates to /journal/{tradeId}
+- View All link in header navigates to /journal with ArrowRightIcon
+- Empty state: "No trades yet. Log your first trade" with link to /trade/new
+- Terminal-style card with TrendingUpIcon header
+- Two-column grid layout: Economic Calendar + Recent Trades on md breakpoint and above
+
+### Files changed
+- src/app/(protected)/dashboard/page.tsx (added RecentTradesWidget, updated layout to two-column grid, added imports)
+
+### Learnings for future iterations:
+- Use formatDateInTimezone for trade dates with format option (e.g., "MMM d")
+- Two-column responsive grid: `grid grid-cols-1 gap-6 md:grid-cols-2`
+- Biome requires sorted CSS classes (font-medium before font-mono)
+- Link component from next/link works well for clickable trade rows with hover:bg-muted/50
+---
