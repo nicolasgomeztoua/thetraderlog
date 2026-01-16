@@ -120,3 +120,25 @@ Started: Fri Jan 16 12:16:45 +01 2026
 - Test validation by confirming errors thrown are config errors, not validation errors
 - Test files go in subdirectories matching router names (e.g., `storage/storage.test.ts`)
 ---
+
+## 2026-01-16 - US-002
+### Create useImageUpload Hook
+
+**Implementation:**
+
+1. Created `src/hooks/use-image-upload.ts`:
+   - Hook accepts `context: string` parameter for S3 key organization
+   - Exports `uploadImage(file: File): Promise<string | null>` returning public URL
+   - Uses `storage.getImageUploadUrl` mutation
+   - Validates file is an image before upload
+   - XMLHttpRequest with progress tracking (10-95% range for upload)
+   - Toast notifications: loading with % → success/error
+
+**Files Changed:**
+- `src/hooks/use-image-upload.ts` (created)
+
+**Learnings for future iterations:**
+- Reusable hooks: accept context param for S3 organization, return simple function
+- Progress mapping: leave room at start (10%) and end (95%) for API calls
+- No need for "Processing..." step when using generic storage router (no confirmUpload)
+---
