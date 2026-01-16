@@ -142,3 +142,112 @@ Started: Fri Jan 16 12:16:45 +01 2026
 - Progress mapping: leave room at start (10%) and end (95%) for API calls
 - No need for "Processing..." step when using generic storage router (no confirmUpload)
 ---
+
+## 2026-01-16 - US-003
+### Create useTiptapImageHandlers Hook
+
+**Implementation:**
+
+1. Created `src/hooks/use-tiptap-image-handlers.ts`:
+   - Hook accepts `editor: Editor | null` and `uploadImage: (file: File) => Promise<string | null>`
+   - Implements `handleImageInsert` with instant blob preview pattern
+   - Implements `handlePaste` for clipboard images
+   - Implements `handleDrop` for dropped files
+   - Attaches/detaches event listeners to `editor.view.dom` via useEffect
+
+2. Key design decisions:
+   - Simplified handleDrop (no `application/x-attachment` support - not needed for trade notes)
+   - Hook returns void (effect-based) instead of returning handlers
+   - Uses `window.Image` for preloading final URLs before swapping
+
+**Files Changed:**
+- `src/hooks/use-tiptap-image-handlers.ts` (created)
+
+**Learnings for future iterations:**
+- Extract reusable patterns from complex components into focused hooks
+- Effect-based hooks (return void) work well for event listener attachment
+- Import `type { Editor }` from `@tiptap/react` to avoid bundling issues
+---
+
+## 2026-01-16 - US-004
+### Create TradeNoteEditor Component
+
+**Implementation:**
+
+1. Created `src/components/trade-detail/trade-note-editor.tsx`:
+   - Minimal Tiptap editor with StarterKit + Image + Link + Placeholder
+   - No toolbar - formatting via keyboard shortcuts only
+   - Placeholder: "Add notes about this trade... (paste images with Ctrl+V)"
+   - Auto-save on blur with 500ms debounce for typing
+   - Uses `useImageUpload` hook with context "trade-notes"
+   - Uses `useTiptapImageHandlers` hook for paste/drop support
+   - Props: `value`, `onChange`, `tradeId`, `className`
+
+2. Key design decisions:
+   - `immediatelyRender: false` to prevent SSR hydration issues
+   - `isInitializedRef` to prevent content reset on re-render
+   - Handles external value changes (trade switching) by comparing normalized content
+   - Empty editor `<p></p>` normalized to `null` for consistency
+   - Terminal design styling: `border-white/10`, `focus-within:border-primary/50`
+
+**Files Changed:**
+- `src/components/trade-detail/trade-note-editor.tsx` (created)
+
+**Learnings for future iterations:**
+- Tiptap + SSR: always use `immediatelyRender: false`
+- Handle external value changes carefully to avoid cursor jumping during typing
+- Normalize empty editor content (`<p></p>` → `null`) for clean API storage
+- Use `prose prose-sm prose-invert` classes for proper typography in dark theme
+---
+
+## 2026-01-16 - US-005
+### Replace EditableTextarea with TradeNoteEditor
+
+**Implementation:**
+
+1. Updated `src/components/trade-detail/content-panel.tsx`:
+   - Replaced `EditableTextarea` import with `TradeNoteEditor` import
+   - Swapped the component in the NotesSection's "trade-note" tab
+   - Passes `value`, `onChange`, and `tradeId` props
+
+2. Removed unused import:
+   - `EditableTextarea` from `./editable-field` is no longer imported
+
+**Files Changed:**
+- `src/components/trade-detail/content-panel.tsx` (modified)
+
+**Learnings for future iterations:**
+- Swap component usage is straightforward when the new component has compatible props
+- `TradeForContentPanel` type already includes `id` and `notes` fields
+- Existing plain text notes will render correctly in Tiptap (HTML paragraphs)
+---
+
+## 2026-01-16 - US-006
+### Add Image Handlers to DailyJournalPreview
+
+**Implementation:**
+
+1. Updated `src/components/daily-journal/daily-journal-preview.tsx`:
+   - Added `useCallback` import from React
+   - Added `toast` import from sonner for upload progress notifications
+   - Added `getUploadUrl` and `confirmUpload` mutations from `dailyJournal` router
+   - Moved `useEditor` declaration before handlers that use it (fixes Biome lint error)
+   - Added `handleImageUpload` function using `dailyJournal.getUploadUrl` + `confirmUpload` pattern
+   - Added `handleImageInsert` with instant blob preview pattern
+   - Added `handlePaste` for clipboard image handling
+   - Added `handleDrop` for drag-and-drop file handling
+   - Added useEffect to attach/detach event listeners to editor DOM (only when `editable={true}`)
+
+2. Key implementation notes:
+   - All image handlers check `!editable` guard to only work when editing is enabled
+   - Uses same upload pattern as journal-editor.tsx (getUploadUrl → XMLHttpRequest → confirmUpload)
+   - Creates attachment record via `confirmUpload` which stores the image in DB
+
+**Files Changed:**
+- `src/components/daily-journal/daily-journal-preview.tsx` (modified)
+
+**Learnings for future iterations:**
+- Biome's `noInvalidUseBeforeDeclaration` rule requires `useEditor` to be declared before callbacks that reference `editor`
+- The DailyJournalPreview uses the journal-specific upload pattern (with attachments) not the generic storage router
+- Pattern: when adding paste/drop to existing Tiptap editors, ensure hooks are declared in correct order
+---

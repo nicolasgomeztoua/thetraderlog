@@ -3,6 +3,8 @@
  * These ensure tests don't go stale due to hardcoded dates.
  */
 
+import { fromZonedTime } from "date-fns-tz";
+
 /**
  * Get a date N days ago at a specific UTC hour.
  * @param daysAgo - Number of days in the past (0 = today)
@@ -55,43 +57,16 @@ export function getDateAtLocalTime(
 	timezone: string,
 	localMinute = 0,
 ): Date {
-	// Get the date N days ago
 	const targetDate = new Date();
 	targetDate.setUTCDate(targetDate.getUTCDate() - daysAgo);
 
-	// Format as YYYY-MM-DD
 	const year = targetDate.getUTCFullYear();
 	const month = String(targetDate.getUTCMonth() + 1).padStart(2, "0");
 	const day = String(targetDate.getUTCDate()).padStart(2, "0");
-	const dateStr = `${year}-${month}-${day}`;
 
-	// Create a date string in the target timezone and convert to UTC
-	const localTimeStr = `${dateStr}T${String(localHour).padStart(2, "0")}:${String(localMinute).padStart(2, "0")}:00`;
+	const localTimeStr = `${year}-${month}-${day} ${String(localHour).padStart(2, "0")}:${String(localMinute).padStart(2, "0")}:00`;
 
-	// Use Intl to figure out the offset for this timezone at this date
-	const formatter = new Intl.DateTimeFormat("en-US", {
-		timeZone: timezone,
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-		hour: "2-digit",
-		minute: "2-digit",
-		second: "2-digit",
-		hour12: false,
-	});
-
-	// Create a temporary date to get the timezone offset
-	const tempDate = new Date(`${dateStr}T12:00:00Z`);
-	const parts = formatter.formatToParts(tempDate);
-	const tzHour = Number(parts.find((p) => p.type === "hour")?.value ?? 12);
-	const utcHour = tempDate.getUTCHours();
-	const offset = tzHour - utcHour; // Rough offset calculation
-
-	// Adjust for the actual offset
-	const result = new Date(`${localTimeStr}Z`);
-	result.setUTCHours(result.getUTCHours() - offset);
-
-	return result;
+	return fromZonedTime(localTimeStr, timezone);
 }
 
 /**

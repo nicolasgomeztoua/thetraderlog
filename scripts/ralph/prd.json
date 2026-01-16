@@ -88,7 +88,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -108,7 +108,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -125,7 +125,7 @@
         "Verify in browser: paste image works, drop image works"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -142,7 +142,7 @@
         "Verify in browser: paste image works in journal preview"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": ""
     }
   ]
