@@ -40,6 +40,51 @@ export async function getUserTimezone(db: Db, userId: string): Promise<string> {
 	return result?.timezone ?? "UTC";
 }
 
+/**
+ * Trading session configuration
+ */
+export interface TradingSession {
+	name: string;
+	startHour: number;
+	endHour: number;
+	color?: string;
+}
+
+/**
+ * Default trading sessions (UTC hours)
+ */
+export const DEFAULT_TRADING_SESSIONS: TradingSession[] = [
+	{ name: "Asia", startHour: 0, endHour: 8, color: "#00d4ff" },
+	{ name: "London", startHour: 8, endHour: 16, color: "#d4ff00" },
+	{ name: "New York", startHour: 13, endHour: 21, color: "#00ff88" },
+];
+
+/**
+ * Get user's trading session configurations
+ * Default to standard Asia/London/New York sessions if not configured
+ */
+export async function getUserTradingSessions(
+	db: Db,
+	userId: string,
+): Promise<TradingSession[]> {
+	const result = await db.query.userSettings.findFirst({
+		where: eq(userSettings.userId, userId),
+		columns: { tradingSessions: true },
+	});
+
+	if (result?.tradingSessions) {
+		try {
+			const parsed = JSON.parse(result.tradingSessions);
+			if (Array.isArray(parsed) && parsed.length > 0) {
+				return parsed;
+			}
+		} catch {
+			// Keep defaults on parse error
+		}
+	}
+	return DEFAULT_TRADING_SESSIONS;
+}
+
 // =============================================================================
 // ACCOUNT QUERY HELPERS
 // =============================================================================

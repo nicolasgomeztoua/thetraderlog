@@ -1,10 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getDayBoundsInTimezone } from "@/lib/shared";
+import { getDateStringInTimezone, getDayBoundsInTimezone } from "@/lib/shared";
 import {
 	createTestAccount,
 	createTestCaller,
 	createTestTrade,
 	createTestUser,
+	DayOfWeek,
+	getDateAtLocalTime,
+	getDateDaysAgo,
+	getDayOfWeekAtLocalTime,
 	getTestDb,
 	schema,
 	type TestCaller,
@@ -18,13 +22,13 @@ import {
  * 1. Session filtering respects user's timezone setting
  * 2. Date groupings (calendar, day-of-week, month) use entry time consistently
  * 3. Date range filters include the full end day
+ *
+ * NOTE: Uses relative dates (days ago) to prevent tests from going stale.
  */
 describe("Analytics Timezone Handling", () => {
 	describe("Session Filtering with User Timezone", () => {
 		// Test scenario: User in America/New_York timezone
-		// A trade entered at 14:00 UTC = 09:00 EST (during winter) / 10:00 EDT (during summer)
-		// London session (8-16 user local time) should include this trade for EST user
-		// if they entered during their 8-16 hours, NOT UTC 8-16
+		// Session hours are stored as UTC, then converted to user's local time for comparison
 
 		let caller: TestCaller;
 		let accountId: string;
@@ -35,19 +39,20 @@ describe("Analytics Timezone Handling", () => {
 
 			// Create user with America/New_York timezone
 			const user = await createTestUser();
+			const timezone = "America/New_York";
 
 			// Set user timezone to America/New_York
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "America/New_York",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 			accountId = account.id;
 
-			// Create trades at specific UTC times to test timezone conversion
-			// Trade 1: 14:00 UTC = 09:00 EST (in London session for EST user: 8-16 EST)
-			const trade1Time = new Date("2025-01-15T14:00:00Z");
+			// Create trades at specific local times to test timezone conversion
+			// Trade 1: 09:00 EST (in London session for EST user: 8-16 local)
+			const trade1Time = getDateAtLocalTime(10, 9, timezone);
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -62,8 +67,8 @@ describe("Analytics Timezone Handling", () => {
 				fees: "5",
 			});
 
-			// Trade 2: 06:00 UTC = 01:00 EST (in Asia session for EST user: 0-8 EST)
-			const trade2Time = new Date("2025-01-15T06:00:00Z");
+			// Trade 2: 01:00 EST (in Asia session for EST user: 0-8 local)
+			const trade2Time = getDateAtLocalTime(10, 1, timezone);
 			await createTestTrade(user.id, account.id, {
 				symbol: "NQ",
 				direction: "short",
@@ -78,8 +83,8 @@ describe("Analytics Timezone Handling", () => {
 				fees: "5",
 			});
 
-			// Trade 3: 20:00 UTC = 15:00 EST (in New York session for EST user: 13-21 EST)
-			const trade3Time = new Date("2025-01-15T20:00:00Z");
+			// Trade 3: 15:00 EST (in New York session for EST user: 13-21 local)
+			const trade3Time = getDateAtLocalTime(10, 15, timezone);
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -103,7 +108,7 @@ describe("Analytics Timezone Handling", () => {
 
 		it("should filter by session using user timezone, not UTC", async () => {
 			// Filter for London session (8-16 in user's timezone = EST)
-			// Trade at 14:00 UTC = 09:00 EST should be included (within 8-16 EST)
+			// Trade at 09:00 EST should be included (within 8-16 EST)
 			const result = await caller.analytics.getOverview({
 				accountId,
 				filters: {
@@ -117,7 +122,7 @@ describe("Analytics Timezone Handling", () => {
 
 		it("should include trades in Asia session based on user timezone", async () => {
 			// Filter for Asia session (0-8 in user's timezone = EST)
-			// Trade at 06:00 UTC = 01:00 EST should be included (within 0-8 EST)
+			// Trade at 01:00 EST should be included (within 0-8 EST)
 			const result = await caller.analytics.getOverview({
 				accountId,
 				filters: {
@@ -131,7 +136,7 @@ describe("Analytics Timezone Handling", () => {
 
 		it("should include trades in New York session based on user timezone", async () => {
 			// Filter for New York session (13-21 in user's timezone = EST)
-			// Trade at 20:00 UTC = 15:00 EST should be included (within 13-21 EST)
+			// Trade at 15:00 EST should be included (within 13-21 EST)
 			const result = await caller.analytics.getOverview({
 				accountId,
 				filters: {
@@ -169,21 +174,29 @@ describe("Analytics Timezone Handling", () => {
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "America/New_York";
 
 			// Set user timezone to America/New_York
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "America/New_York",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 			accountId = account.id;
 
-			// Create a trade that enters on Sunday at 23:00 EST (04:00 UTC Monday)
-			// and exits on Monday at 02:00 EST (07:00 UTC Monday)
+			// Create a trade that enters on Sunday at 23:00 EST
+			// and exits on Monday at 02:00 EST
 			// Entry should be grouped as Sunday in EST
-			const sundayNightEST = new Date("2025-01-13T04:00:00Z"); // 23:00 EST Sunday
-			const mondayMorningEST = new Date("2025-01-13T07:00:00Z"); // 02:00 EST Monday
+			const sundayNightEST = getDayOfWeekAtLocalTime(
+				DayOfWeek.Sunday,
+				1, // 1 week ago
+				23,
+				timezone,
+			);
+			const mondayMorningEST = new Date(
+				sundayNightEST.getTime() + 3 * 60 * 60 * 1000,
+			); // +3 hours = 02:00 next day
 
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
@@ -238,22 +251,27 @@ describe("Analytics Timezone Handling", () => {
 	describe("Date Range End Includes Full Day", () => {
 		let caller: TestCaller;
 		let accountId: string;
+		let tradeDateStr: string;
 
 		beforeAll(async () => {
 			await truncateAllTables();
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "UTC";
+
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "UTC",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 			accountId = account.id;
 
-			// Create a trade at 23:30 UTC on Jan 15
-			const lateNightTrade = new Date("2025-01-15T23:30:00Z");
+			// Create a trade at 23:30 UTC
+			const lateNightTrade = getDateDaysAgo(5, 23, 30);
+			tradeDateStr = getDateStringInTimezone(lateNightTrade, timezone);
+
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -268,8 +286,8 @@ describe("Analytics Timezone Handling", () => {
 				fees: "5",
 			});
 
-			// Create another trade at 10:00 UTC on Jan 15
-			const morningTrade = new Date("2025-01-15T10:00:00Z");
+			// Create another trade at 10:00 UTC same day
+			const morningTrade = getDateDaysAgo(5, 10, 0);
 			await createTestTrade(user.id, account.id, {
 				symbol: "NQ",
 				direction: "short",
@@ -292,18 +310,18 @@ describe("Analytics Timezone Handling", () => {
 		});
 
 		it("should include trades at 23:30 when end date is that day", async () => {
-			// Filter with end date of Jan 15 should include the 23:30 trade
+			// Filter with end date should include the 23:30 trade
 			const result = await caller.analytics.getOverview({
 				accountId,
 				filters: {
 					dateRange: {
-						start: "2025-01-15T00:00:00Z",
-						end: "2025-01-15T00:00:00Z", // End date at midnight - should include full day
+						start: `${tradeDateStr}T00:00:00Z`,
+						end: `${tradeDateStr}T00:00:00Z`, // End date at midnight - should include full day
 					},
 				},
 			});
 
-			// Both trades on Jan 15 should be included
+			// Both trades on that day should be included
 			expect(result.totalTrades).toBe(2);
 		});
 
@@ -312,13 +330,13 @@ describe("Analytics Timezone Handling", () => {
 				accountId,
 				filters: {
 					dateRange: {
-						start: "2025-01-15T00:00:00Z",
-						end: "2025-01-15T00:00:00Z",
+						start: `${tradeDateStr}T00:00:00Z`,
+						end: `${tradeDateStr}T00:00:00Z`,
 					},
 				},
 			});
 
-			// Should have one entry for Jan 15 with 2 trades
+			// Should have one entry for that day with 2 trades
 			expect(result.length).toBe(1);
 			expect(result[0]?.trades).toBe(2);
 		});
@@ -339,7 +357,7 @@ describe("Analytics Timezone Handling", () => {
 			accountId = account.id;
 
 			// Create trade at 10:00 UTC (within London session 8-16 UTC)
-			const tradeLondon = new Date("2025-01-15T10:00:00Z");
+			const tradeLondon = getDateDaysAgo(7, 10, 0);
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -383,7 +401,195 @@ describe("Analytics Timezone Handling", () => {
 		});
 	});
 
+	describe("Custom Session Configuration", () => {
+		// Test that session filtering uses user-configured sessions from userSettings.tradingSessions
+		// NOT the hardcoded default sessions
+		let caller: TestCaller;
+		let accountId: string;
+
+		beforeAll(async () => {
+			await truncateAllTables();
+			const db = getTestDb();
+
+			const user = await createTestUser();
+
+			// Configure custom sessions with different hours than defaults
+			// Default: Asia 0-8, London 8-16, New York 13-21
+			// Custom: Morning 6-12, Afternoon 12-18, Evening 18-24
+			const customSessions = [
+				{ name: "Morning", startHour: 6, endHour: 12, color: "#00ff00" },
+				{ name: "Afternoon", startHour: 12, endHour: 18, color: "#0000ff" },
+				{ name: "Evening", startHour: 18, endHour: 24, color: "#ff0000" },
+			];
+
+			await db.insert(schema.userSettings).values({
+				userId: user.id,
+				timezone: "UTC", // Use UTC for simplicity
+				tradingSessions: JSON.stringify(customSessions),
+			});
+
+			const account = await createTestAccount(user.id, { isDefault: true });
+			accountId = account.id;
+
+			// Create trades at specific UTC times to test custom sessions
+			// Trade 1: 07:00 UTC (in custom Morning session 6-12)
+			const trade1Time = getDateDaysAgo(5, 7, 0);
+			await createTestTrade(user.id, account.id, {
+				symbol: "ES",
+				direction: "long",
+				status: "closed",
+				entryPrice: "5000",
+				exitPrice: "5020",
+				quantity: "1",
+				entryTime: trade1Time,
+				exitTime: new Date(trade1Time.getTime() + 30 * 60000),
+				realizedPnl: "1000",
+				netPnl: "995",
+				fees: "5",
+			});
+
+			// Trade 2: 14:00 UTC (in custom Afternoon session 12-18)
+			const trade2Time = getDateDaysAgo(5, 14, 0);
+			await createTestTrade(user.id, account.id, {
+				symbol: "NQ",
+				direction: "short",
+				status: "closed",
+				entryPrice: "18000",
+				exitPrice: "17980",
+				quantity: "1",
+				entryTime: trade2Time,
+				exitTime: new Date(trade2Time.getTime() + 45 * 60000),
+				realizedPnl: "400",
+				netPnl: "395",
+				fees: "5",
+			});
+
+			// Trade 3: 20:00 UTC (in custom Evening session 18-24)
+			const trade3Time = getDateDaysAgo(5, 20, 0);
+			await createTestTrade(user.id, account.id, {
+				symbol: "ES",
+				direction: "long",
+				status: "closed",
+				entryPrice: "5000",
+				exitPrice: "4990",
+				quantity: "1",
+				entryTime: trade3Time,
+				exitTime: new Date(trade3Time.getTime() + 20 * 60000),
+				realizedPnl: "-500",
+				netPnl: "-505",
+				fees: "5",
+			});
+
+			// Trade 4: 03:00 UTC (NOT in any custom session - before Morning starts at 6)
+			const trade4Time = getDateDaysAgo(5, 3, 0);
+			await createTestTrade(user.id, account.id, {
+				symbol: "NQ",
+				direction: "long",
+				status: "closed",
+				entryPrice: "18000",
+				exitPrice: "18010",
+				quantity: "1",
+				entryTime: trade4Time,
+				exitTime: new Date(trade4Time.getTime() + 20 * 60000),
+				realizedPnl: "200",
+				netPnl: "195",
+				fees: "5",
+			});
+
+			caller = await createTestCaller(user.clerkId, user);
+		});
+
+		afterAll(async () => {
+			await truncateAllTables();
+		});
+
+		it("should filter by custom Morning session", async () => {
+			// Custom Morning session: 6-12 UTC
+			// Trade at 07:00 UTC should be included
+			// Trade at 03:00 UTC should NOT be included (default Asia would include it)
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["morning"],
+				},
+			});
+
+			// Only the 07:00 UTC trade should be included
+			expect(result.totalTrades).toBe(1);
+		});
+
+		it("should filter by custom Afternoon session", async () => {
+			// Custom Afternoon session: 12-18 UTC
+			// Trade at 14:00 UTC should be included
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["afternoon"],
+				},
+			});
+
+			expect(result.totalTrades).toBe(1);
+		});
+
+		it("should filter by custom Evening session", async () => {
+			// Custom Evening session: 18-24 UTC
+			// Trade at 20:00 UTC should be included
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["evening"],
+				},
+			});
+
+			expect(result.totalTrades).toBe(1);
+		});
+
+		it("should NOT match default session names when custom sessions configured", async () => {
+			// Filter by "asia" (default session name) should NOT match anything
+			// because user has custom sessions configured
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["asia"],
+				},
+			});
+
+			// No trades should match because "asia" is not a configured session
+			expect(result.totalTrades).toBe(0);
+		});
+
+		it("should filter by multiple custom sessions", async () => {
+			// Filter by Morning and Evening
+			// Should include trades at 07:00 and 20:00 UTC
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["morning", "evening"],
+				},
+			});
+
+			expect(result.totalTrades).toBe(2);
+		});
+
+		it("should exclude trades outside any custom session", async () => {
+			// Trade at 03:00 UTC is before Morning (6-12) starts
+			// When filtering for all custom sessions, this trade should be excluded
+			const result = await caller.analytics.getOverview({
+				accountId,
+				filters: {
+					sessions: ["morning", "afternoon", "evening"],
+				},
+			});
+
+			// 3 trades (07:00, 14:00, 20:00) should be included
+			// 1 trade (03:00) should be excluded
+			expect(result.totalTrades).toBe(3);
+		});
+	});
+
 	describe("getDayBoundsInTimezone utility", () => {
+		// These tests use hardcoded dates intentionally - testing that specific
+		// inputs produce specific outputs for the utility function
 		it("should return correct UTC bounds for EST timezone", () => {
 			// Jan 6 in EST (UTC-5) should be:
 			// Start: Jan 6 00:00 EST = Jan 6 05:00 UTC
@@ -420,24 +626,34 @@ describe("Analytics Timezone Handling", () => {
 
 	describe("Daily Journal Trades with User Timezone", () => {
 		let caller: TestCaller;
+		let tradeDateStr: string;
+		let previousDateStr: string;
 
 		beforeAll(async () => {
 			await truncateAllTables();
 			const db = getTestDb();
 
 			const user = await createTestUser();
+			const timezone = "America/New_York";
 
 			// Set user timezone to America/New_York (EST, UTC-5)
 			await db.insert(schema.userSettings).values({
 				userId: user.id,
-				timezone: "America/New_York",
+				timezone,
 			});
 
 			const account = await createTestAccount(user.id, { isDefault: true });
 
-			// Create a trade at 02:00 EST on Jan 6 = 07:00 UTC on Jan 6
-			// This should appear in the journal for Jan 6 (EST), NOT Jan 6 (UTC)
-			const tradeTime = new Date("2026-01-06T07:00:00Z"); // 02:00 EST
+			// Create a trade at 02:00 EST
+			// This should appear in the journal for that day (EST)
+			const tradeTime = getDateAtLocalTime(12, 2, timezone);
+			tradeDateStr = getDateStringInTimezone(tradeTime, timezone);
+
+			// Previous day for negative test
+			const previousDay = new Date(tradeTime);
+			previousDay.setDate(previousDay.getDate() - 1);
+			previousDateStr = getDateStringInTimezone(previousDay, timezone);
+
 			await createTestTrade(user.id, account.id, {
 				symbol: "ES",
 				direction: "long",
@@ -460,10 +676,9 @@ describe("Analytics Timezone Handling", () => {
 		});
 
 		it("should include trade in correct day based on user timezone", async () => {
-			// Query for Jan 6 in user's timezone (EST)
-			// Trade at 07:00 UTC = 02:00 EST on Jan 6 should be included
+			// Query for trade date in user's timezone (EST)
 			const result = await caller.dailyJournal.getWithTrades({
-				date: "2026-01-06",
+				date: tradeDateStr,
 			});
 
 			expect(result.trades.length).toBe(1);
@@ -471,10 +686,9 @@ describe("Analytics Timezone Handling", () => {
 		});
 
 		it("should NOT include trade when querying wrong day", async () => {
-			// Query for Jan 5 in user's timezone (EST)
-			// Trade at 07:00 UTC = 02:00 EST on Jan 6 should NOT be included
+			// Query for previous day in user's timezone (EST)
 			const result = await caller.dailyJournal.getWithTrades({
-				date: "2026-01-05",
+				date: previousDateStr,
 			});
 
 			expect(result.trades.length).toBe(0);

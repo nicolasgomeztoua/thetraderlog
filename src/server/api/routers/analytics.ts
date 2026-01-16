@@ -30,6 +30,8 @@ import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
 	getUserTimezone,
+	getUserTradingSessions,
+	type TradingSession,
 } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
@@ -176,6 +178,7 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 	options: {
 		beThreshold: number;
 		userTimezone: string;
+		userSessions: TradingSession[];
 	},
 ): T[] {
 	if (!filters) return trades;
@@ -201,23 +204,23 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 		});
 	}
 
-	// Sessions filter (session hours stored as UTC, convert to local for comparison)
+	// Sessions filter (use user-configured sessions, convert UTC hours to local for comparison)
 	if (filters.sessions && filters.sessions.length > 0) {
-		// Default session definitions (hours stored as UTC)
-		const sessionDefsUtc: Record<string, { start: number; end: number }> = {
-			asia: { start: 0, end: 8 },
-			london: { start: 8, end: 16 },
-			"new york": { start: 13, end: 21 },
-			new_york: { start: 13, end: 21 },
-		};
-
-		// Convert UTC session hours to local hours for this user
+		// Build session definitions from user's configured sessions
 		const sessionDefs: Record<string, { start: number; end: number }> = {};
-		for (const [key, utcSession] of Object.entries(sessionDefsUtc)) {
+
+		for (const session of options.userSessions) {
+			// Create key from session name (lowercase, spaces to underscores)
+			const key = session.name.toLowerCase().replace(/\s+/g, "_");
 			sessionDefs[key] = {
-				start: utcHourToLocalHour(utcSession.start, options.userTimezone),
-				end: utcHourToLocalHour(utcSession.end, options.userTimezone),
+				start: utcHourToLocalHour(session.startHour, options.userTimezone),
+				end: utcHourToLocalHour(session.endHour, options.userTimezone),
 			};
+			// Also add space-separated version for backwards compatibility
+			const keyWithSpaces = session.name.toLowerCase();
+			if (keyWithSpaces !== key) {
+				sessionDefs[keyWithSpaces] = sessionDefs[key];
+			}
 		}
 
 		filtered = filtered.filter((trade) => {
@@ -228,7 +231,7 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 				if (session.start <= session.end) {
 					return hour >= session.start && hour < session.end;
 				}
-				// Handle wrap-around sessions
+				// Handle wrap-around sessions (e.g., 22:00 - 06:00)
 				return hour >= session.start || hour < session.end;
 			});
 		});
@@ -352,9 +355,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -364,6 +368,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -513,9 +518,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -525,6 +531,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -608,9 +615,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -620,6 +628,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -700,9 +709,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -712,6 +722,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -791,9 +802,10 @@ export const analyticsRouter = createTRPCRouter({
 				.from(trades)
 				.where(and(...conditions));
 
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -803,6 +815,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -968,9 +981,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -980,6 +994,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -1109,9 +1124,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -1121,6 +1137,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -1245,9 +1262,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -1257,6 +1275,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -1328,9 +1347,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -1340,6 +1360,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -1415,9 +1436,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -1427,6 +1449,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -1570,9 +1593,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -1582,6 +1606,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -1754,9 +1779,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -1766,6 +1792,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -1916,9 +1943,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -1928,6 +1956,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -2054,9 +2083,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -2066,6 +2096,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -2192,9 +2223,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -2204,6 +2236,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -2436,9 +2469,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(trades.exitTime);
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -2448,6 +2482,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -2665,9 +2700,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions))
 				.orderBy(trades.exitTime);
 
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -2677,6 +2713,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -2872,9 +2909,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -2884,6 +2922,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -3010,9 +3049,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions))
 				.orderBy(trades.exitTime);
 
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -3022,6 +3062,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -3180,9 +3221,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -3192,6 +3234,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -3564,9 +3607,10 @@ export const analyticsRouter = createTRPCRouter({
 				.orderBy(desc(trades.exitTime));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -3576,6 +3620,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
@@ -3741,9 +3786,10 @@ export const analyticsRouter = createTRPCRouter({
 				.where(and(...conditions));
 
 			// Get user settings
-			const [beThreshold, userTimezone] = await Promise.all([
+			const [beThreshold, userTimezone, userSessions] = await Promise.all([
 				getUserBreakevenThreshold(ctx.db, ctx.user.id),
 				getUserTimezone(ctx.db, ctx.user.id),
+				getUserTradingSessions(ctx.db, ctx.user.id),
 			]);
 
 			// Apply post-query filters
@@ -3753,6 +3799,7 @@ export const analyticsRouter = createTRPCRouter({
 				{
 					beThreshold,
 					userTimezone,
+					userSessions,
 				},
 			);
 
