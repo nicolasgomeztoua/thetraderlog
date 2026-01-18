@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { CoverImageUpload } from "@/components/strategy/cover-image-upload";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/trpc/react";
@@ -93,18 +94,12 @@ export default function StrategyEditPage() {
 			className="mx-auto w-[95%] max-w-4xl space-y-6 py-6"
 			data-testid="strategy-edit-page"
 		>
-			{/* Cover image placeholder - will be replaced by US-019 */}
-			<div
-				className="relative aspect-[3/1] w-full overflow-hidden rounded-lg"
-				data-testid="strategy-edit-cover"
-				style={{
-					background: strategy.coverImageUrl
-						? `url(${strategy.coverImageUrl}) center/cover`
-						: `linear-gradient(135deg, ${strategy.color ?? "#d4ff00"}20, ${strategy.color ?? "#d4ff00"}05)`,
-				}}
-			>
-				<div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-			</div>
+			{/* Cover image upload component */}
+			<CoverImageUpload
+				coverImageUrl={strategy.coverImageUrl}
+				strategyColor={strategy.color}
+				strategyId={strategyId}
+			/>
 
 			{/* Header with back link and strategy name */}
 			<div className="flex items-center gap-3">
