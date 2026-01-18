@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import {
+	AlertTriangle,
+	ArrowLeft,
+	Settings,
+	Shield,
+	Target,
+	Wrench,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -10,6 +17,7 @@ import { RulesEditor } from "@/components/strategy/rules-editor";
 import { StrategyEditForm } from "@/components/strategy/strategy-edit-form";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/trpc/react";
 
 export default function StrategyEditPage() {
@@ -91,13 +99,13 @@ export default function StrategyEditPage() {
 		);
 	}
 
-	// Edit page content - placeholder for subsequent stories
+	// Edit page content with tabbed layout
 	return (
 		<div
 			className="mx-auto w-[95%] max-w-4xl space-y-6 py-6"
 			data-testid="strategy-edit-page"
 		>
-			{/* Cover image upload component */}
+			{/* Cover image upload component - full width at top */}
 			<CoverImageUpload
 				coverImageUrl={strategy.coverImageUrl}
 				strategyColor={strategy.color}
@@ -131,37 +139,124 @@ export default function StrategyEditPage() {
 				</div>
 			</div>
 
-			{/* Strategy Edit Form with Auto-Save */}
-			<div className="rounded-lg border border-white/5 bg-white/2 p-6">
-				<StrategyEditForm
-					initialColor={strategy.color}
-					initialDescription={strategy.description}
-					initialName={strategy.name}
-					strategyId={strategyId}
-				/>
-			</div>
-
-			{/* Rules Editor Section */}
-			<div
-				className="rounded-lg border border-white/5 bg-white/2 p-6"
-				data-testid="strategy-edit-rules-section"
+			{/* Tabbed Sections */}
+			<Tabs
+				className="w-full"
+				data-testid="strategy-edit-tabs"
+				defaultValue="overview"
 			>
-				<RulesEditor
-					initialRules={strategy.rules ?? []}
-					strategyId={strategyId}
-				/>
-			</div>
+				<TabsList className="mb-6 grid w-full grid-cols-4 font-mono">
+					<TabsTrigger
+						className="flex items-center gap-2 text-xs"
+						data-testid="strategy-edit-tab-overview"
+						value="overview"
+					>
+						<Settings className="h-3.5 w-3.5" />
+						<span className="hidden sm:inline">Overview</span>
+					</TabsTrigger>
+					<TabsTrigger
+						className="flex items-center gap-2 text-xs"
+						data-testid="strategy-edit-tab-rules"
+						value="rules"
+					>
+						<Target className="h-3.5 w-3.5" />
+						<span className="hidden sm:inline">Rules</span>
+					</TabsTrigger>
+					<TabsTrigger
+						className="flex items-center gap-2 text-xs"
+						data-testid="strategy-edit-tab-risk"
+						value="risk"
+					>
+						<Shield className="h-3.5 w-3.5" />
+						<span className="hidden sm:inline">Risk Management</span>
+					</TabsTrigger>
+					<TabsTrigger
+						className="flex items-center gap-2 text-xs"
+						data-testid="strategy-edit-tab-advanced"
+						value="advanced"
+					>
+						<Wrench className="h-3.5 w-3.5" />
+						<span className="hidden sm:inline">Advanced</span>
+					</TabsTrigger>
+				</TabsList>
 
-			{/* Risk Parameters Section */}
-			<div
-				className="rounded-lg border border-white/5 bg-white/2 p-6"
-				data-testid="strategy-edit-risk-section"
-			>
-				<RiskParametersEditor
-					initialRiskParameters={strategy.riskParameters}
-					strategyId={strategyId}
-				/>
-			</div>
+				{/* Overview Tab - Description, Color, Instruments, Categories */}
+				<TabsContent
+					data-testid="strategy-edit-content-overview"
+					value="overview"
+				>
+					<div className="rounded-lg border border-white/5 bg-white/2 p-6">
+						<StrategyEditForm
+							initialCategoryTags={strategy.categoryTags}
+							initialColor={strategy.color}
+							initialDescription={strategy.description}
+							initialInstruments={strategy.instruments}
+							initialName={strategy.name}
+							strategyId={strategyId}
+						/>
+					</div>
+				</TabsContent>
+
+				{/* Rules Tab - Entry/Exit Rules */}
+				<TabsContent data-testid="strategy-edit-content-rules" value="rules">
+					<div className="rounded-lg border border-white/5 bg-white/2 p-6">
+						<RulesEditor
+							initialRules={strategy.rules ?? []}
+							strategyId={strategyId}
+						/>
+					</div>
+				</TabsContent>
+
+				{/* Risk Management Tab */}
+				<TabsContent data-testid="strategy-edit-content-risk" value="risk">
+					<div className="rounded-lg border border-white/5 bg-white/2 p-6">
+						<RiskParametersEditor
+							initialRiskParameters={strategy.riskParameters}
+							strategyId={strategyId}
+						/>
+					</div>
+				</TabsContent>
+
+				{/* Advanced Tab - Scaling Rules, Trailing Rules (future) */}
+				<TabsContent
+					data-testid="strategy-edit-content-advanced"
+					value="advanced"
+				>
+					<div className="rounded-lg border border-white/5 bg-white/2 p-6">
+						<div className="space-y-6">
+							<div>
+								<h3 className="mb-2 font-mono font-semibold text-sm uppercase tracking-wider">
+									Scaling Rules
+								</h3>
+								<p className="font-mono text-muted-foreground text-sm">
+									Position scaling rules will be available in a future update.
+								</p>
+								<div className="mt-4 rounded-lg border border-white/10 border-dashed p-8 text-center">
+									<Wrench className="mx-auto h-8 w-8 text-muted-foreground/50" />
+									<p className="mt-2 font-mono text-muted-foreground/70 text-xs">
+										Coming Soon
+									</p>
+								</div>
+							</div>
+
+							<div className="border-white/5 border-t pt-6">
+								<h3 className="mb-2 font-mono font-semibold text-sm uppercase tracking-wider">
+									Trailing Rules
+								</h3>
+								<p className="font-mono text-muted-foreground text-sm">
+									Trailing stop rules will be available in a future update.
+								</p>
+								<div className="mt-4 rounded-lg border border-white/10 border-dashed p-8 text-center">
+									<Wrench className="mx-auto h-8 w-8 text-muted-foreground/50" />
+									<p className="mt-2 font-mono text-muted-foreground/70 text-xs">
+										Coming Soon
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</TabsContent>
+			</Tabs>
 		</div>
 	);
 }

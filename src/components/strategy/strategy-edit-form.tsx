@@ -1,19 +1,37 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { STRATEGY_CATEGORIES, STRATEGY_INSTRUMENTS } from "@/lib/constants";
 import { PRESET_COLORS } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+// Helper to compare arrays (outside component to avoid dependency issues)
+function arraysEqual(a: string[], b: string[]) {
+	if (a.length !== b.length) return false;
+	const sortedA = [...a].sort();
+	const sortedB = [...b].sort();
+	return sortedA.every((val, i) => val === sortedB[i]);
+}
 
 interface StrategyEditFormProps {
 	strategyId: string;
 	initialName: string;
 	initialDescription: string | null;
 	initialColor: string | null;
+	initialInstruments: string[] | null;
+	initialCategoryTags: string[] | null;
 }
 
 export function StrategyEditForm({
@@ -21,11 +39,23 @@ export function StrategyEditForm({
 	initialName,
 	initialDescription,
 	initialColor,
+	initialInstruments,
+	initialCategoryTags,
 }: StrategyEditFormProps) {
 	// Form state
 	const [name, setName] = useState(initialName);
 	const [description, setDescription] = useState(initialDescription ?? "");
 	const [color, setColor] = useState(initialColor ?? "#d4ff00");
+	const [instruments, setInstruments] = useState<string[]>(
+		initialInstruments ?? [],
+	);
+	const [categoryTags, setCategoryTags] = useState<string[]>(
+		initialCategoryTags ?? [],
+	);
+
+	// Popover state
+	const [instrumentsOpen, setInstrumentsOpen] = useState(false);
+	const [categoriesOpen, setCategoriesOpen] = useState(false);
 
 	// Save status state
 	const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -37,10 +67,14 @@ export function StrategyEditForm({
 		name: string;
 		description: string;
 		color: string;
+		instruments: string[];
+		categoryTags: string[];
 	}>({
 		name: initialName,
 		description: initialDescription ?? "",
 		color: initialColor ?? "#d4ff00",
+		instruments: initialInstruments ?? [],
+		categoryTags: initialCategoryTags ?? [],
 	});
 
 	// tRPC autosave mutation
@@ -53,7 +87,13 @@ export function StrategyEditForm({
 			setSaveStatus("saved");
 			setLastSavedAt(data.updatedAt);
 			// Update the last saved data reference
-			lastSavedDataRef.current = { name, description, color };
+			lastSavedDataRef.current = {
+				name,
+				description,
+				color,
+				instruments,
+				categoryTags,
+			};
 		},
 		onError: () => {
 			setSaveStatus("error");
@@ -66,7 +106,13 @@ export function StrategyEditForm({
 
 	// Debounced save function
 	const debouncedSave = useCallback(
-		(data: { name: string; description: string; color: string }) => {
+		(data: {
+			name: string;
+			description: string;
+			color: string;
+			instruments: string[];
+			categoryTags: string[];
+		}) => {
 			// Clear existing timer
 			if (debounceTimerRef.current) {
 				clearTimeout(debounceTimerRef.current);
@@ -76,7 +122,9 @@ export function StrategyEditForm({
 			const hasChanges =
 				data.name !== lastSavedDataRef.current.name ||
 				data.description !== lastSavedDataRef.current.description ||
-				data.color !== lastSavedDataRef.current.color;
+				data.color !== lastSavedDataRef.current.color ||
+				!arraysEqual(data.instruments, lastSavedDataRef.current.instruments) ||
+				!arraysEqual(data.categoryTags, lastSavedDataRef.current.categoryTags);
 
 			if (!hasChanges) {
 				return;
@@ -99,6 +147,8 @@ export function StrategyEditForm({
 					name: data.name,
 					description: data.description || null,
 					color: data.color,
+					instruments: data.instruments.length > 0 ? data.instruments : null,
+					categoryTags: data.categoryTags.length > 0 ? data.categoryTags : null,
 				});
 			}, 500);
 		},
@@ -107,8 +157,8 @@ export function StrategyEditForm({
 
 	// Trigger debounced save when form values change
 	useEffect(() => {
-		debouncedSave({ name, description, color });
-	}, [name, description, color, debouncedSave]);
+		debouncedSave({ name, description, color, instruments, categoryTags });
+	}, [name, description, color, instruments, categoryTags, debouncedSave]);
 
 	// Cleanup on unmount
 	useEffect(() => {
@@ -131,7 +181,22 @@ export function StrategyEditForm({
 	const hasUnsavedChanges =
 		name !== lastSavedDataRef.current.name ||
 		description !== lastSavedDataRef.current.description ||
-		color !== lastSavedDataRef.current.color;
+		color !== lastSavedDataRef.current.color ||
+		!arraysEqual(instruments, lastSavedDataRef.current.instruments) ||
+		!arraysEqual(categoryTags, lastSavedDataRef.current.categoryTags);
+
+	// Helper to toggle selection in array
+	const toggleSelection = (
+		item: string,
+		current: string[],
+		setter: React.Dispatch<React.SetStateAction<string[]>>,
+	) => {
+		if (current.includes(item)) {
+			setter(current.filter((i) => i !== item));
+		} else {
+			setter([...current, item]);
+		}
+	};
 
 	return (
 		<div className="space-y-6" data-testid="strategy-edit-form">
@@ -228,6 +293,144 @@ export function StrategyEditForm({
 						/>
 					))}
 				</div>
+			</div>
+
+			{/* Instruments Multi-Select */}
+			<div className="space-y-2">
+				<label
+					className="font-mono text-[11px] text-muted-foreground uppercase tracking-wider"
+					htmlFor="strategy-instruments"
+				>
+					Instruments
+				</label>
+				<Popover onOpenChange={setInstrumentsOpen} open={instrumentsOpen}>
+					<PopoverTrigger asChild>
+						<Button
+							className="h-auto min-h-10 w-full justify-between px-3 py-2 font-mono text-sm"
+							data-testid="strategy-edit-form-instruments"
+							id="strategy-instruments"
+							variant="outline"
+						>
+							<div className="flex flex-wrap gap-1.5">
+								{instruments.length > 0 ? (
+									instruments.map((inst) => (
+										<span
+											className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-xs"
+											key={inst}
+										>
+											{inst}
+											<button
+												className="hover:text-destructive"
+												onClick={(e) => {
+													e.stopPropagation();
+													setInstruments(instruments.filter((i) => i !== inst));
+												}}
+												type="button"
+											>
+												<X className="h-3 w-3" />
+											</button>
+										</span>
+									))
+								) : (
+									<span className="text-muted-foreground">
+										Select instruments...
+									</span>
+								)}
+							</div>
+							<ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent align="start" className="w-64 p-2">
+						<div className="grid gap-1">
+							{STRATEGY_INSTRUMENTS.map((inst) => (
+								<button
+									className="flex items-center gap-2 rounded px-2 py-1.5 text-left font-mono text-sm hover:bg-white/5"
+									key={inst}
+									onClick={() =>
+										toggleSelection(inst, instruments, setInstruments)
+									}
+									type="button"
+								>
+									<Checkbox
+										checked={instruments.includes(inst)}
+										className="pointer-events-none"
+									/>
+									<span>{inst}</span>
+								</button>
+							))}
+						</div>
+					</PopoverContent>
+				</Popover>
+			</div>
+
+			{/* Categories Multi-Select */}
+			<div className="space-y-2">
+				<label
+					className="font-mono text-[11px] text-muted-foreground uppercase tracking-wider"
+					htmlFor="strategy-categories"
+				>
+					Categories
+				</label>
+				<Popover onOpenChange={setCategoriesOpen} open={categoriesOpen}>
+					<PopoverTrigger asChild>
+						<Button
+							className="h-auto min-h-10 w-full justify-between px-3 py-2 font-mono text-sm"
+							data-testid="strategy-edit-form-categories"
+							id="strategy-categories"
+							variant="outline"
+						>
+							<div className="flex flex-wrap gap-1.5">
+								{categoryTags.length > 0 ? (
+									categoryTags.map((cat) => (
+										<span
+											className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-xs"
+											key={cat}
+										>
+											{cat}
+											<button
+												className="hover:text-destructive"
+												onClick={(e) => {
+													e.stopPropagation();
+													setCategoryTags(
+														categoryTags.filter((c) => c !== cat),
+													);
+												}}
+												type="button"
+											>
+												<X className="h-3 w-3" />
+											</button>
+										</span>
+									))
+								) : (
+									<span className="text-muted-foreground">
+										Select categories...
+									</span>
+								)}
+							</div>
+							<ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent align="start" className="w-64 p-2">
+						<div className="grid gap-1">
+							{STRATEGY_CATEGORIES.map((cat) => (
+								<button
+									className="flex items-center gap-2 rounded px-2 py-1.5 text-left font-mono text-sm hover:bg-white/5"
+									key={cat}
+									onClick={() =>
+										toggleSelection(cat, categoryTags, setCategoryTags)
+									}
+									type="button"
+								>
+									<Checkbox
+										checked={categoryTags.includes(cat)}
+										className="pointer-events-none"
+									/>
+									<span>{cat}</span>
+								</button>
+							))}
+						</div>
+					</PopoverContent>
+				</Popover>
 			</div>
 		</div>
 	);
