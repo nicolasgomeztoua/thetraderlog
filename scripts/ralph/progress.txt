@@ -285,3 +285,117 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - The marketplace router uses `publicProcedure` for list/getById (optional auth for vote status)
   - Test multiple users for ownership validation: main user owns resources, other users test access restrictions
 ---
+
+## 2026-01-18 - US-018
+- What was implemented: Created dedicated strategy edit page route at /strategies/[id]/edit
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` - New edit page with:
+    - Loading skeleton showing cover image, header, tabs, and content placeholders
+    - 404 page if strategy not found or user doesn't have access
+    - useEffect redirect to /strategies if not owner (strategy null after load)
+    - Cover image placeholder using strategy color gradient
+    - Terminal design styling with monospace fonts
+    - data-testid attributes for E2E testing (strategy-edit-loading, strategy-edit-not-found, strategy-edit-page, strategy-edit-cover, strategy-edit-back, strategy-edit-heading)
+- **Learnings for future iterations:**
+  - The strategies.getById query already validates ownership (returns null for non-owner)
+  - For edit pages, use useEffect to redirect after load completes if no data
+  - Cover image placeholders can use linear-gradient with strategy color
+  - Placeholder content helps visualize where future components will go
+---
+
+## 2026-01-18 - US-019
+- What was implemented: Created cover image upload component for strategy edit page
+- Files changed:
+  - `src/components/strategy/cover-image-upload.tsx` - New component with:
+    - Shows current cover image if exists, gradient placeholder if not
+    - File picker for image upload (accepts image/*)
+    - Uses strategies.getImageUploadUrl mutation for presigned S3 URLs
+    - Upload progress via XMLHttpRequest with toast notifications (0-100%)
+    - Updates strategy via strategies.update mutation on completion
+    - Delete button to remove cover image (sets to null)
+    - Responsive 3:1 aspect ratio banner
+    - Terminal design styling with hover states
+    - data-testid attributes for E2E testing
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` - Replaced placeholder with CoverImageUpload component
+- **Learnings for future iterations:**
+  - For strategy-specific uploads, use strategies.getImageUploadUrl (validates ownership) instead of generic storage hook
+  - XMLHttpRequest for upload progress tracking: use xhr.upload.addEventListener("progress", ...)
+  - After S3 upload completes, remember to update the entity (strategy) with the new URL and key
+  - When deleting cover images, set both coverImageUrl and coverImageKey to null
+  - Use separate isUploading and isDeleting states for distinct loading indicators
+---
+
+## 2026-01-18 - US-020
+- What was implemented: Built strategy edit form with auto-save functionality
+- Files changed:
+  - `src/components/strategy/strategy-edit-form.tsx` - New component with:
+    - Form fields: name (required), description (textarea), color picker
+    - Debounced auto-save (500ms) using strategies.autosave mutation
+    - Save status indicator: "Saving...", "All changes saved at HH:MM", "Unsaved changes", error state
+    - Uses useRef for debounce timer and tracking last saved data
+    - Invalidates strategy query cache on save completion
+    - Terminal design styling with monospace fonts, spacious inputs
+    - data-testid attributes for E2E testing
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` - Integrated StrategyEditForm component, replaced placeholder
+- **Learnings for future iterations:**
+  - Debounced auto-save pattern: use useRef for timer + last saved data, compare before saving to avoid redundant API calls
+  - For auto-save status UI: track both status (saving/saved/error) AND whether data differs from last saved state
+  - Don't save if required field (name) is empty - silently skip
+  - Invalidate query cache after autosave to keep UI in sync with server state
+---
+
+## 2026-01-18 - US-021
+- What was implemented: Built Rules Editor Section with drag-and-drop, inline editing, delete confirmation
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Added addRule, updateRule, deleteRule, reorderRules mutations for individual rule CRUD operations
+  - `src/components/strategy/rules-editor.tsx` - New component with dnd-kit drag-and-drop, grouped by category, inline text editing, delete confirmation, optimistic updates
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` - Integrated RulesEditor component
+- **Learnings for future iterations:**
+  - For Record<string, T[]> that should only have known keys, use Record<SpecificUnion, T[]> to avoid TypeScript undefined warnings
+  - dnd-kit: Use SortableContext with verticalListSortingStrategy for list reordering
+  - Inline editing pattern: track editingId + editingText state, update on Enter, cancel on Escape
+  - Delete confirmation pattern: track deletingId state, show confirm/cancel buttons inline
+  - When removing unused function params, remember to also remove from JSX props and interface
+---
+
+## 2026-01-18 - US-022
+- What was implemented: Built Risk Parameters Editor Section for strategy edit page
+- Files changed:
+  - `src/components/strategy/risk-parameters-editor.tsx` - New component with:
+    - Position sizing: method dropdown (fixed, risk_percent, kelly) with conditional inputs for fixedSize, riskPercent, kellyFraction
+    - Max risk per trade: type dropdown (dollars/percent) + value input
+    - Daily loss limit: type dropdown (dollars/percent) + value input
+    - Max concurrent positions: number input
+    - Min R:R ratio: number input
+    - Debounced auto-save (500ms) using strategies.autosave mutation
+    - Save status indicator (saving/saved/error/unsaved)
+    - Terminal design styling with grouped sections
+    - data-testid attributes for E2E testing
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` - Integrated RiskParametersEditor component
+- **Learnings for future iterations:**
+  - For complex forms with multiple fields that auto-save, use JSON.stringify comparison of state object vs lastSavedDataRef to detect changes
+  - Build a helper function (buildRiskParameters) that assembles the data shape from state, use it in both change detection and save mutation
+  - When form has conditional fields (e.g., different inputs per position sizing method), only include the relevant field in the saved object
+  - Biome lint: for useEffect that depends on a callback function, only include the callback in dependencies (not all the state it uses internally)
+---
+
+## 2026-01-18 - US-023
+- What was implemented: Assembled strategy edit page layout with tabbed sections
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` - Restructured to use tabbed layout with 4 tabs:
+    - Overview tab: contains StrategyEditForm with name, description, color, instruments, categories
+    - Rules tab: contains RulesEditor component
+    - Risk Management tab: contains RiskParametersEditor component
+    - Advanced tab: placeholder for future scaling and trailing rules
+  - `src/components/strategy/strategy-edit-form.tsx` - Extended with:
+    - instruments multi-select using Popover + Checkbox pattern
+    - categoryTags multi-select using same pattern
+    - Auto-save extended to include instruments and categoryTags arrays
+    - arraysEqual helper moved outside component to avoid dependency warnings
+- **Learnings for future iterations:**
+  - For multi-select with checkboxes in a popover, use controlled Popover with Button trigger styled to show selected items as chips
+  - Move pure helper functions (like array comparison) outside React components to avoid useCallback dependency issues
+  - Tabs component uses defaultValue for initial tab, each TabsTrigger needs matching value prop
+  - Responsive tab labels: use hidden sm:inline pattern to show only icons on mobile
+  - The strategies autosave mutation already accepts instruments and categoryTags as optional arrays (from US-008)
+---

@@ -343,8 +343,8 @@
         "Verify in browser: page loads at /strategies/[id]/edit"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created edit page at /strategies/[id]/edit with loading skeleton, 404 handling, owner redirect, Terminal styling, and data-testid attributes"
     },
     {
       "id": "US-019",
@@ -365,8 +365,8 @@
         "Verify in browser: upload, display, and delete work"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created cover-image-upload.tsx with file picker, S3 presigned URL upload, progress toast, delete functionality, and integrated into edit page"
     },
     {
       "id": "US-020",
@@ -386,8 +386,8 @@
         "Verify in browser: edits auto-save with status indicator"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created strategy-edit-form.tsx with debounced auto-save (500ms), save status indicator, name/description/color fields"
     },
     {
       "id": "US-021",
@@ -407,8 +407,8 @@
         "Verify in browser: CRUD operations work, drag-and-drop works"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created rules-editor.tsx with dnd-kit drag-and-drop, inline editing, delete confirmation, optimistic updates. Added addRule, updateRule, deleteRule, reorderRules endpoints to strategies router."
     },
     {
       "id": "US-022",
@@ -429,8 +429,8 @@
         "Verify in browser: all inputs work, values persist"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created risk-parameters-editor.tsx with position sizing (fixed/risk_percent/kelly), max risk per trade, daily loss limit, max concurrent positions, min R:R ratio. All fields auto-save via strategies.autosave with debounce."
     },
     {
       "id": "US-023",
@@ -449,8 +449,8 @@
         "Verify in browser: full edit flow works"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Restructured edit page with 4 tabs (Overview, Rules, Risk Management, Advanced). Extended StrategyEditForm with instruments and categories multi-select using popover checkboxes. Responsive layout with icons on mobile."
     },
     {
       "id": "US-024",
