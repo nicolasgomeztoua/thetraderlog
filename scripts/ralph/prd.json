@@ -189,8 +189,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added publish and unpublish mutations with validation, stats computation using shared analytics module"
     },
     {
       "id": "US-011",
@@ -206,8 +206,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created marketplace router with list query using publicProcedure for optional auth"
     },
     {
       "id": "US-012",
@@ -226,8 +226,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added vote and removeVote mutations with Upstash rate limiting (20/hour sliding window)"
     },
     {
       "id": "US-013",
@@ -247,8 +247,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added download mutation to marketplace router with copy creation, sourceStrategyId linking, and download record tracking"
     },
     {
       "id": "US-014",
@@ -266,8 +266,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added report mutation to marketplace router with validation for public strategies, duplicate report checks"
     },
     {
       "id": "US-015",
@@ -286,8 +286,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added marketplace.getById query using publicProcedure for optional auth, includes strategy with rules, creator info, vote score, download count, and user vote status"
     },
     {
       "id": "US-016",

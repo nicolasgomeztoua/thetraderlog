@@ -17,6 +17,7 @@ import {
 	strategies,
 	strategyDownloads,
 	strategyReports,
+	strategyRules,
 	strategyVotes,
 	users,
 } from "@/server/db/schema";
@@ -341,6 +342,127 @@ export const marketplaceRouter = createTRPCRouter({
 			return {
 				items,
 				nextCursor,
+			};
+		}),
+
+	/**
+	 * Get a public strategy by ID with full details
+	 * No auth required, auth optional for vote status
+	 */
+	getById: publicProcedure
+		.input(z.object({ id: z.string() }))
+		.query(async ({ ctx, input }) => {
+			// Fetch the strategy with rules relation
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(eq(strategies.id, input.id), eq(strategies.isPublic, true)),
+				with: {
+					rules: {
+						orderBy: [strategyRules.order],
+					},
+				},
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found or is not public");
+			}
+
+			// Get creator info
+			const creator = await ctx.db.query.users.findFirst({
+				where: eq(users.id, strategy.userId),
+				columns: {
+					id: true,
+					name: true,
+					imageUrl: true,
+				},
+			});
+
+			// Get vote score
+			const voteScore = await computeVoteScore(ctx.db, strategy.id);
+
+			// Get download count
+			const downloadCountResult = await ctx.db
+				.select({
+					count: sql<number>`COALESCE(COUNT(${strategyDownloads.id}), 0)`.as(
+						"count",
+					),
+				})
+				.from(strategyDownloads)
+				.where(eq(strategyDownloads.originalStrategyId, strategy.id));
+			const downloadCount = downloadCountResult[0]?.count ?? 0;
+
+			// Get current user's vote if authenticated
+			let userVote: number | null = null;
+			if (ctx.userId) {
+				const user = await ctx.db.query.users.findFirst({
+					where: eq(users.clerkId, ctx.userId),
+					columns: { id: true },
+				});
+
+				if (user) {
+					const vote = await ctx.db.query.strategyVotes.findFirst({
+						where: and(
+							eq(strategyVotes.strategyId, strategy.id),
+							eq(strategyVotes.userId, user.id),
+						),
+						columns: { vote: true },
+					});
+					userVote = vote?.vote ?? null;
+				}
+			}
+
+			// Parse cached stats
+			const cachedStats = parseCachedStats(strategy.cachedStats);
+			const trackRecordStatus = getTrackRecordStatus(
+				cachedStats?.totalTrades ?? 0,
+			);
+
+			// Respect isAnonymous flag for creator info
+			const creatorInfo: CreatorInfo | null = strategy.isAnonymous
+				? null
+				: (creator ?? null);
+
+			return {
+				id: strategy.id,
+				name: strategy.name,
+				description: strategy.description,
+				color: strategy.color,
+				coverImageUrl: strategy.coverImageUrl,
+				instruments: strategy.instruments,
+				categoryTags: strategy.categoryTags,
+				createdAt: strategy.createdAt,
+				updatedAt: strategy.updatedAt,
+
+				// Strategy rules (entry, exit, risk, management)
+				entryCriteria: strategy.entryCriteria,
+				exitRules: strategy.exitRules,
+				rules: strategy.rules,
+
+				// Parsed JSON fields
+				riskParameters: strategy.riskParameters
+					? JSON.parse(strategy.riskParameters)
+					: null,
+				scalingRules: strategy.scalingRules
+					? JSON.parse(strategy.scalingRules)
+					: null,
+				trailingRules: strategy.trailingRules
+					? JSON.parse(strategy.trailingRules)
+					: null,
+
+				// Creator info
+				creator: creatorInfo,
+
+				// Stats
+				stats: cachedStats,
+				trackRecordStatus,
+
+				// Engagement
+				engagement: {
+					voteScore,
+					downloadCount,
+				},
+
+				// User interaction
+				hasVoted: userVote,
 			};
 		}),
 

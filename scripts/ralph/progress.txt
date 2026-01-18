@@ -129,3 +129,119 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Test patterns: `setupTrader()` creates user + account, `createTestUser()` for additional users
   - Use `createTestCaller(clerkId, user)` for authenticated callers
 ---
+
+## 2026-01-19 - US-010
+- What was implemented: Added publish and unpublish mutations for marketplace visibility
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Added `publish` mutation with:
+    - Strategy ownership validation
+    - Required fields validation (name, description)
+    - Minimum trade count enforcement (MIN_TRADES_TO_PUBLISH = 20)
+    - Stats computation using shared `calculateAggregateStats` from `@/lib/analytics`
+    - Cached stats stored as JSON (totalTrades, wins, losses, winRate, profitFactor, avgR, avgWin, avgLoss, computedAt)
+  - `src/server/api/routers/strategies.ts` - Added `unpublish` mutation with:
+    - Strategy ownership validation
+    - Sets isPublic to false
+- **Learnings for future iterations:**
+  - Reuse existing analytics functions: `calculateAggregateStats` from `@/lib/analytics/stats.ts` computes all needed stats
+  - Use `getUserBreakevenThreshold` from `@/server/api/helpers.ts` for consistent breakeven classification
+  - Import constants from `@/lib/constants` (e.g., MIN_TRADES_TO_PUBLISH)
+  - Handle Infinity values in profitFactor when storing as JSON (set to null)
+  - JSON fields: strategy riskParameters, scalingRules, trailingRules need JSON.parse when returning
+---
+
+## 2026-01-18 - US-011
+- What was implemented: Added marketplace listing endpoint for browsing public strategies
+- Files changed:
+  - `src/server/api/routers/marketplace.ts` - Created new marketplace router with `list` query:
+    - Uses `publicProcedure` for optional auth (listing doesn't require auth, but hasVoted does)
+    - Input: cursor, limit, search, instruments, categories, sort
+    - Cursor-based pagination with configurable limit (default MARKETPLACE_PAGE_SIZE = 20)
+    - Search in name and description using `ilike`
+    - Filter by instruments and categories using PostgreSQL array overlap (`&&`)
+    - Sort by votes, downloads, or recent
+    - Returns: strategy fields, creator info (null if anonymous), cachedStats, engagement (voteScore, downloadCount), hasVoted, trackRecordStatus
+  - `src/server/api/root.ts` - Registered marketplaceRouter in appRouter
+- **Learnings for future iterations:**
+  - Use `publicProcedure` for endpoints that don't require auth but benefit from optional user context
+  - For array overlap queries in PostgreSQL, use raw SQL: `strategies.instruments && ARRAY[...]::text[]`
+  - When fetching aggregate data (votes, downloads), use separate queries with `inArray` for efficiency
+  - Build lookup Maps from arrays for O(1) access when transforming results
+  - To get user from clerkId in publicProcedure, query users table: `ctx.db.query.users.findFirst({ where: eq(users.clerkId, ctx.userId) })`
+---
+
+## 2026-01-19 - US-012
+- What was implemented: Added strategy voting endpoints with rate limiting
+- Files changed:
+  - `src/server/api/routers/marketplace.ts` - Added `vote` and `removeVote` mutations:
+    - `vote`: Accepts strategyId and vote (1 or -1), uses upsert pattern to replace existing vote
+    - `removeVote`: Accepts strategyId, deletes user's vote
+    - Both validate strategy is public and return updated vote score
+    - Cannot vote on own strategy
+  - `src/lib/rate-limit.ts` - Created new rate limiting utility:
+    - Uses Upstash Redis with sliding window algorithm
+    - Configurable: 20 votes per user per hour
+    - Graceful fallback if Redis not configured
+  - `src/env.js` - Added UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN env vars
+  - `package.json` - Added @upstash/ratelimit and @upstash/redis dependencies
+- **Learnings for future iterations:**
+  - Upstash rate limiting setup: Redis client + Ratelimit with sliding window
+  - Use `isRateLimitConfigured()` check before creating rate limiter (graceful fallback)
+  - For upsert with Drizzle: `.onConflictDoUpdate({ target: [...columns], set: {...} })`
+  - Biome disallows non-null assertions - use nullish coalescing with empty string fallback after config check
+  - computeVoteScore helper: aggregates all votes for a strategy using SUM
+---
+
+## 2026-01-19 - US-013
+- What was implemented: Added strategy download/copy endpoint to marketplace router
+- Files changed:
+  - `src/server/api/routers/marketplace.ts` - Added `download` mutation:
+    - Validates strategy exists and is public
+    - Prevents downloading own strategy
+    - Prevents duplicate downloads (unique constraint on originalStrategyId + userId)
+    - Creates new strategy copy with "(Copy)" suffix
+    - Copies: name, description, color, coverImageUrl (but NOT coverImageKey), entryCriteria, exitRules, riskParameters, scalingRules, trailingRules
+    - Sets sourceStrategyId to link copy to original
+    - Creates strategyDownload record to track the download
+    - Returns copied strategy with parsed JSON fields
+- **Learnings for future iterations:**
+  - When copying resources with S3 references, copy the public URL (coverImageUrl) but NOT the S3 key (coverImageKey) - user doesn't own the original S3 object
+  - Use sourceStrategyId to track copy-to-original relationships for attribution UI
+  - strategyDownloads table has unique index on (originalStrategyId, userId) to prevent duplicate downloads
+  - JSON fields (riskParameters, scalingRules, trailingRules) need JSON.parse when returning from database
+---
+
+## 2026-01-18 - US-014
+- What was implemented: Added strategy report endpoint to marketplace router
+- Files changed:
+  - `src/server/api/routers/marketplace.ts` - Added `report` mutation:
+    - Input: strategyId, reason (from STRATEGY_REPORT_REASONS enum), optional details (max 1000 chars)
+    - Validates strategy exists and is public
+    - Prevents reporting own strategy
+    - Prevents duplicate reports (checks existing report before insert)
+    - Creates strategyReport record with status "pending"
+    - Returns { success: true }
+- **Learnings for future iterations:**
+  - For report-type features, always check both "cannot report own" and "cannot report twice" before insert
+  - Use constants from `@/lib/constants` for enum values in Zod schema (e.g., `z.enum(STRATEGY_REPORT_REASONS)`)
+  - The strategyReports table has a unique index on (strategyId, reporterId) enforced at DB level, but checking first gives better error messages
+---
+
+## 2026-01-18 - US-015
+- What was implemented: Added marketplace.getById query for public strategy details
+- Files changed:
+  - `src/server/api/routers/marketplace.ts` - Added `getById` query:
+    - Uses `publicProcedure` for optional auth (no auth required, but vote status available when authenticated)
+    - Fetches strategy with rules relation (ordered by rule order)
+    - Only returns public strategies (isPublic = true)
+    - Includes creator info (respects isAnonymous flag)
+    - Includes computed stats from cachedStats
+    - Includes engagement data (voteScore, downloadCount)
+    - Includes current user's vote status (hasVoted)
+    - Returns all strategy fields including entryCriteria, exitRules, rules array
+    - Parses JSON fields (riskParameters, scalingRules, trailingRules)
+- **Learnings for future iterations:**
+  - For detail views, include all related data (rules, stats, engagement) in a single query response
+  - publicProcedure works well for endpoints that benefit from optional user context (vote status, ownership checks)
+  - The strategyRules relation needs explicit import from schema when used in orderBy
+---
