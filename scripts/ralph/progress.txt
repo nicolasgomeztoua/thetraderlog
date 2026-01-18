@@ -417,3 +417,61 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Text readability on images: use gradient overlay (from-background/90 via-background/30 to-transparent) + text-shadow
   - Strategy color can be used as subtle accent on UI elements via inline styles (borderTopColor, boxShadow)
 ---
+
+## 2026-01-18 - US-025
+- What was implemented: Added "Share to Marketplace" section on strategy detail page
+- Files changed:
+  - `src/components/strategy/marketplace-section.tsx` - New component with three states:
+    - Disabled state: shows progress bar (x/20 trades) when < MIN_TRADES_TO_PUBLISH
+    - Publish form: anonymous toggle (custom switch), instrument/category multi-select popovers
+    - Published state: Published badge, track record badge (verified/limited/normal), vote score, download count, marketplace link, unpublish button
+  - `src/components/strategy/index.ts` - Exported MarketplaceSection
+  - `src/app/(protected)/strategies/[id]/page.tsx` - Integrated MarketplaceSection between stats and form sections
+- **Learnings for future iterations:**
+  - For toggle switches without Shadcn Switch component, use a button with relative positioning and translate-x for the thumb
+  - Track record status: verified (100+ trades), normal (30-99), limited (<30 trades) using constants from marketplace.ts
+  - When fetching engagement data (votes, downloads) for published strategies, use marketplace.getById query with enabled: isPublic
+  - cachedStats is stored as JSON string in DB, needs JSON.parse when using
+---
+
+## 2026-01-18 - US-026
+- What was implemented: Created marketplace page route at /marketplace
+- Files changed:
+  - `src/app/(protected)/marketplace/page.tsx` - New page with:
+    - Hero section with gradient orbs, Store icon, title "Strategy Marketplace", and subtitle
+    - Infinite scroll using api.marketplace.list.useInfiniteQuery
+    - useInfiniteScroll hook with sentinel ref for automatic loading
+    - Loading skeleton with 6 placeholder cards
+    - Empty state when no strategies available
+    - Placeholder strategy card showing: cover image (Next.js Image), track record badge, creator info, stats row (win rate, profit factor, trades), engagement row (vote score, downloads), instrument badges
+    - Terminal design styling (monospace fonts, chartreuse accent)
+    - data-testid attributes: marketplace-page, marketplace-heading, marketplace-loading, marketplace-empty, marketplace-grid, marketplace-filter-placeholder, marketplace-strategy-card-{id}
+- **Learnings for future iterations:**
+  - For infinite scroll pages, use api.router.query.useInfiniteQuery with getNextPageParam
+  - The useInfiniteScroll hook provides sentinelRef - place a div with ref={sentinelRef} after the grid
+  - Use Next.js Image component with fill and sizes for responsive cover images
+  - Placeholder components can be typed with interfaces that match the API response shape
+  - Track record status badges: "verified" (100+), "limited" (<30), "normal" (30-99)
+---
+
+## 2026-01-18 - US-027
+- What was implemented: Built marketplace filter bar component with search, filters, and sorting
+- Files changed:
+  - `src/components/marketplace/filter-bar.tsx` - New component with:
+    - Search input with debounced search (300ms) using useRef timer
+    - Instrument filter (multi-select Popover with Checkbox pattern)
+    - Category filter (same multi-select pattern)
+    - Sort dropdown (Most Voted, Most Downloaded, Most Recent)
+    - Clear filters button (shows count when filters active)
+    - URL persistence via useSearchParams, router.replace
+    - Terminal design styling with monospace fonts
+    - data-testid attributes for E2E testing
+  - `src/components/marketplace/index.ts` - Exports FilterBar, MarketplaceFilters type, DEFAULT_MARKETPLACE_FILTERS
+  - `src/app/(protected)/marketplace/page.tsx` - Integrated FilterBar, added filter state, connected to marketplace.list query params, wrapped in Suspense for useSearchParams
+- **Learnings for future iterations:**
+  - When using useSearchParams in a component, wrap it in Suspense at the page level
+  - For URL sync useEffect that should only run once, use a ref (initializedRef) to prevent re-runs on filter state changes
+  - Multi-select filter pattern: Popover with checkbox buttons, show count badge on trigger, "Clear Selection" button inside
+  - Debounced search: use useRef for timer, handleSearchChange updates local input immediately, debounces filter/URL update
+  - Keep sort preference when clearing filters (better UX)
+---

@@ -488,8 +488,8 @@
         "Verify in browser: publish/unpublish flow works, minimum trades enforced"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created MarketplaceSection component with disabled/publish/published states. Integrated into strategy detail page. Uses strategies.publish/unpublish mutations and fetches marketplace.getById for engagement stats."
     },
     {
       "id": "US-026",
@@ -508,8 +508,8 @@
         "Verify in browser: page loads, shows strategies"
       ],
       "priority": 26,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created marketplace page with hero section, infinite scroll using marketplace.list query, loading skeleton, empty state, and placeholder strategy cards. Terminal design with gradient orbs."
     },
     {
       "id": "US-027",
@@ -530,8 +530,8 @@
         "Verify in browser: filters work, persist in URL"
       ],
       "priority": 27,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created filter-bar.tsx with search (debounced 300ms), instrument/category multi-select popovers, sort dropdown, clear filters button, URL persistence. Integrated into marketplace page with Suspense wrapper."
     },
     {
       "id": "US-028",

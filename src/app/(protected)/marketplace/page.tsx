@@ -1,12 +1,13 @@
 "use client";
 
-import { Loader2, Store, TrendingUp } from "lucide-react";
-import Image from "next/image";
+import { Loader2, Store } from "lucide-react";
 import { Suspense, useMemo, useState } from "react";
 import {
 	DEFAULT_MARKETPLACE_FILTERS,
 	FilterBar,
 	type MarketplaceFilters,
+	type MarketplaceStrategyData,
+	StrategyCard,
 } from "@/components/marketplace";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
@@ -64,187 +65,6 @@ function EmptyState() {
 				your strategy from the strategy detail page.
 			</p>
 		</div>
-	);
-}
-
-// =============================================================================
-// PLACEHOLDER STRATEGY CARD (will be replaced in US-028)
-// =============================================================================
-
-interface MarketplaceStrategy {
-	id: string;
-	name: string;
-	description: string | null;
-	color: string | null;
-	coverImageUrl: string | null;
-	instruments: string[] | null;
-	categoryTags: string[] | null;
-	creator: {
-		id: string;
-		name: string | null;
-		imageUrl: string | null;
-	} | null;
-	stats: {
-		totalTrades: number;
-		winRate: number;
-		profitFactor: number | null;
-	} | null;
-	trackRecordStatus: "limited" | "normal" | "verified";
-	engagement: {
-		voteScore: number;
-		downloadCount: number;
-	};
-	hasVoted: number | null;
-}
-
-function PlaceholderStrategyCard({
-	strategy,
-}: {
-	strategy: MarketplaceStrategy;
-}) {
-	return (
-		<a
-			className="group block overflow-hidden rounded border border-border bg-card transition-all hover:border-primary/30"
-			data-testid={`marketplace-strategy-card-${strategy.id}`}
-			href={`/marketplace/${strategy.id}`}
-		>
-			{/* Cover image or gradient placeholder */}
-			<div
-				className="relative aspect-[3/1] w-full overflow-hidden"
-				style={{
-					background: strategy.coverImageUrl
-						? undefined
-						: `linear-gradient(135deg, ${strategy.color ?? "#d4ff00"}20 0%, ${strategy.color ?? "#d4ff00"}05 50%, transparent 100%)`,
-				}}
-			>
-				{strategy.coverImageUrl && (
-					<Image
-						alt={strategy.name}
-						className="h-full w-full object-cover transition-transform group-hover:scale-105"
-						fill
-						sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-						src={strategy.coverImageUrl}
-					/>
-				)}
-				{/* Track record badge */}
-				{strategy.trackRecordStatus === "verified" && (
-					<div className="absolute top-2 right-2 rounded bg-profit/20 px-2 py-0.5 font-mono text-[10px] text-profit uppercase">
-						Verified
-					</div>
-				)}
-				{strategy.trackRecordStatus === "limited" && (
-					<div className="absolute top-2 right-2 rounded bg-yellow-500/20 px-2 py-0.5 font-mono text-[10px] text-yellow-500 uppercase">
-						Limited Data
-					</div>
-				)}
-			</div>
-
-			{/* Content */}
-			<div className="p-4">
-				<h3 className="mb-1 truncate font-medium font-mono text-sm">
-					{strategy.name}
-				</h3>
-				{strategy.description && (
-					<p className="mb-3 line-clamp-2 font-mono text-muted-foreground text-xs">
-						{strategy.description}
-					</p>
-				)}
-
-				{/* Creator */}
-				<div className="mb-3 flex items-center gap-2">
-					{strategy.creator ? (
-						<>
-							{strategy.creator.imageUrl ? (
-								<Image
-									alt={strategy.creator.name ?? "Creator"}
-									className="rounded-full"
-									height={20}
-									src={strategy.creator.imageUrl}
-									width={20}
-								/>
-							) : (
-								<div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
-									<span className="font-mono text-[10px] text-primary">
-										{strategy.creator.name?.charAt(0).toUpperCase() ?? "?"}
-									</span>
-								</div>
-							)}
-							<span className="font-mono text-muted-foreground text-xs">
-								{strategy.creator.name ?? "Anonymous"}
-							</span>
-						</>
-					) : (
-						<span className="font-mono text-muted-foreground text-xs italic">
-							Anonymous
-						</span>
-					)}
-				</div>
-
-				{/* Stats row */}
-				{strategy.stats && (
-					<div className="mb-3 flex items-center gap-4 font-mono text-xs">
-						<span>
-							<span className="text-muted-foreground">Win: </span>
-							<span
-								className={
-									strategy.stats.winRate >= 50 ? "text-profit" : "text-loss"
-								}
-							>
-								{strategy.stats.winRate.toFixed(1)}%
-							</span>
-						</span>
-						<span>
-							<span className="text-muted-foreground">PF: </span>
-							<span
-								className={
-									(strategy.stats.profitFactor ?? 0) >= 1
-										? "text-profit"
-										: "text-loss"
-								}
-							>
-								{strategy.stats.profitFactor === null
-									? "N/A"
-									: strategy.stats.profitFactor.toFixed(2)}
-							</span>
-						</span>
-						<span className="text-muted-foreground">
-							{strategy.stats.totalTrades} trades
-						</span>
-					</div>
-				)}
-
-				{/* Engagement row */}
-				<div className="flex items-center justify-between border-border border-t pt-3">
-					<div className="flex items-center gap-3 font-mono text-xs">
-						<span className="flex items-center gap-1 text-muted-foreground">
-							<TrendingUp className="h-3 w-3" />
-							{strategy.engagement.voteScore}
-						</span>
-						<span className="text-muted-foreground">
-							{strategy.engagement.downloadCount} downloads
-						</span>
-					</div>
-					{/* Instruments badges */}
-					{strategy.instruments && strategy.instruments.length > 0 && (
-						<div className="flex items-center gap-1">
-							{strategy.instruments.slice(0, 2).map((instrument) => (
-								<span
-									className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary"
-									key={instrument}
-								>
-									{instrument}
-								</span>
-							))}
-							{strategy.instruments.length > 2 && (
-								<span className="font-mono text-[10px] text-muted-foreground">
-									+{strategy.instruments.length - 2}
-								</span>
-							)}
-						</div>
-					)}
-				</div>
-			</div>
-		</a>
 	);
 }
 
@@ -339,9 +159,9 @@ function MarketplaceContent() {
 						data-testid="marketplace-grid"
 					>
 						{strategies.map((strategy) => (
-							<PlaceholderStrategyCard
+							<StrategyCard
 								key={strategy.id}
-								strategy={strategy as MarketplaceStrategy}
+								strategy={strategy as MarketplaceStrategyData}
 							/>
 						))}
 					</div>
