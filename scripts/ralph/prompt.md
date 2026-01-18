@@ -61,7 +61,8 @@ Only add patterns that are **general and reusable**, not story-specific details.
 ## Quality Requirements
 
 - ALL commits must pass: `bun run check` and `bun run build`
-- **Test stories**: Must also pass `bun run test`
+- **Backend stories**: Must also pass `bun run test` (integration tests)
+- **UI stories**: Must also pass `bun run test:e2e` (E2E tests)
 - Do NOT commit broken code
 - Keep changes focused and minimal
 - Follow existing code patterns from CLAUDE.md
@@ -102,39 +103,60 @@ When implementing a **UI story** (creates or modifies user-facing components):
 **Read the E2E testing skill first:** `.claude/skills/e2e-testing/SKILL.md`
 
 This skill contains:
-- Playwright + @clerk/testing setup overview
 - `data-testid` naming convention: `[component]-[element]-[qualifier]`
-- Test patterns (authenticated, unauthenticated, forms, state-dependent UI)
-- Global setup and auth state persistence
+- **Critical:** Playwright strict mode - why vague selectors fail
+- Test patterns (authenticated, unauthenticated, forms, loading states)
 
-### Adding data-testid Attributes
+### Step 1: Add data-testid Attributes
 
-When creating testable UI, add `data-testid` attributes:
+Add `data-testid` to ALL new UI elements:
 
 ```tsx
+// Headings (tests wait for these)
+<h1 data-testid="dashboard-heading-overview">
+
+// Containers/sections
+<section data-testid="dashboard-hero-journal">
+
 // Forms
 <form data-testid="trade-form">
 <input data-testid="trade-form-input-symbol" />
-<button data-testid="trade-form-button-submit">Submit</button>
+<button data-testid="trade-form-button-submit">
 
-// Data displays
-<div data-testid="dashboard-card-pnl">
-<ul data-testid="trades-list">
-
-// Navigation
-<nav data-testid="nav-sidebar">
-<button data-testid="nav-button-dashboard">
+// Loading states - SAME testid on skeleton AND loaded content
+if (isLoading) return <div data-testid="feature-section">...skeleton...</div>
+return <div data-testid="feature-section">...content...</div>
 ```
 
-### Running E2E Tests
+### Step 2: Write E2E Tests (Required)
 
-After backend tests pass, optionally run E2E tests for UI stories:
+After implementing UI, add or update E2E tests:
+
+1. Create/update test file: `tests/e2e/[feature].spec.ts`
+2. Use `page.getByTestId()` for reliable selectors (never CSS classes)
+3. Test the happy path for the new UI
+4. Handle loading states by waiting for child elements
+
+```typescript
+test("feature works", async ({ page }) => {
+  await page.goto("/feature");
+
+  // Wait for page to load
+  await expect(page.getByTestId("feature-heading")).toBeVisible();
+
+  // Test interaction
+  await page.getByTestId("feature-button-action").click();
+  await expect(page.getByTestId("feature-result")).toBeVisible();
+});
+```
+
+### Step 3: Run E2E Tests
 
 ```bash
 bun run test:e2e
 ```
 
-**Note:** E2E tests require a Clerk test user. See `tests/e2e/README.md` for setup.
+All E2E tests must pass before committing UI stories.
 
 ## EdgeJournal-Specific Guidelines
 
