@@ -640,8 +640,8 @@
         "Verify in browser: nav link works, highlights correctly"
       ],
       "priority": 32,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Marketplace nav item with Store icon. Fixed isActive to use startsWith for sub-route detection (/marketplace/[id])."
     },
     {
       "id": "US-033",

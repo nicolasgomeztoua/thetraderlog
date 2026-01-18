@@ -553,3 +553,13 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Use CheckCircle icon for positive confirmation items in dialogs
   - When extending existing functionality, check what's already implemented (redirect and toast were already in place)
 ---
+
+## 2026-01-18 - US-032
+- What was implemented: Added Marketplace to sidebar navigation
+- Files changed:
+  - `src/app/(protected)/_components/app-sidebar.tsx` - Added Store icon import, added Marketplace nav item after Strategies, fixed isActive to use `pathname.startsWith()` for sub-route detection
+- **Learnings for future iterations:**
+  - Sidebar navigation uses `mainNavItems` array for nav items
+  - For nested routes (e.g., /marketplace/[id]), use startsWith for active state detection
+  - lucide-react has Store icon suitable for marketplace features
+---

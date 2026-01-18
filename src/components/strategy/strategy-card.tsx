@@ -1,6 +1,16 @@
 "use client";
 
-import { Copy, MoreVertical, Pencil, Trash2, TrendingUp } from "lucide-react";
+import {
+	ArrowDown,
+	ArrowUp,
+	Copy,
+	Download,
+	Globe,
+	MoreVertical,
+	Pencil,
+	Trash2,
+	TrendingUp,
+} from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,11 +30,17 @@ interface StrategyCardProps {
 		description: string | null;
 		color: string | null;
 		isActive: boolean | null;
+		isPublic?: boolean | null;
+		sourceStrategyId?: string | null;
 		_count: {
 			rules: number;
 			trades: number;
 		};
 	};
+	engagement?: {
+		voteScore: number;
+		downloadCount: number;
+	} | null;
 	stats?: {
 		winRate: number;
 		totalPnl: number;
@@ -38,6 +54,7 @@ interface StrategyCardProps {
 
 export function StrategyCard({
 	strategy,
+	engagement,
 	stats,
 	onEdit,
 	onDuplicate,
@@ -62,17 +79,37 @@ export function StrategyCard({
 			{/* Header */}
 			<div className="mb-3 flex items-start justify-between gap-2 sm:mb-4">
 				<div className="min-w-0 flex-1">
-					<Link
-						className="font-mono font-semibold text-base transition-colors hover:text-primary sm:text-lg"
-						href={`/strategies/${strategy.id}`}
-					>
-						{strategy.name}
-					</Link>
-					{!strategy.isActive && (
-						<Badge className="ml-2 font-mono text-[10px]" variant="secondary">
-							Inactive
-						</Badge>
-					)}
+					<div className="flex flex-wrap items-center gap-2">
+						<Link
+							className="font-mono font-semibold text-base transition-colors hover:text-primary sm:text-lg"
+							href={`/strategies/${strategy.id}`}
+						>
+							{strategy.name}
+						</Link>
+						{strategy.isPublic && (
+							<Badge
+								className="bg-primary/20 font-mono text-[10px] text-primary"
+								variant="secondary"
+							>
+								<Globe className="mr-1 h-3 w-3" />
+								Public
+							</Badge>
+						)}
+						{strategy.sourceStrategyId && (
+							<Badge
+								className="bg-accent/20 font-mono text-[10px] text-accent"
+								variant="secondary"
+							>
+								<Download className="mr-1 h-3 w-3" />
+								Downloaded
+							</Badge>
+						)}
+						{!strategy.isActive && (
+							<Badge className="font-mono text-[10px]" variant="secondary">
+								Inactive
+							</Badge>
+						)}
+					</div>
 					{strategy.description && (
 						<p className="mt-1 line-clamp-2 font-mono text-muted-foreground text-xs sm:text-sm">
 							{strategy.description}
@@ -183,6 +220,39 @@ export function StrategyCard({
 							)}
 						>
 							{formatCurrency(stats.totalPnl)}
+						</span>
+					</div>
+				</div>
+			)}
+
+			{/* Engagement stats for public strategies */}
+			{strategy.isPublic && engagement && (
+				<div className="mt-3 flex items-center gap-4 border-border border-t pt-3 sm:mt-4 sm:pt-4">
+					<div className="flex items-center gap-1.5">
+						{engagement.voteScore >= 0 ? (
+							<ArrowUp className="h-3.5 w-3.5 text-profit" />
+						) : (
+							<ArrowDown className="h-3.5 w-3.5 text-loss" />
+						)}
+						<span
+							className={cn(
+								"font-bold font-mono text-sm",
+								engagement.voteScore >= 0 ? "text-profit" : "text-loss",
+							)}
+						>
+							{engagement.voteScore}
+						</span>
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+							votes
+						</span>
+					</div>
+					<div className="flex items-center gap-1.5">
+						<Download className="h-3.5 w-3.5 text-primary" />
+						<span className="font-bold font-mono text-primary text-sm">
+							{engagement.downloadCount}
+						</span>
+						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+							downloads
 						</span>
 					</div>
 				</div>

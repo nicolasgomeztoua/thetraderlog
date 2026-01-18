@@ -13,7 +13,9 @@ import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	strategies,
+	strategyDownloads,
 	strategyRules,
+	strategyVotes,
 	tradeRuleChecks,
 	trades,
 } from "@/server/db/schema";
@@ -248,6 +250,30 @@ export const strategiesRouter = createTRPCRouter({
 
 					const tradeCount = tradeCountResult[0]?.count ?? 0;
 
+					// For public strategies, get engagement data (votes and downloads)
+					let engagement: { voteScore: number; downloadCount: number } | null =
+						null;
+					if (strategy.isPublic) {
+						// Get vote score
+						const voteResult = await ctx.db
+							.select({
+								score: sql<number>`COALESCE(SUM(${strategyVotes.vote}), 0)`,
+							})
+							.from(strategyVotes)
+							.where(eq(strategyVotes.strategyId, strategy.id));
+
+						// Get download count
+						const downloadResult = await ctx.db
+							.select({ count: sql<number>`count(*)` })
+							.from(strategyDownloads)
+							.where(eq(strategyDownloads.originalStrategyId, strategy.id));
+
+						engagement = {
+							voteScore: voteResult[0]?.score ?? 0,
+							downloadCount: downloadResult[0]?.count ?? 0,
+						};
+					}
+
 					return {
 						...strategy,
 						riskParameters: strategy.riskParameters
@@ -259,6 +285,7 @@ export const strategiesRouter = createTRPCRouter({
 						trailingRules: strategy.trailingRules
 							? JSON.parse(strategy.trailingRules)
 							: null,
+						engagement,
 						_count: {
 							rules: strategy.rules.length,
 							trades: tradeCount,
