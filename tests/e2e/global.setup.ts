@@ -1,4 +1,4 @@
-import path from "node:path";
+import { join } from "node:path";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
 import { test as setup } from "@playwright/test";
 
@@ -19,7 +19,7 @@ import { test as setup } from "@playwright/test";
 setup.describe.configure({ mode: "serial" });
 
 // Path to store authenticated state
-const authFile = path.join(__dirname, "../../playwright/.clerk/user.json");
+const authFile = join(__dirname, "../../playwright/.clerk/user.json");
 
 setup("configure Clerk testing", async () => {
 	await clerkSetup();
