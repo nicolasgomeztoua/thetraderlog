@@ -38,6 +38,7 @@ import {
 	buildCursorCondition,
 	buildOrderByClause,
 } from "@/server/api/helpers/sort-builder";
+import { refreshStrategyStatsIfPublic } from "@/server/api/helpers/strategy-stats";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { tradeExecutions, trades, tradeTags } from "@/server/db/schema";
 import { processTradeMAEMFE } from "@/trigger/process-trade-maemfe";
@@ -681,6 +682,17 @@ export const tradesRouter = createTRPCRouter({
 				.where(eq(trades.id, id))
 				.returning();
 
+			// Refresh strategy stats if status is being changed to closed
+			// This ensures marketplace stats stay accurate when trades are closed via update
+			const isBeingClosed =
+				updateData.status === "closed" && existingTrade.status !== "closed";
+
+			if (isBeingClosed) {
+				// Use updated strategy ID if provided, otherwise use existing
+				const strategyId = updateData.strategyId ?? existingTrade.strategyId;
+				await refreshStrategyStatsIfPublic(ctx.db, strategyId, ctx.user.id);
+			}
+
 			return updated;
 		}),
 
@@ -740,6 +752,13 @@ export const tradesRouter = createTRPCRouter({
 				.where(eq(trades.id, input.id))
 				.returning();
 
+			// Refresh strategy stats if the trade has a strategy and it's public
+			await refreshStrategyStatsIfPublic(
+				ctx.db,
+				existingTrade.strategyId,
+				ctx.user.id,
+			);
+
 			return updated;
 		}),
 
@@ -760,6 +779,16 @@ export const tradesRouter = createTRPCRouter({
 				.update(trades)
 				.set({ deletedAt: new Date() })
 				.where(eq(trades.id, input.id));
+
+			// Refresh strategy stats if deleting a closed trade with a strategy
+			// The trade is now excluded from stats (deletedAt is set)
+			if (existingTrade.status === "closed" && existingTrade.strategyId) {
+				await refreshStrategyStatsIfPublic(
+					ctx.db,
+					existingTrade.strategyId,
+					ctx.user.id,
+				);
+			}
 
 			return { success: true };
 		}),
@@ -820,6 +849,16 @@ export const tradesRouter = createTRPCRouter({
 				.update(trades)
 				.set({ deletedAt: null })
 				.where(eq(trades.id, input.id));
+
+			// Refresh strategy stats if restoring a closed trade with a strategy
+			// The trade is now included back in stats (deletedAt is null)
+			if (existingTrade.status === "closed" && existingTrade.strategyId) {
+				await refreshStrategyStatsIfPublic(
+					ctx.db,
+					existingTrade.strategyId,
+					ctx.user.id,
+				);
+			}
 
 			return { success: true };
 		}),
@@ -1245,6 +1284,30 @@ export const tradesRouter = createTRPCRouter({
 				.set({ strategyId: input.strategyId })
 				.where(eq(trades.id, input.id))
 				.returning();
+
+			// Refresh strategy stats for closed trades when strategy assignment changes
+			// This ensures marketplace stats stay accurate when trades are reassigned
+			if (existingTrade.status === "closed") {
+				// Refresh old strategy stats (trade was removed from it)
+				if (
+					existingTrade.strategyId &&
+					existingTrade.strategyId !== input.strategyId
+				) {
+					await refreshStrategyStatsIfPublic(
+						ctx.db,
+						existingTrade.strategyId,
+						ctx.user.id,
+					);
+				}
+				// Refresh new strategy stats (trade was added to it)
+				if (input.strategyId && input.strategyId !== existingTrade.strategyId) {
+					await refreshStrategyStatsIfPublic(
+						ctx.db,
+						input.strategyId,
+						ctx.user.id,
+					);
+				}
+			}
 
 			return updated;
 		}),
