@@ -450,4 +450,96 @@ export const marketplaceRouter = createTRPCRouter({
 				voteScore: newScore,
 			};
 		}),
+
+	/**
+	 * Download/copy a public strategy to user's account
+	 * Creates a new strategy as a copy with source reference
+	 */
+	download: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId } = input;
+
+			// Get the original strategy (must be public)
+			const originalStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.isPublic, true),
+				),
+			});
+
+			if (!originalStrategy) {
+				throw new Error("Strategy not found or is not public");
+			}
+
+			// Cannot download own strategy
+			if (originalStrategy.userId === ctx.user.id) {
+				throw new Error("Cannot download your own strategy");
+			}
+
+			// Check if user has already downloaded this strategy
+			const existingDownload = await ctx.db.query.strategyDownloads.findFirst({
+				where: and(
+					eq(strategyDownloads.originalStrategyId, strategyId),
+					eq(strategyDownloads.userId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+
+			if (existingDownload) {
+				throw new Error("You have already downloaded this strategy");
+			}
+
+			// Create the copied strategy
+			// Copy: name (with Copy suffix), description, color, coverImageUrl (but NOT coverImageKey),
+			// entryCriteria, exitRules, riskParameters, scalingRules, trailingRules, strategyRules
+			const [copiedStrategy] = await ctx.db
+				.insert(strategies)
+				.values({
+					userId: ctx.user.id,
+					name: `${originalStrategy.name} (Copy)`,
+					description: originalStrategy.description,
+					color: originalStrategy.color,
+					coverImageUrl: originalStrategy.coverImageUrl, // Keep public URL for display
+					// Do NOT copy coverImageKey - user doesn't own that S3 object
+					entryCriteria: originalStrategy.entryCriteria,
+					exitRules: originalStrategy.exitRules,
+					riskParameters: originalStrategy.riskParameters,
+					scalingRules: originalStrategy.scalingRules,
+					trailingRules: originalStrategy.trailingRules,
+					sourceStrategyId: originalStrategy.id, // Link to original
+					isActive: true,
+					isPublic: false, // Copied strategy starts as private
+				})
+				.returning();
+
+			if (!copiedStrategy) {
+				throw new Error("Failed to create copied strategy");
+			}
+
+			// Create strategyDownload record linking original to copy
+			await ctx.db.insert(strategyDownloads).values({
+				originalStrategyId: originalStrategy.id,
+				copiedStrategyId: copiedStrategy.id,
+				userId: ctx.user.id,
+			});
+
+			// Return the copied strategy with parsed JSON fields
+			return {
+				...copiedStrategy,
+				riskParameters: copiedStrategy.riskParameters
+					? JSON.parse(copiedStrategy.riskParameters)
+					: null,
+				scalingRules: copiedStrategy.scalingRules
+					? JSON.parse(copiedStrategy.scalingRules)
+					: null,
+				trailingRules: copiedStrategy.trailingRules
+					? JSON.parse(copiedStrategy.trailingRules)
+					: null,
+			};
+		}),
 });
