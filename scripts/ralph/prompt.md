@@ -95,6 +95,47 @@ Reference existing tests:
 - `tests/integration/accounts.test.ts`
 - `tests/integration/analytics.test.ts`
 
+## E2E Testing Requirements (UI Stories)
+
+When implementing a **UI story** (creates or modifies user-facing components):
+
+**Read the E2E testing skill first:** `.claude/skills/e2e-testing/SKILL.md`
+
+This skill contains:
+- Playwright + @clerk/testing setup overview
+- `data-testid` naming convention: `[component]-[element]-[qualifier]`
+- Test patterns (authenticated, unauthenticated, forms, state-dependent UI)
+- Global setup and auth state persistence
+
+### Adding data-testid Attributes
+
+When creating testable UI, add `data-testid` attributes:
+
+```tsx
+// Forms
+<form data-testid="trade-form">
+<input data-testid="trade-form-input-symbol" />
+<button data-testid="trade-form-button-submit">Submit</button>
+
+// Data displays
+<div data-testid="dashboard-card-pnl">
+<ul data-testid="trades-list">
+
+// Navigation
+<nav data-testid="nav-sidebar">
+<button data-testid="nav-button-dashboard">
+```
+
+### Running E2E Tests
+
+After backend tests pass, optionally run E2E tests for UI stories:
+
+```bash
+bun run test:e2e
+```
+
+**Note:** E2E tests require a Clerk test user. See `tests/e2e/README.md` for setup.
+
 ## EdgeJournal-Specific Guidelines
 
 - Database: Edit `src/server/db/schema.ts`, then `bun run db:push`
