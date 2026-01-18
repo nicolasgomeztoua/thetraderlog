@@ -311,6 +311,104 @@ function RiskParametersDisplay({
 }
 
 // =============================================================================
+// DOWNLOAD CONFIRMATION DIALOG
+// =============================================================================
+
+function DownloadConfirmDialog({
+	strategyName,
+	strategyColor,
+	isPending,
+	onConfirm,
+}: {
+	strategyName: string;
+	strategyColor: string;
+	isPending: boolean;
+	onConfirm: () => void;
+}) {
+	const [open, setOpen] = useState(false);
+
+	const handleConfirm = () => {
+		onConfirm();
+		// Dialog stays open during download, closes on success via parent navigation
+	};
+
+	return (
+		<Dialog onOpenChange={setOpen} open={open}>
+			<DialogTrigger asChild>
+				<Button
+					className="font-mono"
+					data-testid="download-button"
+					style={{
+						backgroundColor: strategyColor,
+						color: "#050505",
+					}}
+				>
+					<Download className="mr-2 h-4 w-4" />
+					Download
+				</Button>
+			</DialogTrigger>
+			<DialogContent className="border-border bg-background sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle className="font-mono text-sm uppercase tracking-wider">
+						Download Strategy
+					</DialogTitle>
+					<DialogDescription className="font-mono text-xs">
+						This will copy &quot;{strategyName}&quot; to your account.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="space-y-3 py-4">
+					<p className="font-mono text-muted-foreground text-sm">
+						A copy of this strategy will be added to your strategies. You can
+						customize it freely without affecting the original.
+					</p>
+					<ul className="space-y-2 font-mono text-muted-foreground text-xs">
+						<li className="flex items-start gap-2">
+							<CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-profit" />
+							<span>Strategy rules and parameters will be copied</span>
+						</li>
+						<li className="flex items-start gap-2">
+							<CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-profit" />
+							<span>Your edits won&apos;t affect the original</span>
+						</li>
+						<li className="flex items-start gap-2">
+							<CheckCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-profit" />
+							<span>Attribution to the original author is preserved</span>
+						</li>
+					</ul>
+				</div>
+				<DialogFooter className="flex-col gap-2 sm:flex-row">
+					<Button
+						className="font-mono"
+						disabled={isPending}
+						onClick={() => setOpen(false)}
+						variant="outline"
+					>
+						Cancel
+					</Button>
+					<Button
+						className="font-mono"
+						data-testid="download-confirm-button"
+						disabled={isPending}
+						onClick={handleConfirm}
+						style={{
+							backgroundColor: strategyColor,
+							color: "#050505",
+						}}
+					>
+						{isPending ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							<Download className="mr-2 h-4 w-4" />
+						)}
+						{isPending ? "Downloading..." : "Confirm Download"}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+// =============================================================================
 // REPORT DIALOG
 // =============================================================================
 
@@ -720,23 +818,12 @@ export default function MarketplaceDetailPage() {
 							</Link>
 						</Button>
 					) : (
-						<Button
-							className="font-mono"
-							data-testid="download-button"
-							disabled={downloadMutation.isPending}
-							onClick={handleDownload}
-							style={{
-								backgroundColor: strategyColor,
-								color: "#050505",
-							}}
-						>
-							{downloadMutation.isPending ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : (
-								<Download className="mr-2 h-4 w-4" />
-							)}
-							Download
-						</Button>
+						<DownloadConfirmDialog
+							isPending={downloadMutation.isPending}
+							onConfirm={handleDownload}
+							strategyColor={strategyColor}
+							strategyName={strategy.name}
+						/>
 					)}
 
 					{/* Report button (not for own strategy) */}

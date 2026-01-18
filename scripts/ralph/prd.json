@@ -576,8 +576,8 @@
         "Verify in browser: voting works with optimistic updates"
       ],
       "priority": 29,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Extended VoteControls with isOwner and size props. Marketplace.list returns currentUserId for ownership detection. Detail page voting will reuse VoteControls (US-030)."
     },
     {
       "id": "US-030",
@@ -601,8 +601,8 @@
         "Verify in browser: full detail view works, report flow works"
       ],
       "priority": 30,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created marketplace detail page with hero section, track record badge, full description, rules display (grouped by category), risk parameters display, performance stats with limited data warning, vote controls (reusing VoteControls component), download button with Already Downloaded state, report dialog with reason dropdown and details textarea. Added currentUserId to marketplace.getById for ownership detection."
     },
     {
       "id": "US-031",

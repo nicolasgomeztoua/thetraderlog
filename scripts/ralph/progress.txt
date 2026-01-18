@@ -500,3 +500,40 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Use onClick with e.preventDefault() and e.stopPropagation() on vote buttons to prevent card link navigation
   - Track record status is determined by totalTrades from cachedStats (verified >= 100, limited < 30, normal 30-99)
 ---
+
+## 2026-01-18 - US-029
+- What was implemented: Implemented voting UI with ownership detection and disabled state for own strategies
+- Files changed:
+  - `src/components/marketplace/strategy-card.tsx` - Extended VoteControls with isOwner prop (disables voting), size prop (sm/md for different contexts), exported as public for reuse
+  - `src/components/marketplace/index.ts` - Exported VoteControls and VoteControlsProps
+  - `src/server/api/routers/marketplace.ts` - Added currentUserId to list response for ownership detection
+  - `src/app/(protected)/marketplace/page.tsx` - Pass currentUserId to StrategyCard for isOwner calculation
+- **Learnings for future iterations:**
+  - For ownership detection in marketplace cards, return currentUserId from API and compare with strategy.creator.id
+  - Protected routes (/marketplace under (protected) layout) require authentication via Clerk middleware, so "login required" handling is not needed
+  - Export reusable components (VoteControls) and their props interfaces for use in other pages (detail page)
+  - Use size prop pattern (sm/md) for components that appear in multiple contexts with different visual needs
+---
+
+## 2026-01-18 - US-030
+- What was implemented: Built marketplace strategy detail page at /marketplace/[id]
+- Files changed:
+  - `src/app/(protected)/marketplace/[id]/page.tsx` - New detail page with:
+    - Hero section with cover image (or gradient placeholder), strategy name, creator info overlay
+    - Track record badge (verified/limited/normal) on hero image
+    - Action bar with back link, vote controls (reusing VoteControls), download count, download/view downloaded button
+    - Instrument and category badges section
+    - Performance stats grid with limited data warning banner
+    - Description section
+    - Strategy rules display (grouped by category: entry, exit, risk, management)
+    - Risk parameters display (position sizing, max risk, daily loss, etc.)
+    - Legacy entry/exit criteria display (if present)
+    - Report dialog with reason dropdown and details textarea
+  - `src/server/api/routers/marketplace.ts` - Added currentUserId to getById response for ownership detection
+- **Learnings for future iterations:**
+  - tRPC v11+ doesn't support onSuccess callback in useQuery options - use conditional state initialization in render instead
+  - For vote state initialization: use a separate `voteInitialized` flag and set state in render if strategy data arrives
+  - Reuse VoteControls component from marketplace/strategy-card.tsx with size="md" for larger contexts
+  - For "Already Downloaded" detection, use strategies.getAll with select to find strategy with matching sourceStrategyId
+  - For ownership check on detail pages, add currentUserId to the API response (consistent with list endpoint pattern)
+---
