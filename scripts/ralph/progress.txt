@@ -537,3 +537,19 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - For "Already Downloaded" detection, use strategies.getAll with select to find strategy with matching sourceStrategyId
   - For ownership check on detail pages, add currentUserId to the API response (consistent with list endpoint pattern)
 ---
+
+## 2026-01-18 - US-031
+- What was implemented: Added download confirmation dialog to marketplace detail page
+- Files changed:
+  - `src/app/(protected)/marketplace/[id]/page.tsx` - Added DownloadConfirmDialog component with:
+    - Confirmation message explaining what will be copied
+    - Checklist of benefits (rules copied, edits isolated, attribution preserved)
+    - Cancel and Confirm Download buttons
+    - Loading state with spinner during download
+    - Strategy color accent on confirm button
+    - Replaced direct download button with dialog trigger
+- **Learnings for future iterations:**
+  - Dialog components with mutation can stay open during action, then close on navigation (parent handles redirect)
+  - Use CheckCircle icon for positive confirmation items in dialogs
+  - When extending existing functionality, check what's already implemented (redirect and toast were already in place)
+---

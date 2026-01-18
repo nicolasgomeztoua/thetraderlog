@@ -15,6 +15,7 @@ import {
 	Plus,
 	PlusCircle,
 	Settings,
+	Store,
 	Wallet,
 } from "lucide-react";
 import Link from "next/link";
@@ -66,6 +67,11 @@ const mainNavItems = [
 		title: "Strategies",
 		href: "/strategies",
 		icon: BookMarked,
+	},
+	{
+		title: "Marketplace",
+		href: "/marketplace",
+		icon: Store,
 	},
 	{
 		title: "Analytics",
@@ -375,7 +381,10 @@ export function AppSidebar() {
 									<SidebarMenuButton
 										asChild
 										className="font-mono text-xs uppercase tracking-wider"
-										isActive={pathname === item.href}
+										isActive={
+											pathname === item.href ||
+											pathname.startsWith(`${item.href}/`)
+										}
 									>
 										<Link href={item.href}>
 											<item.icon className="h-4 w-4" />

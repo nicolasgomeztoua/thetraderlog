@@ -622,8 +622,8 @@
         "Verify in browser: download creates copy, redirects correctly"
       ],
       "priority": 31,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added DownloadConfirmDialog component with confirmation message, list of what gets copied, Cancel/Confirm buttons, loading state. Dialog uses strategy color for accent. Existing download mutation already handles success redirect and toast."
     },
     {
       "id": "US-032",
