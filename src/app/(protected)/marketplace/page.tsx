@@ -2,7 +2,12 @@
 
 import { Loader2, Store, TrendingUp } from "lucide-react";
 import Image from "next/image";
-import { useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
+import {
+	DEFAULT_MARKETPLACE_FILTERS,
+	FilterBar,
+	type MarketplaceFilters,
+} from "@/components/marketplace";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { api } from "@/trpc/react";
@@ -244,16 +249,26 @@ function PlaceholderStrategyCard({
 }
 
 // =============================================================================
-// MAIN PAGE
+// MAIN PAGE CONTENT
 // =============================================================================
 
-export default function MarketplacePage() {
+function MarketplaceContent() {
+	// Filter state
+	const [filters, setFilters] = useState<MarketplaceFilters>(
+		DEFAULT_MARKETPLACE_FILTERS,
+	);
+
 	// Fetch marketplace strategies with infinite scroll
 	const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
 		api.marketplace.list.useInfiniteQuery(
 			{
 				limit: 20,
-				sort: "votes",
+				sort: filters.sort,
+				search: filters.search || undefined,
+				instruments:
+					filters.instruments.length > 0 ? filters.instruments : undefined,
+				categories:
+					filters.categories.length > 0 ? filters.categories : undefined,
 			},
 			{
 				getNextPageParam: (lastPage) => lastPage?.nextCursor,
@@ -305,16 +320,12 @@ export default function MarketplacePage() {
 				</div>
 			</div>
 
-			{/* Filter Bar placeholder - will be added in US-027 */}
-			<div
-				className="flex items-center justify-between"
-				data-testid="marketplace-filter-placeholder"
-			>
-				<span className="font-mono text-muted-foreground text-xs">
-					{strategies.length > 0 &&
-						`${strategies.length} ${strategies.length === 1 ? "strategy" : "strategies"}`}
-				</span>
-			</div>
+			{/* Filter Bar */}
+			<FilterBar
+				filters={filters}
+				onChange={setFilters}
+				totalCount={strategies.length > 0 ? strategies.length : undefined}
+			/>
 
 			{/* Strategy Grid */}
 			{isLoading ? (
@@ -354,5 +365,25 @@ export default function MarketplacePage() {
 				</>
 			)}
 		</div>
+	);
+}
+
+// =============================================================================
+// MAIN PAGE (with Suspense for useSearchParams)
+// =============================================================================
+
+export default function MarketplacePage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
+					<Skeleton className="h-32 w-full rounded-lg" />
+					<Skeleton className="h-10 w-full" />
+					<LoadingSkeleton />
+				</div>
+			}
+		>
+			<MarketplaceContent />
+		</Suspense>
 	);
 }
