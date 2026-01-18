@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CoverImageUpload } from "@/components/strategy/cover-image-upload";
+import { RulesEditor } from "@/components/strategy/rules-editor";
 import { StrategyEditForm } from "@/components/strategy/strategy-edit-form";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -135,6 +136,17 @@ export default function StrategyEditPage() {
 					initialColor={strategy.color}
 					initialDescription={strategy.description}
 					initialName={strategy.name}
+					strategyId={strategyId}
+				/>
+			</div>
+
+			{/* Rules Editor Section */}
+			<div
+				className="rounded-lg border border-white/5 bg-white/2 p-6"
+				data-testid="strategy-edit-rules-section"
+			>
+				<RulesEditor
+					initialRules={strategy.rules ?? []}
 					strategyId={strategyId}
 				/>
 			</div>

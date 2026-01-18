@@ -1261,4 +1261,158 @@ export const strategiesRouter = createTRPCRouter({
 					: null,
 			};
 		}),
+
+	// ==========================================================================
+	// INDIVIDUAL RULE MANAGEMENT (for auto-save edit page)
+	// ==========================================================================
+
+	/** Add a new rule to a strategy */
+	addRule: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				text: z.string().min(1, "Rule text is required"),
+				category: z.enum(["entry", "exit", "risk", "management"]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, text, category } = input;
+
+			// Verify strategy ownership
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Get max order for this strategy's rules
+			const existingRules = await ctx.db.query.strategyRules.findMany({
+				where: eq(strategyRules.strategyId, strategyId),
+				orderBy: [desc(strategyRules.order)],
+				limit: 1,
+			});
+
+			const newOrder =
+				existingRules.length > 0 ? (existingRules[0]?.order ?? 0) + 1 : 0;
+
+			// Insert new rule
+			const [newRule] = await ctx.db
+				.insert(strategyRules)
+				.values({
+					strategyId,
+					text,
+					category,
+					order: newOrder,
+				})
+				.returning();
+
+			return newRule;
+		}),
+
+	/** Update an existing rule */
+	updateRule: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				text: z.string().min(1, "Rule text is required").optional(),
+				category: z.enum(["entry", "exit", "risk", "management"]).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { id, ...updates } = input;
+
+			// Verify rule exists and user owns the strategy
+			const rule = await ctx.db.query.strategyRules.findFirst({
+				where: eq(strategyRules.id, id),
+				with: {
+					strategy: true,
+				},
+			});
+
+			if (!rule || rule.strategy.userId !== ctx.user.id) {
+				throw new Error("Rule not found");
+			}
+
+			// Update the rule
+			const [updated] = await ctx.db
+				.update(strategyRules)
+				.set(updates)
+				.where(eq(strategyRules.id, id))
+				.returning();
+
+			return updated;
+		}),
+
+	/** Delete a rule */
+	deleteRule: protectedProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Verify rule exists and user owns the strategy
+			const rule = await ctx.db.query.strategyRules.findFirst({
+				where: eq(strategyRules.id, input.id),
+				with: {
+					strategy: true,
+				},
+			});
+
+			if (!rule || rule.strategy.userId !== ctx.user.id) {
+				throw new Error("Rule not found");
+			}
+
+			// Delete the rule
+			await ctx.db.delete(strategyRules).where(eq(strategyRules.id, input.id));
+
+			return { success: true };
+		}),
+
+	/** Reorder rules within a strategy */
+	reorderRules: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				ruleOrders: z.array(
+					z.object({
+						id: z.string(),
+						order: z.number(),
+					}),
+				),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, ruleOrders } = input;
+
+			// Verify strategy ownership
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update each rule's order
+			await Promise.all(
+				ruleOrders.map(({ id, order }) =>
+					ctx.db
+						.update(strategyRules)
+						.set({ order })
+						.where(
+							and(
+								eq(strategyRules.id, id),
+								eq(strategyRules.strategyId, strategyId),
+							),
+						),
+				),
+			);
+
+			return { success: true };
+		}),
 });
