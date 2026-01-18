@@ -393,8 +393,9 @@ export const marketplaceRouter = createTRPCRouter({
 				.where(eq(strategyDownloads.originalStrategyId, strategy.id));
 			const downloadCount = downloadCountResult[0]?.count ?? 0;
 
-			// Get current user's vote if authenticated
+			// Get current user's vote and ID if authenticated
 			let userVote: number | null = null;
+			let currentUserId: string | null = null;
 			if (ctx.userId) {
 				const user = await ctx.db.query.users.findFirst({
 					where: eq(users.clerkId, ctx.userId),
@@ -402,6 +403,7 @@ export const marketplaceRouter = createTRPCRouter({
 				});
 
 				if (user) {
+					currentUserId = user.id;
 					const vote = await ctx.db.query.strategyVotes.findFirst({
 						where: and(
 							eq(strategyVotes.strategyId, strategy.id),
@@ -466,6 +468,9 @@ export const marketplaceRouter = createTRPCRouter({
 
 				// User interaction
 				hasVoted: userVote,
+
+				// Current user ID for ownership check
+				currentUserId,
 			};
 		}),
 
