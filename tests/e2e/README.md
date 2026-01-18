@@ -96,4 +96,13 @@ Set the environment variables. Either:
 
 ## Writing Tests
 
-See the E2E testing skill: `.claude/skills/e2e-testing/SKILL.md`
+For comprehensive documentation on writing E2E tests, see the E2E testing skill:
+
+**[.claude/skills/e2e-testing/SKILL.md](../../.claude/skills/e2e-testing/SKILL.md)**
+
+The skill covers:
+- `data-testid` naming conventions (`[component]-[element]-[qualifier]`)
+- Test patterns for authenticated and unauthenticated flows
+- Form submission testing
+- Best practices for reliable, non-flaky tests
+- Troubleshooting common issues
