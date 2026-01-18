@@ -303,8 +303,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created strategy-stats.ts helper with computeAndCacheStrategyStats and refreshStrategyStatsIfPublic functions. Integrated into trades router: close, update, delete, restore, and updateStrategy mutations all refresh stats for public strategies."
     },
     {
       "id": "US-017",
@@ -324,8 +324,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created comprehensive marketplace.test.ts with tests for publish/unpublish, list, getById, vote/removeVote, download, and report. Tests require Docker to run (testcontainers). Build and check pass."
     },
     {
       "id": "US-018",

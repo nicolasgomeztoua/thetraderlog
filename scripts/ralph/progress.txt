@@ -245,3 +245,43 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - publicProcedure works well for endpoints that benefit from optional user context (vote status, ownership checks)
   - The strategyRules relation needs explicit import from schema when used in orderBy
 ---
+
+## 2026-01-18 - US-016
+- What was implemented: Added cached stats refresh logic when trades are closed/modified
+- Files changed:
+  - `src/server/api/helpers/strategy-stats.ts` - Created new helper module with:
+    - `CachedStrategyStats` interface matching cachedStats column structure
+    - `computeAndCacheStrategyStats(db, strategyId, userId)` - computes and caches stats for public strategies
+    - `refreshStrategyStatsIfPublic(db, strategyId, userId)` - convenience wrapper that skips if no strategy assigned
+  - `src/server/api/routers/trades.ts` - Integrated stats refresh into multiple mutations:
+    - `close`: refreshes after closing a trade
+    - `update`: refreshes when status changes to "closed"
+    - `delete`: refreshes when soft-deleting a closed trade (excluded from stats)
+    - `restore`: refreshes when restoring a closed trade (included back in stats)
+    - `updateStrategy`: refreshes both old and new strategies when assignment changes on closed trades
+- **Learnings for future iterations:**
+  - Use `import type { db as DbType } from "@/server/db"` then `type Db = typeof DbType` for database client typing (matches helpers.ts pattern)
+  - Stats refresh should happen in all trade mutations that affect closed trades: close, update-to-closed, delete, restore, strategy reassignment
+  - When reassigning a closed trade's strategy, refresh BOTH old and new strategies (one loses a trade, one gains a trade)
+  - The refresh function checks isPublic internally, so callers don't need to check first
+---
+
+## 2026-01-18 - US-017
+- What was implemented: Comprehensive integration tests for marketplace backend
+- Files changed:
+  - `tests/integration/marketplace.test.ts` - Created new test file with:
+    - Tests for strategies.publish: validates name/description required, minimum 20 trades, ownership, stats computation
+    - Tests for strategies.unpublish: sets isPublic false, ownership validation
+    - Tests for marketplace.list: paginated results, filters (search, instruments, categories), trackRecordStatus
+    - Tests for marketplace.getById: returns public strategy details, 404 for private, anonymous creator handling
+    - Tests for marketplace.vote/removeVote: upvote/downvote, vote replacement, cannot vote own strategy
+    - Tests for marketplace.download: creates strategy copy, records download, cannot download twice or own strategy
+    - Tests for marketplace.report: creates report with pending status, cannot report own or twice
+    - Authentication tests for all protected endpoints
+- **Learnings for future iterations:**
+  - Tests require Docker to run (testcontainers for PostgreSQL)
+  - When testing marketplace features, create strategies with enough trades (MIN_TRADES_TO_PUBLISH = 20)
+  - Use `createTestTrades` to create trades, then update them with `db.update` to link to strategy
+  - The marketplace router uses `publicProcedure` for list/getById (optional auth for vote status)
+  - Test multiple users for ownership validation: main user owns resources, other users test access restrictions
+---
