@@ -475,3 +475,28 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Debounced search: use useRef for timer, handleSearchChange updates local input immediately, debounces filter/URL update
   - Keep sort preference when clearing filters (better UX)
 ---
+
+## 2026-01-18 - US-028
+- What was implemented: Built marketplace strategy card component with full voting UI
+- Files changed:
+  - `src/components/marketplace/strategy-card.tsx` - New component with:
+    - Cover image with Next.js Image or gradient placeholder using strategy color
+    - Track record badges: verified (100+ trades with ShieldCheck icon), limited (<30 trades with TriangleAlert icon)
+    - Strategy name and truncated description (line-clamp-2)
+    - Creator info with avatar or initial/Anonymous for anonymous strategies
+    - Stats row: win rate (colored), profit factor (colored), total trades
+    - Category badges (showing first 3 with +N overflow)
+    - Vote controls with up/down arrows, optimistic updates, score display
+    - Download count badge
+    - Instrument badges (showing first 2 with +N overflow)
+    - Hover effects and Terminal design styling
+    - data-testid attributes for E2E testing
+  - `src/components/marketplace/index.ts` - Added StrategyCard and MarketplaceStrategyData exports
+  - `src/app/(protected)/marketplace/page.tsx` - Replaced PlaceholderStrategyCard with new StrategyCard component
+- **Learnings for future iterations:**
+  - Use `@/lib/shared` for cn utility, not `@/lib/utils`
+  - For voting with optimistic updates: calculate score delta based on old vote vs new vote
+  - If changing vote: delta = newVote - oldVote; If removing vote: newScore = oldScore - oldVote
+  - Use onClick with e.preventDefault() and e.stopPropagation() on vote buttons to prevent card link navigation
+  - Track record status is determined by totalTrades from cachedStats (verified >= 100, limited < 30, normal 30-99)
+---

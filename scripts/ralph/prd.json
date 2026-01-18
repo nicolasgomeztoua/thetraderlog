@@ -554,8 +554,8 @@
         "Verify in browser: cards render correctly with appropriate badges"
       ],
       "priority": 28,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created strategy-card.tsx with cover image/gradient placeholder, track record badges (verified/limited), stats row, vote controls with optimistic updates, category badges, instrument badges, download count. Integrated into marketplace page replacing placeholder component."
     },
     {
       "id": "US-029",
