@@ -4,6 +4,7 @@ import {
 	LIMITED_DATA_THRESHOLD,
 	MARKETPLACE_PAGE_SIZE,
 	MARKETPLACE_SORT_OPTIONS,
+	STRATEGY_REPORT_REASONS,
 	VERIFIED_TRACK_RECORD_THRESHOLD,
 } from "@/lib/constants";
 import { checkVoteRateLimit } from "@/lib/rate-limit";
@@ -15,6 +16,7 @@ import {
 import {
 	strategies,
 	strategyDownloads,
+	strategyReports,
 	strategyVotes,
 	users,
 } from "@/server/db/schema";
@@ -540,6 +542,66 @@ export const marketplaceRouter = createTRPCRouter({
 				trailingRules: copiedStrategy.trailingRules
 					? JSON.parse(copiedStrategy.trailingRules)
 					: null,
+			};
+		}),
+
+	/**
+	 * Report a strategy for inappropriate or misleading content
+	 * One report per user per strategy (unique constraint)
+	 */
+	report: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				reason: z.enum(STRATEGY_REPORT_REASONS),
+				details: z.string().max(1000).nullish(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, reason, details } = input;
+
+			// Verify strategy exists and is public
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.isPublic, true),
+				),
+				columns: { id: true, userId: true },
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found or is not public");
+			}
+
+			// Cannot report own strategy
+			if (strategy.userId === ctx.user.id) {
+				throw new Error("Cannot report your own strategy");
+			}
+
+			// Check if user has already reported this strategy
+			const existingReport = await ctx.db.query.strategyReports.findFirst({
+				where: and(
+					eq(strategyReports.strategyId, strategyId),
+					eq(strategyReports.reporterId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+
+			if (existingReport) {
+				throw new Error("You have already reported this strategy");
+			}
+
+			// Create the report with status pending
+			await ctx.db.insert(strategyReports).values({
+				strategyId,
+				reporterId: ctx.user.id,
+				reason,
+				details: details ?? null,
+				status: "pending",
+			});
+
+			return {
+				success: true,
 			};
 		}),
 });
