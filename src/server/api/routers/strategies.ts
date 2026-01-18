@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "@/env";
 import { calculateAggregateStats } from "@/lib/analytics";
+import { MIN_TRADES_TO_PUBLISH } from "@/lib/constants";
 import {
 	deleteObject,
 	getPresignedUploadUrl,
@@ -1094,6 +1095,170 @@ export const strategiesRouter = createTRPCRouter({
 				presignedUrl,
 				publicUrl,
 				key,
+			};
+		}),
+
+	// Publish a strategy to the marketplace
+	publish: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				isAnonymous: z.boolean().optional().default(false),
+				instruments: z.array(z.string()).optional(),
+				categoryTags: z.array(z.string()).optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Get strategy with ownership check
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.id),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Validate required fields for publishing
+			if (!strategy.name || strategy.name.trim() === "") {
+				throw new Error("Strategy must have a name to be published");
+			}
+			if (!strategy.description || strategy.description.trim() === "") {
+				throw new Error("Strategy must have a description to be published");
+			}
+
+			// Count closed trades for this strategy
+			const tradeCountResult = await ctx.db
+				.select({ count: sql<number>`count(*)` })
+				.from(trades)
+				.where(
+					and(
+						eq(trades.strategyId, input.id),
+						eq(trades.userId, ctx.user.id),
+						eq(trades.status, "closed"),
+						isNull(trades.deletedAt),
+					),
+				);
+
+			const tradeCount = tradeCountResult[0]?.count ?? 0;
+
+			if (tradeCount < MIN_TRADES_TO_PUBLISH) {
+				throw new Error(
+					`Strategy must have at least ${MIN_TRADES_TO_PUBLISH} closed trades to be published. Currently has ${tradeCount} trades.`,
+				);
+			}
+
+			// Get all closed trades for stats computation
+			const strategyTrades = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.strategyId, input.id),
+					eq(trades.userId, ctx.user.id),
+					eq(trades.status, "closed"),
+					isNull(trades.deletedAt),
+				),
+				columns: {
+					netPnl: true,
+					entryPrice: true,
+					stopLoss: true,
+					quantity: true,
+					symbol: true,
+					instrumentType: true,
+				},
+			});
+
+			// Compute stats using shared analytics
+			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			const stats = calculateAggregateStats(strategyTrades, beThreshold);
+
+			// Build cached stats object
+			const cachedStats = {
+				totalTrades: stats.totalTrades,
+				wins: stats.wins,
+				losses: stats.losses,
+				winRate: stats.winRate,
+				profitFactor:
+					stats.profitFactor === Infinity ? null : stats.profitFactor,
+				avgR: stats.avgRMultiple,
+				avgWin: stats.avgWin,
+				avgLoss: stats.avgLoss,
+				computedAt: new Date().toISOString(),
+			};
+
+			// Update strategy to published state
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					isPublic: true,
+					isAnonymous: input.isAnonymous,
+					instruments: input.instruments ?? strategy.instruments,
+					categoryTags: input.categoryTags ?? strategy.categoryTags,
+					cachedStats: JSON.stringify(cachedStats),
+				})
+				.where(eq(strategies.id, input.id))
+				.returning();
+
+			if (!updated) {
+				throw new Error("Failed to publish strategy");
+			}
+
+			return {
+				...updated,
+				riskParameters: updated.riskParameters
+					? JSON.parse(updated.riskParameters)
+					: null,
+				scalingRules: updated.scalingRules
+					? JSON.parse(updated.scalingRules)
+					: null,
+				trailingRules: updated.trailingRules
+					? JSON.parse(updated.trailingRules)
+					: null,
+				cachedStats,
+			};
+		}),
+
+	// Unpublish a strategy from the marketplace
+	unpublish: protectedProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Verify ownership
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.id),
+					eq(strategies.userId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update strategy to unpublished state
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					isPublic: false,
+				})
+				.where(eq(strategies.id, input.id))
+				.returning();
+
+			if (!updated) {
+				throw new Error("Failed to unpublish strategy");
+			}
+
+			return {
+				...updated,
+				riskParameters: updated.riskParameters
+					? JSON.parse(updated.riskParameters)
+					: null,
+				scalingRules: updated.scalingRules
+					? JSON.parse(updated.scalingRules)
+					: null,
+				trailingRules: updated.trailingRules
+					? JSON.parse(updated.trailingRules)
+					: null,
 			};
 		}),
 });

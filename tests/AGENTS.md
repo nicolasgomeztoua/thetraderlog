@@ -29,6 +29,48 @@ Example: Trade at `new Date("2025-01-16T04:00:00Z")` is 11 PM EST on Jan 15.
 - Total trades: `sum of (bucket.tradeCount * bucket.days)`
 - Total days: `sum of bucket.days`
 
+### Testing Endpoints with S3 Dependencies
+**When:** Testing router mutations that use `isS3Configured()`
+**How:** In test environment (vitest/Node.js), S3 is never configured. The S3 check happens FIRST in router handlers, before other validations. Tests must account for this:
+```typescript
+// Valid request fails at S3 check, proving it passed validation
+await expect(
+  caller.strategies.getImageUploadUrl({
+    strategyId: strategy.id,
+    filename: "cover.jpg",
+    mimeType: "image/jpeg",
+    size: 1024 * 1024,
+  }),
+).rejects.toThrow("File uploads are not configured");
+
+// Zod validation errors occur BEFORE handler runs (before S3 check)
+await expect(
+  caller.strategies.getImageUploadUrl({
+    strategyId: strategy.id,
+    filename: "", // empty - fails Zod .min(1)
+    mimeType: "image/jpeg",
+    size: 1024,
+  }),
+).rejects.toThrow(); // Zod error
+```
+
+### Testing Multi-User Ownership
+**When:** Verifying ownership validation (user can only access their own data)
+**How:** Create two users with separate callers, then test cross-access:
+```typescript
+const { user: testUser } = await setupTrader();
+caller = await createTestCaller(testUser.clerkId, testUser);
+
+const otherUser = await createTestUser({ email: "other@test.com" });
+otherUserCaller = await createTestCaller(otherUser.clerkId, otherUser);
+
+// Create resource as testUser, try to access as otherUser
+const strategy = await caller.strategies.create({ name: "Test" });
+await expect(
+  otherUserCaller.strategies.getById({ id: strategy.id })
+).rejects.toThrow(/Strategy not found/);
+```
+
 ## E2E Test Patterns
 
 ### Strict Mode: Use data-testid (Critical)

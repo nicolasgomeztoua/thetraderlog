@@ -43,3 +43,89 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Self-referential relations in Drizzle require relationName to distinguish directions (e.g., "sourceStrategies")
   - When a table references another table twice (e.g., originalStrategy and copiedStrategy), use relationName in both the relation definition and the many() call
 ---
+
+## 2026-01-18 22:XX - US-004
+- What was implemented: Created strategyReports table for marketplace content moderation
+- Files changed:
+  - `src/server/db/schema.ts` - Added strategyReportReasonEnum (misleading_stats, inappropriate_content, spam, other) and strategyReportStatusEnum (pending, reviewed, dismissed, actioned); created strategyReports table with id, strategyId (FK), reporterId (FK), reason, details, status, createdAt, reviewedAt; added indexes on strategyId, status; added unique index on (strategyId, reporterId); added relations to strategies and users; exported StrategyReport and NewStrategyReport types
+  - `src/lib/shared/id.ts` - Added strategyReport ID generator with "rp" prefix
+- **Learnings for future iterations:**
+  - When adding new enums, add them to the ENUMS section near other enums for consistency
+  - Report tables typically have two foreign keys: one for the reported entity, one for the reporter user
+  - Use "reporter" vs "user" naming to distinguish between the report owner and the entity owner
+---
+
+## 2026-01-18 23:XX - US-005
+- What was implemented: Added centralized marketplace constants
+- Files changed:
+  - `src/lib/constants/marketplace.ts` - Created new file with STRATEGY_INSTRUMENTS, STRATEGY_CATEGORIES, MARKETPLACE_SORT_OPTIONS, MARKETPLACE_PAGE_SIZE, MIN_TRADES_TO_PUBLISH, VERIFIED_TRACK_RECORD_THRESHOLD, LIMITED_DATA_THRESHOLD, STRATEGY_REPORT_REASONS; includes TypeScript types for each constant array
+  - `src/lib/constants/index.ts` - Re-exported all marketplace constants and types
+- **Learnings for future iterations:**
+  - Follow existing constant file patterns (analytics.ts): use `as const` for type safety, add JSDoc comments explaining each constant
+  - Biome sorts type exports after constant exports in the same export block
+  - Use `bun run check --write` to auto-fix Biome formatting issues
+- S3 utilities exist in `src/lib/storage/s3.ts` with `getPresignedUploadUrl`, `getS3Bucket`, `isS3Configured`
+- Generic image upload hook in `src/hooks/use-image-upload.ts` uses storage router
+---
+
+## 2026-01-19 - US-006
+- What was implemented: Added strategy cover image upload endpoint to strategies router
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Added `getImageUploadUrl` mutation with:
+    - Input validation: strategyId, filename, mimeType, size
+    - Strategy ownership validation
+    - Image type validation (jpeg, png, webp, gif)
+    - File size validation (< 5MB)
+    - S3 key generation: `strategies/{userId}/{strategyId}/cover-{timestamp}.{ext}`
+    - Returns presignedUrl, publicUrl, and key
+- **Learnings for future iterations:**
+  - Existing S3 upload pattern: `src/lib/storage/s3.ts` provides `getPresignedUploadUrl`, `getS3Bucket`, `isS3Configured`
+  - Storage router (`src/server/api/routers/storage.ts`) has generic `getImageUploadUrl` - use for non-entity-specific uploads
+  - For entity-specific uploads (strategy covers), add mutations to the entity router with ownership validation
+  - Helper functions like `getPublicUrl` can be duplicated across routers (or extracted to shared util if needed frequently)
+---
+
+## 2026-01-19 - US-007
+- What was implemented: Extended strategy update mutation to handle cover image fields
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Extended updateStrategySchema with coverImageUrl and coverImageKey fields; modified update mutation to:
+    - Extract coverImageKey from input for special handling
+    - Delete old S3 object when cover image key changes (using deleteObject from s3.ts)
+    - Gracefully handle S3 deletion failures (log but don't fail the update)
+- **Learnings for future iterations:**
+  - When updating fields that reference S3 objects, check if the key is changing to clean up old objects
+  - Use try/catch around S3 operations that shouldn't fail the main operation
+  - Fields extracted from input spread must be explicitly added back to updateData
+---
+
+## 2026-01-19 - US-008
+- What was implemented: Added autosave mutation to strategies router for silent auto-save without cache invalidation
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Added `autosaveStrategySchema` and `autosave` mutation with:
+    - Same validation as update mutation but accepts partial fields
+    - Strategy ownership validation
+    - Cover image key handling with S3 cleanup
+    - Support for instruments and categoryTags array fields
+    - Returns only `{ updatedAt: Date }` for UI confirmation (silent save)
+- **Learnings for future iterations:**
+  - For auto-save endpoints, return minimal data (just timestamp) to avoid triggering cache invalidation
+  - When creating a variant of an existing mutation (autosave vs update), extract shared logic or duplicate carefully
+  - Include marketplace fields (instruments, categoryTags) in autosave schema to support edit page forms
+---
+
+## 2026-01-19 - US-009
+- What was implemented: Integration tests for cover image upload and auto-save endpoints
+- Files changed:
+  - `tests/integration/strategies.test.ts` - Created new test file with:
+    - Tests for getImageUploadUrl: S3 not configured behavior, valid mime types, Zod schema validation
+    - Tests for autosave: field updates, ownership validation, risk parameters JSON, arrays
+    - Tests for update mutation cover image fields: accept URL/key, clear to null, combined updates
+    - Authentication tests for all endpoints
+- **Learnings for future iterations:**
+  - In test environment (vitest/Node.js), `isS3Configured()` returns false - tests must account for this
+  - The S3 config check happens FIRST in router handlers, before other validations
+  - Can only test Zod schema validation and behavior that reaches the S3 check in test env
+  - For full S3 endpoint testing, would need to mock `isS3Configured()` or test with S3 configured
+  - Test patterns: `setupTrader()` creates user + account, `createTestUser()` for additional users
+  - Use `createTestCaller(clerkId, user)` for authenticated callers
+---
