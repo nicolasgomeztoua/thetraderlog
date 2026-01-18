@@ -4,9 +4,12 @@ import {
 	AlertTriangle,
 	ArrowLeft,
 	Copy,
+	Download,
+	ExternalLink,
 	Loader2,
 	Pencil,
 	Trash2,
+	User,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -26,6 +29,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -50,6 +54,14 @@ export default function StrategyDetailPage() {
 	const { data: stats } = api.strategies.getStats.useQuery(
 		{ id: strategyId },
 		{ enabled: !!strategyId && !!strategy },
+	);
+
+	// Fetch source strategy info if this is a downloaded strategy
+	const { data: sourceStrategy } = api.marketplace.getById.useQuery(
+		{ id: strategy?.sourceStrategyId ?? "" },
+		{
+			enabled: !!strategy?.sourceStrategyId,
+		},
 	);
 
 	const updateMutation = api.strategies.update.useMutation({
@@ -213,6 +225,78 @@ export default function StrategyDetailPage() {
 					</div>
 				</div>
 			</div>
+
+			{/* Downloaded from Marketplace Attribution */}
+			{strategy.sourceStrategyId && (
+				<div
+					className="flex flex-wrap items-center gap-3 rounded border border-accent/20 bg-accent/5 p-3 sm:p-4"
+					data-testid="strategy-source-attribution"
+				>
+					<Badge
+						className="bg-accent/20 font-mono text-[10px] text-accent"
+						variant="secondary"
+					>
+						<Download className="mr-1 h-3 w-3" />
+						Downloaded from Marketplace
+					</Badge>
+					{sourceStrategy ? (
+						<>
+							<span className="font-mono text-muted-foreground text-xs">
+								Original:
+							</span>
+							<Link
+								className="flex items-center gap-1.5 font-mono text-sm transition-colors hover:text-accent"
+								href={`/marketplace/${strategy.sourceStrategyId}`}
+							>
+								<span className="font-medium">{sourceStrategy.name}</span>
+								<ExternalLink className="h-3 w-3" />
+							</Link>
+							{sourceStrategy.creator && (
+								<>
+									<span className="font-mono text-muted-foreground text-xs">
+										by
+									</span>
+									<div className="flex items-center gap-1.5">
+										{sourceStrategy.creator.imageUrl ? (
+											<Image
+												alt={sourceStrategy.creator.name ?? "Creator"}
+												className="rounded-full"
+												height={20}
+												src={sourceStrategy.creator.imageUrl}
+												width={20}
+											/>
+										) : (
+											<div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/20">
+												<User className="h-3 w-3 text-accent" />
+											</div>
+										)}
+										<span className="font-mono text-sm">
+											{sourceStrategy.creator.name ?? "Anonymous"}
+										</span>
+									</div>
+								</>
+							)}
+							{!sourceStrategy.creator && (
+								<>
+									<span className="font-mono text-muted-foreground text-xs">
+										by
+									</span>
+									<div className="flex items-center gap-1.5">
+										<User className="h-4 w-4 text-muted-foreground" />
+										<span className="font-mono text-muted-foreground text-sm italic">
+											Anonymous
+										</span>
+									</div>
+								</>
+							)}
+						</>
+					) : (
+						<span className="font-mono text-muted-foreground text-xs italic">
+							Original strategy is no longer public
+						</span>
+					)}
+				</div>
+			)}
 
 			{/* Action Bar */}
 			<div

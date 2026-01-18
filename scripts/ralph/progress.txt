@@ -563,3 +563,15 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - For nested routes (e.g., /marketplace/[id]), use startsWith for active state detection
   - lucide-react has Store icon suitable for marketplace features
 ---
+
+## 2026-01-18 - US-033
+- What was implemented: Updated strategy cards to show marketplace status and engagement
+- Files changed:
+  - `src/components/strategy/strategy-card.tsx` - Added Public badge (Globe icon), Downloaded badge (Download icon), engagement stats section with votes and downloads
+  - `src/server/api/routers/strategies.ts` - Extended getAll query to fetch engagement data (vote score, download count) for public strategies from strategyVotes and strategyDownloads tables
+  - `src/app/(protected)/strategies/page.tsx` - Pass engagement prop to StrategyCard
+- **Learnings for future iterations:**
+  - Use `COALESCE(SUM(...), 0)` for vote aggregations to handle empty results
+  - Conditional data fetching in map: only query engagement data if strategy.isPublic
+  - Badge styling with chartreuse: bg-primary/20 text-primary for consistent accent
+---
