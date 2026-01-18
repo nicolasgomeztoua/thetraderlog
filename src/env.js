@@ -25,6 +25,9 @@ export const env = createEnv({
 		S3_BUCKET: z.string(),
 		// Public URL for S3 objects (optional - for embedding images in HTML)
 		S3_PUBLIC_URL: z.string().url().optional(),
+		// Upstash Redis (for rate limiting)
+		UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+		UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 	},
 
 	/**
@@ -66,6 +69,8 @@ export const env = createEnv({
 		S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
 		S3_BUCKET: process.env.S3_BUCKET,
 		S3_PUBLIC_URL: process.env.S3_PUBLIC_URL,
+		UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+		UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

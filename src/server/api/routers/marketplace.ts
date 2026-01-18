@@ -6,7 +6,12 @@ import {
 	MARKETPLACE_SORT_OPTIONS,
 	VERIFIED_TRACK_RECORD_THRESHOLD,
 } from "@/lib/constants";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { checkVoteRateLimit } from "@/lib/rate-limit";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	publicProcedure,
+} from "@/server/api/trpc";
 import {
 	strategies,
 	strategyDownloads,
@@ -68,6 +73,26 @@ function parseCachedStats(cachedStatsJson: string | null): CachedStats | null {
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Compute the total vote score for a strategy
+ * @returns The net score (sum of all votes: +1 or -1)
+ */
+async function computeVoteScore(
+	db: Parameters<
+		Parameters<typeof protectedProcedure.mutation>[0]
+	>[0]["ctx"]["db"],
+	strategyId: string,
+): Promise<number> {
+	const result = await db
+		.select({
+			score: sql<number>`COALESCE(SUM(${strategyVotes.vote}), 0)`.as("score"),
+		})
+		.from(strategyVotes)
+		.where(eq(strategyVotes.strategyId, strategyId));
+
+	return result[0]?.score ?? 0;
 }
 
 // =============================================================================
@@ -314,6 +339,115 @@ export const marketplaceRouter = createTRPCRouter({
 			return {
 				items,
 				nextCursor,
+			};
+		}),
+
+	/**
+	 * Vote on a public strategy (upvote or downvote)
+	 * Uses upsert pattern - replaces existing vote if any
+	 * Rate limited: Max 20 votes per user per hour
+	 */
+	vote: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				vote: z.union([z.literal(1), z.literal(-1)]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, vote } = input;
+
+			// Check rate limit
+			const rateLimitResult = await checkVoteRateLimit(ctx.user.id);
+			if (!rateLimitResult.success) {
+				throw new Error(
+					"Rate limit exceeded. You can only vote 20 times per hour.",
+				);
+			}
+
+			// Verify strategy exists and is public
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.isPublic, true),
+				),
+				columns: { id: true, userId: true },
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found or is not public");
+			}
+
+			// Cannot vote on own strategy
+			if (strategy.userId === ctx.user.id) {
+				throw new Error("Cannot vote on your own strategy");
+			}
+
+			// Upsert the vote (insert or update if exists)
+			await ctx.db
+				.insert(strategyVotes)
+				.values({
+					strategyId,
+					userId: ctx.user.id,
+					vote,
+				})
+				.onConflictDoUpdate({
+					target: [strategyVotes.strategyId, strategyVotes.userId],
+					set: {
+						vote,
+						updatedAt: new Date(),
+					},
+				});
+
+			// Compute and return new vote score
+			const newScore = await computeVoteScore(ctx.db, strategyId);
+
+			return {
+				voteScore: newScore,
+			};
+		}),
+
+	/**
+	 * Remove vote from a strategy
+	 * Returns the new vote score after removal
+	 */
+	removeVote: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId } = input;
+
+			// Verify strategy exists and is public
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.isPublic, true),
+				),
+				columns: { id: true },
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found or is not public");
+			}
+
+			// Delete the vote
+			await ctx.db
+				.delete(strategyVotes)
+				.where(
+					and(
+						eq(strategyVotes.strategyId, strategyId),
+						eq(strategyVotes.userId, ctx.user.id),
+					),
+				);
+
+			// Compute and return new vote score
+			const newScore = await computeVoteScore(ctx.db, strategyId);
+
+			return {
+				voteScore: newScore,
 			};
 		}),
 });
