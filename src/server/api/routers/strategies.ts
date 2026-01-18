@@ -180,6 +180,25 @@ const updateStrategySchema = z.object({
 	rules: z.array(strategyRuleSchema).optional(),
 });
 
+// Auto-save uses the same fields as update but only for silent saves
+const autosaveStrategySchema = z.object({
+	id: z.string(),
+	name: z.string().min(1).max(100).optional(),
+	description: z.string().nullish(),
+	color: z.string().optional(),
+	coverImageUrl: z.string().nullish(),
+	coverImageKey: z.string().nullish(),
+	entryCriteria: z.string().nullish(),
+	exitRules: z.string().nullish(),
+	riskParameters: riskParametersSchema.nullish(),
+	scalingRules: scalingRulesSchema.nullish(),
+	trailingRules: trailingRulesSchema.nullish(),
+	isActive: z.boolean().optional(),
+	rules: z.array(strategyRuleSchema).optional(),
+	instruments: z.array(z.string()).nullish(),
+	categoryTags: z.array(z.string()).nullish(),
+});
+
 // =============================================================================
 // ROUTER
 // =============================================================================
@@ -415,6 +434,115 @@ export const strategiesRouter = createTRPCRouter({
 			}
 
 			return updated;
+		}),
+
+	// Auto-save a strategy (silent save without cache invalidation)
+	autosave: protectedProcedure
+		.input(autosaveStrategySchema)
+		.mutation(async ({ ctx, input }) => {
+			const {
+				id,
+				rules,
+				riskParameters,
+				scalingRules,
+				trailingRules,
+				coverImageKey,
+				instruments,
+				categoryTags,
+				...data
+			} = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(eq(strategies.id, id), eq(strategies.userId, ctx.user.id)),
+				columns: { id: true, coverImageKey: true },
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Check if cover image key is changing and old key exists - delete old S3 object
+			const oldCoverImageKey = existingStrategy.coverImageKey;
+			if (
+				coverImageKey !== undefined &&
+				oldCoverImageKey &&
+				oldCoverImageKey !== coverImageKey &&
+				isS3Configured()
+			) {
+				try {
+					await deleteObject(oldCoverImageKey);
+				} catch {
+					// Log but don't fail the update if S3 delete fails
+					console.error(
+						`Failed to delete old cover image: ${oldCoverImageKey}`,
+					);
+				}
+			}
+
+			// Prepare update data
+			const updateData: Record<string, unknown> = { ...data };
+
+			// Handle cover image key explicitly since we extracted it
+			if (coverImageKey !== undefined) {
+				updateData.coverImageKey = coverImageKey;
+			}
+
+			// Handle instruments array
+			if (instruments !== undefined) {
+				updateData.instruments = instruments;
+			}
+
+			// Handle category tags array
+			if (categoryTags !== undefined) {
+				updateData.categoryTags = categoryTags;
+			}
+
+			if (riskParameters !== undefined) {
+				updateData.riskParameters = riskParameters
+					? JSON.stringify(riskParameters)
+					: null;
+			}
+			if (scalingRules !== undefined) {
+				updateData.scalingRules = scalingRules
+					? JSON.stringify(scalingRules)
+					: null;
+			}
+			if (trailingRules !== undefined) {
+				updateData.trailingRules = trailingRules
+					? JSON.stringify(trailingRules)
+					: null;
+			}
+
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set(updateData)
+				.where(eq(strategies.id, id))
+				.returning({ updatedAt: strategies.updatedAt });
+
+			// Update rules if provided (same logic as regular update)
+			if (rules !== undefined) {
+				// Delete existing rules
+				await ctx.db
+					.delete(strategyRules)
+					.where(eq(strategyRules.strategyId, id));
+
+				// Insert new rules
+				if (rules.length > 0) {
+					await ctx.db.insert(strategyRules).values(
+						rules.map((rule) => ({
+							strategyId: id,
+							text: rule.text,
+							category: rule.category,
+							order: rule.order,
+						})),
+					);
+				}
+			}
+
+			// Return only the updatedAt timestamp for UI confirmation
+			// This is a "silent save" - no cache invalidation needed
+			return { updatedAt: updated?.updatedAt ?? new Date() };
 		}),
 
 	// Delete a strategy (soft delete by setting inactive)
