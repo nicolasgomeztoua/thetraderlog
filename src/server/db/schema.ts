@@ -574,6 +574,16 @@ export const strategies = createTable(
 		description: text("description"),
 		color: text("color").default("#d4ff00"), // Primary chartreuse
 
+		// Cover image
+		coverImageUrl: text("cover_image_url"), // Public URL for display
+		coverImageKey: text("cover_image_key"), // S3 object key for deletion
+
+		// Marketplace fields
+		isPublic: boolean("is_public").default(false), // Published to marketplace
+		isAnonymous: boolean("is_anonymous").default(false), // Hide creator identity
+		instruments: text("instruments").array(), // Array of instruments (ES, NQ, etc.)
+		categoryTags: text("category_tags").array(), // Array of category tags (Scalping, etc.)
+
 		// Strategy documentation
 		entryCriteria: text("entry_criteria"), // Rich text for entry rules
 		exitRules: text("exit_rules"), // Rich text for exit rules
