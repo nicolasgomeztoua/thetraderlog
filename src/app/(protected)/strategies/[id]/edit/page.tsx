@@ -1,10 +1,11 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CoverImageUpload } from "@/components/strategy/cover-image-upload";
+import { StrategyEditForm } from "@/components/strategy/strategy-edit-form";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/trpc/react";
@@ -128,14 +129,14 @@ export default function StrategyEditPage() {
 				</div>
 			</div>
 
-			{/* Placeholder content - will be replaced by US-020, US-021, US-022, US-023 */}
-			<div className="rounded border border-white/5 bg-white/2 p-6">
-				<div className="flex items-center gap-3 text-muted-foreground">
-					<Loader2 className="h-5 w-5 animate-spin" />
-					<span className="font-mono text-sm">
-						Edit form components coming in subsequent stories...
-					</span>
-				</div>
+			{/* Strategy Edit Form with Auto-Save */}
+			<div className="rounded-lg border border-white/5 bg-white/2 p-6">
+				<StrategyEditForm
+					initialColor={strategy.color}
+					initialDescription={strategy.description}
+					initialName={strategy.name}
+					strategyId={strategyId}
+				/>
 			</div>
 		</div>
 	);
