@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
 import { test as setup } from "@playwright/test";
 
@@ -17,6 +18,9 @@ import { test as setup } from "@playwright/test";
 
 // Setup must be run serially (required for Playwright's fully parallel mode)
 setup.describe.configure({ mode: "serial" });
+
+// ES module equivalent of __dirname
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Path to store authenticated state
 const authFile = join(__dirname, "../../playwright/.clerk/user.json");

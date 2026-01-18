@@ -51,8 +51,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/e2e/README.md with Clerk test user setup instructions and .env.test.example with E2E env var placeholders"
     },
     {
       "id": "US-004",
@@ -67,8 +67,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created dashboard.spec.ts with 3 tests: dashboard loads, stats grid displays, and start journal hero section"
     },
     {
       "id": "US-005",
@@ -81,8 +81,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created auth.spec.ts with 3 tests verifying unauthenticated users are redirected to /sign-in from /dashboard, /journal, and /analytics. Uses test.use({ storageState: { cookies: [], origins: [] } }) to clear auth state."
     },
     {
       "id": "US-006",
@@ -100,8 +100,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created .claude/skills/e2e-testing/SKILL.md with complete documentation covering test commands, data-testid conventions, test patterns (authenticated, unauthenticated, forms, state-dependent UI), global setup architecture, and troubleshooting. Updated tests/e2e/README.md with reference to the skill."
     },
     {
       "id": "US-007",
@@ -115,8 +115,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added E2E Testing Requirements section to prompt.md with: skill reference, data-testid naming convention, examples for forms/data displays/navigation, and optional bun run test:e2e command after backend tests."
     }
   ]
 }

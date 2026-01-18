@@ -27,8 +27,8 @@ test.describe("Authentication", () => {
 		expect(page.url()).toContain("/sign-in");
 
 		// Verify sign-in page elements are visible
-		// Clerk renders a sign-in form with email/password fields
-		const signInContainer = page.locator('[class*="cl-signIn"]');
+		// Clerk renders a sign-in form with a data attribute
+		const signInContainer = page.locator('[data-clerk-component="SignIn"]');
 		await expect(signInContainer).toBeVisible({ timeout: 10000 });
 	});
 

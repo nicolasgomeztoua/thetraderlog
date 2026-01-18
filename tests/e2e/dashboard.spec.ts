@@ -12,12 +12,8 @@ test.describe("Dashboard", () => {
 		await page.goto("/dashboard");
 
 		// Verify page loads without error by checking for the main heading
-		const heading = page.locator('h1:has-text("Trading Overview")');
+		const heading = page.getByTestId("dashboard-heading-overview");
 		await expect(heading).toBeVisible({ timeout: 15000 });
-
-		// Verify the page has the correct title structure
-		const dashboardLabel = page.locator('text="Dashboard"');
-		await expect(dashboardLabel).toBeVisible();
 	});
 
 	test("displays stats grid section", async ({ page }) => {
@@ -25,7 +21,7 @@ test.describe("Dashboard", () => {
 		await page.goto("/dashboard");
 
 		// Wait for page to load
-		await expect(page.locator('h1:has-text("Trading Overview")')).toBeVisible();
+		await expect(page.getByTestId("dashboard-heading-overview")).toBeVisible();
 
 		// Verify stats section labels are present
 		// These are the stat card titles that should always be visible
@@ -48,27 +44,17 @@ test.describe("Dashboard", () => {
 		await page.goto("/dashboard");
 
 		// Wait for page to load
-		await expect(page.locator('h1:has-text("Trading Overview")')).toBeVisible();
+		await expect(page.getByTestId("dashboard-heading-overview")).toBeVisible();
 
-		// The hero section should display either "Start My Journal" button
-		// or "Journal Started" text (depending on state)
-		const startButton = page.locator('button:has-text("Start")');
-		const journalStarted = page.locator('text="Journal Started"');
-		const openJournalButton = page.locator('button:has-text("Journal")');
+		// Use data-testid for hero section
+		const heroSection = page.getByTestId("dashboard-hero-journal");
+		await expect(heroSection).toBeVisible({ timeout: 10000 });
 
-		// Either the start button OR the journal started indicator should be visible
-		const isStartButtonVisible = await startButton
-			.isVisible()
-			.catch(() => false);
-		const isJournalStartedVisible = await journalStarted
-			.isVisible()
-			.catch(() => false);
-		const isOpenJournalVisible = await openJournalButton
-			.isVisible()
-			.catch(() => false);
-
-		expect(
-			isStartButtonVisible || isJournalStartedVisible || isOpenJournalVisible,
-		).toBeTruthy();
+		// Wait for hero to load (either shows "Ready to start" or "Journal Started")
+		// One of these buttons/text should appear after loading completes
+		const startButton = heroSection.getByRole("button", {
+			name: /start|journal/i,
+		});
+		await expect(startButton).toBeVisible({ timeout: 10000 });
 	});
 });

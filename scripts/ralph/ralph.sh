@@ -7,7 +7,7 @@ set -e
 
 MAX_ITERATIONS=${1:-20}
 PR_REVIEW_CYCLES=${2:-10}
-PR_REVIEW_INTERVAL=180  # 3 minutes in seconds
+PR_REVIEW_INTERVAL=240  # 4 minutes in seconds
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
@@ -150,7 +150,7 @@ fi
 
 echo ""
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
-echo -e "${MAGENTA} Ralph Code Quality Phase - Security & Consistency Audit${NC}"
+echo -e "${MAGENTA} Ralph Code Quality Phase - Tests & Audits${NC}"
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
 
 # Run Claude with the code review prompt
@@ -337,6 +337,7 @@ echo -e "${GREEN}╔════════════════════
 echo -e "${GREEN}║           Ralph Complete!                                  ║${NC}"
 echo -e "${GREEN}║                                                           ║${NC}"
 echo -e "${GREEN}║  ✓ All user stories implemented                          ║${NC}"
+echo -e "${GREEN}║  ✓ Tests passed (integration + E2E)                      ║${NC}"
 echo -e "${GREEN}║  ✓ Pull request created: #$PR_NUMBER                              ║${NC}"
 echo -e "${GREEN}║  ✓ Greptile review cycles complete                        ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"

@@ -1,54 +1,6 @@
-# E2E Testing Setup
+# E2E Testing
 
-End-to-end testing with Playwright and Clerk authentication.
-
-## Prerequisites
-
-1. **Node.js/Bun** - Runtime for running tests
-2. **Playwright browsers** - Install with `bunx playwright install`
-
-## Test User Setup
-
-E2E tests require a dedicated test user in Clerk.
-
-### 1. Create Test User in Clerk
-
-1. Open your [Clerk Dashboard](https://dashboard.clerk.com)
-2. Select your **Development** instance
-3. Go to **Users** → **Create user**
-4. Create a user with:
-   - Email: `e2e-test@edgejournal.dev` (or your preferred test email)
-   - Password: A strong password for testing
-5. **Important:** Enable email/password authentication:
-   - Go to **Configure** → **Email, phone, username**
-   - Ensure **Email address** is enabled as an identifier
-   - Go to **Configure** → **Passwords**
-   - Ensure password authentication is enabled
-
-### 2. Configure Environment Variables
-
-Create a `.env.test` file (or add to your `.env`):
-
-```bash
-E2E_CLERK_USER_EMAIL=e2e-test@edgejournal.dev
-E2E_CLERK_USER_PASSWORD=your-test-password
-```
-
-See `.env.test.example` for the required variables.
-
-### 3. Verify Setup
-
-Run the E2E tests:
-
-```bash
-bun run test:e2e
-```
-
-The global setup will:
-1. Start the dev server
-2. Sign in with the test user
-3. Save auth state to `playwright/.clerk/user.json`
-4. Run tests with the authenticated state
+End-to-end tests using Playwright with Clerk authentication.
 
 ## Running Tests
 
@@ -68,41 +20,41 @@ bunx playwright test tests/e2e/dashboard.spec.ts
 ```
 tests/e2e/
 ├── global.setup.ts    # Clerk auth setup (runs before all tests)
-├── README.md          # This file
 ├── dashboard.spec.ts  # Dashboard tests (authenticated)
 └── auth.spec.ts       # Auth redirect tests (unauthenticated)
 ```
 
-## Troubleshooting
-
-### "E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD required"
-
-Set the environment variables. Either:
-- Create `.env.test` with the variables
-- Add them to your existing `.env` file
-- Export them in your shell before running tests
-
-### "Authentication failed"
-
-1. Verify the test user exists in Clerk dashboard
-2. Confirm email/password auth is enabled in Clerk
-3. Check the password is correct
-
-### Tests timeout waiting for page elements
-
-1. Ensure the dev server starts correctly (`bun run dev`)
-2. Check the test user has access to the dashboard
-3. Increase timeout in `playwright.config.ts` if needed
-
 ## Writing Tests
 
-For comprehensive documentation on writing E2E tests, see the E2E testing skill:
+For comprehensive documentation, see the E2E testing skill:
 
 **[.claude/skills/e2e-testing/SKILL.md](../../.claude/skills/e2e-testing/SKILL.md)**
 
-The skill covers:
-- `data-testid` naming conventions (`[component]-[element]-[qualifier]`)
-- Test patterns for authenticated and unauthenticated flows
-- Form submission testing
-- Best practices for reliable, non-flaky tests
-- Troubleshooting common issues
+Key topics covered:
+- **Strict mode** - Why vague selectors fail and how to fix them
+- **data-testid conventions** - Naming pattern `[component]-[element]-[qualifier]`
+- **Test patterns** - Authenticated, unauthenticated, form submission
+- **Loading states** - How to handle skeleton/loaded transitions
+- **Best practices** - Selector priority, timeouts, avoiding flaky tests
+
+## Quick Reference
+
+### Use data-testid (not CSS classes)
+
+```typescript
+// Bad - matches multiple elements
+page.locator('[class*="cl-signIn"]')
+
+// Good - unique selector
+page.getByTestId("dashboard-heading-overview")
+```
+
+### Handle Loading States
+
+Add same `data-testid` to both loading skeleton and loaded content, then wait for child element:
+
+```typescript
+const hero = page.getByTestId("dashboard-hero-journal");
+const button = hero.getByRole("button", { name: /start/i });
+await expect(button).toBeVisible({ timeout: 10000 });
+```
