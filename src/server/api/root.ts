@@ -3,6 +3,7 @@ import { analyticsRouter } from "@/server/api/routers/analytics";
 import { dailyJournalRouter } from "@/server/api/routers/dailyJournal";
 import { filterPresetsRouter } from "@/server/api/routers/filterPresets";
 import { marketDataRouter } from "@/server/api/routers/marketData";
+import { marketplaceRouter } from "@/server/api/routers/marketplace";
 import { settingsRouter } from "@/server/api/routers/settings";
 import { storageRouter } from "@/server/api/routers/storage";
 import { strategiesRouter } from "@/server/api/routers/strategies";
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
 	analytics: analyticsRouter,
 	dailyJournal: dailyJournalRouter,
 	storage: storageRouter,
+	marketplace: marketplaceRouter,
 });
 
 // export type definition of API
