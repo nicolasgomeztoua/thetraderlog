@@ -11,13 +11,33 @@ You are performing a code quality review before creating a PR.
 ## Your Task
 
 Review ALL code changes made during this Ralph run for:
-1. **Security issues**
-2. **Code consistency / AI slop**
-3. **General quality**
+1. **Test execution** (integration + E2E)
+2. **Security issues**
+3. **Code consistency / AI slop**
+4. **General quality**
 
 Fix any issues found, commit with descriptive messages.
 
-## Step 1: Identify Changed Files
+## Step 1: Run Full Test Suite
+
+Run both integration and E2E tests to catch any regressions:
+
+```bash
+# Integration tests (if backend changed)
+bun run test
+
+# E2E tests (if frontend changed)
+bun run test:e2e
+```
+
+If tests fail:
+1. Fix the issue
+2. Commit with `fix: failing test - description`
+3. Re-run until all pass
+
+**Reference:** `.claude/skills/e2e-testing/SKILL.md` for E2E patterns.
+
+## Step 2: Identify Changed Files
 
 ```bash
 git diff main --name-only
@@ -25,7 +45,7 @@ git diff main --name-only
 
 Review each changed file.
 
-## Step 2: Security Audit
+## Step 4: Security Audit
 
 Read and follow: `.claude/skills/security-audit/SKILL.md`
 
@@ -36,7 +56,7 @@ Key checks:
 - Hardcoded secrets
 - Input validation
 
-## Step 3: Consistency Audit (Run Thoroughly)
+## Step 5: Consistency Audit (Run Thoroughly)
 
 Read and follow: `.claude/skills/consistency-audit/SKILL.md`
 
@@ -68,7 +88,7 @@ If you find:
 - Local calculation function → Consider extracting to `src/lib/`
 - Multiple similar local helpers → Consolidate to shared utility
 
-## Step 4: General Quality
+## Step 6: General Quality
 
 - Are there any obvious bugs?
 - Is error handling appropriate?

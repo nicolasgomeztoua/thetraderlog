@@ -270,7 +270,10 @@ function StartJournalHero() {
 
 	if (isLoading) {
 		return (
-			<div className="rounded border border-border bg-card p-4 sm:p-6">
+			<div
+				className="rounded border border-border bg-card p-4 sm:p-6"
+				data-testid="dashboard-hero-journal"
+			>
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div>
 						<Skeleton className="mb-2 h-4 w-32" />
@@ -283,7 +286,10 @@ function StartJournalHero() {
 	}
 
 	return (
-		<div className="rounded border border-primary/30 bg-linear-to-r from-primary/5 to-transparent p-4 sm:p-6">
+		<div
+			className="rounded border border-primary/30 bg-linear-to-r from-primary/5 to-transparent p-4 sm:p-6"
+			data-testid="dashboard-hero-journal"
+		>
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -458,7 +464,10 @@ export default function DashboardPage() {
 					<span className="mb-2 block font-mono text-primary text-xs uppercase tracking-wider">
 						Dashboard
 					</span>
-					<h1 className="font-bold text-2xl tracking-tight sm:text-3xl">
+					<h1
+						className="font-bold text-2xl tracking-tight sm:text-3xl"
+						data-testid="dashboard-heading-overview"
+					>
 						Trading Overview
 					</h1>
 					{selectedAccount && (

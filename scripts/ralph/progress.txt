@@ -1,253 +1,122 @@
 # Ralph Progress Log
-Started: Fri Jan 16 12:16:45 +01 2026
+Started: Sat Jan 17 22:31:13 +01 2026
+---
 
 ## Codebase Patterns
-- S3 utilities in `src/lib/storage/s3.ts` - use `getPresignedUploadUrl(key)` for presigned PUT URLs
-- S3 only works in Bun runtime (not vitest/Node.js) - use `isS3Configured()` to check
-- Image upload pattern: get presigned URL → upload via XMLHttpRequest → confirm upload
-- Instant blob preview pattern: insert blob URL immediately, upload in background, replace with final URL
-- Tiptap event handlers: attach to `editor.view.dom` with useEffect cleanup
-- Toast progress: `toast.loading("Uploading... X%", { id: toastId })` for progress updates
-- For HTML-embedded images, use `S3_PUBLIC_URL` env var for stable URLs (not presigned URLs that expire)
-- Generic storage router: `storage.getImageUploadUrl` for images that don't need DB attachment records
-
+- Playwright config uses projects for browser separation with auth state dependency
+- E2E tests live in tests/e2e/ directory
+- Auth state stored in playwright/.clerk/user.json
 ---
 
-## 2026-01-16 - US-000
-### Audit Existing Image Upload Infrastructure
-
-**Findings:**
-
-1. **S3 Utilities** (`src/lib/storage/s3.ts`):
-   - `getPresignedUploadUrl(key, expiresIn)` - generates PUT URL for uploads
-   - `getPresignedDownloadUrl(key, expiresIn)` - generates GET URL for downloads
-   - `deleteObject(key)` - deletes S3 object
-   - `objectExists(key)` - checks if object exists
-   - `isS3Configured()` - checks if S3 env vars are set
-   - `getS3Bucket()` - returns configured bucket name
-   - Only works in Bun runtime (throws in vitest/Node.js)
-
-2. **handleImageUpload Pattern** (`journal-editor.tsx:156-232`):
-   - Uses tRPC mutations: `dailyJournal.getUploadUrl`, `dailyJournal.confirmUpload`
-   - Progress tracking via XMLHttpRequest upload events
-   - Toast notifications: "Uploading... X%" → "Processing... 95%" → "Image uploaded"
-   - Returns final URL or null on error
-
-3. **handleImageInsert Pattern** (`journal-editor.tsx:235-296`):
-   - Creates blob URL with `URL.createObjectURL(file)` for instant preview
-   - Inserts blob URL into editor immediately: `editor.chain().focus().setImage({ src: blobUrl }).run()`
-   - Uploads in background via handleImageUpload
-   - Preloads final image, then replaces blob URL in editor content
-   - On failure: removes the blob image node from editor
-   - Cleans up blob URL with `URL.revokeObjectURL(blobUrl)`
-
-4. **handlePaste Pattern** (`journal-editor.tsx:299-316`):
-   - Listens for clipboard events
-   - Iterates `event.clipboardData?.items`
-   - Calls `preventDefault()` for images
-   - Gets file with `item.getAsFile()` and calls `handleImageInsert`
-
-5. **handleDrop Pattern** (`journal-editor.tsx:319-354`):
-   - Supports existing attachments via `application/x-attachment` data transfer
-   - For new files: iterates `event.dataTransfer?.files`
-   - Calls `preventDefault()` for images
-   - Calls `handleImageInsert` for each image file
-
-6. **Event Listener Attachment** (`journal-editor.tsx:357-368`):
-   - useEffect attaches paste/drop listeners to `editor.view.dom`
-   - Returns cleanup function to remove listeners
-
-**Files Changed:** None (audit only)
-
-**Learnings for future iterations:**
-- The journal editor's image handling is comprehensive and well-tested
-- New image upload contexts can reuse the S3 utilities and patterns
-- A generic storage endpoint should avoid creating attachment records (journal does this)
-- The blob preview → upload → replace pattern provides excellent UX
+## 2026-01-18 - US-001
+- What was implemented:
+  - Installed @playwright/test@1.57.0 and @clerk/testing@1.13.29
+  - Created playwright.config.ts with webServer, baseURL, and auth projects
+  - Added test:e2e and test:e2e:ui scripts to package.json
+  - Added playwright/.clerk/, /playwright-report/, /blob-report/, /test-results/ to .gitignore
+- Files changed:
+  - package.json (added scripts)
+  - bun.lock (deps installed)
+  - playwright.config.ts (new)
+  - .gitignore (added playwright paths)
+- **Learnings for future iterations:**
+  - Playwright config uses `projects` array for setup dependencies
+  - Auth state is stored via `storageState` in project config
+  - Use `dependencies: ["setup"]` to ensure global setup runs first
 ---
 
-## 2026-01-16 - US-001
-### Create Generic Image Upload tRPC Endpoint
-
-**Implementation:**
-
-1. Created `src/server/api/routers/storage.ts`:
-   - `getImageUploadUrl` mutation accepting filename, mimeType, size, context
-   - Key format: `images/{userId}/{context}/{uuid}-{filename}`
-   - Returns `{ presignedUrl, publicUrl }`
-   - Uses `isS3Configured()` check before generating URLs
-   - Uses `protectedProcedure` for authentication
-
-2. Added `S3_PUBLIC_URL` optional env variable to `src/env.js`:
-   - Used for generating stable public URLs for embedding in HTML
-   - Falls back to endpoint/bucket/key format if not set
-
-3. Registered router in `src/server/api/root.ts` as `storage`
-
-**Files Changed:**
-- `src/server/api/routers/storage.ts` (created)
-- `src/server/api/root.ts` (modified - added storage router)
-- `src/env.js` (modified - added S3_PUBLIC_URL)
-
-**Learnings for future iterations:**
-- For images embedded in HTML content, need stable public URLs (not presigned)
-- Added S3_PUBLIC_URL env var for custom CDN/public domain support
-- Key format uses context param for organization (trade-notes, journal-preview, etc.)
+## 2026-01-18 - US-002
+- What was implemented:
+  - Created tests/e2e/global.setup.ts with Clerk authentication
+  - Uses clerkSetup() from @clerk/testing/playwright to initialize
+  - Signs in with clerk.signIn() using password strategy from env vars
+  - Validates auth by navigating to /dashboard and waiting for "Trading Overview" heading
+  - Saves auth state to playwright/.clerk/user.json for test reuse
+- Files changed:
+  - tests/e2e/global.setup.ts (new)
+  - tests/e2e/.gitkeep (deleted - no longer needed)
+  - scripts/ralph/prd.json (updated US-002 to passes: true)
+- **Learnings for future iterations:**
+  - Clerk global setup requires serial mode: `setup.describe.configure({ mode: "serial" })`
+  - Must navigate to `/` first to load Clerk before calling clerk.signIn()
+  - clerk.signIn() uses `identifier` (not `email`) for the user identifier param
+  - Auth validation: navigate to protected route and wait for expected element
 ---
 
-## 2026-01-16 - US-007
-### Integration Tests for Storage Router
-
-**Implementation:**
-
-1. Created `tests/integration/storage/storage.test.ts`:
-   - Uses `setupTrader()` fixture for authenticated caller
-   - Tests auth rejection for unauthenticated requests
-   - Tests input validation (empty fields, invalid size)
-   - Tests S3 configuration check (throws when not configured in test env)
-   - Tests various contexts and mime types are accepted
-
-2. Test approach note:
-   - S3 utilities return `isS3Configured() = false` in vitest/Node.js runtime
-   - Tests verify the router rejects requests with "File uploads are not configured"
-   - This validates the router works correctly and will function when S3 is configured
-
-**Files Changed:**
-- `tests/integration/storage/storage.test.ts` (created)
-
-**Learnings for future iterations:**
-- S3-dependent routers can be tested by verifying they properly check `isS3Configured()`
-- Test validation by confirming errors thrown are config errors, not validation errors
-- Test files go in subdirectories matching router names (e.g., `storage/storage.test.ts`)
+## 2026-01-18 - US-003
+- What was implemented:
+  - Created tests/e2e/README.md with comprehensive setup instructions
+  - Documents: Clerk test user creation, email/password auth setup, env vars
+  - Created .env.test.example with E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD
+  - Includes troubleshooting section for common issues
+- Files changed:
+  - tests/e2e/README.md (new)
+  - .env.test.example (new)
+  - scripts/ralph/prd.json (updated US-003 to passes: true)
+- **Learnings for future iterations:**
+  - E2E env vars pattern: use .env.test.example for test-specific variables
+  - README should reference the skill file for writing tests: .claude/skills/e2e-testing/SKILL.md
 ---
 
-## 2026-01-16 - US-002
-### Create useImageUpload Hook
-
-**Implementation:**
-
-1. Created `src/hooks/use-image-upload.ts`:
-   - Hook accepts `context: string` parameter for S3 key organization
-   - Exports `uploadImage(file: File): Promise<string | null>` returning public URL
-   - Uses `storage.getImageUploadUrl` mutation
-   - Validates file is an image before upload
-   - XMLHttpRequest with progress tracking (10-95% range for upload)
-   - Toast notifications: loading with % → success/error
-
-**Files Changed:**
-- `src/hooks/use-image-upload.ts` (created)
-
-**Learnings for future iterations:**
-- Reusable hooks: accept context param for S3 organization, return simple function
-- Progress mapping: leave room at start (10%) and end (95%) for API calls
-- No need for "Processing..." step when using generic storage router (no confirmUpload)
+## 2026-01-18 - US-004
+- What was implemented:
+  - Created tests/e2e/dashboard.spec.ts with 3 E2E tests
+  - Test 1: Verifies dashboard loads with "Trading Overview" heading visible
+  - Test 2: Verifies stats grid displays all expected stat cards (Net P&L, Win Rate, etc.)
+  - Test 3: Verifies start journal hero section is visible (Start button or Journal Started)
+- Files changed:
+  - tests/e2e/dashboard.spec.ts (new)
+  - scripts/ralph/prd.json (updated US-004 to passes: true)
+- **Learnings for future iterations:**
+  - Use `expect(locator).toBeVisible()` for checking element visibility
+  - Dashboard stat card labels: "Net P&L", "Win Rate", "Profit Factor", "Avg Win", "Avg Loss"
+  - For state-dependent UI (like journal status), test for OR conditions using multiple locators
 ---
 
-## 2026-01-16 - US-003
-### Create useTiptapImageHandlers Hook
-
-**Implementation:**
-
-1. Created `src/hooks/use-tiptap-image-handlers.ts`:
-   - Hook accepts `editor: Editor | null` and `uploadImage: (file: File) => Promise<string | null>`
-   - Implements `handleImageInsert` with instant blob preview pattern
-   - Implements `handlePaste` for clipboard images
-   - Implements `handleDrop` for dropped files
-   - Attaches/detaches event listeners to `editor.view.dom` via useEffect
-
-2. Key design decisions:
-   - Simplified handleDrop (no `application/x-attachment` support - not needed for trade notes)
-   - Hook returns void (effect-based) instead of returning handlers
-   - Uses `window.Image` for preloading final URLs before swapping
-
-**Files Changed:**
-- `src/hooks/use-tiptap-image-handlers.ts` (created)
-
-**Learnings for future iterations:**
-- Extract reusable patterns from complex components into focused hooks
-- Effect-based hooks (return void) work well for event listener attachment
-- Import `type { Editor }` from `@tiptap/react` to avoid bundling issues
+## 2026-01-18 - US-005
+- What was implemented:
+  - Created tests/e2e/auth.spec.ts with 3 tests for auth redirect behavior
+  - Test 1: Unauthenticated user visiting /dashboard redirects to /sign-in
+  - Test 2: Unauthenticated user visiting /journal redirects to /sign-in
+  - Test 3: Unauthenticated user visiting /analytics redirects to /sign-in
+- Files changed:
+  - tests/e2e/auth.spec.ts (new)
+  - scripts/ralph/prd.json (updated US-005 to passes: true)
+- **Learnings for future iterations:**
+  - To test as unauthenticated, use `test.use({ storageState: { cookies: [], origins: [] } })` to clear auth state
+  - Use `page.waitForURL(/pattern/, { timeout: 15000 })` to wait for redirect completion
+  - Clerk sign-in elements can be located with `[class*="cl-signIn"]` selector
 ---
 
-## 2026-01-16 - US-004
-### Create TradeNoteEditor Component
-
-**Implementation:**
-
-1. Created `src/components/trade-detail/trade-note-editor.tsx`:
-   - Minimal Tiptap editor with StarterKit + Image + Link + Placeholder
-   - No toolbar - formatting via keyboard shortcuts only
-   - Placeholder: "Add notes about this trade... (paste images with Ctrl+V)"
-   - Auto-save on blur with 500ms debounce for typing
-   - Uses `useImageUpload` hook with context "trade-notes"
-   - Uses `useTiptapImageHandlers` hook for paste/drop support
-   - Props: `value`, `onChange`, `tradeId`, `className`
-
-2. Key design decisions:
-   - `immediatelyRender: false` to prevent SSR hydration issues
-   - `isInitializedRef` to prevent content reset on re-render
-   - Handles external value changes (trade switching) by comparing normalized content
-   - Empty editor `<p></p>` normalized to `null` for consistency
-   - Terminal design styling: `border-white/10`, `focus-within:border-primary/50`
-
-**Files Changed:**
-- `src/components/trade-detail/trade-note-editor.tsx` (created)
-
-**Learnings for future iterations:**
-- Tiptap + SSR: always use `immediatelyRender: false`
-- Handle external value changes carefully to avoid cursor jumping during typing
-- Normalize empty editor content (`<p></p>` → `null`) for clean API storage
-- Use `prose prose-sm prose-invert` classes for proper typography in dark theme
+## 2026-01-18 - US-006
+- What was implemented:
+  - Created .claude/skills/e2e-testing/SKILL.md with comprehensive E2E testing documentation
+  - Documented: test commands (bun run test:e2e, test:e2e:ui)
+  - Documented: Playwright + @clerk/testing setup architecture with global setup flow
+  - Documented: data-testid naming convention ([component]-[element]-[qualifier])
+  - Documented: How to add data-testid during feature development
+  - Documented: Test patterns for authenticated, unauthenticated, form submission, and state-dependent UI
+  - Updated tests/e2e/README.md to reference the skill file
+- Files changed:
+  - .claude/skills/e2e-testing/SKILL.md (new)
+  - tests/e2e/README.md (updated)
+  - scripts/ralph/prd.json (updated US-006 to passes: true)
+- **Learnings for future iterations:**
+  - Skill files follow consistent structure: Tech Stack table, Commands table, Project Structure, Patterns, Best Practices, Troubleshooting
+  - data-testid convention is [component]-[element]-[qualifier] e.g., "trade-form-button-submit"
+  - Cross-reference between README and skill files for discoverability
 ---
 
-## 2026-01-16 - US-005
-### Replace EditableTextarea with TradeNoteEditor
-
-**Implementation:**
-
-1. Updated `src/components/trade-detail/content-panel.tsx`:
-   - Replaced `EditableTextarea` import with `TradeNoteEditor` import
-   - Swapped the component in the NotesSection's "trade-note" tab
-   - Passes `value`, `onChange`, and `tradeId` props
-
-2. Removed unused import:
-   - `EditableTextarea` from `./editable-field` is no longer imported
-
-**Files Changed:**
-- `src/components/trade-detail/content-panel.tsx` (modified)
-
-**Learnings for future iterations:**
-- Swap component usage is straightforward when the new component has compatible props
-- `TradeForContentPanel` type already includes `id` and `notes` fields
-- Existing plain text notes will render correctly in Tiptap (HTML paragraphs)
----
-
-## 2026-01-16 - US-006
-### Add Image Handlers to DailyJournalPreview
-
-**Implementation:**
-
-1. Updated `src/components/daily-journal/daily-journal-preview.tsx`:
-   - Added `useCallback` import from React
-   - Added `toast` import from sonner for upload progress notifications
-   - Added `getUploadUrl` and `confirmUpload` mutations from `dailyJournal` router
-   - Moved `useEditor` declaration before handlers that use it (fixes Biome lint error)
-   - Added `handleImageUpload` function using `dailyJournal.getUploadUrl` + `confirmUpload` pattern
-   - Added `handleImageInsert` with instant blob preview pattern
-   - Added `handlePaste` for clipboard image handling
-   - Added `handleDrop` for drag-and-drop file handling
-   - Added useEffect to attach/detach event listeners to editor DOM (only when `editable={true}`)
-
-2. Key implementation notes:
-   - All image handlers check `!editable` guard to only work when editing is enabled
-   - Uses same upload pattern as journal-editor.tsx (getUploadUrl → XMLHttpRequest → confirmUpload)
-   - Creates attachment record via `confirmUpload` which stores the image in DB
-
-**Files Changed:**
-- `src/components/daily-journal/daily-journal-preview.tsx` (modified)
-
-**Learnings for future iterations:**
-- Biome's `noInvalidUseBeforeDeclaration` rule requires `useEditor` to be declared before callbacks that reference `editor`
-- The DailyJournalPreview uses the journal-specific upload pattern (with attachments) not the generic storage router
-- Pattern: when adding paste/drop to existing Tiptap editors, ensure hooks are declared in correct order
+## 2026-01-18 - US-007
+- What was implemented:
+  - Updated scripts/ralph/prompt.md with new "E2E Testing Requirements (UI Stories)" section
+  - Added reference to E2E testing skill (.claude/skills/e2e-testing/SKILL.md)
+  - Added data-testid guidance with examples for forms, data displays, and navigation
+  - Added optional bun run test:e2e command for UI stories (after backend tests)
+- Files changed:
+  - scripts/ralph/prompt.md (updated)
+  - scripts/ralph/prd.json (updated US-007 to passes: true)
+- **Learnings for future iterations:**
+  - Ralph prompt.md has sections for different story types: Testing Requirements (backend), E2E Testing Requirements (UI)
+  - E2E tests are optional for UI stories since they require Clerk test user setup
 ---
