@@ -90,6 +90,18 @@ export const dataQualityEnum = pgEnum("data_quality", [
 	"unavailable", // No data found, MAE/MFE not calculated
 	"pending", // Calculation queued but not yet completed
 ]);
+export const strategyReportReasonEnum = pgEnum("strategy_report_reason", [
+	"misleading_stats", // Performance stats appear manipulated or false
+	"inappropriate_content", // Contains offensive or inappropriate content
+	"spam", // Spam or promotional content
+	"other", // Other reason specified in details
+]);
+export const strategyReportStatusEnum = pgEnum("strategy_report_status", [
+	"pending", // Not yet reviewed
+	"reviewed", // Reviewed by admin
+	"dismissed", // Report dismissed as invalid
+	"actioned", // Action taken against strategy
+]);
 
 // ============================================================================
 // USERS TABLE
@@ -890,6 +902,43 @@ export const strategyDownloads = createTable(
 );
 
 // ============================================================================
+// STRATEGY REPORTS TABLE (marketplace content moderation)
+// ============================================================================
+
+export const strategyReports = createTable(
+	"strategy_report",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.strategyReport()),
+		strategyId: text("strategy_id")
+			.notNull()
+			.references(() => strategies.id, { onDelete: "cascade" }),
+		reporterId: text("reporter_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		reason: strategyReportReasonEnum("reason").notNull(),
+		details: text("details"), // Optional additional context
+		status: strategyReportStatusEnum("status").notNull().default("pending"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		reviewedAt: timestamp("reviewed_at", { withTimezone: true }), // When admin reviewed
+	},
+	(t) => [
+		// Index for querying reports per strategy
+		index("strategy_report_strategy_id_idx").on(t.strategyId),
+		// Index for admin queue filtering by status
+		index("strategy_report_status_idx").on(t.status),
+		// One report per user per strategy
+		uniqueIndex("strategy_report_strategy_reporter_idx").on(
+			t.strategyId,
+			t.reporterId,
+		),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -906,6 +955,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	dailyChecklistTemplates: many(dailyChecklistTemplates),
 	strategyVotes: many(strategyVotes),
 	strategyDownloads: many(strategyDownloads),
+	strategyReports: many(strategyReports),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -1037,6 +1087,7 @@ export const strategiesRelations = relations(strategies, ({ one, many }) => ({
 	rules: many(strategyRules),
 	trades: many(trades),
 	votes: many(strategyVotes),
+	reports: many(strategyReports),
 	// Self-referential: source strategy for copied strategies
 	sourceStrategy: one(strategies, {
 		fields: [strategies.sourceStrategyId],
@@ -1159,6 +1210,20 @@ export const strategyDownloadsRelations = relations(
 	}),
 );
 
+export const strategyReportsRelations = relations(
+	strategyReports,
+	({ one }) => ({
+		strategy: one(strategies, {
+			fields: [strategyReports.strategyId],
+			references: [strategies.id],
+		}),
+		reporter: one(users, {
+			fields: [strategyReports.reporterId],
+			references: [users.id],
+		}),
+	}),
+);
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1203,3 +1268,5 @@ export type StrategyVote = typeof strategyVotes.$inferSelect;
 export type NewStrategyVote = typeof strategyVotes.$inferInsert;
 export type StrategyDownload = typeof strategyDownloads.$inferSelect;
 export type NewStrategyDownload = typeof strategyDownloads.$inferInsert;
+export type StrategyReport = typeof strategyReports.$inferSelect;
+export type NewStrategyReport = typeof strategyReports.$inferInsert;

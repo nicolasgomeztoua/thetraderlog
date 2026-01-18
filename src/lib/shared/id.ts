@@ -28,4 +28,5 @@ export const ids = {
 	journalAttachment: () => createId("ja"),
 	strategyVote: () => createId("sv"),
 	strategyDownload: () => createId("sd"),
+	strategyReport: () => createId("rp"),
 };
