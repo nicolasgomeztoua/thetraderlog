@@ -70,8 +70,34 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 - [ ] Add index on originalStrategyId for counting downloads
 - [ ] Add unique index on (originalStrategyId, userId) - one download per user
 - [ ] Add `sourceStrategyId` column to strategies table (text, nullable, FK) - links copy to original
+- [ ] Add `cachedStats` column to strategies table (jsonb, nullable) - cached performance metrics
 - [ ] Add relations to strategies and users
 - [ ] Export types: `StrategyDownload`, `NewStrategyDownload`
+- [ ] Schema pushed successfully (`bun run db:push`)
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+
+---
+
+### US-003b: Create Strategy Reports Table
+
+**Description**: As a developer, I want a reports table to track user-reported strategies so that we can handle misleading or inappropriate content.
+
+**Acceptance Criteria**:
+- [ ] Create `strategyReports` table with columns:
+  - `id` (text, primary key)
+  - `strategyId` (text, FK to strategies)
+  - `reporterId` (text, FK to users) - who reported
+  - `reason` (text enum: misleading_stats, inappropriate_content, spam, other)
+  - `details` (text, nullable) - optional explanation
+  - `status` (text enum: pending, reviewed, dismissed, actioned) - default pending
+  - `createdAt` (timestamp)
+  - `reviewedAt` (timestamp, nullable)
+- [ ] Add index on strategyId for querying reports per strategy
+- [ ] Add index on status for admin queue filtering
+- [ ] Add unique index on (strategyId, reporterId) - one report per user per strategy
+- [ ] Add relations to strategies and users
+- [ ] Export types: `StrategyReport`, `NewStrategyReport`
 - [ ] Schema pushed successfully (`bun run db:push`)
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
@@ -88,6 +114,10 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 - [ ] Export `STRATEGY_CATEGORIES` array: ["Scalping", "Day Trading", "Swing Trading", "Breakout", "Reversal", "Trend Following", "Mean Reversion", "News Trading", "ICT/SMC", "Other"]
 - [ ] Export `MARKETPLACE_SORT_OPTIONS`: ["votes", "downloads", "recent"]
 - [ ] Export `MARKETPLACE_PAGE_SIZE`: 20
+- [ ] Export `MIN_TRADES_TO_PUBLISH`: 20 (minimum trades required to publish)
+- [ ] Export `VERIFIED_TRACK_RECORD_THRESHOLD`: 100 (trades for "verified" badge)
+- [ ] Export `LIMITED_DATA_THRESHOLD`: 30 (below this, show warning)
+- [ ] Export `STRATEGY_REPORT_REASONS`: ["misleading_stats", "inappropriate_content", "spam", "other"]
 - [ ] Re-export from `src/lib/constants/index.ts`
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
@@ -179,7 +209,10 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 - [ ] Add `unpublish` mutation: sets `isPublic: false`
 - [ ] Validates strategy ownership
 - [ ] Validates strategy has required fields for publishing (name, description)
-- [ ] Returns updated strategy
+- [ ] **Enforces minimum trade count**: rejects if strategy has < `MIN_TRADES_TO_PUBLISH` (20) closed trades
+  - Return error: "Strategy needs at least 20 trades before publishing"
+- [ ] On publish, compute and cache stats in `cachedStats` column (win rate, profit factor, total trades, avg R)
+- [ ] Returns updated strategy with computed stats
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
 
@@ -195,9 +228,10 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 - [ ] Returns paginated list of public strategies with:
   - Strategy fields (id, name, description, color, coverImageUrl, instruments, categoryTags)
   - Creator info (userId, name, imageUrl) - or null if anonymous
-  - Stats (totalTrades, winRate, profitFactor, avgR) computed from trades
+  - Stats from `cachedStats` column (totalTrades, winRate, profitFactor, avgR)
   - Engagement (voteScore, downloadCount)
   - `hasVoted`: current user's vote status (null, 1, or -1)
+  - `trackRecordStatus`: "limited" (<30 trades), "normal" (30-99), or "verified" (100+)
 - [ ] Supports cursor-based pagination
 - [ ] No auth required for listing, auth optional for `hasVoted`
 - [ ] Typecheck passes (`bun run check`)
@@ -215,6 +249,10 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 - [ ] Uses upsert pattern (vote replaces existing vote)
 - [ ] Only works on public strategies
 - [ ] Cannot vote on own strategy
+- [ ] **Rate limiting via Upstash Redis**: Max 20 votes per user per hour
+  - Use `@upstash/ratelimit` with sliding window algorithm
+  - Key pattern: `vote_limit:{userId}`
+  - Return error: "Too many votes. Please try again later."
 - [ ] Returns new vote score
 - [ ] Protected procedures (auth required)
 - [ ] Typecheck passes (`bun run check`)
@@ -244,6 +282,23 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 
 ---
 
+### US-012b: Add Strategy Report Endpoint
+
+**Description**: As a frontend, I want an endpoint to report inappropriate or misleading strategies so that the community can flag problematic content.
+
+**Acceptance Criteria**:
+- [ ] Add `report` mutation: `{ strategyId: string, reason: ReportReason, details?: string }`
+- [ ] Validates strategy exists and is public
+- [ ] Cannot report own strategy
+- [ ] Cannot report same strategy twice (one report per user per strategy)
+- [ ] Creates `strategyReport` record with status "pending"
+- [ ] Returns success confirmation
+- [ ] Protected procedure (auth required)
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+
+---
+
 ### US-013: Add Public Strategy Detail Endpoint
 
 **Description**: As a frontend, I want an endpoint to get full details of a public strategy so that users can view complete information before downloading.
@@ -262,19 +317,39 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 
 ---
 
+### US-013b: Add Cached Stats Refresh Logic
+
+**Description**: As a system, I want strategy stats to refresh when trades are closed so that marketplace stats stay accurate.
+
+**Acceptance Criteria**:
+- [ ] When a trade is closed (in `trades.close` or `trades.update` to closed status):
+  - Check if trade's strategy is public (`isPublic: true`)
+  - If public, recompute stats and update `cachedStats` column
+- [ ] Stats to compute: totalTrades, wins, losses, winRate, profitFactor, avgR, avgWin, avgLoss
+- [ ] Update `trackRecordStatus` based on new trade count
+- [ ] Use a helper function `computeStrategyStats(strategyId)` for reuse
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+
+---
+
 ### US-014: Integration Tests for Marketplace Backend
 
 **Description**: As a developer, I want integration tests for all marketplace endpoints so that we can verify correct behavior.
 
 **Acceptance Criteria**:
 - [ ] Create `tests/integration/marketplace.test.ts`
-- [ ] Test `publish`: sets isPublic, rejects incomplete strategies
+- [ ] Test `publish`:
+  - Sets isPublic, computes and caches stats
+  - Rejects incomplete strategies (missing name/description)
+  - **Rejects strategies with < 20 trades**
 - [ ] Test `unpublish`: sets isPublic false
-- [ ] Test `marketplace.list`: returns paginated public strategies, filters work
+- [ ] Test `marketplace.list`: returns paginated public strategies, filters work, includes trackRecordStatus
 - [ ] Test `vote`: creates vote, replaces existing vote, cannot vote on own
 - [ ] Test `removeVote`: removes vote, returns updated score
 - [ ] Test `download`: creates copy, records download, cannot download twice
 - [ ] Test `marketplace.getById`: returns public strategy, 404 for private
+- [ ] Test `report`: creates report, cannot report own, cannot report twice
 - [ ] All tests pass (`bun run test`)
 - [ ] Typecheck passes (`bun run check`)
 
@@ -429,20 +504,24 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 
 **Acceptance Criteria**:
 - [ ] Add "Share to Marketplace" card section on strategy detail page
-- [ ] If not published: shows "Publish" button with options:
+- [ ] **If < 20 trades**: show disabled state with message:
+  - "Complete at least 20 trades to publish this strategy"
+  - Progress indicator: "12/20 trades"
+- [ ] If not published (and >= 20 trades): shows "Publish" button with options:
   - Anonymous toggle (hide my identity)
   - Instrument selection (multi-select from STRATEGY_INSTRUMENTS)
   - Category selection (multi-select from STRATEGY_CATEGORIES)
 - [ ] If published: shows "Published" badge with:
   - Current vote score
   - Download count
+  - Track record status badge
   - "Unpublish" button
   - Link to view in marketplace
 - [ ] Calls `strategies.publish` / `strategies.unpublish` mutations
 - [ ] Terminal design styling
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
-- [ ] Verify in browser: publish/unpublish flow works
+- [ ] Verify in browser: publish/unpublish flow works, minimum trades enforced
 
 ---
 
@@ -498,6 +577,10 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 - [ ] Strategy name and truncated description
 - [ ] Creator name/avatar (or "Anonymous" if anonymous)
 - [ ] Instrument/category badges
+- [ ] **Track record badge**:
+  - "limited" (20-29 trades): Show "⚠️ Limited Data" in muted/warning style
+  - "normal" (30-99 trades): No badge
+  - "verified" (100+ trades): Show "✓ Verified" in profit green
 - [ ] Stats row: Win Rate, Profit Factor, Total Trades
 - [ ] Vote controls (up/down arrows with net score)
 - [ ] Download count badge
@@ -506,7 +589,7 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 - [ ] Terminal design styling
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
-- [ ] Verify in browser: cards render correctly
+- [ ] Verify in browser: cards render correctly with appropriate badges
 
 ---
 
@@ -537,18 +620,25 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 **Acceptance Criteria**:
 - [ ] Create `src/app/(protected)/marketplace/[id]/page.tsx`
 - [ ] Hero section with cover image, name, creator info
+- [ ] **Track record badge** (same logic as card: limited/normal/verified)
 - [ ] Full description
 - [ ] Entry/exit rules (read-only display)
 - [ ] Risk parameters (read-only display)
 - [ ] Performance stats: Win Rate, Profit Factor, Avg Win, Avg Loss, Avg R, Total Trades
+  - If "limited" status, show warning: "Stats based on limited sample size (<30 trades)"
 - [ ] Vote controls (same as card)
 - [ ] "Download to My Strategies" button
   - If already downloaded: shows "Already Downloaded" with link to copy
+- [ ] **Report button** (flag icon) opens report dialog:
+  - Reason dropdown (from STRATEGY_REPORT_REASONS)
+  - Optional details textarea
+  - Submit calls `strategies.report` mutation
+  - Success toast: "Report submitted. We'll review this strategy."
 - [ ] Back link to marketplace
 - [ ] Terminal design styling
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
-- [ ] Verify in browser: full detail view works
+- [ ] Verify in browser: full detail view works, report flow works
 
 ---
 
@@ -654,8 +744,13 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 
 ### Performance
 - Marketplace list query must use cursor pagination
-- Computed stats (win rate, etc.) should be cached or computed efficiently
-- Consider materialized view or summary table for hot queries
+- Stats cached in `cachedStats` JSONB column, refreshed on trade close
+- Use Upstash Redis for vote rate limiting (`@upstash/ratelimit`)
+
+### Rate Limiting (Upstash)
+- Vote rate limit: 20 votes per user per hour (sliding window)
+- Key pattern: `vote_limit:{userId}`
+- Use `@upstash/redis` and `@upstash/ratelimit` packages
 
 ### Design Reference
 - All UI stories must follow `.claude/skills/frontend-engineer/DESIGN_REFERENCE.md`
@@ -1048,6 +1143,41 @@ className="group transition-all hover:border-white/10 hover:-translate-y-1 hover
 className="active:scale-95 transition-transform"
 ```
 
+### Track Record Badges
+
+```tsx
+function TrackRecordBadge({ status }: { status: "limited" | "normal" | "verified" }) {
+  if (status === "limited") {
+    return (
+      <div className="inline-flex items-center gap-1.5 rounded border border-breakeven/20
+                      bg-breakeven/10 px-2 py-1 font-mono text-[10px] text-breakeven
+                      uppercase tracking-wider">
+        <AlertTriangle className="h-3 w-3" />
+        Limited Data
+      </div>
+    );
+  }
+
+  if (status === "verified") {
+    return (
+      <div className="inline-flex items-center gap-1.5 rounded border border-profit/20
+                      bg-profit/10 px-2 py-1 font-mono text-[10px] text-profit
+                      uppercase tracking-wider">
+        <Check className="h-3 w-3" />
+        Verified Track Record
+      </div>
+    );
+  }
+
+  return null; // "normal" status shows no badge
+}
+```
+
+**Usage:**
+- Card: Show badge below strategy name
+- Detail page: Show badge in hero section next to creator info
+- Stats section: If "limited", show inline warning below stats
+
 ### Empty States
 
 ```tsx
@@ -1093,11 +1223,20 @@ Before marking any UI story complete, verify:
 - Marketplace engagement (votes, downloads)
 - Time spent on edit page (indicates spacious layout is usable)
 
+## Resolved Decisions
+
+| Question | Decision |
+|----------|----------|
+| Minimum trade count before publishing? | Yes, 20 trades minimum (US-009) |
+| Stats visibility for small samples? | Show stats but with "Limited Data" badge for <30 trades, "Verified" badge for 100+ (US-025, US-027) |
+| Rate limiting on votes? | Yes, 20 votes/hour via Upstash Redis (US-011) |
+| Report system for bad content? | Yes, report endpoint with reason categories (US-012b) |
+
 ## Open Questions
 
-- Should there be a minimum trade count before publishing? (prevents low-quality strategies)
-- Should stats be hidden until N trades? (prevents misleading small samples)
-- Rate limiting on votes/downloads?
+- Admin dashboard for reviewing reports? (can be added later)
+- Email notifications when strategy gets votes/downloads? (v2)
+- "Editors' Picks" / featured strategies curation? (v2)
 
 ---
 
