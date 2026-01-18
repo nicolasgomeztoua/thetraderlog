@@ -1,15 +1,45 @@
-# Strategy Marketplace Progress Log
+# Ralph Progress Log
+Started: Sun Jan 18 19:17:56 WET 2026
+---
 
 ## Codebase Patterns
-- Use Drizzle ORM for all database operations
-- All constants go in src/lib/constants/ (never hardcode)
+- Use Drizzle ORM for all database operations in `src/server/db/schema.ts`
+- All constants go in `src/lib/constants/` (never hardcode)
 - Terminal design: monospace fonts, chartreuse accent (#d4ff00)
 - Protected routes use tRPC protectedProcedure
-- Cover images use existing S3 + useImageUpload pattern (see src/hooks/use-image-upload.ts)
-- Rate limiting via @upstash/ratelimit with sliding window
-- Auto-save pattern: useDebouncedCallback with 500ms delay
-- Strategy schema in src/server/db/schema.ts (strategies table)
-- Strategy router in src/server/api/routers/strategies.ts
+- ID generation uses `src/lib/shared/id.ts` with `ids.entityName()` pattern
+- Array columns in PostgreSQL use `.array()` modifier on text columns
+- Schema changes: Edit schema.ts then run `bun run db:push --force` to skip data-loss prompts
 
 ---
 
+## 2026-01-18 19:XX - US-001
+- What was implemented: Extended strategies table with marketplace-related columns
+- Files changed:
+  - `src/server/db/schema.ts` - Added coverImageUrl, coverImageKey, isPublic, isAnonymous, instruments, categoryTags columns
+- **Learnings for future iterations:**
+  - Use `--force` flag with `bun run db:push` to auto-approve data loss statements
+  - Text array columns in Drizzle: `text("column_name").array()`
+  - Existing DB columns not in schema will be dropped during push (watch for data loss warnings)
+---
+
+## 2026-01-18 20:XX - US-002
+- What was implemented: Created strategyVotes table for marketplace voting functionality
+- Files changed:
+  - `src/server/db/schema.ts` - Added strategyVotes table with id, strategyId, userId, vote, createdAt, updatedAt columns; added unique index on (strategyId, userId); added relations to users and strategies; exported StrategyVote and NewStrategyVote types
+  - `src/lib/shared/id.ts` - Added strategyVote ID generator with "sv" prefix
+- **Learnings for future iterations:**
+  - For junction tables with unique constraints, use `uniqueIndex()` function from drizzle-orm/pg-core
+  - Add relation updates in both parent tables (users.strategyVotes, strategies.votes)
+  - Remember to add ID generator when creating new tables
+---
+
+## 2026-01-18 21:XX - US-003
+- What was implemented: Created strategyDownloads table for tracking marketplace strategy copies
+- Files changed:
+  - `src/server/db/schema.ts` - Added strategyDownloads table with id, originalStrategyId (FK), copiedStrategyId (FK), userId (FK), createdAt; added unique index on (originalStrategyId, userId); added index on originalStrategyId for counting; added relations to strategies and users; added sourceStrategyId and cachedStats columns to strategies table; exported StrategyDownload and NewStrategyDownload types
+  - `src/lib/shared/id.ts` - Added strategyDownload ID generator with "sd" prefix
+- **Learnings for future iterations:**
+  - Self-referential relations in Drizzle require relationName to distinguish directions (e.g., "sourceStrategies")
+  - When a table references another table twice (e.g., originalStrategy and copiedStrategy), use relationName in both the relation definition and the many() call
+---

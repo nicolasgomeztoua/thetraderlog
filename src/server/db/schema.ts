@@ -584,6 +584,10 @@ export const strategies = createTable(
 		instruments: text("instruments").array(), // Array of instruments (ES, NQ, etc.)
 		categoryTags: text("category_tags").array(), // Array of category tags (Scalping, etc.)
 
+		// Marketplace copy tracking
+		sourceStrategyId: text("source_strategy_id"), // Original strategy ID if copied from marketplace
+		cachedStats: text("cached_stats"), // JSON: cached performance stats for marketplace display
+
 		// Strategy documentation
 		entryCriteria: text("entry_criteria"), // Rich text for entry rules
 		exitRules: text("exit_rules"), // Rich text for exit rules
@@ -851,6 +855,41 @@ export const strategyVotes = createTable(
 );
 
 // ============================================================================
+// STRATEGY DOWNLOADS TABLE (marketplace copy tracking)
+// ============================================================================
+
+export const strategyDownloads = createTable(
+	"strategy_download",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.strategyDownload()),
+		originalStrategyId: text("original_strategy_id")
+			.notNull()
+			.references(() => strategies.id, { onDelete: "cascade" }),
+		copiedStrategyId: text("copied_strategy_id")
+			.notNull()
+			.references(() => strategies.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [
+		// Index for counting downloads per strategy
+		index("strategy_download_original_id_idx").on(t.originalStrategyId),
+		// One download per user per original strategy
+		uniqueIndex("strategy_download_original_user_idx").on(
+			t.originalStrategyId,
+			t.userId,
+		),
+		index("strategy_download_user_id_idx").on(t.userId),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -866,6 +905,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	dailyJournals: many(dailyJournals),
 	dailyChecklistTemplates: many(dailyChecklistTemplates),
 	strategyVotes: many(strategyVotes),
+	strategyDownloads: many(strategyDownloads),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -997,6 +1037,23 @@ export const strategiesRelations = relations(strategies, ({ one, many }) => ({
 	rules: many(strategyRules),
 	trades: many(trades),
 	votes: many(strategyVotes),
+	// Self-referential: source strategy for copied strategies
+	sourceStrategy: one(strategies, {
+		fields: [strategies.sourceStrategyId],
+		references: [strategies.id],
+		relationName: "sourceStrategies",
+	}),
+	copiedStrategies: many(strategies, {
+		relationName: "sourceStrategies",
+	}),
+	// Downloads where this strategy is the original
+	downloadsAsOriginal: many(strategyDownloads, {
+		relationName: "originalStrategy",
+	}),
+	// Downloads where this strategy is the copy
+	downloadsAsCopy: many(strategyDownloads, {
+		relationName: "copiedStrategy",
+	}),
 }));
 
 export const strategyRulesRelations = relations(
@@ -1082,6 +1139,26 @@ export const strategyVotesRelations = relations(strategyVotes, ({ one }) => ({
 	}),
 }));
 
+export const strategyDownloadsRelations = relations(
+	strategyDownloads,
+	({ one }) => ({
+		originalStrategy: one(strategies, {
+			fields: [strategyDownloads.originalStrategyId],
+			references: [strategies.id],
+			relationName: "originalStrategy",
+		}),
+		copiedStrategy: one(strategies, {
+			fields: [strategyDownloads.copiedStrategyId],
+			references: [strategies.id],
+			relationName: "copiedStrategy",
+		}),
+		user: one(users, {
+			fields: [strategyDownloads.userId],
+			references: [users.id],
+		}),
+	}),
+);
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1124,3 +1201,5 @@ export type JournalAttachment = typeof journalAttachments.$inferSelect;
 export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
 export type StrategyVote = typeof strategyVotes.$inferSelect;
 export type NewStrategyVote = typeof strategyVotes.$inferInsert;
+export type StrategyDownload = typeof strategyDownloads.$inferSelect;
+export type NewStrategyDownload = typeof strategyDownloads.$inferInsert;
