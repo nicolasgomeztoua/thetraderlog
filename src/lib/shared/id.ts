@@ -26,4 +26,5 @@ export const ids = {
 	checklistTemplate: () => createId("ct"),
 	checklistCheck: () => createId("ck"),
 	journalAttachment: () => createId("ja"),
+	strategyVote: () => createId("sv"),
 };

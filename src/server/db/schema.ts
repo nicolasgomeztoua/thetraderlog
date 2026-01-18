@@ -819,6 +819,38 @@ export const candleCache = createTable(
 );
 
 // ============================================================================
+// STRATEGY VOTES TABLE (marketplace voting)
+// ============================================================================
+
+export const strategyVotes = createTable(
+	"strategy_vote",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.strategyVote()),
+		strategyId: text("strategy_id")
+			.notNull()
+			.references(() => strategies.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		vote: integer("vote").notNull(), // 1 (upvote) or -1 (downvote)
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
+	},
+	(t) => [
+		// One vote per user per strategy
+		uniqueIndex("strategy_vote_strategy_user_idx").on(t.strategyId, t.userId),
+		index("strategy_vote_strategy_id_idx").on(t.strategyId),
+		index("strategy_vote_user_id_idx").on(t.userId),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -833,6 +865,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	strategies: many(strategies),
 	dailyJournals: many(dailyJournals),
 	dailyChecklistTemplates: many(dailyChecklistTemplates),
+	strategyVotes: many(strategyVotes),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -963,6 +996,7 @@ export const strategiesRelations = relations(strategies, ({ one, many }) => ({
 	}),
 	rules: many(strategyRules),
 	trades: many(trades),
+	votes: many(strategyVotes),
 }));
 
 export const strategyRulesRelations = relations(
@@ -1037,6 +1071,17 @@ export const journalAttachmentsRelations = relations(
 	}),
 );
 
+export const strategyVotesRelations = relations(strategyVotes, ({ one }) => ({
+	strategy: one(strategies, {
+		fields: [strategyVotes.strategyId],
+		references: [strategies.id],
+	}),
+	user: one(users, {
+		fields: [strategyVotes.userId],
+		references: [users.id],
+	}),
+}));
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1077,3 +1122,5 @@ export type DailyChecklistCheck = typeof dailyChecklistChecks.$inferSelect;
 export type NewDailyChecklistCheck = typeof dailyChecklistChecks.$inferInsert;
 export type JournalAttachment = typeof journalAttachments.$inferSelect;
 export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
+export type StrategyVote = typeof strategyVotes.$inferSelect;
+export type NewStrategyVote = typeof strategyVotes.$inferInsert;
