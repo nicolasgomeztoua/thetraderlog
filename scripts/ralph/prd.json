@@ -469,8 +469,8 @@
         "Verify in browser: cover image displays correctly"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added hero banner with cover image/gradient placeholder, strategy name overlay with text shadow, Edit button linking to edit page, strategy color accent on stats cards. Added data-testid attributes for E2E testing."
     },
     {
       "id": "US-025",

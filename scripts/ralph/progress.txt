@@ -399,3 +399,21 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Responsive tab labels: use hidden sm:inline pattern to show only icons on mobile
   - The strategies autosave mutation already accepts instruments and categoryTags as optional arrays (from US-008)
 ---
+
+## 2026-01-18 - US-024
+- What was implemented: Updated strategy detail page with cover image hero banner
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/page.tsx` - Major updates:
+    - Added hero banner with cover image (using Next.js Image) or gradient placeholder using strategy color
+    - Strategy name overlays cover image with text shadow for readability
+    - Added Edit button linking to /strategies/[id]/edit with strategy color accent
+    - Strategy color used as accent on stats cards (colored top border)
+    - Added data-testid attributes for E2E testing (strategy-detail-loading, strategy-detail-not-found, strategy-detail-page, strategy-detail-hero, strategy-detail-cover-image, strategy-detail-cover-placeholder, strategy-detail-heading, strategy-detail-actions, strategy-detail-edit-button, strategy-detail-stats, strategy-detail-form)
+    - Updated loading skeleton to include hero banner skeleton
+    - Terminal design styling with monospace fonts
+- **Learnings for future iterations:**
+  - For hero banners with cover images, use Next.js Image with fill and object-cover for responsive sizing
+  - Gradient placeholder pattern: `linear-gradient(135deg, ${color}20 0%, ${color}05 50%, transparent 100%)`
+  - Text readability on images: use gradient overlay (from-background/90 via-background/30 to-transparent) + text-shadow
+  - Strategy color can be used as subtle accent on UI elements via inline styles (borderTopColor, boxShadow)
+---
