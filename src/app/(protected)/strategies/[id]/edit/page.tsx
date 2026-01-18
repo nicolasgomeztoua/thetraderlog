@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CoverImageUpload } from "@/components/strategy/cover-image-upload";
+import { RiskParametersEditor } from "@/components/strategy/risk-parameters-editor";
 import { RulesEditor } from "@/components/strategy/rules-editor";
 import { StrategyEditForm } from "@/components/strategy/strategy-edit-form";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,17 @@ export default function StrategyEditPage() {
 			>
 				<RulesEditor
 					initialRules={strategy.rules ?? []}
+					strategyId={strategyId}
+				/>
+			</div>
+
+			{/* Risk Parameters Section */}
+			<div
+				className="rounded-lg border border-white/5 bg-white/2 p-6"
+				data-testid="strategy-edit-risk-section"
+			>
+				<RiskParametersEditor
+					initialRiskParameters={strategy.riskParameters}
 					strategyId={strategyId}
 				/>
 			</div>
