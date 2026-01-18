@@ -3,6 +3,7 @@ import { z } from "zod";
 import { env } from "@/env";
 import { calculateAggregateStats } from "@/lib/analytics";
 import {
+	deleteObject,
 	getPresignedUploadUrl,
 	getS3Bucket,
 	isS3Configured,
@@ -168,6 +169,8 @@ const updateStrategySchema = z.object({
 	name: z.string().min(1).max(100).optional(),
 	description: z.string().nullish(),
 	color: z.string().optional(),
+	coverImageUrl: z.string().nullish(),
+	coverImageKey: z.string().nullish(),
 	entryCriteria: z.string().nullish(),
 	exitRules: z.string().nullish(),
 	riskParameters: riskParametersSchema.nullish(),
@@ -330,6 +333,7 @@ export const strategiesRouter = createTRPCRouter({
 				riskParameters,
 				scalingRules,
 				trailingRules,
+				coverImageKey,
 				...data
 			} = input;
 
@@ -342,8 +346,31 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Strategy not found");
 			}
 
+			// Check if cover image key is changing and old key exists - delete old S3 object
+			const oldCoverImageKey = existingStrategy.coverImageKey;
+			if (
+				coverImageKey !== undefined &&
+				oldCoverImageKey &&
+				oldCoverImageKey !== coverImageKey &&
+				isS3Configured()
+			) {
+				try {
+					await deleteObject(oldCoverImageKey);
+				} catch {
+					// Log but don't fail the update if S3 delete fails
+					console.error(
+						`Failed to delete old cover image: ${oldCoverImageKey}`,
+					);
+				}
+			}
+
 			// Prepare update data
 			const updateData: Record<string, unknown> = { ...data };
+
+			// Handle cover image key explicitly since we extracted it
+			if (coverImageKey !== undefined) {
+				updateData.coverImageKey = coverImageKey;
+			}
 
 			if (riskParameters !== undefined) {
 				updateData.riskParameters = riskParameters
