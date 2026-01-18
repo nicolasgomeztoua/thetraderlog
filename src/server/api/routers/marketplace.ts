@@ -233,6 +233,7 @@ export const marketplaceRouter = createTRPCRouter({
 
 			// Get current user's votes if authenticated
 			let userVotes: Array<{ strategyId: string; vote: number }> = [];
+			let currentUserId: string | null = null;
 			if (ctx.userId && strategyIds.length > 0) {
 				// Need to get user from DB to get internal ID
 				const user = await ctx.db.query.users.findFirst({
@@ -241,6 +242,7 @@ export const marketplaceRouter = createTRPCRouter({
 				});
 
 				if (user) {
+					currentUserId = user.id;
 					userVotes = await ctx.db
 						.select({
 							strategyId: strategyVotes.strategyId,
@@ -342,6 +344,7 @@ export const marketplaceRouter = createTRPCRouter({
 			return {
 				items,
 				nextCursor,
+				currentUserId,
 			};
 		}),
 

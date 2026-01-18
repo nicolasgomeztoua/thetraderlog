@@ -46,23 +46,30 @@ export interface MarketplaceStrategyData {
 
 interface StrategyCardProps {
 	strategy: MarketplaceStrategyData;
+	currentUserId?: string;
 }
 
 // =============================================================================
 // VOTE CONTROLS COMPONENT
 // =============================================================================
 
-function VoteControls({
-	strategyId,
-	voteScore,
-	hasVoted,
-	onVoteUpdate,
-}: {
+export interface VoteControlsProps {
 	strategyId: string;
 	voteScore: number;
 	hasVoted: number | null;
 	onVoteUpdate: (newScore: number, newVote: number | null) => void;
-}) {
+	isOwner?: boolean;
+	size?: "sm" | "md";
+}
+
+export function VoteControls({
+	strategyId,
+	voteScore,
+	hasVoted,
+	onVoteUpdate,
+	isOwner = false,
+	size = "sm",
+}: VoteControlsProps) {
 	const utils = api.useUtils();
 
 	const voteMutation = api.marketplace.vote.useMutation({
@@ -146,6 +153,58 @@ function VoteControls({
 	};
 
 	const isLoading = voteMutation.isPending || removeVoteMutation.isPending;
+	const isDisabled = isLoading || isOwner;
+
+	// Size variants
+	const iconSize = size === "md" ? "h-6 w-6" : "h-5 w-5";
+	const scoreSize = size === "md" ? "text-base" : "text-sm";
+
+	// If owner, show disabled state with tooltip
+	if (isOwner) {
+		return (
+			<div
+				className="flex items-center gap-0.5 opacity-50"
+				data-testid={`strategy-card-votes-${strategyId}`}
+				title="You cannot vote on your own strategy"
+			>
+				{/* Upvote button (disabled) */}
+				<button
+					aria-label="Upvote (disabled - your strategy)"
+					className="cursor-not-allowed rounded p-1 text-muted-foreground"
+					data-testid={`strategy-card-upvote-${strategyId}`}
+					disabled
+					type="button"
+				>
+					<ArrowBigUp className={iconSize} />
+				</button>
+
+				{/* Vote score */}
+				<span
+					className={cn(
+						"min-w-[2ch] text-center font-medium font-mono",
+						scoreSize,
+						voteScore > 0 && "text-primary",
+						voteScore < 0 && "text-loss",
+						voteScore === 0 && "text-muted-foreground",
+					)}
+					data-testid={`strategy-card-score-${strategyId}`}
+				>
+					{voteScore}
+				</span>
+
+				{/* Downvote button (disabled) */}
+				<button
+					aria-label="Downvote (disabled - your strategy)"
+					className="cursor-not-allowed rounded p-1 text-muted-foreground"
+					data-testid={`strategy-card-downvote-${strategyId}`}
+					disabled
+					type="button"
+				>
+					<ArrowBigDown className={iconSize} />
+				</button>
+			</div>
+		);
+	}
 
 	return (
 		<div
@@ -158,16 +217,17 @@ function VoteControls({
 				className={cn(
 					"rounded p-1 transition-colors hover:bg-primary/10",
 					hasVoted === 1 && "text-primary",
-					isLoading && "pointer-events-none opacity-50",
+					isDisabled && "pointer-events-none opacity-50",
 				)}
 				data-testid={`strategy-card-upvote-${strategyId}`}
-				disabled={isLoading}
+				disabled={isDisabled}
 				onClick={handleUpvote}
 				type="button"
 			>
 				<ArrowBigUp
 					className={cn(
-						"h-5 w-5 transition-all",
+						iconSize,
+						"transition-all",
 						hasVoted === 1 && "fill-primary",
 					)}
 				/>
@@ -176,7 +236,8 @@ function VoteControls({
 			{/* Vote score */}
 			<span
 				className={cn(
-					"min-w-[2ch] text-center font-medium font-mono text-sm",
+					"min-w-[2ch] text-center font-medium font-mono",
+					scoreSize,
 					voteScore > 0 && "text-primary",
 					voteScore < 0 && "text-loss",
 					voteScore === 0 && "text-muted-foreground",
@@ -192,16 +253,17 @@ function VoteControls({
 				className={cn(
 					"rounded p-1 transition-colors hover:bg-loss/10",
 					hasVoted === -1 && "text-loss",
-					isLoading && "pointer-events-none opacity-50",
+					isDisabled && "pointer-events-none opacity-50",
 				)}
 				data-testid={`strategy-card-downvote-${strategyId}`}
-				disabled={isLoading}
+				disabled={isDisabled}
 				onClick={handleDownvote}
 				type="button"
 			>
 				<ArrowBigDown
 					className={cn(
-						"h-5 w-5 transition-all",
+						iconSize,
+						"transition-all",
 						hasVoted === -1 && "fill-loss",
 					)}
 				/>
@@ -252,10 +314,13 @@ function TrackRecordBadge({
 // MAIN STRATEGY CARD COMPONENT
 // =============================================================================
 
-export function StrategyCard({ strategy }: StrategyCardProps) {
+export function StrategyCard({ strategy, currentUserId }: StrategyCardProps) {
 	// Local state for optimistic updates
 	const [voteScore, setVoteScore] = useState(strategy.engagement.voteScore);
 	const [hasVoted, setHasVoted] = useState(strategy.hasVoted);
+
+	// Determine if current user owns this strategy
+	const isOwner = !!(currentUserId && strategy.creator?.id === currentUserId);
 
 	const handleVoteUpdate = (newScore: number, newVote: number | null) => {
 		setVoteScore(newScore);
@@ -409,6 +474,7 @@ export function StrategyCard({ strategy }: StrategyCardProps) {
 						{/* Vote controls */}
 						<VoteControls
 							hasVoted={hasVoted}
+							isOwner={isOwner}
 							onVoteUpdate={handleVoteUpdate}
 							strategyId={strategy.id}
 							voteScore={voteScore}

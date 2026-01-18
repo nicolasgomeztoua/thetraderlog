@@ -95,10 +95,13 @@ function MarketplaceContent() {
 			},
 		);
 
-	// Flatten all pages into a single array
+	// Flatten all pages into a single array and get currentUserId
 	const strategies = useMemo(() => {
 		return data?.pages.flatMap((page) => page.items) ?? [];
 	}, [data]);
+
+	// Get currentUserId from the first page (same across all pages)
+	const currentUserId = data?.pages[0]?.currentUserId ?? null;
 
 	// Infinite scroll hook
 	const { sentinelRef } = useInfiniteScroll({
@@ -160,6 +163,7 @@ function MarketplaceContent() {
 					>
 						{strategies.map((strategy) => (
 							<StrategyCard
+								currentUserId={currentUserId ?? undefined}
 								key={strategy.id}
 								strategy={strategy as MarketplaceStrategyData}
 							/>
