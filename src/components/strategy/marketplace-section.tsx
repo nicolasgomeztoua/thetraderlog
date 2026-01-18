@@ -23,13 +23,11 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-	LIMITED_DATA_THRESHOLD,
 	MIN_TRADES_TO_PUBLISH,
 	STRATEGY_CATEGORIES,
 	STRATEGY_INSTRUMENTS,
-	VERIFIED_TRACK_RECORD_THRESHOLD,
 } from "@/lib/constants";
-import { cn } from "@/lib/shared";
+import { cn, getTrackRecordStatus } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 interface MarketplaceSectionProps {
@@ -47,14 +45,6 @@ interface MarketplaceSectionProps {
 	} | null;
 	tradeCount: number;
 	strategyColor: string;
-}
-
-type TrackRecordStatus = "verified" | "normal" | "limited";
-
-function getTrackRecordStatus(tradeCount: number): TrackRecordStatus {
-	if (tradeCount >= VERIFIED_TRACK_RECORD_THRESHOLD) return "verified";
-	if (tradeCount < LIMITED_DATA_THRESHOLD) return "limited";
-	return "normal";
 }
 
 export function MarketplaceSection({

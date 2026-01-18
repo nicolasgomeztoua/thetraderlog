@@ -1,13 +1,12 @@
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
-	LIMITED_DATA_THRESHOLD,
 	MARKETPLACE_PAGE_SIZE,
 	MARKETPLACE_SORT_OPTIONS,
 	STRATEGY_REPORT_REASONS,
-	VERIFIED_TRACK_RECORD_THRESHOLD,
 } from "@/lib/constants";
 import { checkVoteRateLimit } from "@/lib/rate-limit";
+import { getTrackRecordStatus, parseCachedStats } from "@/lib/shared";
 import {
 	createTRPCRouter,
 	protectedProcedure,
@@ -26,56 +25,11 @@ import {
 // TYPES
 // =============================================================================
 
-/** Track record status based on trade count */
-type TrackRecordStatus = "limited" | "normal" | "verified";
-
-/** Cached stats structure from strategy.cachedStats */
-interface CachedStats {
-	totalTrades: number;
-	wins: number;
-	losses: number;
-	winRate: number;
-	profitFactor: number | null;
-	avgR: number;
-	avgWin: number;
-	avgLoss: number;
-	computedAt: string;
-}
-
 /** Creator info returned for marketplace strategies */
 interface CreatorInfo {
 	id: string;
 	name: string | null;
 	imageUrl: string | null;
-}
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Determine track record status based on total trades
- */
-function getTrackRecordStatus(totalTrades: number): TrackRecordStatus {
-	if (totalTrades >= VERIFIED_TRACK_RECORD_THRESHOLD) {
-		return "verified";
-	}
-	if (totalTrades < LIMITED_DATA_THRESHOLD) {
-		return "limited";
-	}
-	return "normal";
-}
-
-/**
- * Parse cached stats JSON safely
- */
-function parseCachedStats(cachedStatsJson: string | null): CachedStats | null {
-	if (!cachedStatsJson) return null;
-	try {
-		return JSON.parse(cachedStatsJson) as CachedStats;
-	} catch {
-		return null;
-	}
 }
 
 /**

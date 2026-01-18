@@ -947,11 +947,12 @@ export default function MarketplaceDetailPage() {
 							<div
 								className={cn(
 									"mt-1 font-bold font-mono text-lg sm:text-2xl",
-									strategy.stats.avgR >= 0 ? "text-profit" : "text-loss",
+									(strategy.stats.avgR ?? 0) >= 0 ? "text-profit" : "text-loss",
 								)}
 							>
-								{strategy.stats.avgR >= 0 ? "+" : ""}
-								{strategy.stats.avgR.toFixed(2)}R
+								{strategy.stats.avgR === null
+									? "N/A"
+									: `${strategy.stats.avgR >= 0 ? "+" : ""}${strategy.stats.avgR.toFixed(2)}R`}
 							</div>
 						</div>
 					</div>
