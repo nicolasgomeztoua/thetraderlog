@@ -1,6 +1,12 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { env } from "@/env";
 import { calculateAggregateStats } from "@/lib/analytics";
+import {
+	getPresignedUploadUrl,
+	getS3Bucket,
+	isS3Configured,
+} from "@/lib/storage/s3";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
@@ -9,6 +15,62 @@ import {
 	tradeRuleChecks,
 	trades,
 } from "@/server/db/schema";
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/** Allowed image mime types for strategy cover images */
+const ALLOWED_IMAGE_TYPES = [
+	"image/jpeg",
+	"image/png",
+	"image/webp",
+	"image/gif",
+] as const;
+
+/** Maximum file size for cover images (5MB) */
+const MAX_COVER_IMAGE_SIZE = 5 * 1024 * 1024;
+
+/**
+ * Construct the public URL for an S3 object.
+ * Uses the custom domain if configured, otherwise falls back to the S3 endpoint.
+ */
+function getPublicUrl(key: string): string {
+	// Use custom domain if configured (e.g., for CDN)
+	if (env.S3_PUBLIC_URL) {
+		return `${env.S3_PUBLIC_URL}/${key}`;
+	}
+
+	// Fall back to S3 endpoint + bucket
+	const bucket = getS3Bucket();
+	const endpoint = env.S3_ENDPOINT ?? "";
+
+	// Remove trailing slash from endpoint if present
+	const cleanEndpoint = endpoint.replace(/\/$/, "");
+
+	return `${cleanEndpoint}/${bucket}/${key}`;
+}
+
+/**
+ * Extract file extension from filename or mime type
+ */
+function getFileExtension(filename: string, mimeType: string): string {
+	// Try to get extension from filename
+	const dotIndex = filename.lastIndexOf(".");
+	if (dotIndex > 0) {
+		return filename.substring(dotIndex + 1).toLowerCase();
+	}
+
+	// Fall back to mime type
+	const mimeExtensions: Record<string, string> = {
+		"image/jpeg": "jpg",
+		"image/png": "png",
+		"image/webp": "webp",
+		"image/gif": "gif",
+	};
+
+	return mimeExtensions[mimeType] ?? "jpg";
+}
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -812,4 +874,71 @@ export const strategiesRouter = createTRPCRouter({
 
 		return curves;
 	}),
+
+	// Get presigned URL for strategy cover image upload
+	getImageUploadUrl: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				filename: z.string().min(1),
+				mimeType: z.string().min(1),
+				size: z.number().int().positive(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify S3 is configured
+			if (!isS3Configured()) {
+				throw new Error(
+					"File uploads are not configured. S3 settings are missing.",
+				);
+			}
+
+			// Verify strategy ownership
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Validate mime type is an allowed image type
+			if (
+				!ALLOWED_IMAGE_TYPES.includes(
+					input.mimeType as (typeof ALLOWED_IMAGE_TYPES)[number],
+				)
+			) {
+				throw new Error(
+					`Invalid file type. Allowed types: ${ALLOWED_IMAGE_TYPES.join(", ")}`,
+				);
+			}
+
+			// Validate file size (5MB limit)
+			if (input.size > MAX_COVER_IMAGE_SIZE) {
+				throw new Error(
+					`File too large. Maximum size is ${MAX_COVER_IMAGE_SIZE / (1024 * 1024)}MB`,
+				);
+			}
+
+			// Generate S3 key: strategies/{userId}/{strategyId}/cover-{timestamp}.{ext}
+			const ext = getFileExtension(input.filename, input.mimeType);
+			const timestamp = Date.now();
+			const key = `strategies/${ctx.user.id}/${input.strategyId}/cover-${timestamp}.${ext}`;
+
+			// Generate presigned PUT URL (valid for 1 hour)
+			const presignedUrl = getPresignedUploadUrl(key, 3600);
+
+			// Generate public URL
+			const publicUrl = getPublicUrl(key);
+
+			return {
+				presignedUrl,
+				publicUrl,
+				key,
+			};
+		}),
 });
