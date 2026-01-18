@@ -14,7 +14,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { StrategyFormData } from "@/components/strategy";
-import { StrategyForm } from "@/components/strategy";
+import { MarketplaceSection, StrategyForm } from "@/components/strategy";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -372,6 +372,28 @@ export default function StrategyDetailPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Marketplace Section */}
+			<MarketplaceSection
+				cachedStats={
+					strategy.cachedStats
+						? (JSON.parse(strategy.cachedStats) as {
+								totalTrades?: number;
+								winRate?: number;
+								profitFactor?: number | null;
+								avgR?: number;
+							})
+						: null
+				}
+				categoryTags={strategy.categoryTags}
+				instruments={strategy.instruments}
+				isAnonymous={strategy.isAnonymous}
+				isPublic={strategy.isPublic ?? false}
+				strategyColor={strategyColor}
+				strategyId={strategyId}
+				strategyName={strategy.name}
+				tradeCount={stats?.totalTrades ?? 0}
+			/>
 
 			{/* Form */}
 			<div

@@ -1,4 +1,5 @@
 export { ComplianceBadge } from "./compliance-badge";
+export { MarketplaceSection } from "./marketplace-section";
 export type { RiskParameters } from "./risk-config";
 export { RiskConfig } from "./risk-config";
 export { RuleChecklist } from "./rule-checklist";
