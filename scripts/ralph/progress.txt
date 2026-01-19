@@ -713,3 +713,22 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Icon badge pattern: icon + uppercase tracking-wider text-xs span in flex row
   - Use Number.POSITIVE_INFINITY instead of Infinity for Biome compliance
 ---
+
+## 2026-01-19 - US-042
+- What was implemented: Created E2E tests for strategy edit page
+- Files changed:
+  - `tests/e2e/strategy-edit.spec.ts` - New E2E test file with 7 tests:
+    - navigates to edit page from strategy detail
+    - shows auto-save indicator when editing fields
+    - navigates between tabs (Overview, Rules, Risk Management, Advanced)
+    - color picker interaction works
+    - instruments selection works
+    - categories selection works
+    - back button returns to strategy detail
+- **Learnings for future iterations:**
+  - Use template literals instead of string concatenation (Biome style rule)
+  - Radix popper content wrapper selector: `[data-radix-popper-content-wrapper]`
+  - Test patterns: skip test if prerequisite data doesn't exist (hasStrategies check)
+  - Use test.skip() for conditional test skipping
+  - Long expect chains need multiline formatting for Biome compliance
+---
