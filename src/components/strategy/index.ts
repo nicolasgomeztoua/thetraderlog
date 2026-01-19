@@ -12,5 +12,6 @@ export { StrategyCard } from "./strategy-card";
 export type { StrategyFormData, StrategyRule } from "./strategy-form";
 export { StrategyForm } from "./strategy-form";
 export { StrategyHero } from "./strategy-hero";
+export { StrategyStatsSummary } from "./strategy-stats-summary";
 export type { TrailingRules } from "./trailing-config";
 export { TrailingConfig } from "./trailing-config";
