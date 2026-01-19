@@ -96,9 +96,9 @@ Reference existing tests:
 - `tests/integration/accounts.test.ts`
 - `tests/integration/analytics.test.ts`
 
-## E2E Testing Requirements (UI Stories)
+## E2E Testing Requirements (MANDATORY for UI Stories)
 
-When implementing a **UI story** (creates or modifies user-facing components):
+**Any story that creates or modifies UI MUST include E2E tests. This is non-negotiable.**
 
 **Read the E2E testing skill first:** `.claude/skills/e2e-testing/SKILL.md`
 
