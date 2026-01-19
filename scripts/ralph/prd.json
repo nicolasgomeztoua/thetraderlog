@@ -403,8 +403,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added marketplaceList query with search, instruments/categories filtering, sortBy (votes/downloads/newest/updated), cursor pagination, vote/download aggregates, authorName handling, and currentUserVote."
     },
     {
       "id": "US-021",

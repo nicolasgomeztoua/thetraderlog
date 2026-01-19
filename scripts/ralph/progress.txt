@@ -449,3 +449,25 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Don't copy coverImageKey when copying coverImageUrl - we don't own the S3 object
   - Clear marketplace fields when copying to user's collection
 ---
+
+## 2026-01-19 - US-020 (Add Marketplace List Query with Pagination)
+- **What was implemented:**
+  - Added `marketplaceList` query to strategies router
+  - Input: search?, instruments[], categories[], sortBy, cursor, limit (default 20, max 50)
+  - Only returns isPublic=true strategies
+  - Filters by instruments/categories (JSON arrays in DB)
+  - Calculates aggregates: upvotes, downvotes, netVotes, downloadCount
+  - Includes authorName (user name or 'Anonymous' if isAnonymous)
+  - Includes currentUserVote for authenticated users
+  - Sorts by selected option (in memory after fetch)
+  - Cursor pagination using strategy ID
+  - Returns { strategies, nextCursor }
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added marketplaceList query)
+
+- **Learnings for future iterations:**
+  - For complex filtering on JSON columns, fetch then filter in memory
+  - Use relational queries with `with:` to fetch related votes/downloads in one query
+  - Cursor pagination with in-memory sorting: find cursor index, slice from there
+---

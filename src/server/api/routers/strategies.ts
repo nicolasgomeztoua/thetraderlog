@@ -1606,4 +1606,132 @@ export const strategiesRouter = createTRPCRouter({
 				nextCursor,
 			};
 		}),
+
+	/**
+	 * Get a single marketplace strategy with full details.
+	 * Returns public strategy with rules, votes, downloads, and source info.
+	 */
+	marketplaceGetById: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			// Get strategy with all relations
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.isPublic, true),
+				),
+				with: {
+					user: {
+						columns: {
+							id: true,
+							name: true,
+						},
+					},
+					rules: {
+						orderBy: [strategyRules.order],
+					},
+					votes: true,
+					downloads: true,
+					sourceStrategy: {
+						columns: {
+							id: true,
+							name: true,
+							isPublic: true,
+						},
+						with: {
+							user: {
+								columns: {
+									id: true,
+									name: true,
+								},
+							},
+						},
+					},
+				},
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Calculate aggregates
+			const upvotes = strategy.votes.filter((v) => v.voteType === "up").length;
+			const downvotes = strategy.votes.filter(
+				(v) => v.voteType === "down",
+			).length;
+			const netVotes = upvotes - downvotes;
+			const downloadCount = strategy.downloads.length;
+			const userVote = strategy.votes.find((v) => v.userId === ctx.user.id);
+
+			// Check if current user has downloaded this strategy
+			const currentUserHasDownloaded = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.userId, ctx.user.id),
+					eq(strategies.sourceStrategyId, input.strategyId),
+				),
+			});
+
+			// Count copies (how many times downloaded)
+			const copiesResult = await ctx.db
+				.select({ count: sql<number>`count(*)` })
+				.from(strategies)
+				.where(eq(strategies.sourceStrategyId, input.strategyId));
+			const copiesCount = copiesResult[0]?.count ?? 0;
+
+			// Prepare source strategy info if this is a copy
+			const sourceStrategyInfo = strategy.sourceStrategy
+				? {
+						id: strategy.sourceStrategy.id,
+						name: strategy.sourceStrategy.name,
+						authorName: strategy.sourceStrategy.user?.name ?? "Unknown",
+						isPublic: strategy.sourceStrategy.isPublic,
+					}
+				: null;
+
+			return {
+				id: strategy.id,
+				name: strategy.name,
+				description: strategy.description,
+				color: strategy.color,
+				coverImageUrl: strategy.coverImageUrl,
+				entryCriteria: strategy.entryCriteria,
+				exitRules: strategy.exitRules,
+				riskParameters: strategy.riskParameters
+					? JSON.parse(strategy.riskParameters)
+					: null,
+				scalingRules: strategy.scalingRules
+					? JSON.parse(strategy.scalingRules)
+					: null,
+				trailingRules: strategy.trailingRules
+					? JSON.parse(strategy.trailingRules)
+					: null,
+				instruments: strategy.instruments
+					? JSON.parse(strategy.instruments)
+					: [],
+				categoryTags: strategy.categoryTags
+					? JSON.parse(strategy.categoryTags)
+					: [],
+				publishedAt: strategy.publishedAt,
+				updatedAt: strategy.updatedAt,
+				createdAt: strategy.createdAt,
+				authorId: strategy.userId,
+				authorName: strategy.isAnonymous
+					? "Anonymous"
+					: (strategy.user?.name ?? "Unknown"),
+				isAnonymous: strategy.isAnonymous,
+				rules: strategy.rules,
+				upvotes,
+				downvotes,
+				netVotes,
+				downloadCount,
+				copiesCount,
+				currentUserVote: userVote?.voteType ?? null,
+				currentUserHasDownloaded: !!currentUserHasDownloaded,
+				sourceStrategy: sourceStrategyInfo,
+			};
+		}),
 });
