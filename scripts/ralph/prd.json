@@ -676,6 +676,244 @@
       "priority": 34,
       "passes": true,
       "notes": "Added attribution section on strategy detail page with badge, link to original, creator info. Downloaded badge on cards was already added in US-033."
+    },
+    {
+      "id": "US-035",
+      "title": "Create Reusable NullableNumberInput Component",
+      "description": "As a developer, I want a reusable number input component that properly handles edge cases (0, negatives, empty/null values) so that form inputs work intuitively.",
+      "acceptanceCriteria": [
+        "Create src/components/ui/nullable-number-input.tsx",
+        "Component uses internal string state while typing (not controlled number)",
+        "Allows typing 0 without it being cleared",
+        "Allows negative numbers (e.g., -5)",
+        "Allows completely empty input (represents null)",
+        "Validates and converts to number on blur (not on every keystroke)",
+        "Props: value: number | null, onChange: (value: number | null) => void",
+        "Props: placeholder, min, max, step, label (for error toast context)",
+        "Error handling with toast: invalid number, below min, above max",
+        "On validation error, revert input to previous valid value",
+        "Placeholder text styled distinctly (text-muted-foreground/50)",
+        "Terminal design styling (monospace font)",
+        "Export from src/components/ui/index.ts",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 35,
+      "passes": true,
+      "notes": "Created NullableNumberInput component with internal string state, blur validation, toast errors, min/max constraints. Uses inputMode=decimal and type=text for intuitive number entry."
+    },
+    {
+      "id": "US-036",
+      "title": "Refactor RiskParametersEditor to Use NullableNumberInput",
+      "description": "As a user, I want the risk parameters form inputs to allow typing 0 and clearing values so that I can configure my risk settings properly.",
+      "acceptanceCriteria": [
+        "Replace all <Input type=number> in risk-parameters-editor.tsx with NullableNumberInput",
+        "Inputs for: fixedSize, riskPercent, kellyFraction, maxRiskValue, dailyLossValue, maxConcurrentPositions, minRRRatio",
+        "Can type 0 in any field",
+        "Can clear any field to empty (null)",
+        "Placeholders look distinct from actual values (muted styling)",
+        "Autosave still triggers correctly on blur",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: all number inputs work correctly"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-037",
+      "title": "Convert Strategy Detail Page to Read-Only View",
+      "description": "As a user, I want the strategy detail page (/strategies/[id]) to show a read-only view of my strategy so that viewing and editing are separate concerns.",
+      "acceptanceCriteria": [
+        "Remove StrategyForm component from /strategies/[id]/page.tsx",
+        "Replace with read-only display sections: Overview (name, description, color), Rules (grouped by category), Risk Parameters (key-value pairs)",
+        "Keep existing: hero banner, stats cards, marketplace section, attribution section",
+        "Edit button prominently displayed, links to /strategies/[id]/edit",
+        "Terminal design styling with terminal-wrapped sections",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: page is fully read-only, Edit button works"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-038",
+      "title": "Add Duplicate Confirmation Modal with Rename",
+      "description": "As a user, I want a confirmation modal when duplicating a strategy so that I can rename the copy before it's created.",
+      "acceptanceCriteria": [
+        "On Duplicate button click, open confirmation dialog (not immediate action)",
+        "Dialog shows: Title 'Duplicate Strategy', description, editable name input pre-filled with '[name] (Copy)'",
+        "Cancel and Duplicate buttons",
+        "strategies.duplicate mutation accepts optional name parameter",
+        "Update tRPC router to accept { id: string, name?: string } input",
+        "If name provided, use it; otherwise default to '[name] (Copy)'",
+        "On success: redirect to new strategy detail page",
+        "Terminal design styling for dialog",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: modal opens, rename works, duplicate creates with custom name"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-039",
+      "title": "Add Optimistic Updates for Strategy Color Changes",
+      "description": "As a user, I want color changes to reflect immediately in the UI so that editing feels responsive.",
+      "acceptanceCriteria": [
+        "In strategy-edit-form.tsx, implement optimistic update for color field",
+        "Use utils.strategies.getById.setData() for immediate UI update",
+        "On mutation success: invalidate to sync with server",
+        "On mutation error: revert to previous value, show error toast",
+        "Color swatch in header updates immediately when color changed",
+        "Strategy card color updates after navigating back to list",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: color changes reflect instantly"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-040",
+      "title": "Fix Button Nesting Bug in StrategyEditForm",
+      "description": "As a developer, I want to fix the hydration error caused by nesting a Checkbox (button) inside a button element.",
+      "acceptanceCriteria": [
+        "In strategy-edit-form.tsx, locate instrument/category selection with Checkbox inside button",
+        "Refactor to use div with onClick handler instead of button wrapping Checkbox",
+        "Use role=button, tabIndex=0, onKeyDown for accessibility",
+        "No console hydration errors about button nesting",
+        "Selection behavior unchanged (clicking row toggles checkbox)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: no hydration errors, selection works"
+      ],
+      "priority": 40,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-041",
+      "title": "Redesign Strategies List Page",
+      "description": "As a user, I want the strategies list page (/strategies) to have a modern, visually appealing design consistent with the homepage and analytics pages.",
+      "acceptanceCriteria": [
+        "Redesign /strategies/page.tsx following homepage/analytics design patterns",
+        "Add hero section with: grid-bg pattern, gradient glow orb, section label badge, heading with accent",
+        "Strategy cards with improved styling: cover image/gradient, stats row, Public/Downloaded badges, hover lift effect",
+        "Improved empty state matching design system",
+        "Responsive layout (1/2/3 columns)",
+        "Terminal design styling throughout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: page matches design system, feels polished"
+      ],
+      "priority": 41,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-042",
+      "title": "E2E Tests for Strategy Edit Page",
+      "description": "As a developer, I want E2E tests for the strategy edit page so that we can verify the edit flow works correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/strategy-edit.spec.ts",
+        "Test navigating to edit page from strategy detail",
+        "Test auto-save indicator shows when editing fields",
+        "Test tab navigation (Overview, Rules, Risk Management, Advanced)",
+        "Test color picker interaction",
+        "Test instruments/categories selection",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 42,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-043",
+      "title": "E2E Tests for Strategy Detail Page",
+      "description": "As a developer, I want E2E tests for the strategy detail page so that we can verify the read-only view and marketplace section work correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/strategy-detail.spec.ts",
+        "Test strategy detail page loads with hero banner",
+        "Test Edit button navigates to edit page",
+        "Test marketplace section displays correct state",
+        "Test attribution section shows for downloaded strategies",
+        "Test duplicate button opens modal",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 43,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-044",
+      "title": "E2E Tests for Marketplace Page",
+      "description": "As a developer, I want E2E tests for the marketplace page so that we can verify browsing and filtering strategies works correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/marketplace.spec.ts",
+        "Test marketplace page loads with hero section",
+        "Test filter bar: search, instrument filter, category filter, sort dropdown",
+        "Test strategy cards display with correct information",
+        "Test voting interaction (optimistic update)",
+        "Test navigation to strategy detail page",
+        "Test empty state when no results",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 44,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-045",
+      "title": "E2E Tests for Marketplace Strategy Detail Page",
+      "description": "As a developer, I want E2E tests for the marketplace strategy detail page so that we can verify the download and report flows work correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/marketplace-detail.spec.ts",
+        "Test marketplace detail page loads with strategy info",
+        "Test vote controls work (up/down/remove)",
+        "Test download button opens confirmation dialog",
+        "Test report button opens report dialog",
+        "Test Already Downloaded state shows link to copy",
+        "Test back link returns to marketplace",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 45,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-046",
+      "title": "E2E Tests for Strategies List Page",
+      "description": "As a developer, I want E2E tests for the redesigned strategies list page so that we can verify the new design works correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/strategies.spec.ts",
+        "Test strategies page loads with hero section",
+        "Test strategy cards display with cover images/gradients",
+        "Test public badge shows on published strategies",
+        "Test downloaded badge shows on marketplace copies",
+        "Test create strategy button works",
+        "Test navigation to strategy detail page",
+        "Test empty state when no strategies",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 46,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

@@ -585,3 +585,24 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Handle both cases: original still public (show link + creator) vs no longer public (show message)
   - The "Downloaded" badge on cards was already implemented in US-033 via sourceStrategyId check
 ---
+
+## 2026-01-19 - US-035
+- What was implemented: Created reusable NullableNumberInput component for proper number input handling
+- Files changed:
+  - `src/components/ui/nullable-number-input.tsx` - New component with:
+    - Internal string state while typing (allows intermediate states like "", "-", ".")
+    - Validation on blur (not every keystroke) for intuitive editing
+    - Properly handles 0, negative numbers, and empty (null) values
+    - Toast errors with label context for invalid, min, max violations
+    - Reverts to last valid value on validation error
+    - Uses type="text" with inputMode="decimal" for mobile keyboards
+    - Monospace font, placeholder styled as muted/50 for distinction
+    - Syncs with external value changes via ref comparison
+  - `src/components/ui/index.ts` - Created new index file exporting NullableNumberInput and NullableNumberInputProps
+- **Learnings for future iterations:**
+  - For number inputs that need intuitive editing, use internal string state + validate on blur pattern
+  - type="text" + inputMode="decimal" gives better UX than type="number" for nullable number fields
+  - Track lastValidValue via ref to revert on validation errors without re-renders
+  - Track lastExternalValue via ref to sync internal state only when external value actually changes
+  - Biome sorts type exports before value exports in export blocks
+---

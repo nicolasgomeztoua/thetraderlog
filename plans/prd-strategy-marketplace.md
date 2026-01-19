@@ -714,6 +714,423 @@ A comprehensive overhaul of EdgeJournal's strategy section with two major initia
 
 ---
 
+### Phase 8: Strategy Section UX Improvements
+
+---
+
+### US-032: Create Reusable NullableNumberInput Component
+
+**Description**: As a developer, I want a reusable number input component that properly handles edge cases (0, negatives, empty/null values) so that form inputs work intuitively.
+
+**Acceptance Criteria**:
+- [ ] Create `src/components/ui/nullable-number-input.tsx`
+- [ ] Component uses internal string state while typing (not controlled number)
+- [ ] Allows typing `0` without it being cleared
+- [ ] Allows negative numbers (e.g., `-5`)
+- [ ] Allows completely empty input (represents `null`)
+- [ ] Validates and converts to number on blur (not on every keystroke)
+- [ ] Props: `value: number | null`, `onChange: (value: number | null) => void`
+- [ ] Props: `placeholder: string`, `min?: number`, `max?: number`, `step?: number`
+- [ ] Props: `label?: string` (for error toast context, e.g., "Fixed Size")
+- [ ] **Error handling with toast notifications on blur**:
+  - If value is not a valid number: toast.error(`${label}: Please enter a valid number`)
+  - If value < min: toast.error(`${label}: Must be at least ${min}`)
+  - If value > max: toast.error(`${label}: Must be at most ${max}`)
+  - On validation error, revert input to previous valid value (or empty)
+- [ ] Placeholder text styled distinctly from actual values (use `text-muted-foreground/50` or similar)
+- [ ] Terminal design styling (monospace font)
+- [ ] Export from `src/components/ui/index.ts`
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+
+**Implementation Notes**:
+```tsx
+// Internal state is string to allow intermediate typing states
+const [internalValue, setInternalValue] = useState(
+  value === null ? "" : String(value)
+);
+
+// Only parse and call onChange on blur
+const handleBlur = () => {
+  if (internalValue === "" || internalValue === "-") {
+    onChange(null);
+    return;
+  }
+
+  const parsed = parseFloat(internalValue);
+
+  if (Number.isNaN(parsed)) {
+    toast.error(`${label}: Please enter a valid number`);
+    setInternalValue(value === null ? "" : String(value)); // revert
+    return;
+  }
+
+  if (min !== undefined && parsed < min) {
+    toast.error(`${label}: Must be at least ${min}`);
+    setInternalValue(value === null ? "" : String(value)); // revert
+    return;
+  }
+
+  if (max !== undefined && parsed > max) {
+    toast.error(`${label}: Must be at most ${max}`);
+    setInternalValue(value === null ? "" : String(value)); // revert
+    return;
+  }
+
+  onChange(parsed);
+};
+```
+
+---
+
+### US-033: Refactor RiskParametersEditor to Use NullableNumberInput
+
+**Description**: As a user, I want the risk parameters form inputs to allow typing 0 and clearing values so that I can configure my risk settings properly.
+
+**Acceptance Criteria**:
+- [ ] Replace all `<Input type="number">` in `risk-parameters-editor.tsx` with `NullableNumberInput`
+- [ ] Inputs for: fixedSize, riskPercent, kellyFraction, maxRiskValue, dailyLossValue, maxConcurrentPositions, minRRRatio
+- [ ] Can type `0` in any field
+- [ ] Can clear any field to empty (null)
+- [ ] Placeholders look distinct from actual values (muted styling)
+- [ ] Autosave still triggers correctly on blur
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser: all number inputs work correctly
+
+---
+
+### US-034: Convert Strategy Detail Page to Read-Only View
+
+**Description**: As a user, I want the strategy detail page (`/strategies/[id]`) to show a read-only view of my strategy so that viewing and editing are separate concerns.
+
+**Acceptance Criteria**:
+- [ ] Remove `StrategyForm` component from `/strategies/[id]/page.tsx`
+- [ ] Replace with read-only display sections:
+  - **Overview**: Name (heading), description (prose text), color swatch
+  - **Rules**: Display rules grouped by category (entry, exit, risk, management) as read-only list
+  - **Risk Parameters**: Display as formatted key-value pairs
+  - **Strategy Details**: Entry criteria and exit rules as formatted text blocks
+- [ ] Keep existing: hero banner, stats cards, marketplace section, attribution section
+- [ ] "Edit" button prominently displayed, links to `/strategies/[id]/edit`
+- [ ] Terminal design styling with terminal-wrapped sections
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser: page is fully read-only, Edit button works
+
+**Design Pattern** (read-only sections):
+```tsx
+<div className="overflow-hidden rounded border border-border bg-card">
+  {/* Terminal header */}
+  <div className="flex items-center justify-between border-b border-border bg-secondary px-4 py-2">
+    <div className="flex items-center gap-2">
+      <div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
+      <div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
+      <div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+    </div>
+    <span className="font-mono text-[10px] text-muted-foreground">rules</span>
+  </div>
+  {/* Content */}
+  <div className="p-4">
+    {/* Read-only content here */}
+  </div>
+</div>
+```
+
+---
+
+### US-035: Add Duplicate Confirmation Modal with Rename
+
+**Description**: As a user, I want a confirmation modal when duplicating a strategy so that I can rename the copy before it's created.
+
+**Acceptance Criteria**:
+- [ ] On Duplicate button click, open confirmation dialog (not immediate action)
+- [ ] Dialog shows:
+  - Title: "Duplicate Strategy"
+  - Description: "Create a copy of [strategy name]"
+  - Editable name input pre-filled with "[strategy name] (Copy)"
+  - Cancel and "Duplicate" buttons
+- [ ] `strategies.duplicate` mutation accepts optional `name` parameter
+- [ ] Update tRPC router to accept `{ id: string, name?: string }` input
+- [ ] If name provided, use it; otherwise default to "[name] (Copy)"
+- [ ] On success: redirect to new strategy detail page
+- [ ] Terminal design styling for dialog
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser: modal opens, rename works, duplicate creates with custom name
+
+---
+
+### US-036: Add Optimistic Updates for Strategy Color Changes
+
+**Description**: As a user, I want color changes to reflect immediately in the UI so that editing feels responsive.
+
+**Acceptance Criteria**:
+- [ ] In `strategy-edit-form.tsx`, implement optimistic update for color field
+- [ ] Use `utils.strategies.getById.setData()` for immediate UI update
+- [ ] On mutation success: invalidate to sync with server
+- [ ] On mutation error: revert to previous value, show error toast
+- [ ] Color swatch in header updates immediately when color changed
+- [ ] Strategy card color updates after navigating back to list
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser: color changes reflect instantly
+
+**Implementation Pattern**:
+```tsx
+const updateMutation = api.strategies.autosave.useMutation({
+  onMutate: async (newData) => {
+    await utils.strategies.getById.cancel({ id: strategyId });
+    const previous = utils.strategies.getById.getData({ id: strategyId });
+    utils.strategies.getById.setData({ id: strategyId }, (old) =>
+      old ? { ...old, ...newData } : old
+    );
+    return { previous };
+  },
+  onError: (err, newData, context) => {
+    if (context?.previous) {
+      utils.strategies.getById.setData({ id: strategyId }, context.previous);
+    }
+    toast.error("Failed to save changes");
+  },
+  onSettled: () => {
+    utils.strategies.getById.invalidate({ id: strategyId });
+  },
+});
+```
+
+---
+
+### US-037: Fix Button Nesting Bug in StrategyEditForm
+
+**Description**: As a developer, I want to fix the hydration error caused by nesting a Checkbox (button) inside a button element.
+
+**Acceptance Criteria**:
+- [ ] In `strategy-edit-form.tsx`, locate the instrument/category selection with Checkbox inside button
+- [ ] Refactor to use `div` with `onClick` handler instead of `button` wrapping Checkbox
+- [ ] Or use Checkbox as standalone with label association
+- [ ] No console hydration errors about button nesting
+- [ ] Selection behavior unchanged (clicking row toggles checkbox)
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser: no hydration errors, selection works
+
+**Fix Pattern**:
+```tsx
+// Before (broken):
+<button onClick={toggle}>
+  <Checkbox checked={selected} />
+  <span>{label}</span>
+</button>
+
+// After (fixed):
+<div
+  role="button"
+  tabIndex={0}
+  onClick={toggle}
+  onKeyDown={(e) => e.key === 'Enter' && toggle()}
+  className="cursor-pointer ..."
+>
+  <Checkbox checked={selected} onCheckedChange={toggle} />
+  <span>{label}</span>
+</div>
+```
+
+---
+
+### US-038: Redesign Strategies List Page
+
+**Description**: As a user, I want the strategies list page (`/strategies`) to have a modern, visually appealing design consistent with the homepage and analytics pages.
+
+**Acceptance Criteria**:
+- [ ] Redesign `/strategies/page.tsx` following homepage/analytics design patterns
+- [ ] Add hero section with subtle background effects:
+  - Grid background pattern (`grid-bg`)
+  - Gradient glow orb (`bg-primary/5 blur-[120px]`)
+  - Section label badge ("Your Strategies")
+  - Main heading with accent color highlight
+- [ ] Performance comparison table in terminal-wrapped container
+- [ ] Strategy cards with improved styling:
+  - Cover image with gradient overlay (or color gradient if no image)
+  - Cleaner stats row with terminal styling
+  - Public/Downloaded badges
+  - Hover state with subtle lift effect
+- [ ] Improved empty state matching design system
+- [ ] Responsive layout (1/2/3 columns)
+- [ ] Terminal design styling throughout
+- [ ] Typecheck passes (`bun run check`)
+- [ ] Build passes (`bun run build`)
+- [ ] Verify in browser: page matches design system, feels polished
+
+**Hero Section Pattern**:
+```tsx
+<section className="relative py-8 overflow-hidden">
+  {/* Background effects */}
+  <div className="grid-bg absolute inset-0 opacity-30" />
+  <div className="absolute top-1/4 -left-32 h-[400px] w-[400px]
+                  rounded-full bg-primary/5 blur-[120px]" />
+
+  <div className="relative mx-auto max-w-none px-4">
+    <span className="mb-3 inline-block font-mono text-xs text-primary
+                     uppercase tracking-wider">
+      Trading Playbook
+    </span>
+    <h1 className="font-bold text-2xl sm:text-3xl tracking-tight">
+      Your <span className="text-primary">Strategies</span>
+    </h1>
+    <p className="mt-2 font-mono text-muted-foreground text-sm max-w-xl">
+      Document your trading strategies with entry rules, risk management, and checklists.
+    </p>
+  </div>
+</section>
+```
+
+---
+
+### Phase 9: E2E Testing
+
+---
+
+### US-039: E2E Tests for Strategy Edit Page
+
+**Description**: As a developer, I want E2E tests for the strategy edit page so that we can verify the edit flow works correctly.
+
+**Acceptance Criteria**:
+- [ ] Create `tests/e2e/strategy-edit.spec.ts`
+- [ ] Test navigating to edit page from strategy detail
+- [ ] Test auto-save indicator shows when editing fields
+- [ ] Test tab navigation (Overview, Rules, Risk Management, Advanced)
+- [ ] Test color picker interaction
+- [ ] Test instruments/categories selection
+- [ ] All new UI elements have `data-testid` attributes
+- [ ] All tests pass (`bun run test:e2e`)
+- [ ] Typecheck passes (`bun run check`)
+
+**Test IDs to verify exist**:
+- `strategy-edit-page`
+- `strategy-edit-loading`
+- `strategy-edit-not-found`
+- `strategy-edit-back`
+- `strategy-edit-tabs`
+- `strategy-edit-tab-overview`
+- `strategy-edit-content-overview`
+- `risk-parameters-editor`
+- `rules-editor`
+
+---
+
+### US-040: E2E Tests for Strategy Detail Page
+
+**Description**: As a developer, I want E2E tests for the strategy detail page so that we can verify the read-only view and marketplace section work correctly.
+
+**Acceptance Criteria**:
+- [ ] Create `tests/e2e/strategy-detail.spec.ts`
+- [ ] Test strategy detail page loads with hero banner
+- [ ] Test Edit button navigates to edit page
+- [ ] Test marketplace section displays correct state (disabled if < 20 trades, publish options if >= 20)
+- [ ] Test attribution section shows for downloaded strategies
+- [ ] Test duplicate button opens modal (after US-035)
+- [ ] All new UI elements have `data-testid` attributes
+- [ ] All tests pass (`bun run test:e2e`)
+- [ ] Typecheck passes (`bun run check`)
+
+**Test IDs to verify exist**:
+- `strategy-detail-page`
+- `strategy-detail-hero`
+- `strategy-detail-edit-button`
+- `strategy-detail-marketplace-section`
+- `strategy-detail-attribution`
+- `strategy-detail-duplicate-button`
+
+---
+
+### US-041: E2E Tests for Marketplace Page
+
+**Description**: As a developer, I want E2E tests for the marketplace page so that we can verify browsing and filtering strategies works correctly.
+
+**Acceptance Criteria**:
+- [ ] Create `tests/e2e/marketplace.spec.ts`
+- [ ] Test marketplace page loads with hero section
+- [ ] Test filter bar: search input, instrument filter, category filter, sort dropdown
+- [ ] Test strategy cards display with correct information
+- [ ] Test voting interaction (optimistic update)
+- [ ] Test navigation to strategy detail page
+- [ ] Test empty state when no results
+- [ ] All new UI elements have `data-testid` attributes
+- [ ] All tests pass (`bun run test:e2e`)
+- [ ] Typecheck passes (`bun run check`)
+
+**Test IDs to verify exist**:
+- `marketplace-page`
+- `marketplace-hero`
+- `marketplace-filter-bar`
+- `marketplace-search`
+- `marketplace-filter-instruments`
+- `marketplace-filter-categories`
+- `marketplace-sort`
+- `marketplace-strategy-grid`
+- `marketplace-strategy-card`
+- `marketplace-empty-state`
+
+---
+
+### US-042: E2E Tests for Marketplace Strategy Detail Page
+
+**Description**: As a developer, I want E2E tests for the marketplace strategy detail page so that we can verify the download and report flows work correctly.
+
+**Acceptance Criteria**:
+- [ ] Create `tests/e2e/marketplace-detail.spec.ts`
+- [ ] Test marketplace detail page loads with strategy info
+- [ ] Test vote controls work (up/down/remove)
+- [ ] Test download button opens confirmation dialog
+- [ ] Test report button opens report dialog
+- [ ] Test "Already Downloaded" state shows link to copy
+- [ ] Test back link returns to marketplace
+- [ ] All new UI elements have `data-testid` attributes
+- [ ] All tests pass (`bun run test:e2e`)
+- [ ] Typecheck passes (`bun run check`)
+
+**Test IDs to verify exist**:
+- `marketplace-detail-page`
+- `marketplace-detail-hero`
+- `marketplace-detail-vote-controls`
+- `marketplace-detail-download-button`
+- `marketplace-detail-download-dialog`
+- `marketplace-detail-report-button`
+- `marketplace-detail-report-dialog`
+- `marketplace-detail-back-link`
+
+---
+
+### US-043: E2E Tests for Strategies List Page
+
+**Description**: As a developer, I want E2E tests for the redesigned strategies list page so that we can verify the new design works correctly.
+
+**Acceptance Criteria**:
+- [ ] Create `tests/e2e/strategies.spec.ts`
+- [ ] Test strategies page loads with hero section
+- [ ] Test strategy cards display with cover images/gradients
+- [ ] Test public badge shows on published strategies
+- [ ] Test downloaded badge shows on marketplace copies
+- [ ] Test create strategy button works
+- [ ] Test navigation to strategy detail page
+- [ ] Test empty state when no strategies
+- [ ] All new UI elements have `data-testid` attributes
+- [ ] All tests pass (`bun run test:e2e`)
+- [ ] Typecheck passes (`bun run check`)
+
+**Test IDs to verify exist**:
+- `strategies-page`
+- `strategies-hero`
+- `strategies-grid`
+- `strategies-card`
+- `strategies-card-public-badge`
+- `strategies-card-downloaded-badge`
+- `strategies-create-button`
+- `strategies-empty-state`
+
+---
+
 ## Non-Goals (Out of Scope)
 
 - Real-time strategy sharing/following (no live sync between original and copy)
@@ -1231,6 +1648,9 @@ Before marking any UI story complete, verify:
 | Stats visibility for small samples? | Show stats but with "Limited Data" badge for <30 trades, "Verified" badge for 100+ (US-025, US-027) |
 | Rate limiting on votes? | Yes, 20 votes/hour via Upstash Redis (US-011) |
 | Report system for bad content? | Yes, report endpoint with reason categories (US-012b) |
+| Strategy detail page editable? | No, detail page is read-only. All editing at /strategies/[id]/edit (US-034) |
+| Duplicate confirmation? | Yes, modal with rename option (US-035) |
+| Number input handling? | Reusable NullableNumberInput component with string state during typing, validation on blur (US-032) |
 
 ## Open Questions
 
@@ -1241,4 +1661,5 @@ Before marking any UI story complete, verify:
 ---
 
 *PRD generated: 2026-01-18*
-*Decisions: Upload only for images, All stats public, Full copy on download, Auto-save with debounce*
+*Updated: 2026-01-19 - Added Phase 8: UX Improvements (US-032 to US-038), Phase 9: E2E Testing (US-039 to US-043)*
+*Decisions: Upload only for images, All stats public, Full copy on download, Auto-save with debounce, Read-only detail page, Duplicate with rename modal, NullableNumberInput for form fields*
