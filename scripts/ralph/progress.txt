@@ -895,3 +895,30 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Debounce effect should compare local value to external value before calling onChange
   - Component extraction improves reusability across pages (e.g., could be used in strategy list)
 ---
+
+## 2026-01-19 - US-039 (Create Marketplace Filter Components)
+- **What was implemented:**
+  - Created src/components/marketplace/marketplace-filters.tsx
+  - InstrumentsFilter: Multi-select with Popover and ScrollArea
+    - Grouped by Futures, Forex, Crypto categories
+    - Checkbox for each instrument
+    - Clear button and selected count badge
+  - CategoriesFilter: Multi-select with Popover
+    - All strategy categories from constants
+    - Checkbox for each, clear button, count badge
+  - SortFilter: Radio-style single select in Popover
+    - Check icon for current selection
+    - Options from MARKETPLACE_SORT_OPTIONS
+  - 'Clear all filters' button when any filter is active
+  - Exported MarketplaceFilterValues interface
+
+- **Files changed:**
+  - `src/components/marketplace/marketplace-filters.tsx` (new file - 400+ lines)
+
+- **Learnings for future iterations:**
+  - Multi-select filters need different state structure (arrays vs single values)
+  - Popover + ScrollArea works well for long lists
+  - Group checkboxes by category for better UX
+  - Radio-style selection in Popover works with Check icon indicator
+  - Keep filter component separate from page for reusability
+---

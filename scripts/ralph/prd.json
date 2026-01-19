@@ -816,8 +816,8 @@
         "Verify in browser"
       ],
       "priority": 40,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created marketplace-filters.tsx with InstrumentsFilter (multi-select, grouped by Futures/Forex/Crypto), CategoriesFilter (multi-select), SortFilter (radio-style single select). Includes Clear button, count badges, ScrollArea, and 'Clear all filters' button. Ready for integration when backend supports multi-select."
     },
     {
       "id": "US-040",
