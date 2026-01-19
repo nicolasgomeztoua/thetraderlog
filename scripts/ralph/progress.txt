@@ -872,3 +872,26 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Debounced search: keep local state, sync to parent in useEffect after delay
   - Empty state should differentiate between "no results" (has filters) vs "no content" (no filters)
 ---
+
+## 2026-01-19 - US-038 (Create Marketplace Search Component)
+- **What was implemented:**
+  - Created src/components/marketplace/search-bar.tsx as reusable component
+  - Extracted from inline MarketplaceSearchBar in marketplace page
+  - Input with search icon on left
+  - Debounced search: 300ms delay
+  - Clear button (X) when text present
+  - Keyboard shortcut: '/' to focus (only when not in input/textarea)
+  - Terminal design: dark input bg, chartreuse focus ring
+  - Props: value, onChange, onClear (optional), placeholder (optional), className (optional)
+  - Updated marketplace page to import and use the extracted component
+
+- **Files changed:**
+  - `src/components/marketplace/search-bar.tsx` (new file)
+  - `src/app/(protected)/marketplace/page.tsx` (refactored to use SearchBar)
+
+- **Learnings for future iterations:**
+  - Keyboard shortcuts should check if target is an input element before triggering
+  - Use `isContentEditable` check in addition to tag name for comprehensive input detection
+  - Debounce effect should compare local value to external value before calling onChange
+  - Component extraction improves reusability across pages (e.g., could be used in strategy list)
+---
