@@ -574,6 +574,10 @@ export const strategies = createTable(
 		description: text("description"),
 		color: text("color").default("#d4ff00"), // Primary chartreuse
 
+		// Visual identity
+		coverImageUrl: text("cover_image_url"), // Public URL of cover image
+		coverImageKey: text("cover_image_key"), // S3 object key for deletion
+
 		// Strategy documentation
 		entryCriteria: text("entry_criteria"), // Rich text for entry rules
 		exitRules: text("exit_rules"), // Rich text for exit rules
