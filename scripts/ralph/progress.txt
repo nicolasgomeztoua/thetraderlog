@@ -772,3 +772,23 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - For variable strategy IDs, extract from testid attribute: getAttribute("data-testid")?.replace("prefix-", "")
   - Dynamic testids can use template literals: `strategy-card-name-${strategyId}`
 ---
+
+## 2026-01-19 - US-045
+- What was implemented: Created E2E tests for marketplace strategy detail page
+- Files changed:
+  - `tests/e2e/marketplace-detail.spec.ts` - New E2E test file with 10 tests:
+    - loads marketplace detail page with strategy info
+    - displays creator information
+    - displays actions section with download count
+    - download button or already downloaded button is visible
+    - report button is visible
+    - report button opens report dialog
+    - displays stats section
+    - displays cover image or placeholder in hero
+    - back navigation works
+    - displays track record badge if available
+- **Learnings for future iterations:**
+  - When testing either/or conditions (download or already-downloaded), check both without failing if neither (could be user's own strategy)
+  - Report dialog has multiple interactive elements: reason select, details textarea, submit button
+  - Track record badges come in two types: verified and limited - test for either
+---
