@@ -19,6 +19,7 @@
 		"ralph": "./scripts/ralph/ralph.sh",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"test:unit": "vitest run --config vitest.unit.config.ts",
 		"test:integration": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:e2e": "playwright test",

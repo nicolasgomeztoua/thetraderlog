@@ -283,4 +283,4 @@ function roundToPrecision(value: number, precision?: number): number {
 	return Math.round(value * multiplier) / multiplier;
 }
 
-export { NumberInput };
+export { NumberInput, isValidIntermediateValue, formatValue, roundToPrecision };
