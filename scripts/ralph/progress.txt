@@ -321,3 +321,19 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - S3 deletion should be graceful (try/catch with continue) - orphaned files are acceptable
   - Use console.error for non-critical failures that shouldn't crash the operation
 ---
+
+## 2026-01-19 - US-013 (Add Cover Image Deletion Endpoint)
+- **What was implemented:**
+  - Added `deleteCoverImage` mutation to strategies router
+  - Input: { strategyId }
+  - Validates user owns the strategy
+  - Deletes S3 object using coverImageKey (graceful failure)
+  - Sets coverImageUrl and coverImageKey to null
+  - Returns updated strategy
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added deleteCoverImage mutation)
+
+- **Learnings for future iterations:**
+  - Consistent pattern for cover image operations: verify ownership → S3 operation (graceful) → DB update → return
+---

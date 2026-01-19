@@ -152,6 +152,21 @@ const updateStrategySchema = z.object({
 	rules: z.array(strategyRuleSchema).optional(),
 });
 
+const autosaveStrategySchema = z.object({
+	id: z.string(),
+	clientUpdatedAt: z.string(), // ISO timestamp for conflict detection
+	name: z.string().min(1).max(100).optional(),
+	description: z.string().nullish(),
+	color: z.string().optional(),
+	entryCriteria: z.string().nullish(),
+	exitRules: z.string().nullish(),
+	riskParameters: riskParametersSchema.nullish(),
+	scalingRules: scalingRulesSchema.nullish(),
+	trailingRules: trailingRulesSchema.nullish(),
+	isActive: z.boolean().optional(),
+	rules: z.array(strategyRuleSchema).optional(),
+});
+
 // =============================================================================
 // ROUTER
 // =============================================================================
@@ -1019,5 +1034,127 @@ export const strategiesRouter = createTRPCRouter({
 				.returning();
 
 			return updated;
+		}),
+
+	// =============================================================================
+	// AUTO-SAVE ENDPOINT
+	// =============================================================================
+
+	/**
+	 * Auto-save strategy changes with optimistic concurrency control.
+	 * Compares clientUpdatedAt with server's updatedAt to detect conflicts.
+	 */
+	autosave: protectedProcedure
+		.input(autosaveStrategySchema)
+		.mutation(async ({ ctx, input }) => {
+			const {
+				id,
+				clientUpdatedAt,
+				rules,
+				riskParameters,
+				scalingRules,
+				trailingRules,
+				...data
+			} = input;
+
+			// Verify ownership and get current version
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(eq(strategies.id, id), eq(strategies.userId, ctx.user.id)),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Compare timestamps for conflict detection
+			const clientTimestamp = new Date(clientUpdatedAt).getTime();
+			const serverTimestamp = existingStrategy.updatedAt
+				? new Date(existingStrategy.updatedAt).getTime()
+				: 0;
+
+			// If client version is older than server version, return conflict
+			if (clientTimestamp < serverTimestamp) {
+				return {
+					success: false,
+					conflict: true,
+					serverVersion: {
+						...existingStrategy,
+						riskParameters: existingStrategy.riskParameters
+							? JSON.parse(existingStrategy.riskParameters)
+							: null,
+						scalingRules: existingStrategy.scalingRules
+							? JSON.parse(existingStrategy.scalingRules)
+							: null,
+						trailingRules: existingStrategy.trailingRules
+							? JSON.parse(existingStrategy.trailingRules)
+							: null,
+					},
+				};
+			}
+
+			// Prepare update data
+			const updateData: Record<string, unknown> = { ...data };
+
+			if (riskParameters !== undefined) {
+				updateData.riskParameters = riskParameters
+					? JSON.stringify(riskParameters)
+					: null;
+			}
+			if (scalingRules !== undefined) {
+				updateData.scalingRules = scalingRules
+					? JSON.stringify(scalingRules)
+					: null;
+			}
+			if (trailingRules !== undefined) {
+				updateData.trailingRules = trailingRules
+					? JSON.stringify(trailingRules)
+					: null;
+			}
+
+			// Update strategy
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set(updateData)
+				.where(eq(strategies.id, id))
+				.returning();
+
+			// Update rules if provided
+			if (rules !== undefined) {
+				// Delete existing rules
+				await ctx.db
+					.delete(strategyRules)
+					.where(eq(strategyRules.strategyId, id));
+
+				// Insert new rules
+				if (rules.length > 0) {
+					await ctx.db.insert(strategyRules).values(
+						rules.map((rule) => ({
+							strategyId: id,
+							text: rule.text,
+							category: rule.category,
+							order: rule.order,
+						})),
+					);
+				}
+			}
+
+			return {
+				success: true,
+				savedAt: updated?.updatedAt?.toISOString() ?? new Date().toISOString(),
+				strategy: updated
+					? {
+							...updated,
+							riskParameters: updated.riskParameters
+								? JSON.parse(updated.riskParameters)
+								: null,
+							scalingRules: updated.scalingRules
+								? JSON.parse(updated.scalingRules)
+								: null,
+							trailingRules: updated.trailingRules
+								? JSON.parse(updated.trailingRules)
+								: null,
+						}
+					: null,
+			};
 		}),
 });
