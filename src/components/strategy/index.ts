@@ -1,11 +1,16 @@
 export { ComplianceBadge } from "./compliance-badge";
+export { ConflictDialog } from "./conflict-dialog";
+export { CoverImageUpload } from "./cover-image-upload";
+export { DefaultCover } from "./default-cover";
 export type { RiskParameters } from "./risk-config";
 export { RiskConfig } from "./risk-config";
 export { RuleChecklist } from "./rule-checklist";
+export { SaveStatusIndicator } from "./save-status-indicator";
 export type { ScalingRules } from "./scaling-config";
 export { ScalingConfig } from "./scaling-config";
 export { StrategyCard } from "./strategy-card";
 export type { StrategyFormData, StrategyRule } from "./strategy-form";
 export { StrategyForm } from "./strategy-form";
+export { StrategyHero } from "./strategy-hero";
 export type { TrailingRules } from "./trailing-config";
 export { TrailingConfig } from "./trailing-config";
