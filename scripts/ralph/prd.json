@@ -1018,8 +1018,8 @@
         "Verify in browser"
       ],
       "priority": 49,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added Marketplace to mainNavItems in app-sidebar.tsx using Store icon. Position is after Strategies. Updated isActive logic to support both exact match and sub-routes (/marketplace/[id])."
     },
     {
       "id": "US-049",

@@ -1149,3 +1149,20 @@ Started: Mon Jan 19 21:08:27 WET 2026
 
 - **Note:** Most tests use test.fixme() since they require actual published strategies in the database to pass. These can be enabled once test data seeding is implemented.
 ---
+
+## 2026-01-19 - US-048 (Add Marketplace to Navigation)
+- **What was implemented:**
+  - Added Marketplace link to mainNavItems array in app-sidebar.tsx
+  - Uses Store icon from lucide-react
+  - Positioned after "Strategies" in the navigation order
+  - Updated isActive logic to use startsWith for sub-route highlighting
+  - Now properly highlights for both /marketplace and /marketplace/[id] routes
+
+- **Files changed:**
+  - `src/app/(protected)/_components/app-sidebar.tsx` (modified)
+
+- **Learnings for future iterations:**
+  - Navigation active state should use startsWith for proper sub-route highlighting
+  - The pattern `pathname === item.href || pathname.startsWith(\`${item.href}/\`)` handles both exact match and sub-routes
+  - Mobile nav is handled by the same SidebarMenu component, so no separate mobile nav changes needed
+---

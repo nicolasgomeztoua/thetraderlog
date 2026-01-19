@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Plus } from "lucide-react";
+import { BookMarked, Download, ExternalLink, Plus, Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -181,9 +181,17 @@ export default function StrategiesPage() {
 
 	const utils = api.useUtils();
 
-	const { data: strategies, isLoading } = api.strategies.getAll.useQuery({
+	const { data: allStrategies, isLoading } = api.strategies.getAll.useQuery({
 		includeInactive: true,
 	});
+
+	// Fetch downloaded strategies separately to get source info
+	const { data: downloadedStrategies, isLoading: isLoadingDownloaded } =
+		api.strategies.getDownloaded.useQuery();
+
+	// Split strategies into "My Strategies" (originals) and "Downloaded"
+	const myStrategies = allStrategies?.filter((s) => !s.sourceStrategyId) ?? [];
+	const downloadedList = downloadedStrategies ?? [];
 
 	const deleteMutation = api.strategies.delete.useMutation({
 		onSuccess: () => {
@@ -222,14 +230,14 @@ export default function StrategiesPage() {
 
 	// Get stats for each strategy
 	const strategyStats = api.useQueries((t) =>
-		(strategies ?? []).map((s) => t.strategies.getStats({ id: s.id })),
+		(allStrategies ?? []).map((s) => t.strategies.getStats({ id: s.id })),
 	);
 
 	const statsMap = new Map<
 		string,
 		{ winRate: number; totalPnl: number; avgPnl: number }
 	>();
-	strategies?.forEach((s, i) => {
+	allStrategies?.forEach((s, i) => {
 		const stats = strategyStats[i]?.data;
 		if (stats) {
 			statsMap.set(s.id, {
@@ -239,6 +247,9 @@ export default function StrategiesPage() {
 			});
 		}
 	});
+
+	// Check if there are any strategies at all
+	const hasAnyStrategies = myStrategies.length > 0 || downloadedList.length > 0;
 
 	const isMobile = useIsMobile();
 
@@ -267,9 +278,7 @@ export default function StrategiesPage() {
 			</div>
 
 			{/* Performance Comparison Table */}
-			{!isLoading && strategies && strategies.length > 0 && (
-				<PerformanceComparisonTable />
-			)}
+			{!isLoading && hasAnyStrategies && <PerformanceComparisonTable />}
 
 			{/* Loading state */}
 			{isLoading && (
@@ -280,8 +289,8 @@ export default function StrategiesPage() {
 				</div>
 			)}
 
-			{/* Empty state */}
-			{!isLoading && (!strategies || strategies.length === 0) && (
+			{/* Empty state - only show when no strategies at all */}
+			{!isLoading && !isLoadingDownloaded && !hasAnyStrategies && (
 				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
 					<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
 					<h2 className="font-semibold text-base sm:text-lg">
@@ -289,28 +298,43 @@ export default function StrategiesPage() {
 					</h2>
 					<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-xs sm:text-sm">
 						Create your first strategy to document your trading approach and
-						track rule compliance.
+						track rule compliance, or browse the marketplace.
 					</p>
-					<Button
-						asChild
-						className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
-					>
-						<Link href="/strategies/new">
-							<Plus className="mr-2 h-4 w-4" />
-							Create Strategy
-						</Link>
-					</Button>
+					<div className="mt-6 flex flex-col gap-3 sm:flex-row">
+						<Button
+							asChild
+							className="min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+						>
+							<Link href="/strategies/new">
+								<Plus className="mr-2 h-4 w-4" />
+								Create Strategy
+							</Link>
+						</Button>
+						<Button
+							asChild
+							className="min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+							variant="outline"
+						>
+							<Link href="/marketplace">
+								<Store className="mr-2 h-4 w-4" />
+								Browse Marketplace
+							</Link>
+						</Button>
+					</div>
 				</div>
 			)}
 
-			{/* Strategies grid */}
-			{!isLoading && strategies && strategies.length > 0 && (
-				<div className="space-y-3 sm:space-y-4">
+			{/* My Strategies section */}
+			{!isLoading && myStrategies.length > 0 && (
+				<div
+					className="space-y-3 sm:space-y-4"
+					data-testid="my-strategies-section"
+				>
 					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-						Your Strategies
+						My Strategies
 					</h2>
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-						{strategies.map((strategy) => (
+						{myStrategies.map((strategy) => (
 							<StrategyCard
 								isMobile={isMobile}
 								key={strategy.id}
@@ -326,6 +350,95 @@ export default function StrategiesPage() {
 					</div>
 				</div>
 			)}
+
+			{/* Downloaded from Marketplace section */}
+			{!isLoadingDownloaded && downloadedList.length > 0 && (
+				<div
+					className="space-y-3 sm:space-y-4"
+					data-testid="downloaded-strategies-section"
+				>
+					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
+						Downloaded from Marketplace
+					</h2>
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+						{downloadedList.map((strategy) => (
+							<div className="relative" key={strategy.id}>
+								{/* Downloaded badge */}
+								<div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded bg-secondary/90 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider backdrop-blur-sm">
+									<Download className="h-3 w-3" />
+									Downloaded
+								</div>
+								{/* Source strategy link */}
+								{strategy.sourceStrategy && (
+									<div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded bg-background/90 px-2 py-1 font-mono text-[10px] backdrop-blur-sm">
+										<span className="text-muted-foreground">From</span>
+										{strategy.sourceStrategy.isPublic ? (
+											<Link
+												className="flex items-center gap-0.5 text-primary hover:underline"
+												href={`/marketplace/${strategy.sourceStrategy.id}`}
+											>
+												{strategy.sourceStrategy.name}
+												<ExternalLink className="h-2.5 w-2.5" />
+											</Link>
+										) : (
+											<span className="text-muted-foreground/70 italic">
+												{strategy.sourceStrategy.name} (unavailable)
+											</span>
+										)}
+									</div>
+								)}
+								<StrategyCard
+									isMobile={isMobile}
+									onDelete={() => handleDelete(strategy.id)}
+									onDuplicate={() =>
+										duplicateMutation.mutate({ id: strategy.id })
+									}
+									onEdit={() => router.push(`/strategies/${strategy.id}`)}
+									stats={statsMap.get(strategy.id) ?? null}
+									strategy={{
+										id: strategy.id,
+										name: strategy.name,
+										description: strategy.description,
+										color: strategy.color,
+										isActive: strategy.isActive,
+										_count: {
+											rules: 0,
+											trades: 0,
+										},
+									}}
+								/>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Empty downloaded state - show when user has original strategies but no downloads */}
+			{!isLoading &&
+				!isLoadingDownloaded &&
+				myStrategies.length > 0 &&
+				downloadedList.length === 0 && (
+					<div
+						className="flex flex-col items-center justify-center rounded border border-border border-dashed bg-card/50 px-4 py-8"
+						data-testid="empty-downloaded-section"
+					>
+						<Store className="mb-2 h-6 w-6 text-muted-foreground/50" />
+						<p className="font-mono text-muted-foreground text-sm">
+							No downloaded strategies yet
+						</p>
+						<Button
+							asChild
+							className="mt-3 font-mono text-xs"
+							size="sm"
+							variant="outline"
+						>
+							<Link href="/marketplace">
+								<Store className="mr-1.5 h-3 w-3" />
+								Browse Marketplace
+							</Link>
+						</Button>
+					</div>
+				)}
 
 			{/* Delete confirmation dialog */}
 			<Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
