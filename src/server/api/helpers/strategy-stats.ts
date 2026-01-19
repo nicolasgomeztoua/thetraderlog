@@ -1,25 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { calculateAggregateStats } from "@/lib/analytics";
+import type { CachedStats } from "@/lib/shared";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import type { db as DbType } from "@/server/db";
 import { strategies, trades } from "@/server/db/schema";
 
 type Db = typeof DbType;
-
-/**
- * Cached stats structure stored in strategy.cachedStats column
- */
-export interface CachedStrategyStats {
-	totalTrades: number;
-	wins: number;
-	losses: number;
-	winRate: number;
-	profitFactor: number | null;
-	avgR: number | null;
-	avgWin: number;
-	avgLoss: number;
-	computedAt: string;
-}
 
 /**
  * Compute and cache strategy stats for a public strategy.
@@ -35,7 +21,7 @@ export async function computeAndCacheStrategyStats(
 	db: Db,
 	strategyId: string,
 	userId: string,
-): Promise<CachedStrategyStats | null> {
+): Promise<CachedStats | null> {
 	// Get strategy to check if it's public
 	const strategy = await db.query.strategies.findFirst({
 		where: and(eq(strategies.id, strategyId), eq(strategies.userId, userId)),
@@ -72,7 +58,7 @@ export async function computeAndCacheStrategyStats(
 	const stats = calculateAggregateStats(strategyTrades, beThreshold);
 
 	// Build cached stats object
-	const cachedStats: CachedStrategyStats = {
+	const cachedStats: CachedStats = {
 		totalTrades: stats.totalTrades,
 		wins: stats.wins,
 		losses: stats.losses,
