@@ -751,3 +751,24 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - inputValue() retrieves the current value of an input for assertions
   - When checking conditional UI (stats only when trades exist), test for visibility first before asserting child content
 ---
+
+## 2026-01-19 - US-044
+- What was implemented: Created E2E tests for marketplace page
+- Files changed:
+  - `tests/e2e/marketplace.spec.ts` - New E2E test file with 10 tests:
+    - loads marketplace page with hero section
+    - filter bar is visible with all controls
+    - search filter works (type, clear)
+    - instruments filter dropdown opens
+    - categories filter dropdown opens
+    - sort dropdown has options
+    - strategy grid or empty state displays
+    - strategy card displays with correct elements
+    - clicking strategy card navigates to detail page
+    - voting buttons are visible on strategy cards
+- **Learnings for future iterations:**
+  - Radix select content selector: `[data-radix-select-content]`
+  - Use waitForTimeout sparingly (only for debounce delays)
+  - For variable strategy IDs, extract from testid attribute: getAttribute("data-testid")?.replace("prefix-", "")
+  - Dynamic testids can use template literals: `strategy-card-name-${strategyId}`
+---
