@@ -55,13 +55,17 @@ describe("strategies router", () => {
 			description: overrides?.description ?? "A test strategy for testing",
 		});
 
+		if (!strategy) throw new Error("Failed to create test strategy");
+
 		// If cover image fields are provided, update the strategy
 		if (overrides?.coverImageUrl || overrides?.coverImageKey) {
-			return caller.strategies.update({
+			const updated = await caller.strategies.update({
 				id: strategy.id,
 				coverImageUrl: overrides.coverImageUrl,
 				coverImageKey: overrides.coverImageKey,
 			});
+			if (!updated) throw new Error("Failed to update test strategy");
+			return updated;
 		}
 
 		return strategy;

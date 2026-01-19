@@ -9,7 +9,10 @@ import {
 	getS3Bucket,
 	isS3Configured,
 } from "@/lib/storage/s3";
-import { getUserBreakevenThreshold } from "@/server/api/helpers";
+import {
+	getCoverImageUrl,
+	getUserBreakevenThreshold,
+} from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	strategies,
@@ -36,22 +39,19 @@ const ALLOWED_IMAGE_TYPES = [
 const MAX_COVER_IMAGE_SIZE = 5 * 1024 * 1024;
 
 /**
- * Construct the public URL for an S3 object.
- * Uses the custom domain if configured, otherwise falls back to the S3 endpoint.
+ * Construct the stored URL for an S3 object (used when saving to DB after upload).
+ * Note: This URL may not be publicly accessible - use getCoverImageUrl() for display.
  */
 function getPublicUrl(key: string): string {
-	// Use custom domain if configured (e.g., for CDN)
+	// Use custom domain if configured
 	if (env.S3_PUBLIC_URL) {
 		return `${env.S3_PUBLIC_URL}/${key}`;
 	}
 
-	// Fall back to S3 endpoint + bucket
+	// Fall back to endpoint + bucket format
 	const bucket = getS3Bucket();
 	const endpoint = env.S3_ENDPOINT ?? "";
-
-	// Remove trailing slash from endpoint if present
 	const cleanEndpoint = endpoint.replace(/\/$/, "");
-
 	return `${cleanEndpoint}/${bucket}/${key}`;
 }
 
@@ -319,6 +319,7 @@ export const strategiesRouter = createTRPCRouter({
 
 			return {
 				...strategy,
+				coverImageUrl: getCoverImageUrl(strategy.coverImageKey),
 				riskParameters: strategy.riskParameters
 					? JSON.parse(strategy.riskParameters)
 					: null,

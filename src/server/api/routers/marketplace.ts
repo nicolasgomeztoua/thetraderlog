@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants";
 import { checkVoteRateLimit } from "@/lib/rate-limit";
 import { getTrackRecordStatus, parseCachedStats } from "@/lib/shared";
+import { getCoverImageUrl } from "@/server/api/helpers";
 import {
 	createTRPCRouter,
 	protectedProcedure,
@@ -242,7 +243,7 @@ export const marketplaceRouter = createTRPCRouter({
 					name: strategy.name,
 					description: strategy.description,
 					color: strategy.color,
-					coverImageUrl: strategy.coverImageUrl,
+					coverImageUrl: getCoverImageUrl(strategy.coverImageKey),
 					instruments: strategy.instruments,
 					categoryTags: strategy.categoryTags,
 					createdAt: strategy.createdAt,
@@ -385,7 +386,7 @@ export const marketplaceRouter = createTRPCRouter({
 				name: strategy.name,
 				description: strategy.description,
 				color: strategy.color,
-				coverImageUrl: strategy.coverImageUrl,
+				coverImageUrl: getCoverImageUrl(strategy.coverImageKey),
 				instruments: strategy.instruments,
 				categoryTags: strategy.categoryTags,
 				createdAt: strategy.createdAt,

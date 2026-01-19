@@ -575,3 +575,13 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Conditional data fetching in map: only query engagement data if strategy.isPublic
   - Badge styling with chartreuse: bg-primary/20 text-primary for consistent accent
 ---
+
+## 2026-01-18 - US-034
+- What was implemented: Added source strategy attribution on strategy detail page
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/page.tsx` - Added attribution section showing "Downloaded from Marketplace" badge, link to original strategy, creator info with avatar
+- **Learnings for future iterations:**
+  - Use marketplace.getById to fetch source strategy info (returns null if no longer public)
+  - Handle both cases: original still public (show link + creator) vs no longer public (show message)
+  - The "Downloaded" badge on cards was already implemented in US-033 via sourceStrategyId check
+---

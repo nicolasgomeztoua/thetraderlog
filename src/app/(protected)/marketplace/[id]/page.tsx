@@ -82,7 +82,7 @@ function LoadingSkeleton() {
 			data-testid="marketplace-detail-loading"
 		>
 			{/* Hero banner skeleton */}
-			<Skeleton className="aspect-[3/1] w-full rounded-lg" />
+			<Skeleton className="aspect-3/1 w-full rounded-lg" />
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2 sm:gap-3">
 					<Skeleton className="h-10 w-10 rounded" />
@@ -655,7 +655,7 @@ export default function MarketplaceDetailPage() {
 		>
 			{/* Hero Banner with Cover Image */}
 			<div
-				className="relative aspect-[3/1] w-full overflow-hidden rounded-lg"
+				className="relative aspect-3/1 w-full overflow-hidden rounded-lg"
 				data-testid="marketplace-detail-hero"
 			>
 				{strategy.coverImageUrl ? (
@@ -666,6 +666,7 @@ export default function MarketplaceDetailPage() {
 						fill
 						sizes="(max-width: 768px) 95vw, 896px"
 						src={strategy.coverImageUrl}
+						unoptimized
 					/>
 				) : (
 					<div
@@ -677,7 +678,7 @@ export default function MarketplaceDetailPage() {
 					/>
 				)}
 				{/* Gradient overlay for text readability */}
-				<div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+				<div className="absolute inset-0 bg-linear-to-t from-background/90 via-background/30 to-transparent" />
 
 				{/* Track record badge on image */}
 				<div className="absolute top-3 right-3">

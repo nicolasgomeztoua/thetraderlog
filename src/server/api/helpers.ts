@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { and, eq } from "drizzle-orm";
+import { env } from "@/env";
 import type { db as DbType } from "@/server/db";
 import { accounts, userSettings } from "@/server/db/schema";
 
@@ -103,3 +104,33 @@ export function getActiveAccountsSubquery(db: Db, userId: string) {
 		.from(accounts)
 		.where(and(eq(accounts.userId, userId), eq(accounts.isActive, true)));
 }
+
+// =============================================================================
+// S3/STORAGE HELPERS
+// =============================================================================
+
+/**
+ * Generate a URL for viewing an S3 object (e.g., cover images).
+ *
+ * Priority:
+ * 1. Public URL if S3_PUBLIC_URL is configured (for public buckets/CDN)
+ * 2. Proxy URL via /api/images/* (permanent URLs, no expiry)
+ *
+ * Returns null if key is null/undefined.
+ */
+export function getImageProxyUrl(
+	key: string | null | undefined,
+): string | null {
+	if (!key) return null;
+
+	// Use public URL if configured (CDN/public bucket)
+	if (env.S3_PUBLIC_URL) {
+		return `${env.S3_PUBLIC_URL}/${key}`;
+	}
+
+	// Use proxy URL (permanent, no expiry)
+	return `/api/images/${key}`;
+}
+
+// Alias for backwards compatibility
+export const getCoverImageUrl = getImageProxyUrl;

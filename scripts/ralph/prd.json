@@ -674,8 +674,8 @@
         "Verify in browser: attribution displays correctly"
       ],
       "priority": 34,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added attribution section on strategy detail page with badge, link to original, creator info. Downloaded badge on cards was already added in US-033."
     }
   ]
 }

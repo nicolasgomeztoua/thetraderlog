@@ -335,7 +335,7 @@ export function StrategyCard({ strategy, currentUserId }: StrategyCardProps) {
 		>
 			{/* Cover image or gradient placeholder */}
 			<div
-				className="relative aspect-[3/1] w-full overflow-hidden"
+				className="relative aspect-3/1 w-full overflow-hidden"
 				data-testid={`strategy-card-cover-${strategy.id}`}
 				style={{
 					background: strategy.coverImageUrl
@@ -350,6 +350,7 @@ export function StrategyCard({ strategy, currentUserId }: StrategyCardProps) {
 						fill
 						sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 						src={strategy.coverImageUrl}
+						unoptimized
 					/>
 				)}
 
