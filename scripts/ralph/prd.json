@@ -1129,8 +1129,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 55,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added S3 cleanup to delete mutation with graceful failure. Updated strategies page to show 'Source no longer available' when sourceStrategy is null (deleted). CASCADE DELETE already configured via FK onDelete: cascade in schema for strategyVotes and strategyDownloads."
     },
     {
       "id": "US-055",

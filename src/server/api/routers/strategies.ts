@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -10,6 +11,7 @@ import {
 	COVER_IMAGE_MAX_SIZE_MB,
 	STRATEGY_CATEGORIES,
 } from "@/lib/constants/marketplace";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
 	deleteObject,
 	getPresignedUploadUrl,
@@ -1298,6 +1300,19 @@ export const strategiesRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			// Rate limit: 30 votes per minute per user
+			const rateLimitResult = checkRateLimit(
+				`vote:${ctx.user.id}`,
+				RATE_LIMITS.VOTES,
+			);
+
+			if (!rateLimitResult.success) {
+				throw new TRPCError({
+					code: "TOO_MANY_REQUESTS",
+					message: "Slow down! Try again in a moment.",
+				});
+			}
+
 			// Get the strategy to validate it's public and not owned by the user
 			const strategy = await ctx.db.query.strategies.findFirst({
 				where: eq(strategies.id, input.strategyId),

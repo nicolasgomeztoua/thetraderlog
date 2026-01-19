@@ -1291,3 +1291,21 @@ Started: Mon Jan 19 21:08:27 WET 2026
 - tRPC infinite query caching: `{ staleTime: STALE_TIME_SHORT, gcTime: STALE_TIME_MEDIUM }`
 - Optimistic updates for infinite queries: use getInfiniteData/setInfiniteData methods
 - Cache invalidation naming: utils.strategies.marketplaceList.invalidate()
+
+## US-054: Handle Strategy Deletion Edge Cases (Completed)
+
+### Implementation Summary
+- Added S3 cleanup to strategy delete mutation: deletes coverImageKey if exists (graceful failure)
+- Updated strategies page to handle 'Source no longer available' when sourceStrategy is null
+- Verified CASCADE DELETE already set up via FK constraints for strategyVotes and strategyDownloads
+
+### Key Technical Details
+- Delete mutation now cleans up S3 cover images with try/catch (continues deletion even on S3 error)
+- Downloaded strategy copies remain fully functional when source is deleted
+- sourceStrategy relation returns null when the source strategy is deleted (orphaned sourceStrategyId)
+- UI shows "Source no longer available" when sourceStrategy is null
+
+### Schema Verification
+- strategyVotes: onDelete: "cascade" on strategyId FK
+- strategyDownloads: onDelete: "cascade" on strategyId FK
+- Derived strategies (copied via download) keep their sourceStrategyId but relation resolves to null
