@@ -1,6 +1,8 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import {
@@ -39,11 +41,66 @@ interface RiskConfigProps {
 export function RiskConfig({ value, onChange }: RiskConfigProps) {
 	const riskParams = value ?? {};
 
+	// State for inline R-multiple input
+	const [isAddingTarget, setIsAddingTarget] = useState(false);
+	const [newTargetValue, setNewTargetValue] = useState<number | null>(null);
+	const targetInputRef = useRef<HTMLInputElement>(null);
+	const targetContainerRef = useRef<HTMLDivElement>(null);
+
 	const updateField = <K extends keyof RiskParameters>(
 		field: K,
 		fieldValue: RiskParameters[K],
 	) => {
 		onChange({ ...riskParams, [field]: fieldValue });
+	};
+
+	// Auto-focus input when showing
+	useEffect(() => {
+		if (isAddingTarget && targetInputRef.current) {
+			targetInputRef.current.focus();
+		}
+	}, [isAddingTarget]);
+
+	// Handle click outside to cancel
+	useEffect(() => {
+		if (!isAddingTarget) return;
+
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				targetContainerRef.current &&
+				!targetContainerRef.current.contains(event.target as Node)
+			) {
+				setIsAddingTarget(false);
+				setNewTargetValue(null);
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [isAddingTarget]);
+
+	const handleAddTarget = () => {
+		if (newTargetValue === null || newTargetValue <= 0) {
+			toast.error("Please enter a positive R multiple");
+			return;
+		}
+		updateField("targetRMultiples", [
+			...(riskParams.targetRMultiples ?? []),
+			newTargetValue,
+		]);
+		setIsAddingTarget(false);
+		setNewTargetValue(null);
+	};
+
+	const handleTargetKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			handleAddTarget();
+		} else if (e.key === "Escape") {
+			e.preventDefault();
+			setIsAddingTarget(false);
+			setNewTargetValue(null);
+		}
 	};
 
 	return (
@@ -349,27 +406,54 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							</button>
 						</div>
 					))}
-					<Button
-						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
-						onClick={() => {
-							const newValue = prompt("Enter R multiple (e.g., 2):");
-							if (newValue) {
-								const num = parseFloat(newValue);
-								if (!Number.isNaN(num)) {
-									updateField("targetRMultiples", [
-										...(riskParams.targetRMultiples ?? []),
-										num,
-									]);
-								}
-							}
-						}}
-						size="sm"
-						type="button"
-						variant="outline"
-					>
-						<Plus className="mr-1 h-3 w-3" />
-						Add Target
-					</Button>
+					{isAddingTarget ? (
+						<div className="flex items-center gap-2" ref={targetContainerRef}>
+							<NumberInput
+								className="h-[36px] w-20 font-mono text-sm sm:h-7"
+								min={0}
+								onChange={setNewTargetValue}
+								onKeyDown={handleTargetKeyDown}
+								placeholder="2.0"
+								precision={1}
+								ref={targetInputRef}
+								step={0.5}
+								suffix="R"
+								value={newTargetValue}
+							/>
+							<Button
+								className="h-[36px] px-2 sm:h-7"
+								onClick={handleAddTarget}
+								size="sm"
+								type="button"
+								variant="outline"
+							>
+								<Plus className="h-3 w-3" />
+							</Button>
+							<Button
+								className="h-[36px] px-2 sm:h-7"
+								onClick={() => {
+									setIsAddingTarget(false);
+									setNewTargetValue(null);
+								}}
+								size="sm"
+								type="button"
+								variant="ghost"
+							>
+								<X className="h-3 w-3" />
+							</Button>
+						</div>
+					) : (
+						<Button
+							className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
+							onClick={() => setIsAddingTarget(true)}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							<Plus className="mr-1 h-3 w-3" />
+							Add Target
+						</Button>
+					)}
 				</div>
 			</div>
 		</div>
