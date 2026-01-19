@@ -605,7 +605,12 @@ export const strategiesRouter = createTRPCRouter({
 
 	// Duplicate a strategy
 	duplicate: protectedProcedure
-		.input(z.object({ id: z.string() }))
+		.input(
+			z.object({
+				id: z.string(),
+				name: z.string().min(1).max(100).optional(),
+			}),
+		)
 		.mutation(async ({ ctx, input }) => {
 			const original = await ctx.db.query.strategies.findFirst({
 				where: and(
@@ -621,12 +626,15 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Strategy not found");
 			}
 
+			// Use provided name or default to "[name] (Copy)"
+			const newName = input.name ?? `${original.name} (Copy)`;
+
 			// Create new strategy
 			const [newStrategy] = await ctx.db
 				.insert(strategies)
 				.values({
 					userId: ctx.user.id,
-					name: `${original.name} (Copy)`,
+					name: newName,
 					description: original.description,
 					color: original.color,
 					entryCriteria: original.entryCriteria,

@@ -606,3 +606,59 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Track lastExternalValue via ref to sync internal state only when external value actually changes
   - Biome sorts type exports before value exports in export blocks
 ---
+
+## 2026-01-19 - US-036
+- What was implemented: Refactored RiskParametersEditor to use NullableNumberInput component
+- Files changed:
+  - `src/components/strategy/risk-parameters-editor.tsx` - Replaced all Input type=number with NullableNumberInput:
+    - Changed state types from string to number|null for: fixedSize, riskPercent, kellyFraction, maxRiskValue, dailyLossValue, maxConcurrentPositions, minRRRatio
+    - Simplified buildRiskParameters() to use direct null checks instead of parsing strings
+    - Updated all 7 numeric inputs to use NullableNumberInput with proper label, min, max, step props
+    - Autosave triggers on blur through NullableNumberInput's onChange callback
+- **Learnings for future iterations:**
+  - When refactoring from string state to number|null state, the buildRiskParameters() logic simplifies dramatically (no need for !Number.isNaN(Number(value)) checks)
+  - NullableNumberInput handles all the edge cases internally (0, negatives, empty), so form code becomes cleaner
+  - NullableNumberInput already has monospace font styling built in, so className="font-mono" not needed
+  - The flex-1 className works with NullableNumberInput for inputs in flex containers (e.g., alongside a Select dropdown)
+---
+
+## 2026-01-19 - US-037
+- What was implemented: Converted strategy detail page from editable form to read-only view
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/page.tsx` - Major refactor:
+    - Removed StrategyForm component and associated mutations (update, handleSubmit)
+    - Added RulesDisplay component: groups rules by category (entry, exit, risk, management), displays ordered bullet points
+    - Added RiskParametersDisplay component: shows position sizing, max risk, daily loss limit, max positions, min R:R as key-value pairs
+    - Added Description section with whitespace-pre-wrap for proper formatting
+    - Added instrument/category badges matching marketplace design pattern
+    - Added legacy entry/exit criteria display for backwards compatibility
+    - Edit button already existed in action bar linking to /strategies/[id]/edit
+    - All display sections use terminal-wrapped styling (rounded border border-white/5 bg-white/2)
+- **Learnings for future iterations:**
+  - Reuse display component patterns from similar pages (marketplace detail has RulesDisplay and RiskParametersDisplay)
+  - Keep the RulesDisplay and RiskParametersDisplay as local components in each page rather than extracting to shared components (matches current pattern)
+  - For read-only views, conditional rendering with `{data && (...)}` keeps UI clean when sections are empty
+  - The StrategyForm is still used in the edit page (/strategies/[id]/edit) - only removed from detail page
+---
+
+## 2026-01-19 - US-038
+- What was implemented: Added duplicate confirmation modal with rename functionality
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Extended duplicate mutation input schema:
+    - Added optional `name` parameter (z.string().min(1).max(100).optional())
+    - If name provided, uses it; otherwise defaults to "[name] (Copy)"
+  - `src/app/(protected)/strategies/[id]/page.tsx` - Added duplicate confirmation dialog:
+    - Added Dialog, Input imports for modal components
+    - Added duplicateOpen state and duplicateName state
+    - Added useEffect to initialize name to "[strategy.name] (Copy)" when dialog opens
+    - Changed Duplicate button to open dialog instead of immediately calling mutation
+    - Created Dialog with name input, Cancel/Duplicate buttons
+    - Added data-testid attributes: strategy-detail-duplicate-button, strategy-duplicate-dialog, strategy-duplicate-name-input, strategy-duplicate-confirm-button
+    - Enter key support for quick submission
+    - Strategy color accent on confirm button
+- **Learnings for future iterations:**
+  - For confirmation dialogs that need to pre-fill values, use useEffect with dialog open state as dependency
+  - Dialog component from Shadcn provides controlled open/close behavior via open and onOpenChange props
+  - Use onKeyDown on Input to support Enter key submission for better UX
+  - Adding data-testid to all interactive elements enables E2E testing
+---

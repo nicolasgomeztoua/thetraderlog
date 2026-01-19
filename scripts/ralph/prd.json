@@ -718,8 +718,8 @@
         "Verify in browser: all number inputs work correctly"
       ],
       "priority": 36,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced all Input type=number with NullableNumberInput. State types changed from string to number|null. buildRiskParameters simplified to use direct number values instead of parsing strings."
     },
     {
       "id": "US-037",
@@ -736,8 +736,8 @@
         "Verify in browser: page is fully read-only, Edit button works"
       ],
       "priority": 37,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced StrategyForm with read-only sections: Description, instrument/category badges, RulesDisplay (grouped by entry/exit/risk/management), RiskParametersDisplay (key-value pairs), and legacy entry/exit criteria."
     },
     {
       "id": "US-038",
@@ -757,8 +757,8 @@
         "Verify in browser: modal opens, rename works, duplicate creates with custom name"
       ],
       "priority": 38,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added confirmation dialog with name input, extended duplicate mutation to accept optional name parameter, added data-testid attributes for E2E testing"
     },
     {
       "id": "US-039",

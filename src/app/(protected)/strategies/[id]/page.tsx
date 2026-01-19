@@ -14,7 +14,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MarketplaceSection } from "@/components/strategy";
 import {
@@ -30,6 +30,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/shared";
@@ -234,6 +243,8 @@ export default function StrategyDetailPage() {
 	const isMobile = useIsMobile();
 
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [duplicateOpen, setDuplicateOpen] = useState(false);
+	const [duplicateName, setDuplicateName] = useState("");
 
 	const utils = api.useUtils();
 
@@ -268,6 +279,7 @@ export default function StrategyDetailPage() {
 
 	const duplicateMutation = api.strategies.duplicate.useMutation({
 		onSuccess: (newStrategy) => {
+			setDuplicateOpen(false);
 			toast.success("Strategy duplicated");
 			utils.strategies.getAll.invalidate();
 			router.push(`/strategies/${newStrategy.id}`);
@@ -276,6 +288,13 @@ export default function StrategyDetailPage() {
 			toast.error(error.message || "Failed to duplicate strategy");
 		},
 	});
+
+	// Initialize duplicate name when strategy loads or dialog opens
+	useEffect(() => {
+		if (strategy?.name && duplicateOpen) {
+			setDuplicateName(`${strategy.name} (Copy)`);
+		}
+	}, [strategy?.name, duplicateOpen]);
 
 	// Loading state
 	if (isLoading) {
@@ -491,7 +510,8 @@ export default function StrategyDetailPage() {
 					</Button>
 					<Button
 						className="min-h-[36px] min-w-[36px] font-mono text-xs sm:min-h-0 sm:min-w-0"
-						onClick={() => duplicateMutation.mutate({ id: strategyId })}
+						data-testid="strategy-detail-duplicate-button"
+						onClick={() => setDuplicateOpen(true)}
 						size={isMobile ? "icon" : "sm"}
 						variant="outline"
 					>
@@ -541,6 +561,82 @@ export default function StrategyDetailPage() {
 					</AlertDialog>
 				</div>
 			</div>
+
+			{/* Duplicate Strategy Dialog */}
+			<Dialog onOpenChange={setDuplicateOpen} open={duplicateOpen}>
+				<DialogContent
+					className="mx-4 border-border bg-background sm:mx-0 sm:max-w-md"
+					data-testid="strategy-duplicate-dialog"
+				>
+					<DialogHeader>
+						<DialogTitle className="font-mono text-sm uppercase tracking-wider sm:text-base">
+							Duplicate Strategy
+						</DialogTitle>
+						<DialogDescription className="font-mono text-muted-foreground text-xs">
+							Create a copy of this strategy with a new name. The copy will
+							include all rules and risk parameters.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="py-4">
+						<label
+							className="font-mono text-muted-foreground text-xs uppercase tracking-wider"
+							htmlFor="duplicate-name"
+						>
+							Strategy Name
+						</label>
+						<Input
+							autoFocus
+							className="mt-2 font-mono"
+							data-testid="strategy-duplicate-name-input"
+							id="duplicate-name"
+							onChange={(e) => setDuplicateName(e.target.value)}
+							onKeyDown={(e) => {
+								if (
+									e.key === "Enter" &&
+									duplicateName.trim() &&
+									!duplicateMutation.isPending
+								) {
+									duplicateMutation.mutate({
+										id: strategyId,
+										name: duplicateName.trim(),
+									});
+								}
+							}}
+							placeholder="Enter strategy name"
+							value={duplicateName}
+						/>
+					</div>
+					<DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+						<Button
+							className="min-h-[44px] font-mono text-xs sm:min-h-0"
+							onClick={() => setDuplicateOpen(false)}
+							variant="outline"
+						>
+							Cancel
+						</Button>
+						<Button
+							className="min-h-[44px] font-mono text-xs sm:min-h-0"
+							data-testid="strategy-duplicate-confirm-button"
+							disabled={!duplicateName.trim() || duplicateMutation.isPending}
+							onClick={() => {
+								duplicateMutation.mutate({
+									id: strategyId,
+									name: duplicateName.trim(),
+								});
+							}}
+							style={{
+								backgroundColor: strategyColor,
+								color: "#050505",
+							}}
+						>
+							{duplicateMutation.isPending && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
+							Duplicate
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			{/* Stats summary */}
 			{stats && stats.totalTrades > 0 && (
