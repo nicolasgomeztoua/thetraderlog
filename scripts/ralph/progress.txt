@@ -732,3 +732,22 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Use test.skip() for conditional test skipping
   - Long expect chains need multiline formatting for Biome compliance
 ---
+
+## 2026-01-19 - US-043
+- What was implemented: Created E2E tests for strategy detail page
+- Files changed:
+  - `tests/e2e/strategy-detail.spec.ts` - New E2E test file with 8 tests:
+    - loads strategy detail page with hero banner
+    - edit button navigates to edit page
+    - marketplace section displays correct state
+    - duplicate button opens modal
+    - action buttons are visible
+    - back button returns to strategies list
+    - stats section displays when trades exist
+    - cover image or placeholder displays in hero
+- **Learnings for future iterations:**
+  - For testing multiple possible states (disabled/publish/published), check if any is visible with .catch(() => false) pattern
+  - Dialog escape key closes with page.keyboard.press("Escape")
+  - inputValue() retrieves the current value of an input for assertions
+  - When checking conditional UI (stats only when trades exist), test for visibility first before asserting child content
+---
