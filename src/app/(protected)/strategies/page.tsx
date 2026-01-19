@@ -369,10 +369,10 @@ export default function StrategiesPage() {
 									Downloaded
 								</div>
 								{/* Source strategy link */}
-								{strategy.sourceStrategy && (
-									<div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded bg-background/90 px-2 py-1 font-mono text-[10px] backdrop-blur-sm">
-										<span className="text-muted-foreground">From</span>
-										{strategy.sourceStrategy.isPublic ? (
+								<div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded bg-background/90 px-2 py-1 font-mono text-[10px] backdrop-blur-sm">
+									<span className="text-muted-foreground">From</span>
+									{strategy.sourceStrategy ? (
+										strategy.sourceStrategy.isPublic ? (
 											<Link
 												className="flex items-center gap-0.5 text-primary hover:underline"
 												href={`/marketplace/${strategy.sourceStrategy.id}`}
@@ -384,9 +384,13 @@ export default function StrategiesPage() {
 											<span className="text-muted-foreground/70 italic">
 												{strategy.sourceStrategy.name} (unavailable)
 											</span>
-										)}
-									</div>
-								)}
+										)
+									) : (
+										<span className="text-muted-foreground/70 italic">
+											Source no longer available
+										</span>
+									)}
+								</div>
 								<StrategyCard
 									isMobile={isMobile}
 									onDelete={() => handleDelete(strategy.id)}

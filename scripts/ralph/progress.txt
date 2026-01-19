@@ -1269,3 +1269,25 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Always invalidate cache on settled to ensure eventual consistency
   - Cooldown can be implemented with simple useState + setTimeout
 ---
+
+## US-053: Add Marketplace Query Caching (Completed)
+
+### Implementation Summary
+- Configured tRPC infinite query with staleTime (30s) and gcTime (5min) for marketplace.list
+- Added optimistic updates for voting directly in marketplace list page (not just detail page)
+- Implemented cache invalidation: on vote mutation (onSettled) and download mutation (onSuccess)
+- Connected marketplace page to real API, replacing mock data with actual tRPC query
+- Added proper pagination with Load More button using useInfiniteQuery
+- Rendered actual MarketplaceStrategyCard components in the grid
+
+### Key Technical Details
+- Used existing time constants: STALE_TIME_SHORT (30s) for staleTime, STALE_TIME_MEDIUM (5min) for gcTime
+- Optimistic updates in marketplace list: snapshot previous infinite query data, optimistically update vote counts, rollback on error
+- Cache invalidation happens at onSettled for votes (ensures consistency after any outcome)
+- Download mutation in detail page invalidates marketplace list to update download counts
+- MarketplaceStrategyCard receives strategy data mapped from query response
+
+### Patterns Established
+- tRPC infinite query caching: `{ staleTime: STALE_TIME_SHORT, gcTime: STALE_TIME_MEDIUM }`
+- Optimistic updates for infinite queries: use getInfiniteData/setInfiniteData methods
+- Cache invalidation naming: utils.strategies.marketplaceList.invalidate()

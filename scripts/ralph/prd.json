@@ -1113,8 +1113,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 54,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Configured marketplace query with STALE_TIME_SHORT (30s) and gcTime STALE_TIME_MEDIUM (5min). Added optimistic updates for voting in marketplace list. Cache invalidation added on vote mutation (onSettled) and download mutation (onSuccess). Connected marketplace page to real API with infinite query pagination."
     },
     {
       "id": "US-054",

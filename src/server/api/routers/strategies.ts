@@ -385,7 +385,7 @@ export const strategiesRouter = createTRPCRouter({
 			return updated;
 		}),
 
-	// Delete a strategy (soft delete by setting inactive)
+	// Delete a strategy (hard delete with cascade to votes/downloads)
 	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
@@ -400,7 +400,22 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Strategy not found");
 			}
 
-			// Hard delete the strategy and cascade to rules
+			// Delete cover image from S3 if it exists (graceful failure)
+			if (existingStrategy.coverImageKey) {
+				try {
+					await deleteObject(existingStrategy.coverImageKey);
+				} catch (error) {
+					console.error(
+						`Failed to delete cover image from S3: ${existingStrategy.coverImageKey}`,
+						error,
+					);
+					// Continue with deletion even if S3 cleanup fails
+				}
+			}
+
+			// Hard delete the strategy
+			// Cascade deletes: strategyVotes, strategyDownloads (via FK onDelete: cascade)
+			// Downloaded copies (derivedStrategies) remain functional with orphaned sourceStrategyId
 			await ctx.db.delete(strategies).where(eq(strategies.id, input.id));
 
 			// Also remove strategy association from trades
