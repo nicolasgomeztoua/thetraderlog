@@ -37,7 +37,34 @@ If tests fail:
 
 **Reference:** `.claude/skills/e2e-testing/SKILL.md` for E2E patterns.
 
-## Step 2: Identify Changed Files
+## Step 2: Verify Test Coverage
+
+Check that all new code has corresponding tests:
+
+```bash
+# Find new/modified UI components without E2E tests
+git diff main --name-only | grep -E "components/.*\.tsx$|app/.*page\.tsx$" | while read f; do
+  basename=$(basename "$f" .tsx)
+  if ! grep -rq "$basename" tests/e2e/; then
+    echo "WARNING: No E2E test found for $f"
+  fi
+done
+
+# Find new/modified routers without integration tests
+git diff main --name-only | grep "routers/.*\.ts$" | while read f; do
+  basename=$(basename "$f" .ts)
+  if ! grep -rq "$basename" tests/integration/; then
+    echo "WARNING: No integration test found for $f"
+  fi
+done
+```
+
+If coverage is missing:
+1. Add the missing tests
+2. Commit with `test: add [e2e|integration] tests for [feature]`
+3. Verify tests pass
+
+## Step 3: Identify Changed Files
 
 ```bash
 git diff main --name-only

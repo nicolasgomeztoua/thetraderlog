@@ -111,7 +111,8 @@ Order by dependencies (priority number):
 3. Backend logic (tRPC routers, utilities)
 4. **Integration tests for backend changes** (MANDATORY)
 5. UI components using the backend
-6. Integration/polish
+6. **E2E tests for UI changes** (MANDATORY)
+7. Integration/polish
 
 ## Pre-Implementation Audit (MANDATORY for calculation-heavy features)
 
@@ -168,6 +169,8 @@ For a "Running P&L Chart" feature, the audit would find:
 
 ## Testing Requirements (MANDATORY)
 
+### Backend: Integration Tests
+
 **Any feature that touches tRPC routers MUST include integration tests.**
 
 This is non-negotiable. Every backend change requires a corresponding test story that:
@@ -175,6 +178,18 @@ This is non-negotiable. Every backend change requires a corresponding test story
 - Tests actual tRPC procedures via `createCallerFactory`
 - Validates happy path and error cases
 - Runs with `bun run test`
+
+### Frontend: E2E Tests (Playwright)
+
+**Any feature that creates or modifies UI MUST include E2E tests.**
+
+This is non-negotiable. Every UI story requires:
+- Playwright tests in `tests/e2e/[feature].spec.ts`
+- `data-testid` attributes on all new UI elements
+- Tests for happy path user flows
+- Runs with `bun run test:e2e`
+
+**Reference:** `.claude/skills/e2e-testing/SKILL.md` for Playwright patterns.
 
 ### Test Story Pattern
 
@@ -213,6 +228,31 @@ Reference existing tests for patterns:
 - `tests/integration/accounts.test.ts`
 - `tests/integration/analytics.test.ts`
 
+### E2E Test Story Pattern
+
+For each UI story, add a follow-up E2E test story:
+
+```markdown
+### US-XXX: E2E Tests for [Feature] UI
+**Description**: As a developer, I want E2E tests for the [feature] UI so that we can verify user flows work correctly.
+
+**Acceptance Criteria**:
+- [ ] Test file created: tests/e2e/[feature].spec.ts
+- [ ] All new UI elements have data-testid attributes
+- [ ] Happy path user flow tested
+- [ ] Loading states handled (wait for content)
+- [ ] All tests pass (`bun run test:e2e`)
+- [ ] Typecheck passes (`bun run check`)
+```
+
+### E2E Test File Location
+
+All E2E tests go in `tests/e2e/[feature].spec.ts`
+
+Reference existing tests for patterns:
+- `tests/e2e/dashboard.spec.ts`
+- `tests/e2e/journal.spec.ts`
+
 ## EdgeJournal-Specific Checklist
 
 For each story, verify:
@@ -223,7 +263,8 @@ For each story, verify:
 - [ ] Includes typecheck criterion
 - [ ] Includes build criterion
 - [ ] UI stories include browser verification
-- [ ] **Backend stories have corresponding test story** (MANDATORY)
+- [ ] **Backend stories have corresponding integration test story** (MANDATORY)
+- [ ] **UI stories have corresponding E2E test story** (MANDATORY)
 
 ## Example PRD
 
@@ -282,6 +323,17 @@ Allow traders to attach screenshots to trades for visual documentation of setups
 - [ ] Typecheck passes
 - [ ] Build passes
 - [ ] Verify in browser
+
+### US-005: E2E Tests for Screenshot UI
+**Description**: As a developer, I want E2E tests for the screenshot gallery so that we can verify the UI works correctly.
+
+**Acceptance Criteria**:
+- [ ] Test file: tests/e2e/screenshots.spec.ts
+- [ ] Tests screenshot gallery displays on trade detail
+- [ ] Tests upload flow (if applicable)
+- [ ] All UI elements have data-testid attributes
+- [ ] All tests pass (bun run test:e2e)
+- [ ] Typecheck passes
 
 ## Non-Goals
 - Image editing/cropping
