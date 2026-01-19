@@ -337,3 +337,21 @@ Started: Mon Jan 19 21:08:27 WET 2026
 - **Learnings for future iterations:**
   - Consistent pattern for cover image operations: verify ownership → S3 operation (graceful) → DB update → return
 ---
+
+## 2026-01-19 - US-014 (Add Strategy Auto-Save Endpoint with Conflict Detection)
+- **What was implemented:**
+  - Added `autosaveStrategySchema` with clientUpdatedAt for conflict detection
+  - Added `autosave` mutation to strategies router
+  - Compares clientUpdatedAt (ISO timestamp) with server's updatedAt
+  - If client older: returns { success: false, conflict: true, serverVersion }
+  - If equal or newer: proceeds with update and returns { success: true, savedAt, strategy }
+  - Handles rules update like regular update mutation
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added autosaveStrategySchema and autosave mutation)
+
+- **Learnings for future iterations:**
+  - Optimistic concurrency control pattern: compare timestamps, return conflict info for frontend resolution
+  - Return serverVersion on conflict so frontend can show diff
+  - Auto-save mutations should NOT invalidate queries - they're silent background operations
+---
