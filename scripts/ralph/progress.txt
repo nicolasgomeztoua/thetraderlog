@@ -1166,3 +1166,26 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - The pattern `pathname === item.href || pathname.startsWith(\`${item.href}/\`)` handles both exact match and sub-routes
   - Mobile nav is handled by the same SidebarMenu component, so no separate mobile nav changes needed
 ---
+
+## 2026-01-19 - US-049 (Add My Downloads Section to Strategies Page)
+- **What was implemented:**
+  - Split strategies page into two sections: "My Strategies" and "Downloaded from Marketplace"
+  - "My Strategies" shows strategies where sourceStrategyId IS NULL
+  - "Downloaded from Marketplace" shows strategies with sourceStrategyId
+  - Each downloaded card shows:
+    - "Downloaded" badge in top-right corner
+    - "From [Strategy Name]" link at bottom (ExternalLink icon if public, "(unavailable)" if not)
+  - Empty state for downloaded section: "No downloaded strategies yet" with Browse Marketplace button
+  - Main empty state updated with both "Create Strategy" and "Browse Marketplace" options
+  - Used getDownloaded query to fetch source strategy info (name, authorName, isPublic)
+
+- **Files changed:**
+  - `src/app/(protected)/strategies/page.tsx` (modified)
+
+- **Data-testid attributes added:**
+  - my-strategies-section, downloaded-strategies-section, empty-downloaded-section
+
+- **Learnings for future iterations:**
+  - Downloaded strategies from getDownloaded don't have _count or rules, need to construct a compatible shape for StrategyCard
+  - Use separate query for downloaded strategies to get sourceStrategy relation data
+---

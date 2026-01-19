@@ -1038,8 +1038,8 @@
         "Verify in browser"
       ],
       "priority": 50,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Split strategies into 'My Strategies' and 'Downloaded from Marketplace' sections. Downloaded cards show badge and source strategy link (with external link icon if public, '(unavailable)' if not). Added empty downloaded state with Browse Marketplace link. Main empty state also has Browse Marketplace option."
     },
     {
       "id": "US-050",

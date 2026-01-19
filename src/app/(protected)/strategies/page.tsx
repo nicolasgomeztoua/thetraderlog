@@ -400,6 +400,7 @@ export default function StrategiesPage() {
 										name: strategy.name,
 										description: strategy.description,
 										color: strategy.color,
+										coverImageUrl: strategy.coverImageUrl,
 										isActive: strategy.isActive,
 										_count: {
 											rules: 0,
