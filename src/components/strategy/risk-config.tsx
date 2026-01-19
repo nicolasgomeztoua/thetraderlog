@@ -2,7 +2,7 @@
 
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
 	Select,
 	SelectContent,
@@ -92,20 +92,20 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Size (lots/contracts)
 							</span>
-							<Input
+							<NumberInput
 								className="min-h-[44px] font-mono sm:min-h-0"
-								inputMode="decimal"
-								onChange={(e) =>
+								min={0}
+								onChange={(val) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "fixed",
-										fixedSize: parseFloat(e.target.value) || undefined,
+										fixedSize: val ?? undefined,
 									})
 								}
 								placeholder="1.0"
-								step="0.01"
-								type="number"
-								value={riskParams.positionSizing?.fixedSize ?? ""}
+								precision={2}
+								step={0.01}
+								value={riskParams.positionSizing?.fixedSize ?? null}
 							/>
 						</div>
 					)}
@@ -115,20 +115,22 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Risk %
 							</span>
-							<Input
+							<NumberInput
 								className="min-h-[44px] font-mono sm:min-h-0"
-								inputMode="decimal"
-								onChange={(e) =>
+								max={100}
+								min={0}
+								onChange={(val) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "risk_percent",
-										riskPercent: parseFloat(e.target.value) || undefined,
+										riskPercent: val ?? undefined,
 									})
 								}
 								placeholder="1.0"
-								step="0.1"
-								type="number"
-								value={riskParams.positionSizing?.riskPercent ?? ""}
+								precision={1}
+								step={0.1}
+								suffix="%"
+								value={riskParams.positionSizing?.riskPercent ?? null}
 							/>
 						</div>
 					)}
@@ -138,20 +140,21 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Kelly Fraction
 							</span>
-							<Input
+							<NumberInput
 								className="min-h-[44px] font-mono sm:min-h-0"
-								inputMode="decimal"
-								onChange={(e) =>
+								max={1}
+								min={0}
+								onChange={(val) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "kelly",
-										kellyFraction: parseFloat(e.target.value) || undefined,
+										kellyFraction: val ?? undefined,
 									})
 								}
 								placeholder="0.25"
-								step="0.01"
-								type="number"
-								value={riskParams.positionSizing?.kellyFraction ?? ""}
+								precision={2}
+								step={0.01}
+								value={riskParams.positionSizing?.kellyFraction ?? null}
 							/>
 						</div>
 					)}
@@ -194,19 +197,25 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Value
 						</span>
-						<Input
+						<NumberInput
 							className="min-h-[44px] font-mono sm:min-h-0"
-							inputMode="decimal"
-							onChange={(e) =>
+							min={0}
+							onChange={(val) =>
 								updateField("maxRiskPerTrade", {
 									type: riskParams.maxRiskPerTrade?.type ?? "dollars",
-									value: parseFloat(e.target.value) || 0,
+									value: val ?? 0,
 								})
 							}
 							placeholder="100"
-							step="1"
-							type="number"
-							value={riskParams.maxRiskPerTrade?.value ?? ""}
+							precision={2}
+							prefix={
+								riskParams.maxRiskPerTrade?.type === "dollars" ? "$" : undefined
+							}
+							step={1}
+							suffix={
+								riskParams.maxRiskPerTrade?.type === "percent" ? "%" : undefined
+							}
+							value={riskParams.maxRiskPerTrade?.value ?? null}
 						/>
 					</div>
 				</div>
@@ -248,19 +257,25 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Value
 						</span>
-						<Input
+						<NumberInput
 							className="min-h-[44px] font-mono sm:min-h-0"
-							inputMode="decimal"
-							onChange={(e) =>
+							min={0}
+							onChange={(val) =>
 								updateField("dailyLossLimit", {
 									type: riskParams.dailyLossLimit?.type ?? "dollars",
-									value: parseFloat(e.target.value) || 0,
+									value: val ?? 0,
 								})
 							}
 							placeholder="500"
-							step="1"
-							type="number"
-							value={riskParams.dailyLossLimit?.value ?? ""}
+							precision={2}
+							prefix={
+								riskParams.dailyLossLimit?.type === "dollars" ? "$" : undefined
+							}
+							step={1}
+							suffix={
+								riskParams.dailyLossLimit?.type === "percent" ? "%" : undefined
+							}
+							value={riskParams.dailyLossLimit?.value ?? null}
 						/>
 					</div>
 				</div>
@@ -276,38 +291,30 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Max Concurrent Positions
 						</span>
-						<Input
+						<NumberInput
 							className="min-h-[44px] font-mono sm:min-h-0"
-							inputMode="numeric"
-							onChange={(e) =>
-								updateField(
-									"maxConcurrentPositions",
-									parseInt(e.target.value, 10) || undefined,
-								)
+							min={0}
+							onChange={(val) =>
+								updateField("maxConcurrentPositions", val ?? undefined)
 							}
 							placeholder="3"
-							step="1"
-							type="number"
-							value={riskParams.maxConcurrentPositions ?? ""}
+							precision={0}
+							step={1}
+							value={riskParams.maxConcurrentPositions ?? null}
 						/>
 					</div>
 					<div className="space-y-1">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 							Min R:R Ratio
 						</span>
-						<Input
+						<NumberInput
 							className="min-h-[44px] font-mono sm:min-h-0"
-							inputMode="decimal"
-							onChange={(e) =>
-								updateField(
-									"minRRRatio",
-									parseFloat(e.target.value) || undefined,
-								)
-							}
+							min={0}
+							onChange={(val) => updateField("minRRRatio", val ?? undefined)}
 							placeholder="2.0"
-							step="0.1"
-							type="number"
-							value={riskParams.minRRRatio ?? ""}
+							precision={1}
+							step={0.1}
+							value={riskParams.minRRRatio ?? null}
 						/>
 					</div>
 				</div>
