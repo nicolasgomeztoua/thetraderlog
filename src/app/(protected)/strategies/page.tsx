@@ -129,7 +129,7 @@ function PerformanceComparisonTable() {
 												s.profitFactor >= 1 ? "text-profit" : "text-loss",
 											)}
 										>
-											{s.profitFactor === Infinity
+											{s.profitFactor === Number.POSITIVE_INFINITY
 												? "∞"
 												: s.profitFactor.toFixed(2)}
 										</span>
@@ -243,27 +243,53 @@ export default function StrategiesPage() {
 	const isMobile = useIsMobile();
 
 	return (
-		<div className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
-			{/* Header */}
-			<div className="flex items-center justify-between gap-3">
-				<div className="min-w-0 flex-1">
-					<h1 className="font-bold text-xl tracking-tight sm:text-2xl">
-						Strategies
-					</h1>
-					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
-						Document your trading strategies with entry rules, risk management,
-						and checklists.
-					</p>
+		<div
+			className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6"
+			data-testid="strategies-page"
+		>
+			{/* Hero Section */}
+			<div
+				className="relative overflow-hidden rounded-lg border border-border bg-card p-6 sm:p-8"
+				data-testid="strategies-hero"
+			>
+				{/* Gradient orbs */}
+				<div className="pointer-events-none absolute top-0 right-0 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+				<div className="pointer-events-none absolute bottom-0 left-0 h-48 w-48 rounded-full bg-accent/10 blur-3xl" />
+
+				{/* Content */}
+				<div className="relative">
+					<div className="mb-2 flex items-center gap-2">
+						<BookMarked className="h-5 w-5 text-primary" />
+						<span className="font-mono text-primary text-xs uppercase tracking-wider">
+							Trading Playbook
+						</span>
+					</div>
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div>
+							<h1
+								className="mb-2 font-bold text-2xl tracking-tight sm:text-3xl"
+								data-testid="strategies-heading"
+							>
+								Your Strategies
+							</h1>
+							<p className="max-w-2xl font-mono text-muted-foreground text-sm">
+								Document your trading strategies with entry rules, risk
+								management, and checklists. Track performance across different
+								approaches.
+							</p>
+						</div>
+						<Button
+							asChild
+							className="min-h-[44px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+							data-testid="strategies-new-button"
+						>
+							<Link href="/strategies/new">
+								<Plus className="mr-2 h-4 w-4" />
+								New Strategy
+							</Link>
+						</Button>
+					</div>
 				</div>
-				<Button
-					asChild
-					className="min-h-[44px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
-				>
-					<Link href="/strategies/new">
-						<Plus className="h-4 w-4 sm:mr-2" />
-						<span className="hidden sm:inline">New Strategy</span>
-					</Link>
-				</Button>
 			</div>
 
 			{/* Performance Comparison Table */}
@@ -273,7 +299,10 @@ export default function StrategiesPage() {
 
 			{/* Loading state */}
 			{isLoading && (
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+				<div
+					className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
+					data-testid="strategies-loading"
+				>
 					{[1, 2, 3].map((i) => (
 						<Skeleton className="h-40 sm:h-48" key={i} />
 					))}
@@ -282,7 +311,10 @@ export default function StrategiesPage() {
 
 			{/* Empty state */}
 			{!isLoading && (!strategies || strategies.length === 0) && (
-				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
+				<div
+					className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16"
+					data-testid="strategies-empty"
+				>
 					<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
 					<h2 className="font-semibold text-base sm:text-lg">
 						No strategies yet
@@ -305,9 +337,9 @@ export default function StrategiesPage() {
 
 			{/* Strategies grid */}
 			{!isLoading && strategies && strategies.length > 0 && (
-				<div className="space-y-3 sm:space-y-4">
+				<div className="space-y-3 sm:space-y-4" data-testid="strategies-grid">
 					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-						Your Strategies
+						All Strategies
 					</h2>
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
 						{strategies.map((strategy) => (

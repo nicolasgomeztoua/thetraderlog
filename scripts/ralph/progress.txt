@@ -695,3 +695,21 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Checkbox onCheckedChange is the proper callback (not onClick on wrapper)
   - Biome lint/a11y/useSemanticElements rejects role="button" on div, use proper elements
 ---
+
+## 2026-01-19 - US-041
+- What was implemented: Redesigned strategies list page following marketplace design patterns
+- Files changed:
+  - `src/app/(protected)/strategies/page.tsx` - Complete hero section redesign:
+    - Added hero section with gradient orbs (bg-primary/10, bg-accent/10 with blur-3xl)
+    - Added icon badge (BookMarked + "Trading Playbook" label)
+    - Moved "New Strategy" button into hero alongside heading
+    - Added data-testid attributes: strategies-page, strategies-hero, strategies-heading, strategies-new-button, strategies-loading, strategies-empty, strategies-grid
+    - Changed "Your Strategies" section heading to "All Strategies"
+    - Fixed Infinity comparison to use Number.POSITIVE_INFINITY
+    - Maintained responsive 1/2/3 column grid layout
+- **Learnings for future iterations:**
+  - Hero section pattern: relative container with overflow-hidden, absolute positioned gradient orbs, relative content wrapper
+  - Gradient orb pattern: absolute positioned div with bg-color/10 blur-3xl rounded-full
+  - Icon badge pattern: icon + uppercase tracking-wider text-xs span in flex row
+  - Use Number.POSITIVE_INFINITY instead of Infinity for Biome compliance
+---
