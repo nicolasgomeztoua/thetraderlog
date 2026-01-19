@@ -749,3 +749,34 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - formatCurrency from lib/shared handles dollar formatting with +/- prefix
   - Link-based stat cards use group pattern for hover effects ("View trades" appears on hover)
 ---
+
+## 2026-01-19 - US-033 (Redesign Strategy Detail Page Layout)
+- **What was implemented:**
+  - Redesigned `src/app/(protected)/strategies/[id]/page.tsx` with spacious layout
+  - Added StrategyHero banner at top with cover image/gradient display
+  - Created action bar with Back button, Edit toggle, More menu (Duplicate, Delete)
+  - Integrated StrategyStatsSummary component for key performance stats
+  - Removed old cramped bordered container for full-width layout
+  - Integrated useStrategyAutosave hook for auto-save with 1500ms debounce
+  - Added SaveStatusIndicator showing save status (idle/saving/saved/error/conflict) in edit mode
+  - Added navigation blocking via useUnsavedChangesWarning when form is dirty
+  - Added ConflictDialog for resolving concurrent edit conflicts
+  - Added CoverImageUpload modal accessible from hero banner in edit mode
+  - Added read-only view when not editing with formatted strategy details
+  - Added comprehensive data-testid attributes for E2E testing:
+    - strategy-detail-page, strategy-detail-loading, strategy-detail-not-found
+    - strategy-action-bar, strategy-back-button, strategy-edit-toggle
+    - strategy-more-menu, strategy-duplicate-button, strategy-delete-button
+    - strategy-delete-dialog, strategy-delete-confirm
+    - cover-image-modal, strategy-readonly-view
+
+- **Files changed:**
+  - `src/app/(protected)/strategies/[id]/page.tsx` (rewritten)
+
+- **Learnings for future iterations:**
+  - StrategyFormData types differ between strategy-form.tsx (with isActive) and use-strategy-autosave.ts (without isActive)
+  - Need to alias types to avoid conflicts: `import type { StrategyFormData as FormData }`
+  - Autosave hook should only be "active" when editing - wrap isDirty with isEditing for navigation blocking
+  - Use AlertDialog for both confirmation dialogs and modals (cover image upload)
+  - Read-only view needs explicit sections for entryCriteria, exitRules, rules when not editing
+---

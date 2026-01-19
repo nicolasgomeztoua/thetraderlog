@@ -1,7 +1,17 @@
 "use client";
 
-import { GripVertical, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import {
+	CheckSquare,
+	FileText,
+	GripVertical,
+	Info,
+	Layers,
+	Plus,
+	Shield,
+	Trash2,
+	TrendingUp,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +22,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PRESET_COLORS } from "@/lib/shared";
 import type { RiskParameters } from "./risk-config";
 import { RiskConfig } from "./risk-config";
@@ -54,6 +70,16 @@ const CATEGORY_OPTIONS = [
 	{ value: "management", label: "Management" },
 ];
 
+// Tab sections defined outside component to avoid recreation on each render
+const FORM_SECTIONS = [
+	{ id: "overview", label: "Overview", icon: Info },
+	{ id: "strategy", label: "Strategy", icon: FileText },
+	{ id: "risk", label: "Risk", icon: Shield },
+	{ id: "scaling", label: "Scaling", icon: Layers },
+	{ id: "trailing", label: "Trailing", icon: TrendingUp },
+	{ id: "rules", label: "Checklist", icon: CheckSquare },
+] as const;
+
 export function StrategyForm({
 	initialData,
 	onSubmit,
@@ -73,7 +99,24 @@ export function StrategyForm({
 		rules: initialData?.rules ?? [],
 	});
 
-	const [activeSection, setActiveSection] = useState<string>("basic");
+	// Storage key for persisting active tab
+	const STORAGE_KEY = "strategy-form-active-tab";
+
+	// Initialize active section from sessionStorage
+	const [activeSection, setActiveSection] = useState<string>(() => {
+		if (typeof window !== "undefined") {
+			return sessionStorage.getItem(STORAGE_KEY) ?? "overview";
+		}
+		return "overview";
+	});
+
+	// Tab button refs for keyboard navigation
+	const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+	// Persist active tab to sessionStorage
+	useEffect(() => {
+		sessionStorage.setItem(STORAGE_KEY, activeSection);
+	}, [activeSection]);
 
 	const updateField = <K extends keyof StrategyFormData>(
 		field: K,
@@ -117,39 +160,99 @@ export function StrategyForm({
 		onSubmit(formData);
 	};
 
-	const sections = [
-		{ id: "basic", label: "Basic Info" },
-		{ id: "strategy", label: "Strategy" },
-		{ id: "risk", label: "Risk Management" },
-		{ id: "scaling", label: "Scaling" },
-		{ id: "trailing", label: "Trailing Stops" },
-		{ id: "rules", label: "Rules Checklist" },
-	];
+	// Keyboard navigation handler
+	const handleTabKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+			let nextIndex: number | null = null;
+
+			if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+				e.preventDefault();
+				nextIndex = (currentIndex + 1) % FORM_SECTIONS.length;
+			} else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+				e.preventDefault();
+				nextIndex =
+					(currentIndex - 1 + FORM_SECTIONS.length) % FORM_SECTIONS.length;
+			} else if (e.key === "Home") {
+				e.preventDefault();
+				nextIndex = 0;
+			} else if (e.key === "End") {
+				e.preventDefault();
+				nextIndex = FORM_SECTIONS.length - 1;
+			}
+
+			if (nextIndex !== null && nextIndex >= 0 && nextIndex < FORM_SECTIONS.length) {
+				const nextTab = tabRefs.current[nextIndex];
+				const nextSection = FORM_SECTIONS[nextIndex];
+				if (nextTab && nextSection) {
+					nextTab.focus();
+					setActiveSection(nextSection.id);
+				}
+			}
+		},
+		[],
+	);
 
 	return (
 		<form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
 			{/* Section Tabs */}
-			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-				<div className="flex gap-1.5 border-border border-b pb-4 sm:flex-wrap sm:gap-2">
-					{sections.map((section) => (
-						<button
-							className={`min-h-[36px] shrink-0 rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:min-h-0 sm:px-3 sm:text-xs ${
-								activeSection === section.id
-									? "bg-primary text-primary-foreground"
-									: "text-muted-foreground hover:bg-white/5"
-							}`}
-							key={section.id}
-							onClick={() => setActiveSection(section.id)}
-							type="button"
-						>
-							{section.label}
-						</button>
-					))}
-				</div>
+			<div
+				className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+				data-testid="strategy-form-tabs"
+			>
+				<TooltipProvider delayDuration={300}>
+					<div
+						aria-label="Strategy sections"
+						className="flex gap-1 border-border border-b"
+						role="tablist"
+					>
+						{FORM_SECTIONS.map((section, index) => {
+							const Icon = section.icon;
+							const isActive = activeSection === section.id;
+
+							return (
+								<Tooltip key={section.id}>
+									<TooltipTrigger asChild>
+										<button
+											aria-controls={`tabpanel-${section.id}`}
+											aria-selected={isActive}
+											className={`relative flex shrink-0 items-center gap-2 px-3 py-3 font-mono text-xs uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary sm:px-4 ${
+												isActive
+													? "text-foreground"
+													: "text-muted-foreground hover:text-foreground/80"
+											}`}
+											data-testid={`strategy-tab-${section.id}`}
+											onClick={() => setActiveSection(section.id)}
+											onKeyDown={(e) => handleTabKeyDown(e, index)}
+											ref={(el) => {
+												tabRefs.current[index] = el;
+											}}
+											role="tab"
+											tabIndex={isActive ? 0 : -1}
+											type="button"
+										>
+											<Icon className="size-4" />
+											<span className="hidden sm:inline">{section.label}</span>
+											{/* Active indicator - chartreuse underline */}
+											{isActive && (
+												<span className="-bottom-px absolute inset-x-0 h-0.5 bg-primary" />
+											)}
+										</button>
+									</TooltipTrigger>
+									<TooltipContent
+										className="font-mono text-xs sm:hidden"
+										side="bottom"
+									>
+										{section.label}
+									</TooltipContent>
+								</Tooltip>
+							);
+						})}
+					</div>
+				</TooltipProvider>
 			</div>
 
-			{/* Basic Info Section */}
-			{activeSection === "basic" && (
+			{/* Overview Section (renamed from Basic Info) */}
+			{activeSection === "overview" && (
 				<div className="space-y-4 sm:space-y-6">
 					<div className="space-y-1">
 						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">

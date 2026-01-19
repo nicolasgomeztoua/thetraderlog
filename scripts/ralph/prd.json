@@ -678,8 +678,8 @@
         "Verify in browser"
       ],
       "priority": 34,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Redesigned strategy detail page with StrategyHero banner at top, action bar with Back/Edit/More menu, StrategyStatsSummary component, full-width layout, useStrategyAutosave hook integration, SaveStatusIndicator, navigation blocking, ConflictDialog for conflict resolution, CoverImageUpload modal, and read-only view when not editing. Note: Tabbed content area is already provided by StrategyForm component, Publish button will be added in US-046."
     },
     {
       "id": "US-034",
