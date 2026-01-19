@@ -1118,3 +1118,34 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - GlobeLock icon is good for unpublish actions (locked/private)
   - Opening external links from buttons: use Button asChild with anchor tag
 ---
+
+## 2026-01-19 - US-047 (E2E Tests for Marketplace Detail and Publishing)
+- **What was implemented:**
+  - Created tests/e2e/marketplace-detail.spec.ts with comprehensive E2E tests
+  - Test suite covers marketplace detail page functionality:
+    - 404 handling for invalid/non-existent strategy IDs
+    - Back link navigation to marketplace
+    - Page structure (hero, title, author, stats)
+    - Voting controls display
+    - Download button states (default, downloaded, own strategy)
+    - Tab navigation (Overview, Entry/Exit, Risk, Rules)
+  - Test suite covers publishing flow from strategy detail page:
+    - Publish button display for unpublished strategies
+    - Publish dialog opening and validation
+    - Cancel closes dialog
+    - Published badge display with link to marketplace
+    - Unpublish menu item in more dropdown
+    - Unpublish confirmation dialog
+  - Added missing data-testid attributes to marketplace detail page
+
+- **Files changed:**
+  - `tests/e2e/marketplace-detail.spec.ts` (new file - 380+ lines)
+  - `src/app/(protected)/marketplace/[id]/page.tsx` (added testids)
+
+- **Data-testid attributes added:**
+  - marketplace-detail-title, marketplace-detail-author
+  - marketplace-detail-vote-buttons
+  - marketplace-detail-content
+
+- **Note:** Most tests use test.fixme() since they require actual published strategies in the database to pass. These can be enabled once test data seeding is implemented.
+---
