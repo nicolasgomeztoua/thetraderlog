@@ -304,3 +304,20 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Biome requires alphabetical import order: drizzle-orm before nanoid
   - Keep S3 helpers (getPublicUrl) local to router when they're simple one-liners to avoid over-abstraction
 ---
+
+## 2026-01-19 - US-012 (Add Cover Image Confirmation Endpoint)
+- **What was implemented:**
+  - Added `confirmCoverImage` mutation to strategies router
+  - Input: { strategyId, key, url }
+  - Validates user owns the strategy
+  - Deletes old cover image from S3 if exists (graceful failure with console.error)
+  - Updates strategy with new coverImageUrl and coverImageKey
+  - Returns updated strategy
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added deleteObject import, added confirmCoverImage mutation)
+
+- **Learnings for future iterations:**
+  - S3 deletion should be graceful (try/catch with continue) - orphaned files are acceptable
+  - Use console.error for non-critical failures that shouldn't crash the operation
+---

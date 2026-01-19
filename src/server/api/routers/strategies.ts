@@ -972,4 +972,52 @@ export const strategiesRouter = createTRPCRouter({
 
 			return updated;
 		}),
+
+	/**
+	 * Delete a strategy's cover image.
+	 * Removes the image from S3 and clears the strategy's cover image fields.
+	 */
+	deleteCoverImage: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns the strategy
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Delete S3 object if exists (graceful failure)
+			if (strategy.coverImageKey) {
+				try {
+					await deleteObject(strategy.coverImageKey);
+				} catch {
+					// Gracefully ignore deletion failures - continue with DB update
+					console.error(
+						`Failed to delete cover image from S3: ${strategy.coverImageKey}`,
+					);
+				}
+			}
+
+			// Clear cover image fields
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					coverImageUrl: null,
+					coverImageKey: null,
+				})
+				.where(eq(strategies.id, input.strategyId))
+				.returning();
+
+			return updated;
+		}),
 });
