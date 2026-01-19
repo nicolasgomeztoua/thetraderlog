@@ -1090,3 +1090,31 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Use `checked === true` when converting CheckedState to boolean
   - Non-null assertions fail linter - use `?? ""` for optional strings
 ---
+
+## 2026-01-19 - US-046 (Add Publish/Unpublish Actions to Strategy Detail Page)
+- **What was implemented:**
+  - Updated strategy detail page action bar with publish/unpublish controls
+  - Added Publish button (Globe icon) for unpublished strategies - opens PublishDialog
+  - Added Published badge for published strategies with:
+    - Green dot with pulse animation
+    - "Published" text
+    - External link icon
+    - Links to marketplace detail page
+    - Tooltip showing publish date
+  - Added Unpublish menu item in more dropdown (GlobeLock icon)
+  - Added unpublish confirmation dialog explaining the action
+  - Added unpublish mutation with cache invalidation
+
+- **Files changed:**
+  - `src/app/(protected)/strategies/[id]/page.tsx` (modified)
+
+- **Data-testid attributes added:**
+  - strategy-publish-button, strategy-published-badge
+  - strategy-unpublish-button, strategy-unpublish-dialog, strategy-unpublish-confirm
+
+- **Learnings for future iterations:**
+  - TooltipProvider must wrap the entire app or component tree for Tooltip to work
+  - Use Tooltip to show contextual info like publish date on hover
+  - GlobeLock icon is good for unpublish actions (locked/private)
+  - Opening external links from buttons: use Button asChild with anchor tag
+---

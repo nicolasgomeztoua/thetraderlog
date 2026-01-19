@@ -980,8 +980,8 @@
         "Verify in browser"
       ],
       "priority": 47,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added Publish button for unpublished strategies, Published badge with green dot and publish date tooltip linking to marketplace detail page, Unpublish menu item in more dropdown, and unpublish confirmation dialog with mutation."
     },
     {
       "id": "US-047",

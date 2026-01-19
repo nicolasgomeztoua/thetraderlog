@@ -289,11 +289,17 @@ export default function MarketplaceDetailPage() {
 
 			{/* Title bar */}
 			<div className="space-y-2" data-testid="marketplace-detail-title-bar">
-				<h1 className="font-bold font-mono text-2xl sm:text-3xl">
+				<h1
+					className="font-bold font-mono text-2xl sm:text-3xl"
+					data-testid="marketplace-detail-title"
+				>
 					{strategy.name}
 				</h1>
 				<div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-muted-foreground text-sm">
-					<span className="flex items-center gap-1.5">
+					<span
+						className="flex items-center gap-1.5"
+						data-testid="marketplace-detail-author"
+					>
 						<User className="size-4" />
 						{authorName}
 					</span>
@@ -310,17 +316,19 @@ export default function MarketplaceDetailPage() {
 				data-testid="marketplace-detail-actions"
 			>
 				{/* Vote buttons */}
-				<VoteButtons
-					currentUserVote={strategy.currentUserVote as "up" | "down" | null}
-					disabled={strategy.isOwner}
-					disabledReason="You cannot vote on your own strategy"
-					downvotes={strategy.downvotes}
-					isLoading={voteMutation.isPending}
-					onVoteChange={handleVoteChange}
-					strategyId={strategyId}
-					upvotes={strategy.upvotes}
-					variant="default"
-				/>
+				<div data-testid="marketplace-detail-vote-buttons">
+					<VoteButtons
+						currentUserVote={strategy.currentUserVote as "up" | "down" | null}
+						disabled={strategy.isOwner}
+						disabledReason="You cannot vote on your own strategy"
+						downvotes={strategy.downvotes}
+						isLoading={voteMutation.isPending}
+						onVoteChange={handleVoteChange}
+						strategyId={strategyId}
+						upvotes={strategy.upvotes}
+						variant="default"
+					/>
+				</div>
 
 				{/* Download button */}
 				<Button
@@ -473,7 +481,11 @@ export default function MarketplaceDetailPage() {
 				</TabsList>
 
 				{/* Overview tab */}
-				<TabsContent className="space-y-4" value="overview">
+				<TabsContent
+					className="space-y-4"
+					data-testid="marketplace-detail-content"
+					value="overview"
+				>
 					<div className="space-y-2">
 						<h3 className="font-mono font-semibold text-sm">Description</h3>
 						{strategy.description ? (
