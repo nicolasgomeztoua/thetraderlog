@@ -491,3 +491,63 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Count copies with separate query for accurate count
   - Check currentUserHasDownloaded by querying for strategy with sourceStrategyId
 ---
+
+## 2026-01-19 - US-022 (Add User's Downloaded Strategies Query)
+- **What was implemented:**
+  - Added `getDownloaded` query to strategies router
+  - Returns strategies where sourceStrategyId IS NOT NULL for current user
+  - Includes source strategy info: { id, name, authorName, isPublic }
+  - Sorted by createdAt DESC
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added getDownloaded query)
+
+- **Learnings for future iterations:**
+  - Strategies table doesn't have deletedAt - no soft delete pattern
+  - Use raw SQL for IS NOT NULL check: `sql\`${strategies.sourceStrategyId} IS NOT NULL\``
+---
+
+## 2026-01-19 - US-023 (Integration Tests for Marketplace Endpoints)
+- **What was implemented:**
+  - Created `tests/integration/marketplace.test.ts` with 30+ tests
+  - Setup two test users (author, browser) for cross-user testing
+  - Tests for publish: valid data, invalid instruments/categories, non-owner, anonymous publishing, requires at least one instrument and category
+  - Tests for unpublish: success, non-owner rejection
+  - Tests for vote: upvote, toggle off, downvote, change vote type, remove with null, own strategy prevention, private strategy prevention
+  - Tests for download: success, idempotency (returns existing copy), own strategy prevention, private strategy prevention, rules copying
+  - Tests for marketplaceList: filters (search, instruments, categories), sorting (votes, downloads), pagination, current user vote, anonymous author name
+  - Tests for marketplaceGetById: full details, rules, currentUserHasDownloaded, private strategy rejection
+  - Tests for getDownloaded: returns downloaded strategies, source strategy info, empty for new user
+
+- **Files changed:**
+  - `tests/integration/marketplace.test.ts` (new file - 430+ lines)
+
+- **Learnings for future iterations:**
+  - Tests can't run without Docker (Testcontainers) - verify code quality with `bun run check` and `bun run build` when Docker unavailable
+  - For cross-user tests, setup separate callers with different clerkIds
+  - Test idempotency by calling the same mutation twice and verifying same ID returned
+  - Use nested beforeAll in describe blocks for test-specific setup
+---
+
+## 2026-01-19 - US-024 (Create useStrategyAutosave Hook)
+- **What was implemented:**
+  - Created `src/hooks/use-strategy-autosave.ts` with comprehensive auto-save and conflict detection
+  - Hook accepts: strategyId, initialData, onConflict callback, debounceDelay (default 1500ms)
+  - Returns: formData, updateField, updateFields, saveStatus, isDirty, lastSavedAt, conflictData, resolveConflictKeepLocal, resolveConflictAcceptServer, forceSave, reset
+  - Save status types: 'idle' | 'saving' | 'saved' | 'error' | 'conflict'
+  - Uses clientUpdatedAt timestamp for optimistic concurrency control
+  - Compares against lastSavedData to prevent unnecessary saves
+  - Cancels pending save when new changes occur (no race conditions)
+  - Clears dirty state on successful save
+  - Types inferred from tRPC router using inferRouterInputs/inferRouterOutputs
+  - Based on journal-editor.tsx save pattern with additions for conflict handling
+
+- **Files changed:**
+  - `src/hooks/use-strategy-autosave.ts` (new file)
+
+- **Learnings for future iterations:**
+  - Use `inferRouterInputs<AppRouter>` and `inferRouterOutputs<AppRouter>` from @trpc/server to infer types from router schema
+  - This avoids manually duplicating type definitions and ensures types stay in sync
+  - For conflict resolution, update clientUpdatedAtRef to server's timestamp before re-saving
+  - Use Object.assign for dynamic key assignment to avoid TypeScript partial type issues
+---

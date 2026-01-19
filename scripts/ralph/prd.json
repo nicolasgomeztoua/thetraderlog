@@ -439,8 +439,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added getDownloaded query that returns strategies with sourceStrategyId NOT NULL, including source strategy info with authorName."
     },
     {
       "id": "US-023",
@@ -459,8 +459,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created tests/integration/marketplace.test.ts with 30+ tests covering: publish validation (valid data, invalid instruments/categories, non-owner, requires at least one of each), unpublish, vote (create, toggle, change, remove, own strategy, private strategy), download (attribution, idempotency, rules copying), marketplaceList (filters, pagination, sorting), marketplaceGetById, and getDownloaded."
     },
     {
       "id": "US-024",
@@ -480,8 +480,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created src/hooks/use-strategy-autosave.ts with debounced auto-save (1500ms), conflict detection via clientUpdatedAt, isDirty tracking, resolveConflictKeepLocal/AcceptServer, forceSave, and reset. Types inferred from tRPC router schema."
     },
     {
       "id": "US-025",
