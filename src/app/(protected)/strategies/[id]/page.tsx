@@ -4,6 +4,9 @@ import {
 	AlertTriangle,
 	ArrowLeft,
 	Copy,
+	ExternalLink,
+	Globe,
+	GlobeLock,
 	Loader2,
 	MoreHorizontal,
 	PencilIcon,
@@ -17,6 +20,7 @@ import type { StrategyFormData as FormData } from "@/components/strategy";
 import {
 	ConflictDialog,
 	CoverImageUpload,
+	PublishDialog,
 	SaveStatusIndicator,
 	StrategyForm,
 	StrategyHero,
@@ -41,6 +45,11 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { StrategyFormData } from "@/hooks/use-strategy-autosave";
 import { useStrategyAutosave } from "@/hooks/use-strategy-autosave";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
@@ -57,6 +66,8 @@ export default function StrategyDetailPage() {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
 	const [coverImageModalOpen, setCoverImageModalOpen] = useState(false);
+	const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+	const [unpublishDialogOpen, setUnpublishDialogOpen] = useState(false);
 
 	const utils = api.useUtils();
 
@@ -146,6 +157,18 @@ export default function StrategyDetailPage() {
 		},
 		onError: (error) => {
 			toast.error(error.message || "Failed to duplicate strategy");
+		},
+	});
+
+	// Unpublish mutation
+	const unpublishMutation = api.strategies.unpublish.useMutation({
+		onSuccess: () => {
+			toast.success("Strategy unpublished from marketplace");
+			utils.strategies.getById.invalidate({ id: strategyId });
+			setUnpublishDialogOpen(false);
+		},
+		onError: (error) => {
+			toast.error(error.message || "Failed to unpublish strategy");
 		},
 	});
 
@@ -326,7 +349,49 @@ export default function StrategyDetailPage() {
 						{isEditing ? "Editing" : "Edit"}
 					</Button>
 
-					{/* TODO: Publish button will be added in US-046 */}
+					{/* Published badge with view on marketplace link */}
+					{strategy.isPublic && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									asChild
+									className="h-8 gap-1.5 border-profit/50 bg-profit/10 font-mono text-profit text-xs hover:bg-profit/20"
+									data-testid="strategy-published-badge"
+									size="sm"
+									variant="outline"
+								>
+									<a
+										href={`/marketplace/${strategyId}`}
+										rel="noreferrer"
+										target="_blank"
+									>
+										<span className="mr-0.5 inline-block h-2 w-2 animate-pulse rounded-full bg-profit" />
+										Published
+										<ExternalLink className="h-3 w-3" />
+									</a>
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent className="font-mono text-xs">
+								{strategy.publishedAt
+									? `Published ${new Date(strategy.publishedAt).toLocaleDateString()}`
+									: "View on Marketplace"}
+							</TooltipContent>
+						</Tooltip>
+					)}
+
+					{/* Publish button (only show if not published) */}
+					{!strategy.isPublic && (
+						<Button
+							className="h-8 font-mono text-xs"
+							data-testid="strategy-publish-button"
+							onClick={() => setPublishDialogOpen(true)}
+							size="sm"
+							variant="outline"
+						>
+							<Globe className="mr-1.5 h-3 w-3" />
+							Publish
+						</Button>
+					)}
 
 					{/* More menu */}
 					<DropdownMenu>
@@ -351,6 +416,19 @@ export default function StrategyDetailPage() {
 								<Copy className="mr-2 h-3.5 w-3.5" />
 								{duplicateMutation.isPending ? "Duplicating..." : "Duplicate"}
 							</DropdownMenuItem>
+							{strategy.isPublic && (
+								<>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										className="cursor-pointer font-mono text-xs"
+										data-testid="strategy-unpublish-button"
+										onClick={() => setUnpublishDialogOpen(true)}
+									>
+										<GlobeLock className="mr-2 h-3.5 w-3.5" />
+										Unpublish
+									</DropdownMenuItem>
+								</>
+							)}
 							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								className="cursor-pointer font-mono text-loss text-xs focus:text-loss"
@@ -579,6 +657,67 @@ export default function StrategyDetailPage() {
 				onOpenChange={setConflictDialogOpen}
 				open={conflictDialogOpen}
 			/>
+
+			{/* Publish Dialog */}
+			<PublishDialog
+				onOpenChange={setPublishDialogOpen}
+				onPublished={() => {
+					utils.strategies.getById.invalidate({ id: strategyId });
+				}}
+				open={publishDialogOpen}
+				strategy={{
+					id: strategyId,
+					name: strategy.name,
+					description: strategy.description,
+					color: strategy.color,
+					coverImageUrl: strategy.coverImageUrl,
+					categoryTags: strategy.categoryTags,
+					instruments: strategy.instruments,
+					isPublic: strategy.isPublic ?? false,
+				}}
+			/>
+
+			{/* Unpublish Confirmation Dialog */}
+			<AlertDialog
+				onOpenChange={setUnpublishDialogOpen}
+				open={unpublishDialogOpen}
+			>
+				<AlertDialogContent
+					className="mx-4 border-border bg-background sm:mx-0"
+					data-testid="strategy-unpublish-dialog"
+				>
+					<AlertDialogHeader>
+						<AlertDialogTitle className="font-mono text-sm uppercase tracking-wider sm:text-base">
+							Unpublish Strategy
+						</AlertDialogTitle>
+						<AlertDialogDescription className="font-mono text-xs">
+							Remove &quot;{strategy.name}&quot; from the marketplace? Other
+							traders will no longer be able to find or download this strategy.
+							You can republish it at any time.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+						<AlertDialogCancel className="min-h-[44px] font-mono text-xs sm:min-h-0">
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction
+							className="min-h-[44px] font-mono text-xs sm:min-h-0"
+							data-testid="strategy-unpublish-confirm"
+							disabled={unpublishMutation.isPending}
+							onClick={(e) => {
+								e.preventDefault();
+								unpublishMutation.mutate({ strategyId });
+							}}
+						>
+							{unpublishMutation.isPending && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
+							<GlobeLock className="mr-2 h-4 w-4" />
+							Unpublish
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

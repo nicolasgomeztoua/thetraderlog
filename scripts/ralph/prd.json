@@ -866,8 +866,8 @@
         "Verify in browser"
       ],
       "priority": 42,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created vote-buttons.tsx with horizontal layout, ArrowBigUp/Down icons, net score display, optimistic updates, disabled state with tooltip, loading state, compact and default variants. Types exported."
     },
     {
       "id": "US-042",
@@ -887,8 +887,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 43,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created tests/e2e/marketplace.spec.ts with comprehensive E2E tests covering: page loading, search functionality (debounce, URL sync, clear button), filter dropdowns visibility, filter opening/selection, sort filter URL updates, results count display, loading skeletons, empty state, keyboard shortcut '/' to focus search, URL state synchronization for search and sort params, and filter clearing."
     },
     {
       "id": "US-043",
@@ -913,8 +913,8 @@
         "Verify in browser"
       ],
       "priority": 44,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created marketplace strategy detail page with cover image hero, title bar, action bar with VoteButtons and download button, stats row, instrument/category tags, tabbed content (Overview, Entry/Exit, Risk Management, Rules), derived from section, back link, and 404 not found state. Added isOwner field to marketplaceGetById API response."
     },
     {
       "id": "US-044",
@@ -936,8 +936,8 @@
         "Verify in browser"
       ],
       "priority": 45,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created reusable DownloadButton component with three states: default (Add to My Strategies), loading (Adding...), and downloaded (Downloaded with checkmark). Includes toast notification with 'View Strategy' action on success."
     },
     {
       "id": "US-045",
@@ -961,8 +961,8 @@
         "Verify in browser"
       ],
       "priority": 46,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created PublishDialog component with instruments multi-select (grouped by futures/forex/crypto), categories multi-select, anonymous checkbox toggle, cover image preview with warning, strategy preview section, form validation, and publish mutation with loading state."
     },
     {
       "id": "US-046",

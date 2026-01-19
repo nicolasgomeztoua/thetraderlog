@@ -947,3 +947,146 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Inline vote buttons work well for compact display
   - Net score coloring: profit for positive, loss for negative, muted for zero
 ---
+
+## 2026-01-19 - US-041 (Create Voting Component)
+- **What was implemented:**
+  - Created src/components/marketplace/vote-buttons.tsx
+  - Horizontal layout: Upvote button | net score | Downvote button
+  - ArrowBigUp with profit green when active, ArrowBigDown with loss red when active
+  - Net score with color coding (profit/loss/neutral)
+  - Toggle behavior: click active removes, click inactive sets
+  - Optimistic updates with setTimeout reset
+  - Disabled state with tooltip (for own strategies)
+  - Loading state with Loader2 spinner
+  - Two variants: 'compact' (for cards) and 'default' (for detail pages)
+  - Exported types: VoteType, VoteButtonsProps
+
+- **Files changed:**
+  - `src/components/marketplace/vote-buttons.tsx` (new file - 200+ lines)
+
+- **Learnings for future iterations:**
+  - Optimistic UI needs local state with setTimeout cleanup
+  - effectiveVote pattern: optimistic state ?? external state
+  - Wrap disabled content in TooltipProvider for tooltip support
+  - Variant prop with size classes keeps component flexible
+  - fill-current class fills SVG icons when active
+---
+
+## 2026-01-19 - US-042 (E2E Tests for Marketplace Page)
+- **What was implemented:**
+  - Created tests/e2e/marketplace.spec.ts with comprehensive E2E tests
+  - Test suites: "Marketplace Page", "Marketplace URL State", "Marketplace Filter Clearing"
+  - Tests for page loading: marketplace-page container, header with "Strategy Marketplace" title
+  - Tests for search functionality: search input visible, debounced URL sync, clear button appears/works
+  - Tests for filter dropdowns: instrument, category, sort filters visible and openable
+  - Tests for sort filter: selecting "Newest" updates URL with ?sort=newest
+  - Tests for results count: shows "Loading" or "Showing X strategies" text
+  - Tests for loading state: skeleton grid or empty state or results grid visible
+  - Tests for empty state: checks for "No strategies" message when visible
+  - Tests for keyboard shortcut: '/' focuses search input
+  - Tests for URL state: loading filters from URL params (?q=test, ?sort=newest)
+  - Tests for filter clearing: clear button removes URL param
+
+- **Files changed:**
+  - `tests/e2e/marketplace.spec.ts` (new file - 278 lines)
+
+- **Data-testid attributes used:**
+  - marketplace-page, marketplace-header, marketplace-search, marketplace-search-input
+  - marketplace-search-clear, marketplace-filters, marketplace-filter-instrument
+  - marketplace-filter-category, marketplace-filter-sort, marketplace-active-filters
+  - marketplace-filter-clear-{key}, marketplace-results-header, marketplace-grid
+  - marketplace-loading, marketplace-empty, marketplace-load-more, marketplace-strategy-card
+
+- **Learnings for future iterations:**
+  - E2E tests for debounced inputs: use waitForTimeout(400) to account for 300ms debounce + buffer
+  - URL testing: use `expect(page).toHaveURL(/regex/)` for partial URL matching
+  - Loading states: check for multiple possible states with `.or()` chaining
+  - Filter dropdowns: test opening with click, then check for visible options
+  - Radio-style selects: use `getByRole("option", { name: "..." })` for option selection
+---
+
+## 2026-01-19 - US-043 (Create Marketplace Strategy Detail Page)
+- **What was implemented:**
+  - Created src/app/(protected)/marketplace/[id]/page.tsx - full marketplace strategy detail page
+  - Cover image hero banner with DefaultCover fallback
+  - Title bar with strategy name, author (User icon), published date (Calendar icon)
+  - Action bar with VoteButtons component and Download/Downloaded button
+  - Stats row: Net Votes (colored), Downloads, Copies count
+  - Instrument and category tags with badge styling
+  - Derived from section with link to source strategy (if public)
+  - Tabbed content: Overview (description), Entry/Exit (criteria/rules), Risk Management (parameters), Rules (checklist)
+  - Back to marketplace link at top
+  - Not found state (404) when strategy doesn't exist or isn't public
+  - Loading skeleton state while fetching
+  - Added isOwner field to marketplaceGetById API response
+  - Download button states: disabled for own strategy, "Downloaded" for already downloaded, "Add to My Strategies" default
+  - Toast notification on download success with "View Strategy" action
+
+- **Files changed:**
+  - `src/app/(protected)/marketplace/[id]/page.tsx` (new file - 570+ lines)
+  - `src/server/api/routers/strategies.ts` (added isOwner to marketplaceGetById response)
+
+- **Data-testid attributes added:**
+  - marketplace-detail-page, marketplace-detail-loading, marketplace-detail-not-found
+  - marketplace-detail-back, marketplace-detail-hero, marketplace-detail-title-bar
+  - marketplace-detail-actions, marketplace-detail-download, marketplace-detail-stats
+  - marketplace-detail-tags, marketplace-detail-derived-from, marketplace-detail-tabs
+
+- **Learnings for future iterations:**
+  - Strategy rules use `text` field not `title`, and `category` enum not nullable string
+  - JSON.parse for categoryTags/instruments needs type assertion since API returns string
+  - isOwner check needs to be added to API response, not computed on client
+  - Download button needs three states: owner (disabled), already downloaded (green check), default (download icon)
+  - useParams in Next.js 15 uses generic: `useParams<{ id: string }>()`
+---
+
+## 2026-01-19 - US-044 (Create Strategy Download Button Component)
+- **What was implemented:**
+  - Created src/components/marketplace/download-button.tsx - reusable download button
+  - Three states: default ("Add to My Strategies"), loading ("Adding..."), downloaded ("Downloaded")
+  - Default state: chartreuse button with download icon
+  - Loading state: Loader2 spinner
+  - Downloaded state: green outline with checkmark, navigates to /strategies on click
+  - Toast notification on success with "View Strategy" action
+  - Local state tracks downloaded status for optimistic UI
+  - Props: strategyId, hasDownloaded, onDownloaded, disabled, className
+  - data-testid="download-button" for E2E testing
+
+- **Files changed:**
+  - `src/components/marketplace/download-button.tsx` (new file)
+
+- **Learnings for future iterations:**
+  - Use local state (localHasDownloaded) for optimistic UI after mutation success
+  - Downloaded state should navigate to strategies list, not be permanently disabled
+  - Toast with action button pattern: { action: { label: "...", onClick: () => {} } }
+---
+
+## 2026-01-19 - US-045 (Create Strategy Publish Dialog)
+- **What was implemented:**
+  - Created src/components/strategy/publish-dialog.tsx
+  - Dialog header with Globe icon and description
+  - Warning section about public visibility
+  - Cover image preview using existing image or DefaultCover gradient
+  - Instruments multi-select grouped by asset class (Futures, Forex, Crypto)
+  - Categories multi-select with all strategy categories
+  - Anonymous toggle using Checkbox (Switch component not available)
+  - Preview section showing how strategy will appear
+  - Form validation: require at least one instrument and category
+  - Publish mutation with loading state
+  - Toast notification on success
+  - Exported from src/components/strategy/index.ts
+
+- **Files changed:**
+  - `src/components/strategy/publish-dialog.tsx` (new file - 480+ lines)
+  - `src/components/strategy/index.ts` (added export)
+
+- **Data-testid attributes added:**
+  - publish-dialog, publish-dialog-cancel, publish-dialog-submit
+  - publish-anonymous-toggle
+
+- **Learnings for future iterations:**
+  - Switch component doesn't exist in this codebase - use Checkbox instead
+  - Biome requires htmlFor on labels even when Checkbox is nested inside
+  - Use `checked === true` when converting CheckedState to boolean
+  - Non-null assertions fail linter - use `?? ""` for optional strings
+---

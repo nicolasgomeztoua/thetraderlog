@@ -140,7 +140,10 @@ function RuleItem({ rule }: RuleItemProps) {
 			<div className="flex-1 space-y-1">
 				<p className="font-medium font-mono text-sm">{rule.text}</p>
 				{rule.category && (
-					<Badge className="mt-1 font-mono text-xs capitalize" variant="outline">
+					<Badge
+						className="mt-1 font-mono text-xs capitalize"
+						variant="outline"
+					>
 						{rule.category}
 					</Badge>
 				)}
