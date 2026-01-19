@@ -378,6 +378,7 @@ export default function StrategyDetailPage() {
 			<div className="px-4 sm:px-6">
 				{isEditing ? (
 					<StrategyForm
+						coverImageUrl={strategy.coverImageUrl}
 						initialData={{
 							name: currentFormData.name ?? "",
 							description:
@@ -399,8 +400,14 @@ export default function StrategyDetailPage() {
 							isActive: true,
 							rules: currentFormData.rules ?? [],
 						}}
+						isPublic={strategy.isPublic ?? undefined}
 						isSubmitting={autosave.saveStatus === "saving"}
+						onCoverImageChange={handleCoverImageChange}
 						onSubmit={handleFormSubmit}
+						publishedAt={strategy.publishedAt}
+						sourceStrategyId={strategy.sourceStrategyId}
+						sourceStrategyName={strategy.sourceStrategy?.name ?? null}
+						strategyId={strategyId}
 						submitLabel="Save Changes"
 					/>
 				) : (

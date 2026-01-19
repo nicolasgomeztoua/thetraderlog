@@ -254,6 +254,7 @@ export const strategiesRouter = createTRPCRouter({
 					rules: {
 						orderBy: [strategyRules.order],
 					},
+					sourceStrategy: true,
 				},
 			});
 

@@ -1,7 +1,9 @@
 "use client";
 
 import {
+	BadgeCheck,
 	CheckSquare,
+	ExternalLink,
 	FileText,
 	GripVertical,
 	Info,
@@ -11,6 +13,7 @@ import {
 	Trash2,
 	TrendingUp,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +31,9 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PRESET_COLORS } from "@/lib/shared";
+import { cn, PRESET_COLORS } from "@/lib/shared";
+import { CoverImageUpload } from "./cover-image-upload";
+import { DefaultCover } from "./default-cover";
 import type { RiskParameters } from "./risk-config";
 import { RiskConfig } from "./risk-config";
 import type { ScalingRules } from "./scaling-config";
@@ -56,7 +61,25 @@ export interface StrategyFormData {
 	rules: StrategyRule[];
 }
 
-interface StrategyFormProps {
+/** Props for marketplace and visual identity display */
+interface StrategyMetadata {
+	/** Strategy ID for cover image upload */
+	strategyId?: string;
+	/** Current cover image URL */
+	coverImageUrl?: string | null;
+	/** Callback when cover image changes */
+	onCoverImageChange?: (url: string | null) => void;
+	/** Source strategy ID if this is a downloaded copy */
+	sourceStrategyId?: string | null;
+	/** Source strategy name for "Derived from" link */
+	sourceStrategyName?: string | null;
+	/** Whether the strategy is published to marketplace */
+	isPublic?: boolean;
+	/** When the strategy was published */
+	publishedAt?: Date | string | null;
+}
+
+interface StrategyFormProps extends StrategyMetadata {
 	initialData?: Partial<StrategyFormData>;
 	onSubmit: (data: StrategyFormData) => void;
 	isSubmitting?: boolean;
@@ -80,11 +103,30 @@ const FORM_SECTIONS = [
 	{ id: "rules", label: "Checklist", icon: CheckSquare },
 ] as const;
 
+// Character limits
+const NAME_MAX_LENGTH = 100;
+const DESCRIPTION_MAX_LENGTH = 500;
+
+/**
+ * Validate and format a hex color string
+ */
+function isValidHexColor(color: string): boolean {
+	return /^#[0-9A-Fa-f]{6}$/.test(color);
+}
+
 export function StrategyForm({
 	initialData,
 	onSubmit,
 	isSubmitting,
 	submitLabel = "Save Strategy",
+	// Metadata props for Overview tab
+	strategyId,
+	coverImageUrl,
+	onCoverImageChange,
+	sourceStrategyId,
+	sourceStrategyName,
+	isPublic,
+	publishedAt,
 }: StrategyFormProps) {
 	const [formData, setFormData] = useState<StrategyFormData>({
 		name: initialData?.name ?? "",
@@ -112,6 +154,11 @@ export function StrategyForm({
 
 	// Tab button refs for keyboard navigation
 	const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+	// Custom hex color input state
+	const [customHexInput, setCustomHexInput] = useState(
+		formData.color ?? "#d4ff00",
+	);
 
 	// Persist active tab to sessionStorage
 	useEffect(() => {
@@ -180,7 +227,11 @@ export function StrategyForm({
 				nextIndex = FORM_SECTIONS.length - 1;
 			}
 
-			if (nextIndex !== null && nextIndex >= 0 && nextIndex < FORM_SECTIONS.length) {
+			if (
+				nextIndex !== null &&
+				nextIndex >= 0 &&
+				nextIndex < FORM_SECTIONS.length
+			) {
 				const nextTab = tabRefs.current[nextIndex];
 				const nextSection = FORM_SECTIONS[nextIndex];
 				if (nextTab && nextSection) {
@@ -253,53 +304,227 @@ export function StrategyForm({
 
 			{/* Overview Section (renamed from Basic Info) */}
 			{activeSection === "overview" && (
-				<div className="space-y-4 sm:space-y-6">
-					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Strategy Name *
-						</span>
-						<Input
-							className="min-h-[44px] font-mono sm:min-h-0"
-							onChange={(e) => updateField("name", e.target.value)}
-							placeholder="e.g., Trend Continuation"
-							required
-							value={formData.name}
-						/>
-					</div>
-
-					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Description
-						</span>
-						<Textarea
-							className="font-mono"
-							onChange={(e) => updateField("description", e.target.value)}
-							placeholder="Brief description of this strategy..."
-							rows={3}
-							value={formData.description}
-						/>
-					</div>
-
-					<div className="space-y-2">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Color
-						</span>
-						<div className="flex flex-wrap gap-2">
-							{PRESET_COLORS.map((color) => (
-								<button
-									className={`h-9 w-9 rounded border-2 transition-all sm:h-8 sm:w-8 ${
-										formData.color === color
-											? "scale-110 border-white"
-											: "border-transparent hover:border-white/30"
-									}`}
-									key={color}
-									onClick={() => updateField("color", color)}
-									style={{ backgroundColor: color }}
-									type="button"
+				<div
+					className="space-y-6"
+					data-testid="strategy-overview-tab"
+					id="tabpanel-overview"
+					role="tabpanel"
+				>
+					{/* Two-column layout: single column on mobile, 2 cols on desktop */}
+					<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+						{/* Left column: Name and Description */}
+						<div className="space-y-6">
+							{/* Strategy Name (required, max 100 chars) */}
+							<div className="space-y-2" data-testid="strategy-name-field">
+								<div className="flex items-center justify-between">
+									<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+										Strategy Name *
+									</span>
+									<span
+										className={cn(
+											"font-mono text-[10px]",
+											formData.name.length > NAME_MAX_LENGTH
+												? "text-loss"
+												: "text-muted-foreground",
+										)}
+									>
+										{formData.name.length}/{NAME_MAX_LENGTH}
+									</span>
+								</div>
+								<Input
+									className="min-h-[44px] font-mono sm:min-h-0"
+									data-testid="strategy-name-input"
+									maxLength={NAME_MAX_LENGTH}
+									onChange={(e) => updateField("name", e.target.value)}
+									placeholder="e.g., Trend Continuation"
+									required
+									value={formData.name}
 								/>
-							))}
+							</div>
+
+							{/* Description (optional, max 500, with character count) */}
+							<div
+								className="space-y-2"
+								data-testid="strategy-description-field"
+							>
+								<div className="flex items-center justify-between">
+									<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+										Description
+									</span>
+									<span
+										className={cn(
+											"font-mono text-[10px]",
+											formData.description.length > DESCRIPTION_MAX_LENGTH
+												? "text-loss"
+												: "text-muted-foreground",
+										)}
+									>
+										{formData.description.length}/{DESCRIPTION_MAX_LENGTH}
+									</span>
+								</div>
+								<Textarea
+									className="min-h-[120px] resize-none font-mono"
+									data-testid="strategy-description-input"
+									maxLength={DESCRIPTION_MAX_LENGTH}
+									onChange={(e) => updateField("description", e.target.value)}
+									placeholder="Brief description of this strategy's approach, market conditions it works best in, and key considerations..."
+									rows={5}
+									value={formData.description}
+								/>
+							</div>
+						</div>
+
+						{/* Right column: Color and Cover Image */}
+						<div className="space-y-6">
+							{/* Color picker with preset swatches + custom hex input */}
+							<div className="space-y-3" data-testid="strategy-color-field">
+								<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+									Color
+								</span>
+
+								{/* Preset color swatches */}
+								<div className="flex flex-wrap gap-2">
+									{PRESET_COLORS.map((color) => (
+										<button
+											className={cn(
+												"h-9 w-9 rounded border-2 transition-all sm:h-8 sm:w-8",
+												formData.color === color
+													? "scale-110 border-white"
+													: "border-transparent hover:border-white/30",
+											)}
+											data-testid={`strategy-color-swatch-${color.replace("#", "")}`}
+											key={color}
+											onClick={() => {
+												updateField("color", color);
+												setCustomHexInput(color);
+											}}
+											style={{ backgroundColor: color }}
+											type="button"
+										/>
+									))}
+								</div>
+
+								{/* Custom hex input */}
+								<div className="flex items-center gap-3">
+									<div
+										className="h-9 w-9 shrink-0 rounded border border-border sm:h-8 sm:w-8"
+										style={{
+											backgroundColor: isValidHexColor(customHexInput)
+												? customHexInput
+												: formData.color,
+										}}
+									/>
+									<Input
+										className="max-w-[120px] font-mono text-sm"
+										data-testid="strategy-color-hex-input"
+										onBlur={() => {
+											// Apply custom color on blur if valid
+											if (isValidHexColor(customHexInput)) {
+												updateField("color", customHexInput);
+											} else {
+												// Reset to current color if invalid
+												setCustomHexInput(formData.color);
+											}
+										}}
+										onChange={(e) => {
+											let value = e.target.value;
+											// Auto-prepend # if missing
+											if (value && !value.startsWith("#")) {
+												value = `#${value}`;
+											}
+											setCustomHexInput(value);
+										}}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") {
+												e.preventDefault();
+												if (isValidHexColor(customHexInput)) {
+													updateField("color", customHexInput);
+												}
+											}
+										}}
+										placeholder="#d4ff00"
+										value={customHexInput}
+									/>
+									<span className="font-mono text-muted-foreground text-xs">
+										Hex
+									</span>
+								</div>
+							</div>
+
+							{/* Cover Image Upload */}
+							<div
+								className="space-y-3"
+								data-testid="strategy-cover-image-field"
+							>
+								<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+									Cover Image
+								</span>
+
+								{strategyId ? (
+									<CoverImageUpload
+										currentImageUrl={coverImageUrl ?? null}
+										onImageChange={onCoverImageChange ?? (() => {})}
+										strategyId={strategyId}
+									/>
+								) : (
+									// Preview-only mode for new strategies (no strategyId yet)
+									<div className="w-full">
+										<DefaultCover
+											className="rounded-lg"
+											strategyColor={formData.color}
+											strategyName={formData.name || "New Strategy"}
+										/>
+										<p className="mt-2 font-mono text-muted-foreground text-xs">
+											Save the strategy to upload a cover image
+										</p>
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
+
+					{/* Bottom section: Derived from link and Published badge */}
+					{(sourceStrategyId || isPublic) && (
+						<div
+							className="flex flex-wrap items-center gap-4 border-border border-t pt-4"
+							data-testid="strategy-metadata-footer"
+						>
+							{/* Derived from link */}
+							{sourceStrategyId && sourceStrategyName && (
+								<div
+									className="flex items-center gap-2"
+									data-testid="strategy-derived-from"
+								>
+									<span className="font-mono text-muted-foreground text-xs">
+										Derived from:
+									</span>
+									<Link
+										className="flex items-center gap-1 font-mono text-primary text-xs hover:underline"
+										href={`/marketplace/${sourceStrategyId}`}
+									>
+										{sourceStrategyName}
+										<ExternalLink className="h-3 w-3" />
+									</Link>
+								</div>
+							)}
+
+							{/* Published badge */}
+							{isPublic && publishedAt && (
+								<div
+									className="flex items-center gap-2 rounded-full bg-profit/10 px-3 py-1"
+									data-testid="strategy-published-badge"
+								>
+									<BadgeCheck className="h-4 w-4 text-profit" />
+									<span className="font-mono text-profit text-xs">
+										Published to Marketplace
+									</span>
+									<span className="font-mono text-muted-foreground text-xs">
+										{new Date(publishedAt).toLocaleDateString()}
+									</span>
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 			)}
 
