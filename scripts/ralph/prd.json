@@ -423,8 +423,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added marketplaceGetById query with full strategy details, rules, vote/download aggregates, sourceStrategy info, copiesCount, and currentUserHasDownloaded."
     },
     {
       "id": "US-022",

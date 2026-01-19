@@ -1734,4 +1734,56 @@ export const strategiesRouter = createTRPCRouter({
 				sourceStrategy: sourceStrategyInfo,
 			};
 		}),
+
+	/**
+	 * Get user's downloaded strategies (copied from marketplace).
+	 * Returns strategies where sourceStrategyId is not null.
+	 */
+	getDownloaded: protectedProcedure.query(async ({ ctx }) => {
+		// Get all strategies that were downloaded from marketplace (have sourceStrategyId)
+		const downloadedStrategies = await ctx.db.query.strategies.findMany({
+			where: and(
+				eq(strategies.userId, ctx.user.id),
+				sql`${strategies.sourceStrategyId} IS NOT NULL`,
+			),
+			with: {
+				sourceStrategy: {
+					columns: {
+						id: true,
+						name: true,
+						isPublic: true,
+					},
+					with: {
+						user: {
+							columns: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				},
+			},
+			orderBy: [desc(strategies.createdAt)],
+		});
+
+		// Format response with source strategy info
+		return downloadedStrategies.map((s) => ({
+			id: s.id,
+			name: s.name,
+			description: s.description,
+			color: s.color,
+			coverImageUrl: s.coverImageUrl,
+			isActive: s.isActive,
+			createdAt: s.createdAt,
+			updatedAt: s.updatedAt,
+			sourceStrategy: s.sourceStrategy
+				? {
+						id: s.sourceStrategy.id,
+						name: s.sourceStrategy.name,
+						authorName: s.sourceStrategy.user?.name ?? "Unknown",
+						isPublic: s.sourceStrategy.isPublic,
+					}
+				: null,
+		}));
+	}),
 });

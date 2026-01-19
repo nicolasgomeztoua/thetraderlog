@@ -471,3 +471,23 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Use relational queries with `with:` to fetch related votes/downloads in one query
   - Cursor pagination with in-memory sorting: find cursor index, slice from there
 ---
+
+## 2026-01-19 - US-021 (Add Marketplace Strategy Detail Query)
+- **What was implemented:**
+  - Added `marketplaceGetById` query to strategies router
+  - Input: { strategyId }
+  - Only returns if isPublic=true (else throws 'Strategy not found')
+  - Includes all strategy fields plus computed fields from list query
+  - Includes rules array with full rule details
+  - Includes sourceStrategy if copy: { id, name, authorName, isPublic }
+  - Includes copiesCount (how many times downloaded)
+  - Includes currentUserHasDownloaded: boolean
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added marketplaceGetById query)
+
+- **Learnings for future iterations:**
+  - Use nested `with:` for self-referencing relations (sourceStrategy.user)
+  - Count copies with separate query for accurate count
+  - Check currentUserHasDownloaded by querying for strategy with sourceStrategyId
+---
