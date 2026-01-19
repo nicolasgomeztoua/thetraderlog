@@ -17,6 +17,8 @@ export {
 	COVER_IMAGE_MAX_SIZE_BYTES,
 	COVER_IMAGE_MAX_SIZE_MB,
 	type CoverImageMimeType,
+	getCategoryLabel,
+	getInstrumentLabel,
 	type InstrumentAssetClass,
 	MARKETPLACE_SORT_OPTIONS,
 	type MarketplaceSortOption,

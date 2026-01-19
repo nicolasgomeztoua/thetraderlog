@@ -21,23 +21,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ALL_INSTRUMENTS, STRATEGY_CATEGORIES } from "@/lib/constants";
+import { getCategoryLabel, getInstrumentLabel } from "@/lib/constants";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // =============================================================================
 // HELPERS
 // =============================================================================
-
-function getCategoryLabel(value: string): string {
-	const category = STRATEGY_CATEGORIES.find((c) => c.value === value);
-	return category?.label ?? value;
-}
-
-function getInstrumentLabel(value: string): string {
-	const instrument = ALL_INSTRUMENTS.find((i) => i.value === value);
-	return instrument?.symbol ?? value.toUpperCase();
-}
 
 function formatDate(date: Date | string | null): string {
 	if (!date) return "Unknown";

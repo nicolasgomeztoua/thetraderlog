@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { STRATEGY_CATEGORIES, TRADEABLE_INSTRUMENTS } from "@/lib/constants";
+import { getCategoryLabel, getInstrumentLabel } from "@/lib/constants";
 import { cn } from "@/lib/shared";
 
 // =============================================================================
@@ -56,27 +56,6 @@ function parseCategories(categoryTags: string | null): string[] {
 	} catch {
 		return [];
 	}
-}
-
-/**
- * Get category label from value
- */
-function getCategoryLabel(value: string): string {
-	const category = STRATEGY_CATEGORIES.find((c) => c.value === value);
-	return category?.label ?? value;
-}
-
-/**
- * Get instrument label from value
- */
-function getInstrumentLabel(value: string): string {
-	const allInstruments = [
-		...TRADEABLE_INSTRUMENTS.futures,
-		...TRADEABLE_INSTRUMENTS.forex,
-		...TRADEABLE_INSTRUMENTS.crypto,
-	];
-	const instrument = allInstruments.find((i) => i.value === value);
-	return instrument?.symbol ?? value.toUpperCase();
 }
 
 // =============================================================================

@@ -169,3 +169,29 @@ export const COVER_IMAGE_EXTENSIONS = [
 	".webp",
 	".gif",
 ] as const;
+
+// =============================================================================
+// LABEL HELPERS
+// =============================================================================
+
+/**
+ * Get the display label for a category value.
+ *
+ * @param value - The category value (e.g., "day_trading")
+ * @returns The display label (e.g., "Day Trading") or the original value if not found
+ */
+export function getCategoryLabel(value: string): string {
+	const category = STRATEGY_CATEGORIES.find((c) => c.value === value);
+	return category?.label ?? value;
+}
+
+/**
+ * Get the display symbol for an instrument value.
+ *
+ * @param value - The instrument value (e.g., "es")
+ * @returns The symbol (e.g., "ES") or the uppercased value if not found
+ */
+export function getInstrumentLabel(value: string): string {
+	const instrument = ALL_INSTRUMENTS.find((i) => i.value === value);
+	return instrument?.symbol ?? value.toUpperCase();
+}

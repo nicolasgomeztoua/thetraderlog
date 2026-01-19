@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { STRATEGY_CATEGORIES } from "@/lib/constants";
+import { getCategoryLabel } from "@/lib/constants";
 import { cn } from "@/lib/shared";
 
 interface DefaultCoverProps {
@@ -38,17 +38,6 @@ function darkenColor(hex: string, percent: number): string {
 	// Convert back to hex
 	const toHex = (n: number) => n.toString(16).padStart(2, "0");
 	return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
-}
-
-/**
- * Get the display label for a category tag.
- *
- * @param categoryTag - The category value (e.g., "day_trading")
- * @returns The display label (e.g., "Day Trading") or the original value if not found
- */
-function getCategoryLabel(categoryTag: string): string {
-	const category = STRATEGY_CATEGORIES.find((c) => c.value === categoryTag);
-	return category?.label ?? categoryTag;
 }
 
 /**

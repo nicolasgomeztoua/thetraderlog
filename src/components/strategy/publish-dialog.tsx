@@ -24,7 +24,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { STRATEGY_CATEGORIES, TRADEABLE_INSTRUMENTS } from "@/lib/constants";
+import {
+	getCategoryLabel,
+	STRATEGY_CATEGORIES,
+	TRADEABLE_INSTRUMENTS,
+} from "@/lib/constants";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -50,15 +54,6 @@ export interface PublishDialogProps {
 	};
 	/** Callback after successful publish */
 	onPublished?: () => void;
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function getCategoryLabel(value: string): string {
-	const category = STRATEGY_CATEGORIES.find((c) => c.value === value);
-	return category?.label ?? value;
 }
 
 // =============================================================================
