@@ -130,8 +130,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added coverImageUrl and coverImageKey fields to strategies table for visual identity support."
     },
     {
       "id": "US-007",
@@ -151,8 +151,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added 6 marketplace fields (isPublic, isAnonymous, instruments, categoryTags, sourceStrategyId, publishedAt) to strategies table. Added indexes on isPublic and sourceStrategyId. Added self-referencing relations for source/derived strategies."
     },
     {
       "id": "US-008",
@@ -169,8 +169,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created strategyVotes table with voteType enum (up/down), unique index on (userId, strategyId), index on strategyId, relation definitions, and ID generator strategyVote: () => createId('sv')."
     },
     {
       "id": "US-009",
@@ -187,8 +187,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created strategyDownloads table with id, strategyId, userId, copiedStrategyId, createdAt fields. Added indexes on strategyId and userId. Added relation definitions for strategy and user. Added ID generator strategyDownload: () => createId('sd')."
     },
     {
       "id": "US-010",
@@ -204,8 +204,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created marketplace.ts with STRATEGY_CATEGORIES (10 categories), TRADEABLE_INSTRUMENTS (grouped by futures/forex/crypto), MARKETPLACE_SORT_OPTIONS (4 options), and cover image constraints (5MB max, 16:9 aspect ratio, jpeg/png/webp/gif accepted types)."
     },
     {
       "id": "US-011",

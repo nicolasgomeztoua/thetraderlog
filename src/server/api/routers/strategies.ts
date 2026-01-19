@@ -1,6 +1,18 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { z } from "zod";
+import { env } from "@/env";
 import { calculateAggregateStats } from "@/lib/analytics";
+import {
+	COVER_IMAGE_ACCEPTED_TYPES,
+	COVER_IMAGE_MAX_SIZE_BYTES,
+	COVER_IMAGE_MAX_SIZE_MB,
+} from "@/lib/constants/marketplace";
+import {
+	getPresignedUploadUrl,
+	getS3Bucket,
+	isS3Configured,
+} from "@/lib/storage/s3";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
@@ -9,6 +21,30 @@ import {
 	tradeRuleChecks,
 	trades,
 } from "@/server/db/schema";
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Construct the public URL for an S3 object.
+ * Uses the custom domain if configured, otherwise falls back to the S3 endpoint.
+ */
+function getPublicUrl(key: string): string {
+	// Use custom domain if configured (e.g., for CDN)
+	if (env.S3_PUBLIC_URL) {
+		return `${env.S3_PUBLIC_URL}/${key}`;
+	}
+
+	// Fall back to S3 endpoint + bucket
+	const bucket = getS3Bucket();
+	const endpoint = env.S3_ENDPOINT ?? "";
+
+	// Remove trailing slash from endpoint if present
+	const cleanEndpoint = endpoint.replace(/\/$/, "");
+
+	return `${cleanEndpoint}/${bucket}/${key}`;
+}
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -812,4 +848,77 @@ export const strategiesRouter = createTRPCRouter({
 
 		return curves;
 	}),
+
+	// =============================================================================
+	// COVER IMAGE ENDPOINTS
+	// =============================================================================
+
+	/**
+	 * Get a presigned URL for uploading a strategy cover image.
+	 * Validates ownership, mime type, and file size before generating the URL.
+	 */
+	getCoverImageUploadUrl: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				filename: z.string().min(1),
+				mimeType: z.string().min(1),
+				size: z.number().int().positive(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify S3 is configured
+			if (!isS3Configured()) {
+				throw new Error(
+					"File uploads are not configured. S3 settings are missing.",
+				);
+			}
+
+			// Verify user owns the strategy
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Validate mime type
+			if (
+				!COVER_IMAGE_ACCEPTED_TYPES.includes(
+					input.mimeType as (typeof COVER_IMAGE_ACCEPTED_TYPES)[number],
+				)
+			) {
+				throw new Error(
+					`Invalid file type. Accepted types: ${COVER_IMAGE_ACCEPTED_TYPES.join(", ")}`,
+				);
+			}
+
+			// Validate file size
+			if (input.size > COVER_IMAGE_MAX_SIZE_BYTES) {
+				throw new Error(
+					`File too large. Maximum size is ${COVER_IMAGE_MAX_SIZE_MB}MB`,
+				);
+			}
+
+			// Generate a unique key for the file
+			// Format: images/{userId}/strategy-covers/{strategyId}/{nanoid}-{filename}
+			const uuid = nanoid();
+			const key = `images/${ctx.user.id}/strategy-covers/${input.strategyId}/${uuid}-${input.filename}`;
+
+			// Generate presigned PUT URL (valid for 1 hour)
+			const presignedUrl = getPresignedUploadUrl(key, 3600);
+
+			// Generate public URL for embedding
+			const publicUrl = getPublicUrl(key);
+
+			return {
+				presignedUrl,
+				key,
+				publicUrl,
+			};
+		}),
 });

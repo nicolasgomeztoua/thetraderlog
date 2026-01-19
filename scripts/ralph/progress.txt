@@ -13,6 +13,7 @@ Started: Mon Jan 19 21:08:27 WET 2026
 - **Debounced Mutation**: `use-debounced-mutation.ts` provides debounce + optimistic updates, but simpler pattern in journal-editor may be better for auto-save
 - **Save Status UI**: Journal editor uses `SaveStatus` type ('idle'|'saving'|'saved'|'error') with icons - reuse this pattern
 - **Local State for Editing**: `EditableField` component uses local string state + sync on blur - same pattern as NumberInput
+- **Marketplace Constants**: Use `src/lib/constants/marketplace.ts` for STRATEGY_CATEGORIES, TRADEABLE_INSTRUMENTS, MARKETPLACE_SORT_OPTIONS, and COVER_IMAGE_* constraints
 
 ---
 
@@ -185,4 +186,101 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - XMLHttpRequest is used for upload progress (not fetch) - keep this pattern for cover image uploads
   - Local string state + sync on blur is the established pattern for inputs across the codebase
   - Toast progress updates use id to update the same toast: `toast.loading('...', { id: toastId })`
+---
+
+## 2026-01-19 - US-006 (Extend Strategy Schema for Visual Identity)
+- **What was implemented:**
+  - Added `coverImageUrl` (text, nullable) field to strategies table - stores public S3 URL
+  - Added `coverImageKey` (text, nullable) field to strategies table - stores S3 object key for deletion
+  - Applied schema changes with `bun run db:push`
+
+- **Files changed:**
+  - `src/server/db/schema.ts` (modified - added 2 fields to strategies table)
+
+- **Learnings for future iterations:**
+  - Schema changes for nullable text fields are non-breaking - existing rows get null values
+  - Keep coverImageKey separate from URL for S3 deletion operations (key format differs from public URL)
+---
+
+## 2026-01-19 - US-007 (Extend Strategy Schema for Marketplace)
+- **What was implemented:**
+  - Added `isPublic` (boolean, default false) to strategies table - controls marketplace visibility
+  - Added `isAnonymous` (boolean, default false) to strategies table - hides author name when published
+  - Added `instruments` (text, nullable) to strategies table - JSON array of tradeable instruments
+  - Added `categoryTags` (text, nullable) to strategies table - JSON array of strategy categories
+  - Added `sourceStrategyId` (text, nullable) to strategies table - self-referencing FK for downloaded/copied strategies
+  - Added `publishedAt` (timestamp with timezone, nullable) to strategies table - when first published
+  - Added index on `isPublic` for marketplace queries
+  - Added index on `sourceStrategyId` for source lookups
+  - Added self-referencing relations: `sourceStrategy` and `derivedStrategies`
+
+- **Files changed:**
+  - `src/server/db/schema.ts` (modified - added 6 fields, 2 indexes, 2 relations)
+
+- **Learnings for future iterations:**
+  - Self-referencing FKs in Drizzle use `relationName` to distinguish forward/reverse relations
+  - Drizzle supports self-joins via the same table reference in `one()` with explicit `relationName`
+  - JSON arrays stored as text work well for filtering/display but require parsing in application code
+  - updatedAt field already exists (confirmed) - can be used for conflict detection in auto-save
+---
+
+## 2026-01-19 - US-008 (Create Strategy Votes Table)
+- **What was implemented:**
+  - Added `voteTypeEnum` with values "up" and "down" for vote tracking
+  - Created `strategyVotes` table with id, strategyId, userId, voteType, createdAt, updatedAt
+  - Added unique index on (userId, strategyId) to enforce one vote per user per strategy
+  - Added index on strategyId for efficient vote count queries
+  - Added relation definitions: votes -> strategy, votes -> user
+  - Added relation to strategies (votes) and users (strategyVotes)
+  - Added ID generator: `strategyVote: () => createId("sv")`
+  - Added type exports: StrategyVote, NewStrategyVote
+
+- **Files changed:**
+  - `src/server/db/schema.ts` (added enum, table, relations, type exports)
+  - `src/lib/shared/id.ts` (added strategyVote ID generator)
+
+- **Learnings for future iterations:**
+  - Unique index on (userId, strategyId) enforces one vote per user per strategy at DB level
+  - CASCADE DELETE on both strategyId and userId ensures votes are cleaned up when strategy or user is deleted
+---
+
+## 2026-01-19 - US-009 (Create Strategy Downloads Table)
+- **What was implemented:**
+  - Created `strategyDownloads` table with id, strategyId, userId, copiedStrategyId, createdAt
+  - Added index on strategyId for efficient download count queries
+  - Added index on userId for user's downloads lookup
+  - Added relation definitions: downloads -> strategy, downloads -> user
+  - Added relation to strategies (downloads) and users (strategyDownloads)
+  - Added ID generator: `strategyDownload: () => createId("sd")`
+  - Added type exports: StrategyDownload, NewStrategyDownload
+
+- **Files changed:**
+  - `src/server/db/schema.ts` (added table, indexes, relations, type exports)
+  - `src/lib/shared/id.ts` (added strategyDownload ID generator)
+
+- **Learnings for future iterations:**
+  - Strategy download tracking table is separate from the strategy copy (copiedStrategyId is nullable reference to the copy)
+  - This allows tracking downloads even if the user deletes their copy later
+  - CASCADE DELETE on strategyId ensures download records are cleaned up when strategy is deleted
+---
+
+## 2026-01-19 - US-010 (Add Marketplace Constants)
+- **What was implemented:**
+  - Created `src/lib/constants/marketplace.ts` with centralized marketplace constants
+  - STRATEGY_CATEGORIES: 10 categories (scalping, day_trading, swing_trading, position_trading, news_trading, breakout, mean_reversion, trend_following, range_trading, other)
+  - TRADEABLE_INSTRUMENTS: Grouped by asset class (futures: ES, NQ, YM, etc.; forex: EUR/USD, GBP/USD, etc.; crypto: BTC, ETH, SOL, etc.)
+  - MARKETPLACE_SORT_OPTIONS: 4 options (votes, downloads, newest, updated) with field/direction for DB queries
+  - Cover image constraints: COVER_IMAGE_ASPECT_RATIO (16:9), COVER_IMAGE_MAX_SIZE_MB (5), COVER_IMAGE_MAX_SIZE_BYTES (5242880), COVER_IMAGE_ACCEPTED_TYPES (jpeg, png, webp, gif)
+  - Added helper constants: ALL_INSTRUMENTS (flat list), ALL_INSTRUMENT_VALUES (for validation)
+  - Exported all from `src/lib/constants/index.ts`
+
+- **Files changed:**
+  - `src/lib/constants/marketplace.ts` (new file)
+  - `src/lib/constants/index.ts` (exports added)
+
+- **Learnings for future iterations:**
+  - Constants file pattern: group related constants with section headers, export types alongside values
+  - Use `as const` for readonly arrays/objects to get literal types
+  - Provide both value (DB storage) and label (UI display) for enum-like constants
+  - Helper arrays like ALL_INSTRUMENT_VALUES make validation easier
 ---
