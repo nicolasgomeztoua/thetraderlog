@@ -4,9 +4,11 @@ import { z } from "zod";
 import { env } from "@/env";
 import { calculateAggregateStats } from "@/lib/analytics";
 import {
+	ALL_INSTRUMENT_VALUES,
 	COVER_IMAGE_ACCEPTED_TYPES,
 	COVER_IMAGE_MAX_SIZE_BYTES,
 	COVER_IMAGE_MAX_SIZE_MB,
+	STRATEGY_CATEGORIES,
 } from "@/lib/constants/marketplace";
 import {
 	deleteObject,
@@ -1156,5 +1158,78 @@ export const strategiesRouter = createTRPCRouter({
 						}
 					: null,
 			};
+		}),
+
+	// =============================================================================
+	// MARKETPLACE ENDPOINTS
+	// =============================================================================
+
+	/**
+	 * Publish a strategy to the marketplace.
+	 * Validates instruments and categories before publishing.
+	 */
+	publish: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				instruments: z
+					.array(z.string())
+					.min(1, "At least one instrument is required"),
+				categoryTags: z
+					.array(z.string())
+					.min(1, "At least one category is required"),
+				isAnonymous: z.boolean().default(false),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns the strategy
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Validate instruments
+			const validInstrumentValues: readonly string[] = ALL_INSTRUMENT_VALUES;
+			const validCategoryValues: readonly string[] = STRATEGY_CATEGORIES.map(
+				(c) => c.value,
+			);
+
+			const invalidInstruments = input.instruments.filter(
+				(i) => !validInstrumentValues.includes(i),
+			);
+			if (invalidInstruments.length > 0) {
+				throw new Error(
+					`Invalid instrument(s): ${invalidInstruments.join(", ")}`,
+				);
+			}
+
+			// Validate category tags
+			const invalidCategories = input.categoryTags.filter(
+				(c) => !validCategoryValues.includes(c),
+			);
+			if (invalidCategories.length > 0) {
+				throw new Error(`Invalid category(s): ${invalidCategories.join(", ")}`);
+			}
+
+			// Update strategy for publishing
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					isPublic: true,
+					isAnonymous: input.isAnonymous,
+					instruments: JSON.stringify(input.instruments),
+					categoryTags: JSON.stringify(input.categoryTags),
+					publishedAt: strategy.publishedAt ?? new Date(), // Keep original publish date if re-publishing
+				})
+				.where(eq(strategies.id, input.strategyId))
+				.returning();
+
+			return updated;
 		}),
 });

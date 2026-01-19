@@ -355,3 +355,20 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Return serverVersion on conflict so frontend can show diff
   - Auto-save mutations should NOT invalidate queries - they're silent background operations
 ---
+
+## 2026-01-19 - US-015 (Integration Tests for Visual Identity Endpoints)
+- **What was implemented:**
+  - Created `tests/integration/strategies-images.test.ts` with 15 tests
+  - Tests for getCoverImageUploadUrl: valid request (S3 not configured error), invalid mime types, file size over limit, non-owner access, non-existent strategy, all valid mime types
+  - Tests for confirmCoverImage: update with URL, non-owner rejection, updating existing image
+  - Tests for deleteCoverImage: clear fields, non-owner rejection, strategy without image
+  - Tests for autosave: save with current timestamp, conflict detection (server newer), non-owner rejection, rules update, complex config objects
+
+- **Files changed:**
+  - `tests/integration/strategies-images.test.ts` (new file)
+
+- **Learnings for future iterations:**
+  - Tests verify validation passes before S3 errors (S3 not configured is expected in test env)
+  - Use setupTrader with different clerkIds to test cross-user access
+  - Create fresh strategies in beforeAll for test isolation
+---
