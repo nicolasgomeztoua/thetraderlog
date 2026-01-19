@@ -284,3 +284,23 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Provide both value (DB storage) and label (UI display) for enum-like constants
   - Helper arrays like ALL_INSTRUMENT_VALUES make validation easier
 ---
+
+## 2026-01-19 - US-011 (Add Cover Image Upload Endpoint)
+- **What was implemented:**
+  - Added `getCoverImageUploadUrl` mutation to strategies router
+  - Input validation: strategyId, filename, mimeType, size
+  - Ownership validation: verifies user owns the strategy
+  - Mime type validation: checks against COVER_IMAGE_ACCEPTED_TYPES
+  - Size validation: checks against COVER_IMAGE_MAX_SIZE_BYTES
+  - S3 key generation: `images/${userId}/strategy-covers/${strategyId}/${nanoid()}-${filename}`
+  - Returns { presignedUrl, key, publicUrl }
+  - Reused getPublicUrl helper pattern from storage.ts (copied locally to avoid coupling)
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added imports, getPublicUrl helper, getCoverImageUploadUrl mutation)
+
+- **Learnings for future iterations:**
+  - S3 upload pattern: validate mime type/size → generate key → get presigned URL → return key + publicUrl
+  - Biome requires alphabetical import order: drizzle-orm before nanoid
+  - Keep S3 helpers (getPublicUrl) local to router when they're simple one-liners to avoid over-abstraction
+---

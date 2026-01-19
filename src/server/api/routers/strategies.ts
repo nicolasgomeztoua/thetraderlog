@@ -9,6 +9,7 @@ import {
 	COVER_IMAGE_MAX_SIZE_MB,
 } from "@/lib/constants/marketplace";
 import {
+	deleteObject,
 	getPresignedUploadUrl,
 	getS3Bucket,
 	isS3Configured,
@@ -920,5 +921,55 @@ export const strategiesRouter = createTRPCRouter({
 				key,
 				publicUrl,
 			};
+		}),
+
+	/**
+	 * Confirm a cover image upload and update the strategy.
+	 * Deletes the old cover image from S3 if one exists.
+	 */
+	confirmCoverImage: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				key: z.string(),
+				url: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns the strategy
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Delete old cover image from S3 if exists (graceful failure)
+			if (strategy.coverImageKey) {
+				try {
+					await deleteObject(strategy.coverImageKey);
+				} catch {
+					// Gracefully ignore deletion failures - the old image will remain orphaned
+					console.error(
+						`Failed to delete old cover image: ${strategy.coverImageKey}`,
+					);
+				}
+			}
+
+			// Update strategy with new cover image
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					coverImageUrl: input.url,
+					coverImageKey: input.key,
+				})
+				.where(eq(strategies.id, input.strategyId))
+				.returning();
+
+			return updated;
 		}),
 });
