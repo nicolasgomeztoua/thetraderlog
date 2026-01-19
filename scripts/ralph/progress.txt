@@ -922,3 +922,28 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Radio-style selection in Popover works with Check icon indicator
   - Keep filter component separate from page for reusability
 ---
+
+## 2026-01-19 - US-040 (Create Marketplace Strategy Card)
+- **What was implemented:**
+  - Created src/components/marketplace/marketplace-strategy-card.tsx
+  - Cover image or default gradient (16:7 aspect ratio)
+  - Strategy name with truncation
+  - Author display with User icon (username or 'Anonymous')
+  - Tags row: category pills (max 2 + '+N'), instrument pills (max 3 + '+N')
+  - Stats row with inline vote buttons (up/down), net score, download count
+  - Vote toggle handling (click active removes, click inactive sets)
+  - Hover effect with border color change
+  - Link wrapping for navigation to detail page
+  - Loading skeleton variant (MarketplaceStrategyCardSkeleton)
+  - Exported types: MarketplaceStrategyData, VoteType
+
+- **Files changed:**
+  - `src/components/marketplace/marketplace-strategy-card.tsx` (new file - 370+ lines)
+
+- **Learnings for future iterations:**
+  - Use e.preventDefault() + e.stopPropagation() for button clicks inside Link
+  - parseCategories needs try/catch for JSON.parse
+  - MAX_CATEGORIES and MAX_INSTRUMENTS constants make overflow logic readable
+  - Inline vote buttons work well for compact display
+  - Net score coloring: profit for positive, loss for negative, muted for zero
+---

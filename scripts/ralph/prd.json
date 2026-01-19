@@ -841,8 +841,8 @@
         "Verify in browser"
       ],
       "priority": 41,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created marketplace-strategy-card.tsx with cover image/gradient, strategy name, author, category/instrument pills with overflow, vote buttons, net score, download count. Includes loading skeleton. Vote buttons are inline rather than separate component."
     },
     {
       "id": "US-041",
