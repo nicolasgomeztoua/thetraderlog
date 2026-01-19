@@ -2,6 +2,7 @@ export { ComplianceBadge } from "./compliance-badge";
 export { ConflictDialog } from "./conflict-dialog";
 export { CoverImageUpload } from "./cover-image-upload";
 export { DefaultCover } from "./default-cover";
+export { PublishDialog } from "./publish-dialog";
 export type { RiskParameters } from "./risk-config";
 export { RiskConfig } from "./risk-config";
 export { RuleChecklist } from "./rule-checklist";
