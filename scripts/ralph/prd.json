@@ -1145,8 +1145,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 56,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created src/lib/rate-limit.ts with sliding window rate limiter. Added RATE_LIMITS.VOTES (30 per minute per user). Applied to vote mutation with TRPCError code: TOO_MANY_REQUESTS. Frontend already handles error.message in toast."
     },
     {
       "id": "US-056",

@@ -1309,3 +1309,30 @@ Started: Mon Jan 19 21:08:27 WET 2026
 - strategyVotes: onDelete: "cascade" on strategyId FK
 - strategyDownloads: onDelete: "cascade" on strategyId FK
 - Derived strategies (copied via download) keep their sourceStrategyId but relation resolves to null
+
+## US-055: Add Rate Limiting for Votes (Completed)
+
+### Implementation Summary
+- Created src/lib/rate-limit.ts with in-memory sliding window rate limiter
+- Added checkRateLimit function with configurable limit and windowMs
+- Created RATE_LIMITS constant with VOTES: 30 per minute per user
+- Applied rate limiting to vote mutation in strategies router
+- Throws TRPCError with code: TOO_MANY_REQUESTS when limit exceeded
+
+### Key Technical Details
+- Uses in-memory Map store for rate limit tracking (process-scoped)
+- Sliding window approach: tracks timestamps of recent actions
+- Automatic cleanup of old entries to prevent memory leaks
+- Returns { success, remaining, resetAt } for potential UI display
+- Note: For production scale, consider Redis-based rate limiting
+
+### Code Pattern
+```ts
+const result = checkRateLimit(`vote:${ctx.user.id}`, RATE_LIMITS.VOTES);
+if (!result.success) {
+  throw new TRPCError({
+    code: "TOO_MANY_REQUESTS",
+    message: "Slow down! Try again in a moment.",
+  });
+}
+```
