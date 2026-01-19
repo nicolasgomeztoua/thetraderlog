@@ -780,3 +780,28 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Use AlertDialog for both confirmation dialogs and modals (cover image upload)
   - Read-only view needs explicit sections for entryCriteria, exitRules, rules when not editing
 ---
+
+## 2026-01-19 - US-034 (Redesign Strategy Form with Improved Tabs)
+- **What was implemented:**
+  - Added tab icons from lucide-react: Info, FileText, Shield, Layers, TrendingUp, CheckSquare
+  - Implemented horizontal scrollable tab bar on mobile
+  - Active tab styling: chartreuse underline (-bottom-px), foreground text
+  - Inactive tab styling: muted text, hover shows foreground/80
+  - Icons always visible, labels hidden on mobile (sm:inline) with tooltips
+  - Keyboard navigation: Arrow keys (right/down = next, left/up = prev), Home/End
+  - SessionStorage persistence for active tab across page reloads
+  - Proper ARIA attributes: role="tablist", role="tab", aria-selected, aria-controls, tabIndex
+  - Renamed "Basic Info" tab to "Overview", "Rules Checklist" to "Checklist"
+  - Moved FORM_SECTIONS to module level constant to avoid recreation on render
+
+- **Files changed:**
+  - `src/components/strategy/strategy-form.tsx` (major restructure of tabs)
+
+- **Learnings for future iterations:**
+  - Move array constants (like tab sections with icons) outside component to avoid useCallback dependency issues
+  - For accessible tab lists: use role="tablist" on container, role="tab" on buttons
+  - tabIndex pattern: 0 for active tab, -1 for inactive (roving tabindex pattern)
+  - TooltipProvider should wrap the entire tab list, each tab has its own Tooltip
+  - For keyboard navigation, use Home/End for first/last in addition to arrows
+  - SessionStorage read must be in useState initializer with typeof window check for SSR
+---

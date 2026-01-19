@@ -704,8 +704,8 @@
         "Verify in browser"
       ],
       "priority": 35,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Redesigned strategy form tabs with icons (Info, FileText, Shield, Layers, TrendingUp, CheckSquare), horizontal scrollable tab bar on mobile, chartreuse underline for active tab, tooltips for mobile labels, keyboard navigation (Arrow keys, Home, End), sessionStorage persistence, proper ARIA attributes. Renamed 'Basic Info' to 'Overview'."
     },
     {
       "id": "US-035",
