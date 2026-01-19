@@ -372,3 +372,22 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Use setupTrader with different clerkIds to test cross-user access
   - Create fresh strategies in beforeAll for test isolation
 ---
+
+## 2026-01-19 - US-016 (Add Strategy Publish Endpoint)
+- **What was implemented:**
+  - Added `publish` mutation to strategies router
+  - Input: { strategyId, instruments[], categoryTags[], isAnonymous }
+  - Validates user owns the strategy
+  - Validates instruments against ALL_INSTRUMENT_VALUES
+  - Validates categoryTags against STRATEGY_CATEGORIES
+  - Requires at least one instrument and one category (zod .min(1))
+  - Updates: isPublic=true, publishedAt (keeps original if re-publishing), stores instruments/categoryTags as JSON
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added imports for validation constants, added publish mutation)
+
+- **Learnings for future iterations:**
+  - TypeScript readonly arrays need widening for .includes() with generic strings: `const validValues: readonly string[] = TYPED_ARRAY`
+  - Use zod .min(1, "message") for required array validation
+  - Store arrays as JSON strings in text columns
+---

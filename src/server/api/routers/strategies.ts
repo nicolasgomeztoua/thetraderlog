@@ -1232,4 +1232,39 @@ export const strategiesRouter = createTRPCRouter({
 
 			return updated;
 		}),
+
+	/**
+	 * Unpublish a strategy from the marketplace.
+	 * Keeps instruments, categoryTags, and publishedAt intact for easy re-publishing.
+	 */
+	unpublish: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns the strategy
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Set isPublic to false (keep other marketplace fields intact)
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					isPublic: false,
+				})
+				.where(eq(strategies.id, input.strategyId))
+				.returning();
+
+			return updated;
+		}),
 });

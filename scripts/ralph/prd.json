@@ -322,8 +322,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added publish mutation with instrument/category validation, isAnonymous flag, and publishedAt timestamp."
     },
     {
       "id": "US-017",
