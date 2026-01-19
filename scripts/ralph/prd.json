@@ -794,8 +794,8 @@
         "Verify in browser: no hydration errors, selection works"
       ],
       "priority": 40,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Refactored to use proper Checkbox with label pattern instead of button wrapping Checkbox. Uses Checkbox onCheckedChange with htmlFor label for accessibility."
     },
     {
       "id": "US-041",

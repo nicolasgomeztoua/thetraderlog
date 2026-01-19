@@ -375,22 +375,29 @@ export function StrategyEditForm({
 					</PopoverTrigger>
 					<PopoverContent align="start" className="w-64 p-2">
 						<div className="grid gap-1">
-							{STRATEGY_INSTRUMENTS.map((inst) => (
-								<button
-									className="flex items-center gap-2 rounded px-2 py-1.5 text-left font-mono text-sm hover:bg-white/5"
-									key={inst}
-									onClick={() =>
-										toggleSelection(inst, instruments, setInstruments)
-									}
-									type="button"
-								>
-									<Checkbox
-										checked={instruments.includes(inst)}
-										className="pointer-events-none"
-									/>
-									<span>{inst}</span>
-								</button>
-							))}
+							{STRATEGY_INSTRUMENTS.map((inst) => {
+								const checkboxId = `instrument-${inst}`;
+								return (
+									<div
+										className="flex items-center gap-2 rounded px-2 py-1.5 font-mono text-sm hover:bg-white/5"
+										key={inst}
+									>
+										<Checkbox
+											checked={instruments.includes(inst)}
+											id={checkboxId}
+											onCheckedChange={() =>
+												toggleSelection(inst, instruments, setInstruments)
+											}
+										/>
+										<label
+											className="flex-1 cursor-pointer"
+											htmlFor={checkboxId}
+										>
+											{inst}
+										</label>
+									</div>
+								);
+							})}
 						</div>
 					</PopoverContent>
 				</Popover>
@@ -445,22 +452,29 @@ export function StrategyEditForm({
 					</PopoverTrigger>
 					<PopoverContent align="start" className="w-64 p-2">
 						<div className="grid gap-1">
-							{STRATEGY_CATEGORIES.map((cat) => (
-								<button
-									className="flex items-center gap-2 rounded px-2 py-1.5 text-left font-mono text-sm hover:bg-white/5"
-									key={cat}
-									onClick={() =>
-										toggleSelection(cat, categoryTags, setCategoryTags)
-									}
-									type="button"
-								>
-									<Checkbox
-										checked={categoryTags.includes(cat)}
-										className="pointer-events-none"
-									/>
-									<span>{cat}</span>
-								</button>
-							))}
+							{STRATEGY_CATEGORIES.map((cat) => {
+								const checkboxId = `category-${cat.toLowerCase().replace(/\s+/g, "-")}`;
+								return (
+									<div
+										className="flex items-center gap-2 rounded px-2 py-1.5 font-mono text-sm hover:bg-white/5"
+										key={cat}
+									>
+										<Checkbox
+											checked={categoryTags.includes(cat)}
+											id={checkboxId}
+											onCheckedChange={() =>
+												toggleSelection(cat, categoryTags, setCategoryTags)
+											}
+										/>
+										<label
+											className="flex-1 cursor-pointer"
+											htmlFor={checkboxId}
+										>
+											{cat}
+										</label>
+									</div>
+								);
+							})}
 						</div>
 					</PopoverContent>
 				</Popover>

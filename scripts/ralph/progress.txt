@@ -679,3 +679,19 @@ Started: Sun Jan 18 19:17:56 WET 2026
   - Only apply optimistic updates when the specific field is being changed (check input.field !== undefined)
   - Invalidate cache on settled to ensure eventual consistency with server
 ---
+
+## 2026-01-19 - US-040
+- What was implemented: Fixed button nesting hydration error in StrategyEditForm
+- Files changed:
+  - `src/components/strategy/strategy-edit-form.tsx` - Refactored instrument/category selection:
+    - Replaced button wrapping Checkbox with proper Checkbox + label pattern
+    - Checkbox uses onCheckedChange handler (native Radix pattern)
+    - Label uses htmlFor with unique ID for each checkbox
+    - Biome-compliant: no role="button" on div, no button nesting
+    - Maintains same UX: clicking label toggles checkbox
+- **Learnings for future iterations:**
+  - Radix Checkbox component renders as a <button>, so never wrap in another <button>
+  - For multi-select with checkboxes, use Checkbox with id + label with htmlFor pattern
+  - Checkbox onCheckedChange is the proper callback (not onClick on wrapper)
+  - Biome lint/a11y/useSemanticElements rejects role="button" on div, use proper elements
+---
