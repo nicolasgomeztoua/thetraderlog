@@ -1724,6 +1724,7 @@ export const strategiesRouter = createTRPCRouter({
 					? "Anonymous"
 					: (strategy.user?.name ?? "Unknown"),
 				isAnonymous: strategy.isAnonymous,
+				isOwner: strategy.userId === ctx.user.id,
 				rules: strategy.rules,
 				upvotes,
 				downvotes,
