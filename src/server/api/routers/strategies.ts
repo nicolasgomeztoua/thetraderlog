@@ -20,6 +20,7 @@ import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	strategies,
+	strategyDownloads,
 	strategyRules,
 	strategyVotes,
 	tradeRuleChecks,
@@ -1357,5 +1358,101 @@ export const strategiesRouter = createTRPCRouter({
 				netVotes,
 				userVote: userVote?.voteType ?? null,
 			};
+		}),
+
+	/**
+	 * Download/copy a marketplace strategy to the user's collection.
+	 * Creates a full copy with sourceStrategyId set to the original.
+	 * Idempotent - returns existing copy if already downloaded.
+	 */
+	download: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Get the source strategy with rules
+			const sourceStrategy = await ctx.db.query.strategies.findFirst({
+				where: eq(strategies.id, input.strategyId),
+				with: {
+					rules: true,
+				},
+			});
+
+			if (!sourceStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			if (!sourceStrategy.isPublic) {
+				throw new Error("Cannot download a private strategy");
+			}
+
+			if (sourceStrategy.userId === ctx.user.id) {
+				throw new Error("You already own this strategy");
+			}
+
+			// Check if already downloaded (idempotent)
+			const existingDownload = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.userId, ctx.user.id),
+					eq(strategies.sourceStrategyId, input.strategyId),
+				),
+			});
+
+			if (existingDownload) {
+				// Return the existing copy
+				return existingDownload;
+			}
+
+			// Create a full copy of the strategy
+			const [newStrategy] = await ctx.db
+				.insert(strategies)
+				.values({
+					userId: ctx.user.id,
+					name: `${sourceStrategy.name} (Copy)`,
+					description: sourceStrategy.description,
+					color: sourceStrategy.color,
+					entryCriteria: sourceStrategy.entryCriteria,
+					exitRules: sourceStrategy.exitRules,
+					riskParameters: sourceStrategy.riskParameters,
+					scalingRules: sourceStrategy.scalingRules,
+					trailingRules: sourceStrategy.trailingRules,
+					coverImageUrl: sourceStrategy.coverImageUrl, // Reference same image
+					// Don't copy coverImageKey - we don't own the S3 object
+					sourceStrategyId: input.strategyId,
+					isPublic: false,
+					isAnonymous: false,
+					instruments: null,
+					categoryTags: null,
+					publishedAt: null,
+					isActive: true,
+				})
+				.returning();
+
+			if (!newStrategy) {
+				throw new Error("Failed to create strategy copy");
+			}
+
+			// Copy rules
+			if (sourceStrategy.rules.length > 0) {
+				await ctx.db.insert(strategyRules).values(
+					sourceStrategy.rules.map((rule) => ({
+						strategyId: newStrategy.id,
+						text: rule.text,
+						category: rule.category,
+						order: rule.order,
+					})),
+				);
+			}
+
+			// Create download record
+			await ctx.db.insert(strategyDownloads).values({
+				strategyId: input.strategyId,
+				userId: ctx.user.id,
+				copiedStrategyId: newStrategy.id,
+			});
+
+			return newStrategy;
 		}),
 });

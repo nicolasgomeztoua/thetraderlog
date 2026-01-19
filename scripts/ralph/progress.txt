@@ -406,3 +406,23 @@ Started: Mon Jan 19 21:08:27 WET 2026
 - **Learnings for future iterations:**
   - Unpublish is simple: just flip isPublic flag, preserve metadata for re-publishing
 ---
+
+## 2026-01-19 - US-018 (Add Strategy Vote Endpoint)
+- **What was implemented:**
+  - Added `vote` mutation to strategies router
+  - Input: { strategyId, voteType: 'up' | 'down' | null }
+  - Validates strategy is public (isPublic = true)
+  - Prevents users from voting on their own strategies
+  - null removes existing vote
+  - Same vote type toggles off
+  - Different vote type updates
+  - New vote inserts
+  - Returns { upvotes, downvotes, netVotes, userVote }
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added strategyVotes import, added vote mutation)
+
+- **Learnings for future iterations:**
+  - Vote toggle pattern: same type = delete, different type = update, new = insert
+  - Filter votes in memory for count calculation (simpler than count queries)
+---
