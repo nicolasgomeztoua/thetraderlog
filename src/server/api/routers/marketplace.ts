@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
 	MARKETPLACE_PAGE_SIZE,
 	MARKETPLACE_SORT_OPTIONS,
+	MAX_VOTES_PER_HOUR,
 	STRATEGY_REPORT_REASONS,
 } from "@/lib/constants";
 import { checkVoteRateLimit } from "@/lib/rate-limit";
@@ -448,7 +449,7 @@ export const marketplaceRouter = createTRPCRouter({
 			const rateLimitResult = await checkVoteRateLimit(ctx.user.id);
 			if (!rateLimitResult.success) {
 				throw new Error(
-					"Rate limit exceeded. You can only vote 20 times per hour.",
+					`Rate limit exceeded. You can only vote ${MAX_VOTES_PER_HOUR} times per hour.`,
 				);
 			}
 

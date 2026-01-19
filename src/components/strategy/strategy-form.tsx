@@ -157,6 +157,7 @@ export function StrategyForm({
 						</span>
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="strategy-new-name"
 							onChange={(e) => updateField("name", e.target.value)}
 							placeholder="e.g., Trend Continuation"
 							required

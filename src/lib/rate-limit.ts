@@ -1,6 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { env } from "@/env";
+import { MAX_VOTES_PER_HOUR } from "@/lib/constants/marketplace";
 
 /**
  * Check if Upstash Redis rate limiting is configured
@@ -26,7 +27,7 @@ function createRedisClient(): Redis | null {
 }
 
 /**
- * Vote rate limiter: Max 20 votes per user per hour
+ * Vote rate limiter: Max votes per user per hour
  * Uses sliding window algorithm for smooth rate limiting
  */
 export function createVoteRateLimiter(): Ratelimit | null {
@@ -37,7 +38,7 @@ export function createVoteRateLimiter(): Ratelimit | null {
 
 	return new Ratelimit({
 		redis,
-		limiter: Ratelimit.slidingWindow(20, "1 h"),
+		limiter: Ratelimit.slidingWindow(MAX_VOTES_PER_HOUR, "1 h"),
 		prefix: "ratelimit:vote",
 		analytics: true,
 	});

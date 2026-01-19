@@ -45,6 +45,7 @@ test.describe("Strategies List Page", () => {
 
 		// Click new strategy button
 		const newButton = page.getByTestId("strategies-new-button");
+		await expect(newButton).toBeVisible({ timeout: 5000 });
 		await newButton.click();
 
 		// Should navigate to new strategy page
@@ -57,9 +58,18 @@ test.describe("Strategies List Page", () => {
 			timeout: 15000,
 		});
 
-		// Wait for loading to complete (either grid or empty state)
+		// Wait for loading to complete - loading skeleton should disappear
+		// and either grid or empty state should appear
+		const loading = page.getByTestId("strategies-loading");
 		const grid = page.getByTestId("strategies-grid");
 		const empty = page.getByTestId("strategies-empty");
+
+		// Wait for loading to finish (loading disappears or grid/empty appears)
+		await Promise.race([
+			loading.waitFor({ state: "hidden", timeout: 15000 }),
+			grid.waitFor({ state: "visible", timeout: 15000 }),
+			empty.waitFor({ state: "visible", timeout: 15000 }),
+		]);
 
 		const hasGrid = await grid.isVisible().catch(() => false);
 		const hasEmpty = await empty.isVisible().catch(() => false);

@@ -83,3 +83,9 @@ export const STRATEGY_REPORT_REASONS = [
 ] as const;
 
 export type StrategyReportReason = (typeof STRATEGY_REPORT_REASONS)[number];
+
+/**
+ * Maximum number of votes a user can cast per hour
+ * Used by Upstash rate limiter
+ */
+export const MAX_VOTES_PER_HOUR = 20;
