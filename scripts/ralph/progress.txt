@@ -805,3 +805,26 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - For keyboard navigation, use Home/End for first/last in addition to arrows
   - SessionStorage read must be in useState initializer with typeof window check for SSR
 ---
+
+## 2026-01-19 - US-035 (Create Strategy Overview Tab Content)
+- **What was implemented:**
+  - Enhanced Overview tab in strategy-form.tsx with two-column responsive layout
+  - Left column: Strategy name input (max 100 chars, character counter), Description textarea (max 500 chars, character counter)
+  - Right column: Color picker with 10 preset swatches + custom hex input, Cover image upload component
+  - Bottom section: 'Derived from' link when sourceStrategyId exists, 'Published to Marketplace' badge when isPublic=true
+  - Added StrategyMetadata interface with new props: strategyId, coverImageUrl, onCoverImageChange, sourceStrategyId, sourceStrategyName, isPublic, publishedAt
+  - Updated getById query to include sourceStrategy relation
+  - Added comprehensive data-testid attributes for E2E testing
+
+- **Files changed:**
+  - `src/components/strategy/strategy-form.tsx` (enhanced Overview tab)
+  - `src/app/(protected)/strategies/[id]/page.tsx` (pass new props to StrategyForm)
+  - `src/server/api/routers/strategies.ts` (include sourceStrategy in getById query)
+
+- **Learnings for future iterations:**
+  - Use isValidHexColor() utility to validate hex colors before applying
+  - Custom hex input should auto-prepend '#' if missing
+  - Use DefaultCover component as preview for new strategies without strategyId
+  - Character counters use cn() with conditional text-loss class when over limit
+  - The ?? operator converts null to undefined for optional boolean props
+---
