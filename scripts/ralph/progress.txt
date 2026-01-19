@@ -7,6 +7,12 @@ Started: Mon Jan 19 21:08:27 WET 2026
 - Use `inputMode="decimal"` for mobile-friendly number keyboards
 - Toast notifications for validation errors on blur, not during typing
 - Allow intermediate typing states ("0.", "-", ".") without showing errors
+- Unit tests for pure utilities: use vitest.unit.config.ts (no database needed), run with `bun run test:unit`
+- **Image Upload Pattern**: `use-image-upload.ts` hook provides S3 upload with progress tracking - reuse for cover images
+- **Storage Router**: `storage.ts` has generic `getImageUploadUrl` endpoint - extend for strategy-specific cover images
+- **Debounced Mutation**: `use-debounced-mutation.ts` provides debounce + optimistic updates, but simpler pattern in journal-editor may be better for auto-save
+- **Save Status UI**: Journal editor uses `SaveStatus` type ('idle'|'saving'|'saved'|'error') with icons - reuse this pattern
+- **Local State for Editing**: `EditableField` component uses local string state + sync on blur - same pattern as NumberInput
 
 ---
 
@@ -67,4 +73,116 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Biome linter requires JSX props to be sorted alphabetically - use `bun run check --write` to auto-fix
   - For R-multiple fields, use suffix="R" for clear visual indication of the unit
   - Trailing config removed Input import entirely since all number inputs now use NumberInput
+---
+
+## 2026-01-19 - US-003 (Replace prompt() with Inline R-Multiple Input)
+- **What was implemented:**
+  - Replaced browser `prompt()` with inline NumberInput for adding target R multiples
+  - Added state management: `isAddingTarget` boolean and `newTargetValue` number state
+  - Input auto-focuses when "Add Target" is clicked using useEffect with ref
+  - Enter key confirms and adds the value via `handleTargetKeyDown`
+  - Escape key cancels and clears state
+  - Click outside cancels using document mousedown listener
+  - Validation: must be a positive number (> 0) with toast error
+  - Styled with confirm button (Plus icon) and cancel button (X icon)
+  - NumberInput uses suffix="R", min=0, precision=1, step=0.5
+
+- **Files changed:**
+  - `src/components/strategy/risk-config.tsx` (modified)
+
+- **Learnings for future iterations:**
+  - For inline "add item" UX, use a container ref + document mousedown listener for click-outside-to-cancel
+  - Use useEffect with input ref.current?.focus() for auto-focus when toggling visibility
+  - Handle both Enter (confirm) and Escape (cancel) via onKeyDown handler
+  - Keep confirm/cancel buttons compact with icon-only design for inline inputs
+---
+
+## 2026-01-19 - US-004 (Integration Tests for NumberInput)
+- **What was implemented:**
+  - Created `tests/unit/number-input.test.ts` with 36 unit tests
+  - Exported utility functions from number-input.tsx: `isValidIntermediateValue`, `formatValue`, `roundToPrecision`
+  - Created `vitest.unit.config.ts` for running unit tests without database container
+  - Added `test:unit` script to package.json
+  - Tests cover:
+    - isValidIntermediateValue: empty string, "-", ".", "0.", "-5.", "-0"
+    - formatValue: null/undefined, zero, positive/negative, with precision
+    - roundToPrecision: zero/one/two decimal places, negative numbers
+    - Zero value handling (critical bug the NumberInput was created to fix)
+    - Currency symbol stripping (simulating paste behavior)
+
+- **Files changed:**
+  - `src/components/ui/number-input.tsx` (exported utility functions)
+  - `tests/unit/number-input.test.ts` (new file)
+  - `vitest.unit.config.ts` (new file)
+  - `vitest.config.ts` (added unit test include)
+  - `package.json` (added test:unit script)
+
+- **Learnings for future iterations:**
+  - Unit tests for pure UI utilities should use vitest.unit.config.ts (no database needed)
+  - Run unit tests with `bun run test:unit` vs `bun run test` for integration tests
+  - Export utility functions to make them testable
+  - Testing currency stripping with a local function simulates component behavior
+---
+
+## 2026-01-19 - US-005 (Audit Existing Utilities for Strategy Redesign)
+- **What was audited:**
+
+  ### 1. use-image-upload.ts (src/hooks/use-image-upload.ts)
+  - **Can reuse for cover images**: YES
+  - **Features**: Uses storage.getImageUploadUrl, shows progress with toast, returns public URL
+  - **Key pattern**: Uses `XMLHttpRequest` for upload progress tracking (10-95% range)
+  - **For cover images**: Can reuse directly with `context: "strategy-covers"`
+
+  ### 2. storage.ts (src/server/api/routers/storage.ts)
+  - **Has getImageUploadUrl endpoint**: YES
+  - **Key pattern**: Generic endpoint that takes context, generates unique S3 key, returns presignedUrl + publicUrl
+  - **S3 key format**: `images/{userId}/{context}/{uuid}-{filename}`
+  - **For cover images**: Could use existing endpoint OR create strategy-specific one with size/type validation
+  - **Note**: Uses nanoid for UUID, getPresignedUploadUrl from lib/storage/s3
+
+  ### 3. use-debounced-mutation.ts (src/hooks/use-debounced-mutation.ts)
+  - **Can reuse for auto-save**: PARTIALLY
+  - **Features**: Debounces mutations, supports optimistic updates, per-item debouncing with getKey
+  - **Exports**: `useDebouncedMutation` and `useOptimisticState` hooks
+  - **For auto-save**: Simpler pattern in journal-editor (setTimeout + clearTimeout) may be better - auto-save needs conflict detection which this doesn't have
+
+  ### 4. journal-editor.tsx (src/components/daily-journal/journal-editor.tsx)
+  - **Save status pattern**: YES - excellent reference
+  - **SaveStatus type**: `'idle' | 'saving' | 'saved' | 'error'`
+  - **Key patterns**:
+    - Uses `lastSavedContentRef` to compare before saving (prevents unnecessary saves)
+    - Debounce with setTimeout/clearTimeout (500ms delay)
+    - Save indicator shows: Loader2Icon (saving), CheckCircleIcon (saved in text-profit), AlertCircleIcon (error in text-loss)
+    - "Saved" status auto-clears after 2 seconds
+  - **For strategy auto-save**: Need to add 'conflict' status and conflict resolution UI
+
+  ### 5. editable-field.tsx (src/components/trade-detail/editable-field.tsx)
+  - **Local state pattern**: YES - same as NumberInput
+  - **Key patterns**:
+    - Local state (`localValue`) with `isFocused` flag
+    - Sync with external value only when not focused (useEffect)
+    - Track initial value to detect changes (`initialValueRef`)
+    - Call onChange on blur only if changed
+    - Enter to confirm, Escape to cancel (resets to initial)
+    - Currency symbol stripping on paste for number fields
+  - **For strategy fields**: NumberInput already uses this pattern; EditableField provides text/select variants
+
+- **Files reviewed:**
+  - `src/hooks/use-image-upload.ts`
+  - `src/server/api/routers/storage.ts`
+  - `src/hooks/use-debounced-mutation.ts`
+  - `src/components/daily-journal/journal-editor.tsx`
+  - `src/components/trade-detail/editable-field.tsx`
+
+- **Recommendations for upcoming stories:**
+  1. **Cover Image Upload (US-011, US-012)**: Create strategy-specific endpoint with size/type validation, reuse use-image-upload hook pattern
+  2. **Auto-save (US-014, US-024)**: Use journal-editor pattern (setTimeout debounce) + add conflict detection with clientUpdatedAt
+  3. **Save Status (US-026)**: Extract journal-editor's status indicator into reusable component
+  4. **Conflict Resolution (US-027)**: New component, no existing pattern to reuse
+
+- **Learnings for future iterations:**
+  - Journal editor's save pattern is the gold standard for auto-save UX in this codebase
+  - XMLHttpRequest is used for upload progress (not fetch) - keep this pattern for cover image uploads
+  - Local string state + sync on blur is the established pattern for inputs across the codebase
+  - Toast progress updates use id to update the same toast: `toast.loading('...', { id: toastId })`
 ---

@@ -80,8 +80,8 @@
         "Verify in browser"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Replaced prompt() with inline NumberInput. Added state for isAddingTarget and newTargetValue. Input auto-focuses, Enter confirms, Escape cancels, click outside cancels. Validation requires positive number with toast error. Styled with R suffix and confirm/cancel buttons."
     },
     {
       "id": "US-004",
@@ -98,8 +98,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created tests/unit/number-input.test.ts with 36 unit tests for utility functions. Added vitest.unit.config.ts for running unit tests without database. Tests cover: isValidIntermediateValue, formatValue, roundToPrecision, zero handling, null/undefined handling, and currency stripping. Added test:unit script to package.json."
     },
     {
       "id": "US-005",
@@ -115,8 +115,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Audited 5 existing utilities: use-image-upload.ts (reusable for cover images), storage.ts router (has generic upload endpoint), use-debounced-mutation.ts (partial reuse for auto-save), journal-editor.tsx (gold standard save status pattern), editable-field.tsx (local state pattern). Documented findings and recommendations in progress.txt."
     },
     {
       "id": "US-006",
