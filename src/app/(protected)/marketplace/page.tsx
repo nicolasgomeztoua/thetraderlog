@@ -1,11 +1,11 @@
 "use client";
 
-import { Loader2, Search, ShoppingCart, XIcon } from "lucide-react";
+import { Loader2, ShoppingCart, XIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { SearchBar } from "@/components/marketplace/search-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -105,78 +105,6 @@ function FilterChips({
 					</button>
 				</Badge>
 			))}
-		</div>
-	);
-}
-
-// =============================================================================
-// SEARCH BAR COMPONENT
-// =============================================================================
-
-function MarketplaceSearchBar({
-	value,
-	onChange,
-}: {
-	value: string;
-	onChange: (value: string) => void;
-}) {
-	const [localValue, setLocalValue] = useState(value);
-
-	// Sync with external value
-	useEffect(() => {
-		setLocalValue(value);
-	}, [value]);
-
-	// Debounced search
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			if (localValue !== value) {
-				onChange(localValue);
-			}
-		}, 300);
-
-		return () => clearTimeout(timer);
-	}, [localValue, value, onChange]);
-
-	// Keyboard shortcut: '/' to focus search
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "/" && e.target === document.body) {
-				e.preventDefault();
-				const input = document.querySelector(
-					'[data-testid="marketplace-search-input"]',
-				) as HTMLInputElement;
-				input?.focus();
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, []);
-
-	return (
-		<div className="relative w-full max-w-xl" data-testid="marketplace-search">
-			<Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
-			<Input
-				className="h-11 bg-input pr-10 pl-10 font-mono placeholder:font-mono focus-visible:ring-primary"
-				data-testid="marketplace-search-input"
-				onChange={(e) => setLocalValue(e.target.value)}
-				placeholder="Search strategies... (press /)"
-				value={localValue}
-			/>
-			{localValue && (
-				<button
-					className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground transition-colors hover:text-foreground"
-					data-testid="marketplace-search-clear"
-					onClick={() => {
-						setLocalValue("");
-						onChange("");
-					}}
-					type="button"
-				>
-					<XIcon className="h-4 w-4" />
-				</button>
-			)}
 		</div>
 	);
 }
@@ -428,7 +356,7 @@ function MarketplaceContent() {
 
 			{/* Search Bar (centered, prominent) */}
 			<div className="mx-auto flex justify-center">
-				<MarketplaceSearchBar
+				<SearchBar
 					onChange={(v) => handleFilterChange("search", v)}
 					value={filters.search}
 				/>

@@ -847,3 +847,28 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Character counters can be verified by checking the field container contains expected format like "18/100"
   - Color swatch testid pattern: `strategy-color-swatch-{hex without #}` (e.g., d4ff00 for #d4ff00)
 ---
+
+## 2026-01-19 - US-037 (Create Marketplace Page Layout)
+- **What was implemented:**
+  - Created src/app/(protected)/marketplace/page.tsx with full marketplace layout
+  - Header: 'Strategy Marketplace' title and subtitle (centered)
+  - Search bar: Search icon, 300ms debounce, clear button, '/' keyboard shortcut
+  - Filter dropdowns: Instruments, Categories, Sort (using constants from lib/constants)
+  - Active filter chips with clear buttons
+  - Results count: 'Showing X strategies'
+  - Responsive grid: 1 col mobile, 2 cols tablet, 3 cols desktop
+  - Loading skeleton: 6 placeholder cards
+  - Empty state: Different messages for no results vs no strategies
+  - URL state sync: q, instrument, category, sort params
+  - Suspense boundary for useSearchParams
+
+- **Files changed:**
+  - `src/app/(protected)/marketplace/page.tsx` (new file - 500+ lines)
+
+- **Learnings for future iterations:**
+  - useSearchParams requires Suspense boundary in Next.js 15
+  - URL state sync pattern: build URLSearchParams, use router.push with scroll: false
+  - Keyboard shortcuts need cleanup in useEffect return
+  - Debounced search: keep local state, sync to parent in useEffect after delay
+  - Empty state should differentiate between "no results" (has filters) vs "no content" (no filters)
+---
