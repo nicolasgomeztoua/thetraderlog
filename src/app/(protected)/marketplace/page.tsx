@@ -2,7 +2,9 @@
 
 import { Loader2, ShoppingCart, XIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
+import { toast } from "sonner";
+import { MarketplaceStrategyCard } from "@/components/marketplace/marketplace-strategy-card";
 import { SearchBar } from "@/components/marketplace/search-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,8 @@ import {
 	MARKETPLACE_SORT_OPTIONS,
 	STRATEGY_CATEGORIES,
 } from "@/lib/constants";
-import { cn } from "@/lib/shared";
+import { cn, STALE_TIME_MEDIUM, STALE_TIME_SHORT } from "@/lib/shared";
+import { api } from "@/trpc/react";
 
 // =============================================================================
 // TYPES
@@ -268,21 +271,122 @@ function MarketplaceContent() {
 		sort: searchParams.get("sort") ?? "votes",
 	});
 
-	// Track loading state (mock - real implementation will use tRPC query)
-	const [isLoading, setIsLoading] = useState(true);
-	const [strategies, setStrategies] = useState<unknown[]>([]);
+	// Query with proper caching configuration
+	const utils = api.useUtils();
+	const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+		api.strategies.marketplaceList.useInfiniteQuery(
+			{
+				search: filters.search || undefined,
+				instruments: filters.instrument ? [filters.instrument] : undefined,
+				categories: filters.category ? [filters.category] : undefined,
+				sortBy: filters.sort as "votes" | "downloads" | "newest" | "updated",
+				limit: 20,
+			},
+			{
+				getNextPageParam: (lastPage) => lastPage.nextCursor,
+				// 30 seconds stale time - data considered fresh for this period
+				staleTime: STALE_TIME_SHORT,
+				// 5 minutes gc time - cached data kept for this period
+				gcTime: STALE_TIME_MEDIUM,
+			},
+		);
 
-	// Mock loading - real implementation will use api.marketplace.search.useQuery
-	useEffect(() => {
-		setIsLoading(true);
-		const timer = setTimeout(() => {
-			// Mock empty results - real API will be implemented in future stories
-			setStrategies([]);
-			setIsLoading(false);
-		}, 500);
+	// Flatten pages into single strategies array
+	const strategies = data?.pages.flatMap((page) => page.strategies) ?? [];
 
-		return () => clearTimeout(timer);
-	}, []);
+	// Vote mutation with optimistic updates and cache invalidation
+	const voteMutation = api.strategies.vote.useMutation({
+		onMutate: async ({ strategyId, voteType }) => {
+			// Cancel outgoing refetches for marketplace list
+			await utils.strategies.marketplaceList.cancel();
+
+			// Snapshot previous data
+			const previousData = utils.strategies.marketplaceList.getInfiniteData({
+				search: filters.search || undefined,
+				instruments: filters.instrument ? [filters.instrument] : undefined,
+				categories: filters.category ? [filters.category] : undefined,
+				sortBy: filters.sort as "votes" | "downloads" | "newest" | "updated",
+				limit: 20,
+			});
+
+			// Optimistically update the cache
+			utils.strategies.marketplaceList.setInfiniteData(
+				{
+					search: filters.search || undefined,
+					instruments: filters.instrument ? [filters.instrument] : undefined,
+					categories: filters.category ? [filters.category] : undefined,
+					sortBy: filters.sort as "votes" | "downloads" | "newest" | "updated",
+					limit: 20,
+				},
+				(oldData) => {
+					if (!oldData) return oldData;
+
+					return {
+						...oldData,
+						pages: oldData.pages.map((page) => ({
+							...page,
+							strategies: page.strategies.map((strategy) => {
+								if (strategy.id !== strategyId) return strategy;
+
+								const previousVote = strategy.currentUserVote;
+								let newUpvotes = strategy.upvotes;
+								let newDownvotes = strategy.downvotes;
+
+								// Remove previous vote impact
+								if (previousVote === "up") newUpvotes--;
+								if (previousVote === "down") newDownvotes--;
+
+								// Add new vote impact
+								if (voteType === "up") newUpvotes++;
+								if (voteType === "down") newDownvotes++;
+
+								return {
+									...strategy,
+									upvotes: newUpvotes,
+									downvotes: newDownvotes,
+									netVotes: newUpvotes - newDownvotes,
+									currentUserVote: voteType,
+								};
+							}),
+						})),
+					};
+				},
+			);
+
+			return { previousData };
+		},
+		onError: (error, _variables, context) => {
+			// Rollback on error
+			if (context?.previousData) {
+				utils.strategies.marketplaceList.setInfiniteData(
+					{
+						search: filters.search || undefined,
+						instruments: filters.instrument ? [filters.instrument] : undefined,
+						categories: filters.category ? [filters.category] : undefined,
+						sortBy: filters.sort as
+							| "votes"
+							| "downloads"
+							| "newest"
+							| "updated",
+						limit: 20,
+					},
+					context.previousData,
+				);
+			}
+			toast.error(error.message || "Failed to vote");
+		},
+		onSettled: () => {
+			// Invalidate marketplace list cache to ensure consistency
+			utils.strategies.marketplaceList.invalidate();
+		},
+	});
+
+	const handleVoteChange = (
+		strategyId: string,
+		voteType: "up" | "down" | null,
+	) => {
+		voteMutation.mutate({ strategyId, voteType });
+	};
 
 	// Update URL when filters change
 	const updateUrl = useCallback(
@@ -405,12 +509,36 @@ function MarketplaceContent() {
 					className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
 					data-testid="marketplace-grid"
 				>
-					{/* Strategy cards will be rendered here in future stories */}
+					{strategies.map((strategy) => (
+						<MarketplaceStrategyCard
+							currentUserVote={strategy.currentUserVote as "up" | "down" | null}
+							key={strategy.id}
+							onVote={(strategyId, voteType) =>
+								handleVoteChange(strategyId, voteType)
+							}
+							strategy={{
+								id: strategy.id,
+								name: strategy.name,
+								color: strategy.color,
+								coverImageUrl: strategy.coverImageUrl,
+								categoryTags: strategy.categoryTags,
+								instruments: strategy.instruments
+									? JSON.parse(strategy.instruments as string)
+									: [],
+								authorName: strategy.authorName,
+								isAnonymous: strategy.isAnonymous ?? false,
+								upvotes: strategy.upvotes,
+								downvotes: strategy.downvotes,
+								netVotes: strategy.netVotes,
+								downloadCount: strategy.downloadCount,
+							}}
+						/>
+					))}
 				</div>
 			)}
 
-			{/* Load More Button (placeholder for future implementation) */}
-			{!isLoading && strategies.length > 0 && (
+			{/* Load More Button */}
+			{!isLoading && strategies.length > 0 && hasNextPage && (
 				<div className="flex justify-center">
 					<Button
 						className={cn(
@@ -418,9 +546,18 @@ function MarketplaceContent() {
 							"min-h-[44px] sm:min-h-0",
 						)}
 						data-testid="marketplace-load-more"
+						disabled={isFetchingNextPage}
+						onClick={() => fetchNextPage()}
 						variant="outline"
 					>
-						Load More
+						{isFetchingNextPage ? (
+							<>
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								Loading...
+							</>
+						) : (
+							"Load More"
+						)}
 					</Button>
 				</div>
 			)}

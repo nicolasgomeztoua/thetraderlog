@@ -235,7 +235,7 @@ export default function MarketplaceDetailPage() {
 		},
 	});
 
-	// Download mutation
+	// Download mutation with cache invalidation
 	const downloadMutation = api.strategies.download.useMutation({
 		onSuccess: (data) => {
 			setIsDownloading(false);
@@ -245,6 +245,8 @@ export default function MarketplaceDetailPage() {
 					onClick: () => router.push(`/strategies/${data.id}`),
 				},
 			});
+			// Invalidate marketplace list cache to update download counts
+			utils.strategies.marketplaceList.invalidate();
 			refetch();
 		},
 		onError: (error) => {

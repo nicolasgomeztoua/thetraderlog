@@ -1248,3 +1248,24 @@ Started: Mon Jan 19 21:08:27 WET 2026
 
 - **Note:** Most tests use test.fixme() since they require actual strategies in the database. Tests can be enabled once test data seeding is implemented.
 ---
+
+## 2026-01-19 - US-052 (Add Optimistic Updates for Voting)
+- **What was implemented:**
+  - Added tRPC optimistic update pattern to marketplace detail page vote mutation
+  - onMutate: Cancel outgoing refetches, snapshot previous data, optimistically update cache
+  - Cache update calculates new upvotes/downvotes/netVotes based on previous and new vote
+  - onError: Roll back to previous data, show toast error
+  - onSettled: Invalidate cache to ensure consistency with server
+  - Added 300ms cooldown in VoteButtons component to prevent rapid clicking
+  - Cooldown uses local state and disables buttons during cooldown period
+
+- **Files changed:**
+  - `src/app/(protected)/marketplace/[id]/page.tsx` (added optimistic mutation)
+  - `src/components/marketplace/vote-buttons.tsx` (added cooldown state)
+
+- **Learnings for future iterations:**
+  - tRPC optimistic updates use onMutate/onError/onSettled pattern
+  - Cancel outgoing requests before optimistic update to prevent race conditions
+  - Always invalidate cache on settled to ensure eventual consistency
+  - Cooldown can be implemented with simple useState + setTimeout
+---
