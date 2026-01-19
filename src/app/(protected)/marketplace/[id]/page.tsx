@@ -176,13 +176,62 @@ export default function MarketplaceDetailPage() {
 		},
 	);
 
-	// Vote mutation
+	// Vote mutation with optimistic updates
+	const utils = api.useUtils();
 	const voteMutation = api.strategies.vote.useMutation({
-		onSuccess: () => {
-			refetch();
+		// Optimistic update
+		onMutate: async ({ strategyId: mutatedId, voteType }) => {
+			// Cancel any outgoing refetches
+			await utils.strategies.marketplaceGetById.cancel({
+				strategyId: mutatedId,
+			});
+
+			// Snapshot the previous value
+			const previousData = utils.strategies.marketplaceGetById.getData({
+				strategyId: mutatedId,
+			});
+
+			// Optimistically update the cache
+			if (previousData) {
+				const previousVote = previousData.currentUserVote;
+				let newUpvotes = previousData.upvotes;
+				let newDownvotes = previousData.downvotes;
+
+				// Remove previous vote impact
+				if (previousVote === "up") newUpvotes--;
+				if (previousVote === "down") newDownvotes--;
+
+				// Add new vote impact
+				if (voteType === "up") newUpvotes++;
+				if (voteType === "down") newDownvotes++;
+
+				utils.strategies.marketplaceGetById.setData(
+					{ strategyId: mutatedId },
+					{
+						...previousData,
+						upvotes: newUpvotes,
+						downvotes: newDownvotes,
+						netVotes: newUpvotes - newDownvotes,
+						currentUserVote: voteType,
+					},
+				);
+			}
+
+			return { previousData };
 		},
-		onError: (error) => {
+		// If mutation fails, use context to roll back
+		onError: (error, _variables, context) => {
+			if (context?.previousData) {
+				utils.strategies.marketplaceGetById.setData(
+					{ strategyId },
+					context.previousData,
+				);
+			}
 			toast.error(error.message || "Failed to vote");
+		},
+		// Always refetch after error or success to ensure consistency
+		onSettled: () => {
+			utils.strategies.marketplaceGetById.invalidate({ strategyId });
 		},
 	});
 

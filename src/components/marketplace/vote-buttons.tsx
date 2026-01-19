@@ -88,6 +88,9 @@ export function VoteButtons({
 		undefined,
 	);
 
+	// Cooldown state to prevent rapid clicking (300ms between votes)
+	const [isCooldown, setIsCooldown] = useState(false);
+
 	const effectiveVote =
 		optimisticVote !== undefined ? optimisticVote : currentUserVote;
 	const netVotes = upvotes - downvotes;
@@ -98,7 +101,11 @@ export function VoteButtons({
 	const textSize = variant === "compact" ? "text-xs" : "text-sm";
 
 	const handleVote = (voteType: "up" | "down") => {
-		if (disabled || isLoading || !onVoteChange) return;
+		if (disabled || isLoading || isCooldown || !onVoteChange) return;
+
+		// Start cooldown
+		setIsCooldown(true);
+		setTimeout(() => setIsCooldown(false), 300);
 
 		// Optimistic update
 		const newVote = effectiveVote === voteType ? null : voteType;
@@ -125,7 +132,7 @@ export function VoteButtons({
 				disabled && "cursor-not-allowed opacity-50",
 			)}
 			data-testid="vote-button-up"
-			disabled={disabled || isLoading}
+			disabled={disabled || isLoading || isCooldown}
 			onClick={() => handleVote("up")}
 			size="sm"
 			variant="outline"
@@ -153,7 +160,7 @@ export function VoteButtons({
 				disabled && "cursor-not-allowed opacity-50",
 			)}
 			data-testid="vote-button-down"
-			disabled={disabled || isLoading}
+			disabled={disabled || isLoading || isCooldown}
 			onClick={() => handleVote("down")}
 			size="sm"
 			variant="outline"
