@@ -2,7 +2,7 @@
 
 import { Check, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { NullableNumberInput } from "@/components/ui/nullable-number-input";
 import {
 	Select,
 	SelectContent,
@@ -64,38 +64,38 @@ export function RiskParametersEditor({
 	// Position sizing state
 	const [positionSizingMethod, setPositionSizingMethod] =
 		useState<PositionSizingMethod>(initial.positionSizing?.method ?? "fixed");
-	const [fixedSize, setFixedSize] = useState<string>(
-		initial.positionSizing?.fixedSize?.toString() ?? "",
+	const [fixedSize, setFixedSize] = useState<number | null>(
+		initial.positionSizing?.fixedSize ?? null,
 	);
-	const [riskPercent, setRiskPercent] = useState<string>(
-		initial.positionSizing?.riskPercent?.toString() ?? "",
+	const [riskPercent, setRiskPercent] = useState<number | null>(
+		initial.positionSizing?.riskPercent ?? null,
 	);
-	const [kellyFraction, setKellyFraction] = useState<string>(
-		initial.positionSizing?.kellyFraction?.toString() ?? "",
+	const [kellyFraction, setKellyFraction] = useState<number | null>(
+		initial.positionSizing?.kellyFraction ?? null,
 	);
 
 	// Max risk per trade state
 	const [maxRiskType, setMaxRiskType] = useState<LimitType>(
 		initial.maxRiskPerTrade?.type ?? "dollars",
 	);
-	const [maxRiskValue, setMaxRiskValue] = useState<string>(
-		initial.maxRiskPerTrade?.value?.toString() ?? "",
+	const [maxRiskValue, setMaxRiskValue] = useState<number | null>(
+		initial.maxRiskPerTrade?.value ?? null,
 	);
 
 	// Daily loss limit state
 	const [dailyLossType, setDailyLossType] = useState<LimitType>(
 		initial.dailyLossLimit?.type ?? "dollars",
 	);
-	const [dailyLossValue, setDailyLossValue] = useState<string>(
-		initial.dailyLossLimit?.value?.toString() ?? "",
+	const [dailyLossValue, setDailyLossValue] = useState<number | null>(
+		initial.dailyLossLimit?.value ?? null,
 	);
 
 	// Other fields
-	const [maxConcurrentPositions, setMaxConcurrentPositions] = useState<string>(
-		initial.maxConcurrentPositions?.toString() ?? "",
-	);
-	const [minRRRatio, setMinRRRatio] = useState<string>(
-		initial.minRRRatio?.toString() ?? "",
+	const [maxConcurrentPositions, setMaxConcurrentPositions] = useState<
+		number | null
+	>(initial.maxConcurrentPositions ?? null);
+	const [minRRRatio, setMinRRRatio] = useState<number | null>(
+		initial.minRRRatio ?? null,
 	);
 
 	// Save status state
@@ -136,57 +136,42 @@ export function RiskParametersEditor({
 			const positionSizing: RiskParameters["positionSizing"] = {
 				method: positionSizingMethod,
 			};
-			if (
-				positionSizingMethod === "fixed" &&
-				fixedSize &&
-				!Number.isNaN(Number(fixedSize))
-			) {
-				positionSizing.fixedSize = Number(fixedSize);
+			if (positionSizingMethod === "fixed" && fixedSize !== null) {
+				positionSizing.fixedSize = fixedSize;
 			}
-			if (
-				positionSizingMethod === "risk_percent" &&
-				riskPercent &&
-				!Number.isNaN(Number(riskPercent))
-			) {
-				positionSizing.riskPercent = Number(riskPercent);
+			if (positionSizingMethod === "risk_percent" && riskPercent !== null) {
+				positionSizing.riskPercent = riskPercent;
 			}
-			if (
-				positionSizingMethod === "kelly" &&
-				kellyFraction &&
-				!Number.isNaN(Number(kellyFraction))
-			) {
-				positionSizing.kellyFraction = Number(kellyFraction);
+			if (positionSizingMethod === "kelly" && kellyFraction !== null) {
+				positionSizing.kellyFraction = kellyFraction;
 			}
 			params.positionSizing = positionSizing;
 		}
 
 		// Max risk per trade
-		if (maxRiskValue && !Number.isNaN(Number(maxRiskValue))) {
+		if (maxRiskValue !== null) {
 			params.maxRiskPerTrade = {
 				type: maxRiskType,
-				value: Number(maxRiskValue),
+				value: maxRiskValue,
 			};
 		}
 
 		// Daily loss limit
-		if (dailyLossValue && !Number.isNaN(Number(dailyLossValue))) {
+		if (dailyLossValue !== null) {
 			params.dailyLossLimit = {
 				type: dailyLossType,
-				value: Number(dailyLossValue),
+				value: dailyLossValue,
 			};
 		}
 
 		// Max concurrent positions
-		if (
-			maxConcurrentPositions &&
-			!Number.isNaN(Number(maxConcurrentPositions))
-		) {
-			params.maxConcurrentPositions = Number(maxConcurrentPositions);
+		if (maxConcurrentPositions !== null) {
+			params.maxConcurrentPositions = maxConcurrentPositions;
 		}
 
 		// Min R:R ratio
-		if (minRRRatio && !Number.isNaN(Number(minRRRatio))) {
-			params.minRRRatio = Number(minRRRatio);
+		if (minRRRatio !== null) {
+			params.minRRRatio = minRRRatio;
 		}
 
 		return params;
@@ -355,13 +340,13 @@ export function RiskParametersEditor({
 							>
 								Fixed Contracts/Lots
 							</label>
-							<Input
-								className="font-mono"
+							<NullableNumberInput
 								data-testid="risk-parameters-fixed-size"
 								id="fixed-size"
-								onChange={(e) => setFixedSize(e.target.value)}
+								label="Fixed Size"
+								min={0}
+								onChange={setFixedSize}
 								placeholder="e.g., 2"
-								type="number"
 								value={fixedSize}
 							/>
 						</div>
@@ -374,14 +359,15 @@ export function RiskParametersEditor({
 							>
 								Risk % of Account
 							</label>
-							<Input
-								className="font-mono"
+							<NullableNumberInput
 								data-testid="risk-parameters-risk-percent"
 								id="risk-percent"
-								onChange={(e) => setRiskPercent(e.target.value)}
+								label="Risk Percent"
+								max={100}
+								min={0}
+								onChange={setRiskPercent}
 								placeholder="e.g., 1.0"
 								step="0.1"
-								type="number"
 								value={riskPercent}
 							/>
 						</div>
@@ -394,14 +380,15 @@ export function RiskParametersEditor({
 							>
 								Kelly Fraction
 							</label>
-							<Input
-								className="font-mono"
+							<NullableNumberInput
 								data-testid="risk-parameters-kelly-fraction"
 								id="kelly-fraction"
-								onChange={(e) => setKellyFraction(e.target.value)}
+								label="Kelly Fraction"
+								max={1}
+								min={0}
+								onChange={setKellyFraction}
 								placeholder="e.g., 0.25"
 								step="0.05"
-								type="number"
 								value={kellyFraction}
 							/>
 						</div>
@@ -449,16 +436,17 @@ export function RiskParametersEditor({
 									))}
 								</SelectContent>
 							</Select>
-							<Input
-								className="flex-1 font-mono"
+							<NullableNumberInput
+								className="flex-1"
 								data-testid="risk-parameters-max-risk-value"
 								id="max-risk-value"
-								onChange={(e) => setMaxRiskValue(e.target.value)}
+								label="Max Risk"
+								min={0}
+								onChange={setMaxRiskValue}
 								placeholder={
 									maxRiskType === "dollars" ? "e.g., 100" : "e.g., 1"
 								}
 								step={maxRiskType === "dollars" ? "1" : "0.1"}
-								type="number"
 								value={maxRiskValue}
 							/>
 						</div>
@@ -495,16 +483,17 @@ export function RiskParametersEditor({
 									))}
 								</SelectContent>
 							</Select>
-							<Input
-								className="flex-1 font-mono"
+							<NullableNumberInput
+								className="flex-1"
 								data-testid="risk-parameters-daily-loss-value"
 								id="daily-loss-value"
-								onChange={(e) => setDailyLossValue(e.target.value)}
+								label="Daily Loss Limit"
+								min={0}
+								onChange={setDailyLossValue}
 								placeholder={
 									dailyLossType === "dollars" ? "e.g., 500" : "e.g., 2"
 								}
 								step={dailyLossType === "dollars" ? "1" : "0.1"}
-								type="number"
 								value={dailyLossValue}
 							/>
 						</div>
@@ -529,14 +518,13 @@ export function RiskParametersEditor({
 						>
 							Max Concurrent Positions
 						</label>
-						<Input
-							className="font-mono"
+						<NullableNumberInput
 							data-testid="risk-parameters-max-concurrent"
 							id="max-concurrent"
-							min="1"
-							onChange={(e) => setMaxConcurrentPositions(e.target.value)}
+							label="Max Concurrent Positions"
+							min={1}
+							onChange={setMaxConcurrentPositions}
 							placeholder="e.g., 3"
-							type="number"
 							value={maxConcurrentPositions}
 						/>
 					</div>
@@ -549,15 +537,14 @@ export function RiskParametersEditor({
 						>
 							Minimum R:R Ratio
 						</label>
-						<Input
-							className="font-mono"
+						<NullableNumberInput
 							data-testid="risk-parameters-min-rr"
 							id="min-rr-ratio"
-							min="0.1"
-							onChange={(e) => setMinRRRatio(e.target.value)}
+							label="Min R:R Ratio"
+							min={0.1}
+							onChange={setMinRRRatio}
 							placeholder="e.g., 2.0"
 							step="0.1"
-							type="number"
 							value={minRRRatio}
 						/>
 					</div>
