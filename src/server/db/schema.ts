@@ -683,6 +683,33 @@ export const strategyVotes = createTable(
 );
 
 // ============================================================================
+// STRATEGY DOWNLOADS TABLE (marketplace download tracking)
+// ============================================================================
+
+export const strategyDownloads = createTable(
+	"strategy_download",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.strategyDownload()),
+		strategyId: text("strategy_id")
+			.notNull()
+			.references(() => strategies.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		copiedStrategyId: text("copied_strategy_id"), // The user's copy of the strategy (if created)
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [
+		index("strategy_download_strategy_id_idx").on(t.strategyId),
+		index("strategy_download_user_id_idx").on(t.userId),
+	],
+);
+
+// ============================================================================
 // TRADE RULE CHECKS TABLE (junction: tracks which rules were checked per trade)
 // ============================================================================
 
@@ -869,6 +896,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	dailyJournals: many(dailyJournals),
 	dailyChecklistTemplates: many(dailyChecklistTemplates),
 	strategyVotes: many(strategyVotes),
+	strategyDownloads: many(strategyDownloads),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -1000,6 +1028,7 @@ export const strategiesRelations = relations(strategies, ({ one, many }) => ({
 	rules: many(strategyRules),
 	trades: many(trades),
 	votes: many(strategyVotes),
+	downloads: many(strategyDownloads),
 	// Self-referencing: source strategy for copied/downloaded strategies
 	sourceStrategy: one(strategies, {
 		fields: [strategies.sourceStrategyId],
@@ -1033,6 +1062,20 @@ export const strategyVotesRelations = relations(strategyVotes, ({ one }) => ({
 		references: [users.id],
 	}),
 }));
+
+export const strategyDownloadsRelations = relations(
+	strategyDownloads,
+	({ one }) => ({
+		strategy: one(strategies, {
+			fields: [strategyDownloads.strategyId],
+			references: [strategies.id],
+		}),
+		user: one(users, {
+			fields: [strategyDownloads.userId],
+			references: [users.id],
+		}),
+	}),
+);
 
 export const tradeRuleChecksRelations = relations(
 	tradeRuleChecks,
@@ -1137,3 +1180,5 @@ export type JournalAttachment = typeof journalAttachments.$inferSelect;
 export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
 export type StrategyVote = typeof strategyVotes.$inferSelect;
 export type NewStrategyVote = typeof strategyVotes.$inferInsert;
+export type StrategyDownload = typeof strategyDownloads.$inferSelect;
+export type NewStrategyDownload = typeof strategyDownloads.$inferInsert;
