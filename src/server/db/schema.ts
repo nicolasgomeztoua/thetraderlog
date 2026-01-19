@@ -578,6 +578,14 @@ export const strategies = createTable(
 		coverImageUrl: text("cover_image_url"), // Public URL of cover image
 		coverImageKey: text("cover_image_key"), // S3 object key for deletion
 
+		// Marketplace fields
+		isPublic: boolean("is_public").default(false), // Published to marketplace
+		isAnonymous: boolean("is_anonymous").default(false), // Hide author name
+		instruments: text("instruments"), // JSON array of tradeable instruments
+		categoryTags: text("category_tags"), // JSON array of strategy categories
+		sourceStrategyId: text("source_strategy_id"), // Self-ref FK - original strategy if copied
+		publishedAt: timestamp("published_at", { withTimezone: true }), // When first published
+
 		// Strategy documentation
 		entryCriteria: text("entry_criteria"), // Rich text for entry rules
 		exitRules: text("exit_rules"), // Rich text for exit rules
@@ -610,6 +618,8 @@ export const strategies = createTable(
 	(t) => [
 		index("strategy_user_id_idx").on(t.userId),
 		index("strategy_is_active_idx").on(t.isActive),
+		index("strategy_is_public_idx").on(t.isPublic),
+		index("strategy_source_strategy_id_idx").on(t.sourceStrategyId),
 	],
 );
 
@@ -957,6 +967,16 @@ export const strategiesRelations = relations(strategies, ({ one, many }) => ({
 	}),
 	rules: many(strategyRules),
 	trades: many(trades),
+	// Self-referencing: source strategy for copied/downloaded strategies
+	sourceStrategy: one(strategies, {
+		fields: [strategies.sourceStrategyId],
+		references: [strategies.id],
+		relationName: "strategySource",
+	}),
+	// Strategies that were copied from this one
+	derivedStrategies: many(strategies, {
+		relationName: "strategySource",
+	}),
 }));
 
 export const strategyRulesRelations = relations(
