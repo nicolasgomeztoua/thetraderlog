@@ -828,3 +828,22 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Character counters use cn() with conditional text-loss class when over limit
   - The ?? operator converts null to undefined for optional boolean props
 ---
+
+## 2026-01-19 - US-036 (E2E Tests for Strategy Detail Page)
+- **What was implemented:**
+  - Created tests/e2e/strategy-detail.spec.ts with 12 comprehensive E2E tests
+  - Tests for Strategy Detail Page: page loading, hero banner display, tab navigation, edit mode toggle, save status indicator
+  - Tests for Strategy Overview Tab: two-column layout, character counters, color picker swatches, color swatch selection, cover image section
+  - Navigation warning test marked as fixme (browser dialog testing is difficult)
+  - All tests use data-testid selectors per E2E testing skill guidelines
+
+- **Files changed:**
+  - `tests/e2e/strategy-detail.spec.ts` (new file - 490+ lines)
+
+- **Learnings for future iterations:**
+  - E2E tests should check for element counts > 0 before clicking cards that may not exist
+  - Use conditional checks with `.isVisible().catch(() => false)` for elements that may not always be present
+  - Tab aria-selected attribute is good for verifying tab selection state
+  - Character counters can be verified by checking the field container contains expected format like "18/100"
+  - Color swatch testid pattern: `strategy-color-swatch-{hex without #}` (e.g., d4ff00 for #d4ff00)
+---
