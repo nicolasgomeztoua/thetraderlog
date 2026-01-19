@@ -77,11 +77,31 @@ export function StrategyEditForm({
 		categoryTags: initialCategoryTags ?? [],
 	});
 
-	// tRPC autosave mutation
+	// tRPC autosave mutation with optimistic updates for color
 	const utils = api.useUtils();
+	const previousColorRef = useRef<string | null>(null);
+
 	const autosaveMutation = api.strategies.autosave.useMutation({
-		onMutate: () => {
+		onMutate: async (input) => {
 			setSaveStatus("saving");
+
+			// Only apply optimistic update if color is being changed
+			if (input.color !== undefined) {
+				// Cancel outgoing refetches to prevent overwriting optimistic update
+				await utils.strategies.getById.cancel({ id: strategyId });
+
+				// Snapshot current data for potential rollback
+				const previousData = utils.strategies.getById.getData({
+					id: strategyId,
+				});
+				previousColorRef.current = previousData?.color ?? null;
+
+				// Optimistically update the cache with new color
+				utils.strategies.getById.setData({ id: strategyId }, (old) => {
+					if (!old) return old;
+					return { ...old, color: input.color ?? old.color };
+				});
+			}
 		},
 		onSuccess: (data) => {
 			setSaveStatus("saved");
@@ -94,9 +114,22 @@ export function StrategyEditForm({
 				instruments,
 				categoryTags,
 			};
+			// Clear the previous color ref on success
+			previousColorRef.current = null;
 		},
-		onError: () => {
+		onError: (_err, input) => {
 			setSaveStatus("error");
+
+			// Revert optimistic color update if color was changed
+			if (input.color !== undefined && previousColorRef.current !== null) {
+				utils.strategies.getById.setData({ id: strategyId }, (old) => {
+					if (!old) return old;
+					return { ...old, color: previousColorRef.current };
+				});
+				// Also revert local state
+				setColor(previousColorRef.current);
+			}
+			previousColorRef.current = null;
 		},
 		onSettled: () => {
 			// Invalidate strategy query to keep cache in sync
