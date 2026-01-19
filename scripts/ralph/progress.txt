@@ -551,3 +551,44 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - For conflict resolution, update clientUpdatedAtRef to server's timestamp before re-saving
   - Use Object.assign for dynamic key assignment to avoid TypeScript partial type issues
 ---
+
+## 2026-01-19 - US-025 (Add Navigation Blocking for Unsaved Changes)
+- **What was implemented:**
+  - Created `src/hooks/use-unsaved-changes-warning.ts` to warn users before leaving pages with unsaved changes
+  - Handles hard navigation (refresh, close tab, external link) via `beforeunload` event
+  - Handles soft navigation (Next.js App Router links) via click interception on anchor elements
+  - Handles browser back/forward buttons via `popstate` event with history.pushState bounce
+  - Uses browser `confirm()` dialog per acceptance criteria
+  - Tracks isDirty in refs to avoid stale closure issues in event handlers
+
+- **Files changed:**
+  - `src/hooks/use-unsaved-changes-warning.ts` (new file)
+
+- **Learnings for future iterations:**
+  - Next.js App Router doesn't expose router events like Pages Router did
+  - For soft navigation blocking, intercept clicks on anchor elements using document event listener with capture phase
+  - Use refs to track state in event handlers to avoid stale closure issues
+  - For back/forward button blocking, use popstate + history.pushState to create a "bounce" effect
+  - Custom beforeunload messages are ignored by most modern browsers for security
+---
+
+## 2026-01-19 - US-026 (Create Save Status Indicator Component)
+- **What was implemented:**
+  - Created `src/components/strategy/save-status-indicator.tsx` - a reusable save status indicator
+  - State idle: hidden (null render)
+  - State saving: 'Saving...' with Loader2Icon spinner in text-muted-foreground
+  - State saved: 'Saved' with CheckCircleIcon in text-profit (chartreuse green)
+  - State error: 'Save failed' with AlertCircleIcon in text-loss + Retry button
+  - State conflict: 'Conflict detected' with AlertTriangleIcon in text-breakeven (gold) + 'View Changes' button
+  - Terminal design: monospace font, small unobtrusive design
+  - Props: status, onRetry?, onViewConflict?, className?
+  - Added data-testid="save-status-indicator" for E2E testing
+
+- **Files changed:**
+  - `src/components/strategy/save-status-indicator.tsx` (new file)
+
+- **Learnings for future iterations:**
+  - Use text-breakeven for warning states (gold/yellow) - no text-warning color defined in design system
+  - Import cn from @/lib/shared, not @/lib/utils
+  - Based on journal-editor.tsx save status pattern but extracted as reusable component
+---

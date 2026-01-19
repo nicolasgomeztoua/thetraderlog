@@ -499,8 +499,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 26,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created src/hooks/use-unsaved-changes-warning.ts with beforeunload handler for hard navigation, click interception for soft navigation (Next.js App Router links), and popstate handler for browser back/forward buttons. Uses browser confirm() for dialog."
     },
     {
       "id": "US-026",
@@ -521,8 +521,8 @@
         "Verify in browser"
       ],
       "priority": 27,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created src/components/strategy/save-status-indicator.tsx with states: idle (hidden), saving (Loader2Icon + 'Saving...'), saved (CheckCircleIcon in text-profit + 'Saved'), error (AlertCircleIcon in text-loss + 'Save failed' + retry button), conflict (AlertTriangleIcon in text-breakeven + 'Conflict detected' + 'View Changes' button). Uses Terminal design with monospace font."
     },
     {
       "id": "US-027",
