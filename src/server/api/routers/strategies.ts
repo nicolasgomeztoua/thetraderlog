@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { env } from "@/env";
@@ -1454,5 +1454,156 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			return newStrategy;
+		}),
+
+	// =============================================================================
+	// MARKETPLACE DISCOVERY ENDPOINTS
+	// =============================================================================
+
+	/**
+	 * List marketplace strategies with search, filtering, sorting, and pagination.
+	 * Returns public strategies with aggregated vote/download counts.
+	 */
+	marketplaceList: protectedProcedure
+		.input(
+			z.object({
+				search: z.string().optional(),
+				instruments: z.array(z.string()).optional(),
+				categories: z.array(z.string()).optional(),
+				sortBy: z
+					.enum(["votes", "downloads", "newest", "updated"])
+					.default("votes"),
+				cursor: z.string().optional(), // Format: "sortValue:id"
+				limit: z.number().min(1).max(50).default(20),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			// Build base conditions
+			const conditions = [eq(strategies.isPublic, true)];
+
+			// Search filter (name or description)
+			if (input.search?.trim()) {
+				conditions.push(
+					or(
+						ilike(strategies.name, `%${input.search}%`),
+						ilike(strategies.description, `%${input.search}%`),
+					) ?? sql`true`,
+				);
+			}
+
+			// Get all public strategies matching filters
+			const publicStrategies = await ctx.db.query.strategies.findMany({
+				where: and(...conditions),
+				with: {
+					user: {
+						columns: {
+							id: true,
+							name: true,
+						},
+					},
+					votes: true,
+					downloads: true,
+				},
+			});
+
+			// Filter by instruments and categories (stored as JSON arrays)
+			let filteredStrategies = publicStrategies;
+
+			if (input.instruments && input.instruments.length > 0) {
+				filteredStrategies = filteredStrategies.filter((s) => {
+					if (!s.instruments) return false;
+					const strategyInstruments = JSON.parse(s.instruments) as string[];
+					return input.instruments?.some((i) =>
+						strategyInstruments.includes(i),
+					);
+				});
+			}
+
+			if (input.categories && input.categories.length > 0) {
+				filteredStrategies = filteredStrategies.filter((s) => {
+					if (!s.categoryTags) return false;
+					const strategyCategories = JSON.parse(s.categoryTags) as string[];
+					return input.categories?.some((c) => strategyCategories.includes(c));
+				});
+			}
+
+			// Calculate aggregates and add metadata
+			const strategiesWithStats = filteredStrategies.map((s) => {
+				const upvotes = s.votes.filter((v) => v.voteType === "up").length;
+				const downvotes = s.votes.filter((v) => v.voteType === "down").length;
+				const netVotes = upvotes - downvotes;
+				const downloadCount = s.downloads.length;
+				const userVote = s.votes.find((v) => v.userId === ctx.user.id);
+
+				return {
+					id: s.id,
+					name: s.name,
+					description: s.description,
+					color: s.color,
+					coverImageUrl: s.coverImageUrl,
+					instruments: s.instruments ? JSON.parse(s.instruments) : [],
+					categoryTags: s.categoryTags ? JSON.parse(s.categoryTags) : [],
+					publishedAt: s.publishedAt,
+					updatedAt: s.updatedAt,
+					authorId: s.userId,
+					authorName: s.isAnonymous ? "Anonymous" : (s.user?.name ?? "Unknown"),
+					isAnonymous: s.isAnonymous,
+					upvotes,
+					downvotes,
+					netVotes,
+					downloadCount,
+					currentUserVote: userVote?.voteType ?? null,
+				};
+			});
+
+			// Sort
+			type StrategyWithStats = (typeof strategiesWithStats)[number];
+			const sortFn = (a: StrategyWithStats, b: StrategyWithStats) => {
+				switch (input.sortBy) {
+					case "votes":
+						return b.netVotes - a.netVotes;
+					case "downloads":
+						return b.downloadCount - a.downloadCount;
+					case "newest":
+						return (
+							(b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0)
+						);
+					case "updated":
+						return (
+							(b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0)
+						);
+					default:
+						return 0;
+				}
+			};
+
+			strategiesWithStats.sort(sortFn);
+
+			// Apply cursor pagination
+			let startIndex = 0;
+			if (input.cursor) {
+				const cursorIndex = strategiesWithStats.findIndex(
+					(s) => s.id === input.cursor,
+				);
+				if (cursorIndex !== -1) {
+					startIndex = cursorIndex + 1;
+				}
+			}
+
+			const paginatedStrategies = strategiesWithStats.slice(
+				startIndex,
+				startIndex + input.limit,
+			);
+
+			// Determine next cursor
+			const hasMore = startIndex + input.limit < strategiesWithStats.length;
+			const nextCursor = hasMore
+				? paginatedStrategies[paginatedStrategies.length - 1]?.id
+				: undefined;
+
+			return {
+				strategies: paginatedStrategies,
+				nextCursor,
+			};
 		}),
 });

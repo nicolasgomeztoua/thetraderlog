@@ -426,3 +426,26 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Vote toggle pattern: same type = delete, different type = update, new = insert
   - Filter votes in memory for count calculation (simpler than count queries)
 ---
+
+## 2026-01-19 - US-019 (Add Strategy Download/Copy Endpoint)
+- **What was implemented:**
+  - Added `download` mutation to strategies router
+  - Input: { strategyId }
+  - Validates strategy is public
+  - Prevents downloading own strategies ("You already own this strategy")
+  - Idempotent: returns existing copy if already downloaded (checks sourceStrategyId)
+  - Creates full copy with name + ' (Copy)'
+  - Copies all fields including rules
+  - Sets sourceStrategyId to original
+  - Copies coverImageUrl (reference same image, don't copy coverImageKey)
+  - Sets isPublic=false, clears publishedAt/instruments/categoryTags
+  - Creates strategyDownloads record
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added strategyDownloads import, added download mutation)
+
+- **Learnings for future iterations:**
+  - Idempotent download: check sourceStrategyId + userId to find existing copy
+  - Don't copy coverImageKey when copying coverImageUrl - we don't own the S3 object
+  - Clear marketplace fields when copying to user's collection
+---
