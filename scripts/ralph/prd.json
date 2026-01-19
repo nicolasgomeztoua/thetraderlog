@@ -340,8 +340,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Added unpublish mutation that sets isPublic=false while keeping instruments, categoryTags, and publishedAt intact."
     },
     {
       "id": "US-018",

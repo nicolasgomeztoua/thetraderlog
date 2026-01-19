@@ -21,6 +21,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
 	strategies,
 	strategyRules,
+	strategyVotes,
 	tradeRuleChecks,
 	trades,
 } from "@/server/db/schema";
@@ -1266,5 +1267,95 @@ export const strategiesRouter = createTRPCRouter({
 				.returning();
 
 			return updated;
+		}),
+
+	/**
+	 * Vote on a marketplace strategy.
+	 * Supports upvote, downvote, or removing a vote.
+	 */
+	vote: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				voteType: z.enum(["up", "down"]).nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Get the strategy to validate it's public and not owned by the user
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: eq(strategies.id, input.strategyId),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			if (!strategy.isPublic) {
+				throw new Error("Cannot vote on a private strategy");
+			}
+
+			if (strategy.userId === ctx.user.id) {
+				throw new Error("Cannot vote on your own strategy");
+			}
+
+			// Get existing vote if any
+			const existingVote = await ctx.db.query.strategyVotes.findFirst({
+				where: and(
+					eq(strategyVotes.strategyId, input.strategyId),
+					eq(strategyVotes.userId, ctx.user.id),
+				),
+			});
+
+			// Handle vote removal (null)
+			if (input.voteType === null) {
+				if (existingVote) {
+					await ctx.db
+						.delete(strategyVotes)
+						.where(eq(strategyVotes.id, existingVote.id));
+				}
+			}
+			// Handle same vote type -> toggle off
+			else if (existingVote?.voteType === input.voteType) {
+				await ctx.db
+					.delete(strategyVotes)
+					.where(eq(strategyVotes.id, existingVote.id));
+			}
+			// Handle different vote type or new vote -> upsert
+			else if (existingVote) {
+				await ctx.db
+					.update(strategyVotes)
+					.set({ voteType: input.voteType })
+					.where(eq(strategyVotes.id, existingVote.id));
+			} else {
+				await ctx.db.insert(strategyVotes).values({
+					strategyId: input.strategyId,
+					userId: ctx.user.id,
+					voteType: input.voteType,
+				});
+			}
+
+			// Calculate and return vote counts
+			const votes = await ctx.db.query.strategyVotes.findMany({
+				where: eq(strategyVotes.strategyId, input.strategyId),
+			});
+
+			const upvotes = votes.filter((v) => v.voteType === "up").length;
+			const downvotes = votes.filter((v) => v.voteType === "down").length;
+			const netVotes = upvotes - downvotes;
+
+			// Get current user's vote
+			const userVote = await ctx.db.query.strategyVotes.findFirst({
+				where: and(
+					eq(strategyVotes.strategyId, input.strategyId),
+					eq(strategyVotes.userId, ctx.user.id),
+				),
+			});
+
+			return {
+				upvotes,
+				downvotes,
+				netVotes,
+				userVote: userVote?.voteType ?? null,
+			};
 		}),
 });

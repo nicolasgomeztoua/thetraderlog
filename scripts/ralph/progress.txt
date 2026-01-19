@@ -391,3 +391,18 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Use zod .min(1, "message") for required array validation
   - Store arrays as JSON strings in text columns
 ---
+
+## 2026-01-19 - US-017 (Add Strategy Unpublish Endpoint)
+- **What was implemented:**
+  - Added `unpublish` mutation to strategies router
+  - Input: { strategyId }
+  - Validates user owns the strategy
+  - Sets isPublic = false
+  - Keeps instruments, categoryTags, publishedAt intact for easy re-publishing
+
+- **Files changed:**
+  - `src/server/api/routers/strategies.ts` (added unpublish mutation)
+
+- **Learnings for future iterations:**
+  - Unpublish is simple: just flip isPublic flag, preserve metadata for re-publishing
+---
