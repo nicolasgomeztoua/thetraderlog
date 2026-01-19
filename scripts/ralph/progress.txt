@@ -592,3 +592,28 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Import cn from @/lib/shared, not @/lib/utils
   - Based on journal-editor.tsx save status pattern but extracted as reusable component
 ---
+
+## 2026-01-19 - US-027 (Create Conflict Resolution Dialog)
+- **What was implemented:**
+  - Created `src/components/strategy/conflict-dialog.tsx` - modal for resolving auto-save conflicts
+  - Modal header: 'Changes Conflict' with AlertTriangleIcon in breakeven color
+  - Explanation text about concurrent edits in secondary panel
+  - Two-column diff view: 'Your Version' vs 'Server Version' for each changed field
+  - Color-coded badges: 'Conflict' (breakeven), 'Your change' (primary), 'Server change' (ice-blue)
+  - Timestamps showing server version save time
+  - Three actions: 'Keep My Changes' (primary), 'Use Server Version' (secondary), 'Cancel' (outline)
+  - Terminal design: monospace font, dark theme, data-dense layout
+  - Added data-testid attributes: conflict-dialog, conflict-dialog-title, conflict-dialog-diff, conflict-dialog-cancel, conflict-dialog-accept-server, conflict-dialog-keep-local
+  - Helper functions: formatValueForDisplay (truncate long strings, format objects/arrays), getFieldLabel (human-readable labels), valuesAreDifferent (JSON comparison)
+  - Field order sorting by importance (name, description, color, criteria, rules)
+
+- **Files changed:**
+  - `src/components/strategy/conflict-dialog.tsx` (new file - 424 lines)
+
+- **Learnings for future iterations:**
+  - StrategyFormData type uses Omit<AutosaveInput, "id" | "clientUpdatedAt"> - does not include updatedAt
+  - Field names in schema: riskParameters (not riskConfig), scalingRules (not scalingConfig), trailingRules (not trailingConfig)
+  - ServerVersion from conflict includes extra fields (updatedAt, id, userId, createdAt) that need filtering
+  - Use text-ice-blue for server/AI-related accents (ice-blue is defined as #00d4ff in design system)
+  - For diff components, show values with ring-1 highlight and color-coded badges
+---
