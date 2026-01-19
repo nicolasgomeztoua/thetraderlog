@@ -21,6 +21,7 @@ export const ids = {
 	message: () => createId("mg"),
 	strategy: () => createId("sy"),
 	strategyRule: () => createId("sr"),
+	strategyVote: () => createId("sv"),
 	candleCache: () => createId("cc"),
 	dailyJournal: () => createId("dj"),
 	checklistTemplate: () => createId("ct"),
