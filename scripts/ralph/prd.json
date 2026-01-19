@@ -1061,8 +1061,8 @@
         "Verify in browser"
       ],
       "priority": 51,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Redesigned StrategyCard with cover image at top (h-28/h-32), gradient fallback using strategy color, name with color bar accent, stats row (trades/win rate/rules) centered, hover effects (scale 1.02, shadow, image zoom), actions menu on cover with backdrop blur, Inactive badge on cover."
     },
     {
       "id": "US-051",

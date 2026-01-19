@@ -1189,3 +1189,34 @@ Started: Mon Jan 19 21:08:27 WET 2026
   - Downloaded strategies from getDownloaded don't have _count or rules, need to construct a compatible shape for StrategyCard
   - Use separate query for downloaded strategies to get sourceStrategy relation data
 ---
+
+## 2026-01-19 - US-050 (Redesign Strategy Card with Cover Image)
+- **What was implemented:**
+  - Redesigned StrategyCard component with new visual structure:
+    - Cover image at top (h-28/h-32 responsive) with Next.js Image component
+    - Gradient fallback using strategy color (135deg diagonal)
+    - Gradient overlay from bottom for text visibility
+    - Strategy name in content area with color bar accent
+    - Description truncated to 2 lines
+    - Stats row with centered trades/win rate/rules
+  - Hover effects:
+    - Card scale 1.02 with shadow
+    - Border color change to primary/30
+    - Cover image zoom (scale 1.05)
+  - Actions menu positioned on cover with backdrop blur
+  - Inactive badge on cover for inactive strategies
+  - Total P&L section below stats when available
+  - Added coverImageUrl to strategy props interface
+
+- **Files changed:**
+  - `src/components/strategy/strategy-card.tsx` (major rewrite)
+  - `src/app/(protected)/strategies/page.tsx` (added coverImageUrl to downloaded strategy card)
+
+- **Data-testid attributes added:**
+  - strategy-card
+
+- **Learnings for future iterations:**
+  - Use Next.js Image component with fill prop and sizes attribute for responsive images
+  - Backdrop blur with bg-black/40 creates nice floating button effect on images
+  - Group hover with transition-transform creates smooth coordinated animations
+---
