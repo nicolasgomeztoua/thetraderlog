@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -58,11 +59,29 @@ function ThemeMenuItem({
 
 export function ThemeSelector() {
 	const { theme, setTheme } = useTheme();
+	const [mounted, setMounted] = useState(false);
+
+	// Prevent hydration mismatch with Radix UI dropdown IDs
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
 	const currentTheme =
 		darkThemes.find((t) => t.id === theme) ||
 		lightThemes.find((t) => t.id === theme);
 	const isDark = currentTheme?.isDark ?? true;
+
+	if (!mounted) {
+		return (
+			<SidebarMenuButton
+				className="font-mono text-xs uppercase tracking-wider"
+				disabled
+			>
+				<Moon className="h-4 w-4" />
+				<span>Theme</span>
+			</SidebarMenuButton>
+		);
+	}
 
 	return (
 		<DropdownMenu>

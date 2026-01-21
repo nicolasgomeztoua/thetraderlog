@@ -114,6 +114,9 @@ export function useStrategyAutosave({
 	// Track if component is mounted
 	const isMountedRef = useRef(true);
 
+	// Track previous initialData for stable comparison (prevents infinite loop)
+	const prevInitialDataRef = useRef<string>(JSON.stringify(initialData));
+
 	// Check if data has changed from last saved version
 	const hasDataChanged = useCallback(
 		(current: StrategyFormData, saved: StrategyFormData): boolean => {
@@ -337,17 +340,33 @@ export function useStrategyAutosave({
 	}, []);
 
 	// Sync with external initial data changes (e.g., after refetch)
+	// Note: We compute isDirty inside the effect instead of using the derived value
+	// to prevent infinite loops (setFormData -> formData changes -> isDirty changes -> effect runs)
 	useEffect(() => {
-		// Only sync if we're not dirty and not in conflict
-		if (!isDirty && saveStatus !== "conflict") {
-			const { updatedAt, ...formFields } = initialData;
-			setFormData(formFields as StrategyFormData);
-			lastSavedDataRef.current = formFields as StrategyFormData;
-			clientUpdatedAtRef.current = updatedAt
-				? new Date(updatedAt).toISOString()
-				: new Date().toISOString();
+		const currentInitialDataJson = JSON.stringify(initialData);
+
+		// Only sync if initialData actually changed (not just reference)
+		if (prevInitialDataRef.current === currentInitialDataJson) {
+			return;
 		}
-	}, [initialData, isDirty, saveStatus]);
+
+		// Don't sync if we have local changes or are in conflict
+		const currentIsDirty = hasDataChanged(formData, lastSavedDataRef.current);
+		if (currentIsDirty || saveStatus === "conflict") {
+			return;
+		}
+
+		// Sync with new initialData
+		const { updatedAt, ...formFields } = initialData;
+		setFormData(formFields as StrategyFormData);
+		lastSavedDataRef.current = formFields as StrategyFormData;
+		clientUpdatedAtRef.current = updatedAt
+			? new Date(updatedAt).toISOString()
+			: new Date().toISOString();
+
+		// Update ref after successful sync
+		prevInitialDataRef.current = currentInitialDataJson;
+	}, [initialData, saveStatus, hasDataChanged, formData]);
 
 	return {
 		formData,

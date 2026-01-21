@@ -1162,8 +1162,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 57,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed - Created marketplace-edge-cases.test.ts with 10 tests covering: idempotent downloads (3 tests), deleted strategy behavior (3 tests), unpublished strategy behavior (4 tests). Tests verify copied strategies remain functional after source deletion/unpublishing. Tests require Docker/Testcontainers to run."
     }
   ]
 }

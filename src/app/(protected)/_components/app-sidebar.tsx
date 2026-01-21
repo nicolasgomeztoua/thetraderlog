@@ -148,225 +148,245 @@ export function AppSidebar() {
 				</Link>
 
 				{/* Account Selector */}
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<button
-							className="flex min-h-[44px] w-full items-center gap-2 rounded border border-border bg-secondary/50 px-3 py-2.5 text-left font-mono text-xs transition-colors hover:border-border hover:bg-secondary"
-							type="button"
-						>
-							{isLoading ? (
-								<div className="flex items-center gap-2">
-									<div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground/50" />
-									<span className="text-muted-foreground uppercase tracking-wider">
-										Loading...
-									</span>
-								</div>
-							) : selectedAccount ? (
-								<>
-									<div
-										className={cn(
-											"h-2 w-2 rounded-full",
-											ACCOUNT_TYPE_COLORS[selectedAccount.accountType],
-										)}
-									/>
-									<div className="flex-1 truncate">
-										<span className="font-medium uppercase tracking-wider">
-											{selectedAccount.name}
+				{mounted ? (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button
+								className="flex min-h-[44px] w-full items-center gap-2 rounded border border-border bg-secondary/50 px-3 py-2.5 text-left font-mono text-xs transition-colors hover:border-border hover:bg-secondary"
+								type="button"
+							>
+								{isLoading ? (
+									<div className="flex items-center gap-2">
+										<div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground/50" />
+										<span className="text-muted-foreground uppercase tracking-wider">
+											Loading...
 										</span>
-										{selectedAccount.accountType.startsWith("prop_") && (
-											<span className="ml-1 text-muted-foreground">
-												({ACCOUNT_TYPE_LABELS[selectedAccount.accountType]})
-											</span>
-										)}
 									</div>
-									<ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-								</>
-							) : (
-								<>
-									<Wallet className="h-3 w-3 text-muted-foreground" />
-									<span className="text-muted-foreground uppercase tracking-wider">
-										No account
-									</span>
-									<ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-								</>
-							)}
-						</button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						align="start"
-						className="w-(--radix-dropdown-menu-trigger-width) min-w-[240px]"
-					>
-						{accounts.length === 0 ? (
-							<DropdownMenuItem asChild className="min-h-[44px] py-3">
-								<Link
-									className="flex items-center gap-2 font-mono text-xs"
-									href="/settings?tab=accounts"
-								>
-									<PlusCircle className="h-4 w-4" />
-									Create your first account
-								</Link>
-							</DropdownMenuItem>
-						) : (
-							<>
-								{/* Groups with accounts */}
-								{groups.map((group) => {
-									const groupAccounts = groupedAccounts[group.id] || [];
-									if (groupAccounts.length === 0) return null;
-
-									return (
-										<div key={group.id}>
-											<DropdownMenuLabel className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-												<FolderOpen className="h-3 w-3" />
-												{group.name}
-											</DropdownMenuLabel>
-											{groupAccounts.map((account) => (
-												<DropdownMenuItem
-													className="flex min-h-[44px] items-center gap-2 py-2.5 pl-6 font-mono text-xs"
-													key={account.id}
-													onClick={() => {
-														setSelectedAccountId(account.id);
-														router.push("/dashboard");
-													}}
-												>
-													<div
-														className={cn(
-															"h-2 w-2 rounded-full",
-															ACCOUNT_TYPE_COLORS[account.accountType],
-														)}
-													/>
-													<div className="flex-1 truncate">
-														<span>{account.name}</span>
-														{account.accountType === "prop_challenge" &&
-															account.challengeStatus && (
-																<span
-																	className={cn(
-																		"ml-1 text-[10px]",
-																		account.challengeStatus === "passed" &&
-																			"text-green-500",
-																		account.challengeStatus === "failed" &&
-																			"text-red-500",
-																		account.challengeStatus === "active" &&
-																			"text-amber-500",
-																	)}
-																>
-																	({account.challengeStatus})
-																</span>
-															)}
-													</div>
-													{selectedAccount?.id === account.id && (
-														<Check className="h-4 w-4 text-primary" />
-													)}
-												</DropdownMenuItem>
-											))}
-										</div>
-									);
-								})}
-
-								{/* Ungrouped accounts */}
-								{groupedAccounts.ungrouped &&
-									groupedAccounts.ungrouped.length > 0 && (
-										<>
-											{groups.length > 0 && <DropdownMenuSeparator />}
-											{groups.length > 0 && (
-												<DropdownMenuLabel className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-													Ungrouped
-												</DropdownMenuLabel>
+								) : selectedAccount ? (
+									<>
+										<div
+											className={cn(
+												"h-2 w-2 rounded-full",
+												ACCOUNT_TYPE_COLORS[selectedAccount.accountType],
 											)}
-											{groupedAccounts.ungrouped.map((account) => (
-												<DropdownMenuItem
-													className={cn(
-														"flex min-h-[44px] items-center gap-2 py-2.5 font-mono text-xs",
-														groups.length > 0 && "pl-6",
-													)}
-													key={account.id}
-													onClick={() => {
-														setSelectedAccountId(account.id);
-														router.push("/dashboard");
-													}}
-												>
-													<div
-														className={cn(
-															"h-2 w-2 rounded-full",
-															ACCOUNT_TYPE_COLORS[account.accountType],
-														)}
-													/>
-													<div className="flex-1 truncate">
-														<span>{account.name}</span>
-														{account.accountType === "prop_challenge" &&
-															account.challengeStatus && (
-																<span
-																	className={cn(
-																		"ml-1 text-[10px]",
-																		account.challengeStatus === "passed" &&
-																			"text-green-500",
-																		account.challengeStatus === "failed" &&
-																			"text-red-500",
-																		account.challengeStatus === "active" &&
-																			"text-amber-500",
-																	)}
-																>
-																	({account.challengeStatus})
-																</span>
-															)}
-													</div>
-													{selectedAccount?.id === account.id && (
-														<Check className="h-4 w-4 text-primary" />
-													)}
-												</DropdownMenuItem>
-											))}
-										</>
-									)}
-
-								<DropdownMenuSeparator />
-								<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
+										/>
+										<div className="flex-1 truncate">
+											<span className="font-medium uppercase tracking-wider">
+												{selectedAccount.name}
+											</span>
+											{selectedAccount.accountType.startsWith("prop_") && (
+												<span className="ml-1 text-muted-foreground">
+													({ACCOUNT_TYPE_LABELS[selectedAccount.accountType]})
+												</span>
+											)}
+										</div>
+										<ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+									</>
+								) : (
+									<>
+										<Wallet className="h-3 w-3 text-muted-foreground" />
+										<span className="text-muted-foreground uppercase tracking-wider">
+											No account
+										</span>
+										<ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+									</>
+								)}
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							align="start"
+							className="w-(--radix-dropdown-menu-trigger-width) min-w-[240px]"
+						>
+							{accounts.length === 0 ? (
+								<DropdownMenuItem asChild className="min-h-[44px] py-3">
 									<Link
 										className="flex items-center gap-2 font-mono text-xs"
 										href="/settings?tab=accounts"
 									>
-										<Settings className="h-4 w-4" />
-										Manage accounts
+										<PlusCircle className="h-4 w-4" />
+										Create your first account
 									</Link>
 								</DropdownMenuItem>
-							</>
-						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
+							) : (
+								<>
+									{/* Groups with accounts */}
+									{groups.map((group) => {
+										const groupAccounts = groupedAccounts[group.id] || [];
+										if (groupAccounts.length === 0) return null;
+
+										return (
+											<div key={group.id}>
+												<DropdownMenuLabel className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+													<FolderOpen className="h-3 w-3" />
+													{group.name}
+												</DropdownMenuLabel>
+												{groupAccounts.map((account) => (
+													<DropdownMenuItem
+														className="flex min-h-[44px] items-center gap-2 py-2.5 pl-6 font-mono text-xs"
+														key={account.id}
+														onClick={() => {
+															setSelectedAccountId(account.id);
+															router.push("/dashboard");
+														}}
+													>
+														<div
+															className={cn(
+																"h-2 w-2 rounded-full",
+																ACCOUNT_TYPE_COLORS[account.accountType],
+															)}
+														/>
+														<div className="flex-1 truncate">
+															<span>{account.name}</span>
+															{account.accountType === "prop_challenge" &&
+																account.challengeStatus && (
+																	<span
+																		className={cn(
+																			"ml-1 text-[10px]",
+																			account.challengeStatus === "passed" &&
+																				"text-green-500",
+																			account.challengeStatus === "failed" &&
+																				"text-red-500",
+																			account.challengeStatus === "active" &&
+																				"text-amber-500",
+																		)}
+																	>
+																		({account.challengeStatus})
+																	</span>
+																)}
+														</div>
+														{selectedAccount?.id === account.id && (
+															<Check className="h-4 w-4 text-primary" />
+														)}
+													</DropdownMenuItem>
+												))}
+											</div>
+										);
+									})}
+
+									{/* Ungrouped accounts */}
+									{groupedAccounts.ungrouped &&
+										groupedAccounts.ungrouped.length > 0 && (
+											<>
+												{groups.length > 0 && <DropdownMenuSeparator />}
+												{groups.length > 0 && (
+													<DropdownMenuLabel className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+														Ungrouped
+													</DropdownMenuLabel>
+												)}
+												{groupedAccounts.ungrouped.map((account) => (
+													<DropdownMenuItem
+														className={cn(
+															"flex min-h-[44px] items-center gap-2 py-2.5 font-mono text-xs",
+															groups.length > 0 && "pl-6",
+														)}
+														key={account.id}
+														onClick={() => {
+															setSelectedAccountId(account.id);
+															router.push("/dashboard");
+														}}
+													>
+														<div
+															className={cn(
+																"h-2 w-2 rounded-full",
+																ACCOUNT_TYPE_COLORS[account.accountType],
+															)}
+														/>
+														<div className="flex-1 truncate">
+															<span>{account.name}</span>
+															{account.accountType === "prop_challenge" &&
+																account.challengeStatus && (
+																	<span
+																		className={cn(
+																			"ml-1 text-[10px]",
+																			account.challengeStatus === "passed" &&
+																				"text-green-500",
+																			account.challengeStatus === "failed" &&
+																				"text-red-500",
+																			account.challengeStatus === "active" &&
+																				"text-amber-500",
+																		)}
+																	>
+																		({account.challengeStatus})
+																	</span>
+																)}
+														</div>
+														{selectedAccount?.id === account.id && (
+															<Check className="h-4 w-4 text-primary" />
+														)}
+													</DropdownMenuItem>
+												))}
+											</>
+										)}
+
+									<DropdownMenuSeparator />
+									<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
+										<Link
+											className="flex items-center gap-2 font-mono text-xs"
+											href="/settings?tab=accounts"
+										>
+											<Settings className="h-4 w-4" />
+											Manage accounts
+										</Link>
+									</DropdownMenuItem>
+								</>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				) : (
+					<div className="flex min-h-[44px] w-full items-center gap-2 rounded border border-border bg-secondary/50 px-3 py-2.5">
+						<div className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground/50" />
+						<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+							Loading...
+						</span>
+					</div>
+				)}
 
 				{/* Add Trade Dropdown */}
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button
-							className="mt-3 w-full font-mono text-xs uppercase tracking-wider"
-							size="sm"
+				{mounted ? (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								className="mt-3 w-full font-mono text-xs uppercase tracking-wider"
+								size="sm"
+							>
+								<Plus className="mr-2 h-4 w-4" />
+								Add Trade
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							align="start"
+							className="w-(--radix-dropdown-menu-trigger-width) min-w-[200px]"
 						>
-							<Plus className="mr-2 h-4 w-4" />
-							Add Trade
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						align="start"
-						className="w-(--radix-dropdown-menu-trigger-width) min-w-[200px]"
+							<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
+								<Link
+									className="flex items-center gap-2 font-mono text-xs"
+									href="/trade/new"
+								>
+									<Plus className="h-4 w-4" />
+									Log Trade
+								</Link>
+							</DropdownMenuItem>
+							<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
+								<Link
+									className="flex items-center gap-2 font-mono text-xs"
+									href="/import"
+								>
+									<FileSpreadsheet className="h-4 w-4" />
+									Import CSV
+								</Link>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				) : (
+					<Button
+						className="mt-3 w-full font-mono text-xs uppercase tracking-wider"
+						disabled
+						size="sm"
 					>
-						<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
-							<Link
-								className="flex items-center gap-2 font-mono text-xs"
-								href="/trade/new"
-							>
-								<Plus className="h-4 w-4" />
-								Log Trade
-							</Link>
-						</DropdownMenuItem>
-						<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
-							<Link
-								className="flex items-center gap-2 font-mono text-xs"
-								href="/import"
-							>
-								<FileSpreadsheet className="h-4 w-4" />
-								Import CSV
-							</Link>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+						<Plus className="mr-2 h-4 w-4" />
+						Add Trade
+					</Button>
+				)}
 			</SidebarHeader>
 
 			<SidebarContent className="bg-sidebar">

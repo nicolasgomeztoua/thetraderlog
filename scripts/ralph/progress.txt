@@ -1336,3 +1336,36 @@ if (!result.success) {
   });
 }
 ```
+
+## US-056: Integration Tests for Edge Cases (Completed)
+
+### Implementation Summary
+- Created tests/integration/marketplace-edge-cases.test.ts
+- 10 tests covering marketplace edge cases
+
+### Test Categories
+1. **Idempotent Downloads (3 tests)**
+   - First download returns new copy with (Copy) suffix
+   - Second download returns same copy
+   - Third download still returns same copy
+
+2. **Deleted Strategy Behavior (3 tests)**
+   - Deleted strategy returns 404 in marketplace
+   - Downloaded copy remains functional after source deletion
+   - Source shows as unavailable in downloaded strategies list
+
+3. **Unpublished Strategy Behavior (4 tests)**
+   - Unpublish preserves instruments/categoryTags for re-publishing
+   - Unpublished strategy returns 404 in marketplace
+   - Downloaded copy remains functional after unpublishing
+   - New downloads prevented after unpublishing
+
+### Test Patterns Used
+- Setup author and browser users in beforeAll
+- Create and publish strategies for different test scenarios
+- Download strategies before modification for edge case testing
+- Verify behavior after delete/unpublish operations
+- Cleanup with truncateAllTables in afterAll
+
+### Note
+Tests require Docker/Testcontainers to run (PostgreSQL container)
