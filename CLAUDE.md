@@ -154,7 +154,7 @@ Skills are automatically suggested based on the type of work you're doing.
 
 ## Ralph Autonomous Loop
 
-Ralph is an autonomous AI agent loop that executes PRD user stories one at a time, then creates a PR and handles Greptile AI code review. Based on [snarktank/ralph](https://github.com/snarktank/ralph), adapted for Claude Code.
+Ralph is an autonomous AI agent loop that executes PRD user stories, then creates a PR and handles Greptile AI code review. Enhanced edition combines [snarktank/ralph](https://github.com/snarktank/ralph) workflow with [michaelshimeles/ralphy](https://github.com/michaelshimeles/ralphy) features.
 
 ### Quick Start
 
@@ -162,39 +162,69 @@ Ralph is an autonomous AI agent loop that executes PRD user stories one at a tim
 # 1. Create a PRD (use /prd skill or manually)
 # 2. Convert to JSON (use /ralph skill or manually)
 cp scripts/ralph/prd.example.json scripts/ralph/prd.json
-# Edit prd.json with your stories
 
 # 3. Run Ralph
-./scripts/ralph/ralph.sh              # Default: 20 impl iterations, 10 PR review cycles
-./scripts/ralph/ralph.sh 30           # 30 impl iterations, 10 PR review cycles
-./scripts/ralph/ralph.sh 30 5         # 30 impl iterations, 5 PR review cycles
+./scripts/ralph/ralph.sh                          # Sequential (default)
+./scripts/ralph/ralph.sh --parallel 3             # 3 parallel agents
+./scripts/ralph/ralph.sh --engine cursor          # Use Cursor instead of Claude
+./scripts/ralph/ralph.sh --issues "ralph"         # Pull from GitHub Issues
+./scripts/ralph/ralph.sh --dry-run                # Preview without executing
 ```
+
+### CLI Options
+
+| Option | Description |
+|--------|-------------|
+| `--engine <name>` | AI engine: `claude` (default), `opencode`, `cursor`, `codex`, `qwen`, `copilot` |
+| `--parallel [n]` | Run n agents in parallel with isolated git worktrees (default: 3) |
+| `--branch-per-task` | Create separate branch per task |
+| `--create-pr` | Create PR for each task (requires `--branch-per-task`) |
+| `--draft-pr` | Create draft PRs instead |
+| `--issues <label>` | Pull tasks from GitHub Issues with label |
+| `--dry-run` | Preview what would happen without executing |
+| `--max-iterations <n>` | Max implementation iterations (default: 20) |
+| `--pr-cycles <n>` | PR review cycles (default: 10) |
+| `--no-quality` | Skip Phase 2 code quality review |
+| `--no-greptile` | Skip Phase 4 Greptile review |
+| `--model <model>` | Override model for the AI engine |
+| `--init` | Initialize `.ralph/config.yaml` |
 
 ### Workflow Phases
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ PHASE 1: Implementation Loop                                │
-│   - Pick highest priority story with passes: false          │
-│   - Implement, test, commit                                 │
-│   - Update prd.json, repeat until all complete              │
+│   - Sequential: One story at a time                         │
+│   - Parallel: Multiple agents with git worktrees            │
+│   - AI-assisted merge conflict resolution                   │
 ├─────────────────────────────────────────────────────────────┤
 │ PHASE 2: Code Quality Review                                │
 │   - Security audit (uses security-audit skill)              │
 │   - Consistency audit (uses consistency-audit skill)        │
-│   - Fix issues, commit                                      │
 ├─────────────────────────────────────────────────────────────┤
 │ PHASE 3: Create Pull Request                                │
-│   - Push branch to remote                                   │
-│   - Create PR with summary from prd.json                    │
+│   - Push branch, create PR with cost summary                │
+│   - Auto-close GitHub Issues if --issues was used           │
 ├─────────────────────────────────────────────────────────────┤
-│ PHASE 4: Greptile Review Loop (every 3 minutes)             │
-│   - Check for new Greptile AI comments                      │
-│   - Evaluate each comment skeptically                       │
-│   - Fix valid issues, commit                                │
-│   - Reply to @greptileai (valid or invalid)                 │
+│ PHASE 4: Greptile Review Loop                               │
+│   - Check for Greptile AI comments every 4 minutes          │
+│   - Evaluate skeptically, fix valid issues                  │
+│   - Reply to @greptileai with verdict                       │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Agent** | Switch between Claude, OpenCode, Cursor, Codex, Qwen, Copilot |
+| **Parallel Execution** | Spawn N agents with isolated git worktrees |
+| **Cost Tracking** | Token usage and $ estimates logged to `.cost-log` |
+| **GitHub Issues** | Pull tasks directly from Issues by label |
+| **Dry-Run** | Preview execution without making changes |
+| **Exponential Backoff** | Retry with 2s, 4s, 8s delays on transient errors |
+| **AI Conflict Resolution** | Merge conflicts resolved by AI when possible |
+| **Config File** | Persist settings in `.ralph/config.yaml` |
 
 ### Files
 
@@ -206,7 +236,8 @@ cp scripts/ralph/prd.example.json scripts/ralph/prd.json
 | `scripts/ralph/pr-review-prompt.md` | Instructions for Greptile review handling |
 | `scripts/ralph/prd.json` | Your task manifest (create from example) |
 | `scripts/ralph/progress.txt` | Persistent learnings between iterations |
-| `scripts/ralph/prd.example.json` | Template for PRD format |
+| `scripts/ralph/.cost-log` | Token usage and cost tracking |
+| `.ralph/config.yaml` | Project-level configuration (optional) |
 
 ### Story Sizing
 
@@ -255,6 +286,12 @@ cat scripts/ralph/.pr-number
 
 # View processed Greptile comments
 cat scripts/ralph/.processed-comments
+
+# View cost log
+cat scripts/ralph/.cost-log
+
+# Preview without executing
+./scripts/ralph/ralph.sh --dry-run
 
 # Recent commits
 git log --oneline -10

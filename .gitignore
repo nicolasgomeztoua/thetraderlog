@@ -62,8 +62,11 @@ scripts/ralph/.pr-number
 scripts/ralph/.last-branch
 scripts/ralph/.processed-comments
 scripts/ralph/.greptile-comments.json
+scripts/ralph/.cost-log
 scripts/ralph/prd.json
 scripts/ralph/archive/
+.ralph-worktrees/
+.ralph/
 
 # Playwright
 /playwright-report/
