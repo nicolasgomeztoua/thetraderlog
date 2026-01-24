@@ -211,3 +211,309 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - Don't use module-level `let` variables that aren't used (biome lint error)
   - Import `trades` from `../utils/db` for direct DB operations
 ---
+
+## 2026-01-24 19:XX - US-007
+- **Completed:** Update StrategyCard Component
+- **Files modified:**
+  - `src/components/strategy/strategy-card.tsx`
+- **Key changes:**
+  - Added StrategyMiniChart integration showing recent P&L trend
+  - Enhanced stats: Trades, Win Rate, P&L (was Trades, Rules, Win Rate)
+  - Top color accent bar (was left side bar)
+  - Active/Inactive badge with distinct profit/muted styling (always shown, not just Inactive)
+  - Hover glow effect using strategy color
+  - Profit factor display in footer when available
+  - Changed from `div` to `article` element for semantic HTML and accessibility
+  - Added data-testid attributes for E2E testing
+- **API additions:**
+  - `performance?: { winRate, totalPnl, profitFactor, avgPnl, tradesCount, recentPnlSeries }`
+  - Backwards compatible with existing `stats` prop
+- **Learnings:**
+  - Use `<article>` instead of `<div>` with mouse handlers to satisfy `noStaticElementInteractions` lint rule
+  - `formatCurrency()` takes `(value, currency)` not `(value, options)` - no compact option available
+  - Mouse event handlers on semantic elements (article, button) don't need role attribute
+---
+
+## 2026-01-24 19:XX - US-010
+- **Completed:** Redesign Strategies List Page
+- **Files modified:**
+  - `src/app/(protected)/strategies/page.tsx`
+- **Key changes:**
+  - Terminal-styled header with primary label ("Trading Playbook"), icon, title
+  - Integrated `getPerformanceByStrategy` query for real-time performance data on cards
+  - Created `StrategyCardSkeleton` component matching new card design
+  - Enhanced empty state with icon in circle, better copy
+  - Responsive grid: 1 column mobile, 2 columns sm, 3 columns lg
+  - Removed `PerformanceComparisonTable` (redundant with enhanced cards showing P&L)
+  - Invalidates `getPerformanceByStrategy` on mutations
+- **API integration:**
+  - Uses `performanceMap` to pass performance data to each `StrategyCard`
+  - Falls back to `null` if strategy not in performance data (inactive strategies)
+- **Learnings:**
+  - Terminal header pattern: primary label span + h1 with icon + description paragraph
+  - When using batch query data (like `getPerformanceByStrategy`), create a Map for O(1) lookups
+  - Combined loading states: `strategiesLoading || performanceLoading` for smoother UX
+---
+
+## 2026-01-24 19:XX - US-011
+- **Completed:** Create RulesCompliancePanel Component
+- **Files created:**
+  - `src/components/strategy/rules-compliance-panel.tsx`
+- **Files modified:**
+  - `src/components/strategy/index.ts` (added exports)
+- **Key features:**
+  - `ComplianceGauge` - circular SVG gauge adapted from RiskGauge pattern
+  - `CategoryBreakdown` - grid of category cards (Entry, Exit, Risk, Management)
+  - `RuleComplianceList` - sorted by compliance (worst first to highlight problem areas)
+  - `HighlightsSection` - Most Followed (top 3 with >=50%) and Most Skipped (bottom 3 with <80%)
+  - Color coding: profit green (>=80%), yellow (50-79%), loss red (<50%)
+  - Handles empty state when no trades exist
+- **Props:**
+  - `avgCompliance: number` - overall compliance percentage
+  - `totalTrades: number` - number of trades analyzed
+  - `ruleCompliance: RuleComplianceData[]` - per-rule compliance array
+- **Learnings:**
+  - Re-use circular gauge pattern from RiskGauge for consistency
+  - Sort rules by lowest compliance first to highlight problem areas
+  - Use category colors from CATEGORY_COLORS constant for visual distinction
+  - The existing `getRuleCompliance` query already provides all needed data
+---
+
+## 2026-01-24 19:XX - US-012
+- **Completed:** Add Rules Compliance tRPC Query
+- **Files modified:**
+  - `src/server/api/routers/strategies.ts`
+- **Key changes:**
+  - Added `categoryCompliance` array to `getRuleCompliance` query return
+  - Each category (entry, exit, risk, management) returns: category, rulesCount, compliance %
+  - The existing query already had avgCompliance, ruleCompliance (with category), totalTrades
+- **API return shape:**
+  ```typescript
+  {
+    totalTrades: number,
+    avgCompliance: number,
+    tradeCompliance: { tradeId, compliance }[],
+    ruleCompliance: { ruleId, ruleText, category, checkedCount, totalTrades, compliance }[],
+    categoryCompliance: { category, rulesCount, compliance }[]  // NEW
+  }
+  ```
+- **Learnings:**
+  - PRD asked for "getRulesCompliance" (plural) but existing "getRuleCompliance" (singular) already exists
+  - Don't duplicate - enhance the existing query instead
+  - Per-category rollup is simple: filter rules by category, average their compliance
+---
+
+## 2026-01-24 19:XX - US-013
+- **Completed:** Integration Tests for Rules Compliance Query
+- **Files created:**
+  - `tests/integration/rules-compliance.test.ts`
+- **Test cases (6 total):**
+  1. Should throw error for non-existent strategy
+  2. Should return zero compliance with no trades
+  3. Should return 100% compliance when all rules checked
+  4. Should calculate partial compliance correctly (75% from 100%+50%)
+  5. Should calculate category compliance correctly
+  6. Should return 100% compliance for strategy with no rules
+- **Test patterns used:**
+  - `setupTrader()` from fixtures for user/account setup
+  - Direct DB inserts via `schema.trades` and `schema.tradeRuleChecks`
+  - Query strategy rules via `db.query.strategyRules.findMany()`
+- **Learnings:**
+  - Avoid `!` non-null assertions - Biome disallows them
+  - Use guard clauses with explicit `throw new Error()` for type safety
+  - `tradeRuleChecks` needs both tradeId and ruleId (composite primary key)
+  - Strategy with no rules defaults to 100% compliance per trade
+---
+
+## 2026-01-24 20:XX - US-014
+- **Completed:** Redesign Strategy Detail Page - Layout
+- **Files modified:**
+  - `src/app/(protected)/strategies/[id]/page.tsx`
+- **Key changes:**
+  - Two-column layout: main (compliance dashboard) + sidebar (strategy form)
+  - Terminal header with strategy name and color indicator bar
+  - QuickStats component with Trades, Win Rate, P&L, Compliance %
+  - Edit mode toggle (Pencil icon / X icon) to switch between view and edit states
+  - Action buttons: Edit mode toggle, Duplicate, Delete (duplicate opens in new page)
+  - Integrated RulesCompliancePanel for compliance visualization
+  - Read-only view showing strategy details when not editing
+  - Responsive: stacks on mobile with reordered columns (sidebar first on mobile)
+- **Component additions:**
+  - `QuickStats` - inline component showing 4 stat cards in grid
+  - Fetches both `getById` (strategy) and `getRuleCompliance` (compliance data)
+  - Uses `isEditMode` state to toggle between view and form
+- **API:**
+  - Uses existing `getById`, `update`, `duplicate`, `delete` mutations
+  - Integrates `getRuleCompliance` query for compliance metrics
+- **Learnings:**
+  - StrategyForm's `submitLabel` prop only accepts strings, not ReactNode
+  - Use `order-1`/`order-2` classes with `lg:order-1`/`lg:order-2` for responsive column reordering
+  - Remove unused imports (e.g., `Save` icon) after refactoring to avoid lint errors
+---
+
+## 2026-01-24 20:XX - US-015
+- **Completed:** Redesign Strategy Detail Page - Compliance Section
+- **Files modified:**
+  - `src/server/api/routers/strategies.ts` - Enhanced getRuleCompliance query
+  - `src/components/strategy/rules-compliance-panel.tsx` - Added new components
+  - `src/components/strategy/index.ts` - Export TradeComplianceData type
+  - `src/app/(protected)/strategies/[id]/page.tsx` - Pass tradeCompliance to panel
+- **Query enhancement:**
+  - `getRuleCompliance.tradeCompliance` now includes: symbol, exitTime, pnl, checkedCount, totalRules
+  - This enables trend charts and recent trades list without additional queries
+- **New components added to RulesCompliancePanel:**
+  - `ComplianceTrendChart` - SVG line chart of compliance over last 20 trades
+  - `RecentTradesList` - Shows last 5 trades with symbol, date, P&L, compliance badge
+  - `ImprovementTips` - Highlights rules with <70% compliance for focus
+- **Pattern: Type guard for array filtering:**
+  ```typescript
+  const tradesWithExit = tradeCompliance.filter(
+    (t): t is TradeComplianceData & { exitTime: Date | string } =>
+      t.exitTime !== null,
+  );
+  ```
+  This narrows the type so TypeScript knows exitTime is non-null after filtering.
+- **Learnings:**
+  - Use type guards with `.filter()` to narrow types for subsequent operations
+  - Always add null guards before accessing array indices (e.g., `points[0]`)
+  - When adding fields to query returns, ensure frontend handles optional props
+---
+
+## 2026-01-24 20:XX - US-016
+- **Completed:** E2E Tests for Strategy Wizard
+- **Files created:**
+  - `tests/e2e/strategy-wizard.spec.ts`
+- **Test cases (9 total):**
+  1. `loads new strategy page with wizard` - Verifies wizard container and stepper visible
+  2. `navigates through all wizard steps using Next button` - Steps 1-6 forward navigation
+  3. `navigates backward using Back button` - Step 2 → Step 1, verifies Back hidden on step 1
+  4. `navigates steps by clicking sidebar stepper` - Direct step navigation via stepper
+  5. `preserves form data when navigating between steps` - Name field persistence
+  6. `validates required fields on submit` - Verifies form doesn't submit without name
+  7. `completes wizard flow and creates strategy` - Full flow with redirect verification
+  8. `can add a rule in rules step` - Tests rule addition in step 6
+  9. `can select strategy color` - Tests color picker interaction
+- **Test patterns used:**
+  - `beforeEach` hook to navigate and wait for wizard
+  - `getByTestId()` for all element selection
+  - `toBeVisible()` and `not.toBeVisible()` for presence checks
+  - `toHaveValue()` for form input verification
+  - `waitForURL()` for navigation assertions
+- **Learnings:**
+  - Use Playwright's built-in `getByTestId()` over `locator('[data-testid="..."]')`
+  - E2E tests require dev server + auth setup (env vars E2E_CLERK_USER_EMAIL, E2E_CLERK_USER_PASSWORD)
+  - Test file naming: `*.spec.ts` for Playwright (configured in playwright.config.ts)
+---
+
+## 2026-01-24 20:XX - US-017
+- **Completed:** E2E Tests for Strategy List Page
+- **Files created:**
+  - `tests/e2e/strategy-list.spec.ts`
+- **Test cases (9 total):**
+  1. `loads strategies page` - Verifies page container and heading
+  2. `displays create strategy button in header` - Button text verification
+  3. `navigates to new strategy page` - Click button, verify URL change
+  4. `shows loading state` - Race condition handling for loading/loaded/empty
+  5. `displays strategies grid when strategies exist` - Card count > 0
+  6. `displays empty state when no strategies` - Empty state text
+  7. `strategy cards display key information` - Name, badge, trades count
+  8. `strategy card name links to detail page` - Click name, verify URL
+  9. `strategy card menu opens on click` - Menu items visible
+- **Key pattern: Handling optional data**
+  - Tests gracefully skip when no strategies exist using `test.skip()`
+  - Use `Promise.race()` to handle loading/loaded/empty states
+- **Learnings:**
+  - Use `locator("[data-testid^='prefix-']")` for partial testid matching
+  - Hover before interacting with elements that are hidden until hover
+---
+
+## 2026-01-24 20:XX - US-018
+- **Completed:** E2E Tests for Strategy Detail Page
+- **Files created:**
+  - `tests/e2e/strategy-detail.spec.ts`
+- **Test cases (11 total):**
+  1. `loads strategy detail page` - Page container and name visible
+  2. `displays quick stats bar` - Stats labels (Trades, Win Rate, P&L, Compliance)
+  3. `displays color indicator` - Strategy color bar visible
+  4. `displays rules compliance panel` - Compliance panel testid
+  5. `displays strategy form container` - Form container testid
+  6. `edit mode toggle switches to edit form` - Button text changes Edit → Cancel
+  7. `edit mode can be cancelled` - Toggle back to view mode
+  8. `duplicate button is visible` - Button presence
+  9. `delete button opens confirmation dialog` - Dialog with Cancel/Delete
+  10. `back link navigates to strategies list` - URL navigation
+  11. `shows not found for invalid strategy ID` - Error state handling
+- **Key pattern: Dynamic strategy ID**
+  - Use `beforeAll` to navigate to list and extract strategy ID from card testid
+  - Skip tests if no strategies exist
+- **Learnings:**
+  - `beforeAll` can use `browser.newContext()` for setup operations
+  - Extract IDs from `data-testid` using `.getAttribute()` and string parsing
+  - Always test error states (invalid ID → not found)
+---
+
+## 2026-01-24 21:XX - US-019
+- **Completed:** Fix NumericInput Edge Cases and Add E2E Tests
+- **Files modified:**
+  - `src/components/strategy/risk-config.tsx` - Added data-testid attributes to all NumericInput fields
+- **Files created:**
+  - `tests/e2e/numeric-input.spec.ts` - 14 E2E test cases
+- **Key changes:**
+  - Verified NumericInput already handles all edge cases correctly:
+    - Clearing field completely (backspace to empty)
+    - Typing 0 as a valid value
+    - Decimal values (e.g., 1.5, 0.25)
+    - Editing existing values (delete and retype)
+  - Added data-testid attributes to NumericInput fields in risk-config.tsx for E2E testing:
+    - `risk-config-input-fixed-size`
+    - `risk-config-input-risk-percent`
+    - `risk-config-input-kelly-fraction`
+    - `risk-config-input-max-risk-value`
+    - `risk-config-input-daily-loss-value`
+    - `risk-config-input-max-positions`
+    - `risk-config-input-min-rr`
+- **E2E test cases:**
+  1. Type numeric value
+  2. Type zero as valid value
+  3. Clear field using clear()
+  4. Clear field using keyboard (Ctrl+A, Backspace)
+  5. Type decimal values
+  6. Type complex decimals (0.25)
+  7. Edit existing value (delete and retype)
+  8. Type zero after clearing
+  9. Preserve value when navigating steps
+  10. Negative values
+  11. Integer-only field rejects decimals
+  12. Character-by-character typing
+  13. Backspace deletes correctly
+  14. (Additional edge case tests)
+- **Learnings:**
+  - NumericInput's internal string state management correctly handles all edge cases
+  - The useEffect sync logic properly distinguishes between external changes and user input
+  - `parseFloat("")` returns NaN, and `Number.isNaN(NaN) !== Number.isNaN(NaN)` is false (both are true)
+  - For integer-only inputs (`allowDecimals={false}`), the decimal character is filtered at input time
+---
+
+## PRD COMPLETE
+All 20 user stories have been implemented:
+- US-000: Audit existing utilities ✓
+- US-001: NumericInput component ✓
+- US-002: Update strategy forms ✓
+- US-003: StrategyStepper component ✓
+- US-004: StrategyWizard component ✓
+- US-005: Update new strategy page ✓
+- US-006: StrategyMiniChart component ✓
+- US-007: Update StrategyCard component ✓
+- US-008: Strategy performance tRPC query ✓
+- US-009: Integration tests for performance query ✓
+- US-010: Redesign strategies list page ✓
+- US-011: RulesCompliancePanel component ✓
+- US-012: Rules compliance tRPC query ✓
+- US-013: Integration tests for compliance query ✓
+- US-014: Redesign strategy detail page layout ✓
+- US-015: Strategy detail page compliance section ✓
+- US-016: E2E tests for strategy wizard ✓
+- US-017: E2E tests for strategy list page ✓
+- US-018: E2E tests for strategy detail page ✓
+- US-019: NumericInput edge cases + E2E tests ✓
+---

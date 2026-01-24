@@ -94,6 +94,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							</span>
 							<NumericInput
 								className="min-h-[44px] font-mono sm:min-h-0"
+								data-testid="risk-config-input-fixed-size"
 								onChange={(val) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
@@ -115,6 +116,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							</span>
 							<NumericInput
 								className="min-h-[44px] font-mono sm:min-h-0"
+								data-testid="risk-config-input-risk-percent"
 								onChange={(val) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
@@ -136,6 +138,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							</span>
 							<NumericInput
 								className="min-h-[44px] font-mono sm:min-h-0"
+								data-testid="risk-config-input-kelly-fraction"
 								onChange={(val) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
@@ -190,6 +193,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						</span>
 						<NumericInput
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="risk-config-input-max-risk-value"
 							onChange={(val) =>
 								updateField("maxRiskPerTrade", {
 									type: riskParams.maxRiskPerTrade?.type ?? "dollars",
@@ -242,6 +246,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						</span>
 						<NumericInput
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="risk-config-input-daily-loss-value"
 							onChange={(val) =>
 								updateField("dailyLossLimit", {
 									type: riskParams.dailyLossLimit?.type ?? "dollars",
@@ -269,6 +274,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<NumericInput
 							allowDecimals={false}
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="risk-config-input-max-positions"
 							onChange={(val) => updateField("maxConcurrentPositions", val)}
 							placeholder="3"
 							step={1}
@@ -281,6 +287,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						</span>
 						<NumericInput
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="risk-config-input-min-rr"
 							onChange={(val) => updateField("minRRRatio", val)}
 							placeholder="2.0"
 							step={0.1}
