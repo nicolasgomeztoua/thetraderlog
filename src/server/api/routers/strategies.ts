@@ -488,17 +488,23 @@ export const strategiesRouter = createTRPCRouter({
 				},
 			});
 
-			// Calculate compliance per trade
+			// Calculate compliance per trade (including details for UI)
 			const tradeCompliance = strategyTrades.map((trade) => {
 				const totalRules = strategy.rules.length;
-				if (totalRules === 0) {
-					return { tradeId: trade.id, compliance: 100 };
-				}
-
 				const checkedRules = trade.ruleChecks.filter((rc) => rc.checked).length;
-				const compliance = (checkedRules / totalRules) * 100;
+				const compliance =
+					totalRules === 0 ? 100 : (checkedRules / totalRules) * 100;
 
-				return { tradeId: trade.id, compliance };
+				return {
+					tradeId: trade.id,
+					compliance,
+					// Include trade details for recent trades list and trend chart
+					symbol: trade.symbol,
+					exitTime: trade.exitTime,
+					pnl: trade.realizedPnl ? parseFloat(trade.realizedPnl) : 0,
+					checkedCount: checkedRules,
+					totalRules,
+				};
 			});
 
 			// Calculate average compliance

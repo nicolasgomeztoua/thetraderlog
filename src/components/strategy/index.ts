@@ -5,6 +5,7 @@ export { RuleChecklist } from "./rule-checklist";
 export type {
 	RuleComplianceData,
 	RulesCompliancePanelProps,
+	TradeComplianceData,
 } from "./rules-compliance-panel";
 export { RulesCompliancePanel } from "./rules-compliance-panel";
 export type { ScalingRules } from "./scaling-config";

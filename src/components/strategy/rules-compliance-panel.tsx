@@ -16,6 +16,16 @@ export interface RuleComplianceData {
 	compliance: number;
 }
 
+export interface TradeComplianceData {
+	tradeId: string;
+	compliance: number;
+	symbol: string;
+	exitTime: Date | string | null;
+	pnl: number;
+	checkedCount: number;
+	totalRules: number;
+}
+
 export interface RulesCompliancePanelProps {
 	/** Average compliance percentage across all trades */
 	avgCompliance: number;
@@ -23,6 +33,8 @@ export interface RulesCompliancePanelProps {
 	totalTrades: number;
 	/** Per-rule compliance data */
 	ruleCompliance: RuleComplianceData[];
+	/** Per-trade compliance data for trends and recent trades list */
+	tradeCompliance?: TradeComplianceData[];
 	/** Optional className for container */
 	className?: string;
 }
@@ -59,6 +71,291 @@ function getComplianceLabel(compliance: number): string {
 	if (compliance >= 80) return "Strong";
 	if (compliance >= 50) return "Moderate";
 	return "Weak";
+}
+
+// =============================================================================
+// COMPLIANCE TREND CHART COMPONENT
+// =============================================================================
+
+interface ComplianceTrendChartProps {
+	tradeCompliance: TradeComplianceData[];
+}
+
+function ComplianceTrendChart({ tradeCompliance }: ComplianceTrendChartProps) {
+	// Sort by exitTime and take last 20 trades
+	const tradesWithExit = tradeCompliance.filter(
+		(t): t is TradeComplianceData & { exitTime: Date | string } =>
+			t.exitTime !== null,
+	);
+	const sortedTrades = [...tradesWithExit]
+		.sort((a, b) => {
+			const dateA = new Date(a.exitTime).getTime();
+			const dateB = new Date(b.exitTime).getTime();
+			return dateA - dateB;
+		})
+		.slice(-20);
+
+	if (sortedTrades.length < 2) {
+		return (
+			<div className="flex h-24 items-center justify-center rounded border border-white/5 bg-white/2">
+				<span className="font-mono text-[10px] text-muted-foreground">
+					Need 2+ trades for trend chart
+				</span>
+			</div>
+		);
+	}
+
+	// Chart dimensions
+	const width = 100;
+	const height = 60;
+	const padding = { top: 8, right: 8, bottom: 8, left: 8 };
+	const chartWidth = width - padding.left - padding.right;
+	const chartHeight = height - padding.top - padding.bottom;
+
+	// Normalize data (compliance is 0-100)
+	const minY = 0;
+	const maxY = 100;
+	const points = sortedTrades.map((trade, i) => {
+		const x = padding.left + (i / (sortedTrades.length - 1)) * chartWidth;
+		const y =
+			padding.top +
+			chartHeight -
+			((trade.compliance - minY) / (maxY - minY)) * chartHeight;
+		return { x, y, compliance: trade.compliance };
+	});
+
+	// Build path
+	const pathD = points
+		.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+		.join(" ");
+
+	// Calculate trend color based on recent performance
+	const recentCompliance = points.slice(-3);
+	const avgRecent =
+		recentCompliance.reduce((sum, p) => sum + p.compliance, 0) /
+		recentCompliance.length;
+	const color =
+		avgRecent >= 70 ? "#00ff88" : avgRecent >= 50 ? "#ffaa00" : "#ff3b3b";
+
+	// Build area path for fill
+	const firstPoint = points[0];
+	const lastPoint = points[points.length - 1];
+	if (!firstPoint || !lastPoint) {
+		return null;
+	}
+	const areaD = `${pathD} L ${lastPoint.x} ${height - padding.bottom} L ${firstPoint.x} ${height - padding.bottom} Z`;
+
+	return (
+		<div className="space-y-2">
+			<h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+				Compliance Trend (Last 20 Trades)
+			</h3>
+			<div className="rounded border border-white/5 bg-white/2 p-3">
+				<svg
+					aria-label="Compliance trend over time"
+					className="w-full"
+					preserveAspectRatio="none"
+					role="img"
+					style={{ height: height }}
+					viewBox={`0 0 ${width} ${height}`}
+				>
+					<defs>
+						<linearGradient
+							id="complianceTrendGradient"
+							x1="0%"
+							x2="0%"
+							y1="0%"
+							y2="100%"
+						>
+							<stop offset="0%" stopColor={color} stopOpacity="0.3" />
+							<stop offset="100%" stopColor={color} stopOpacity="0" />
+						</linearGradient>
+					</defs>
+
+					{/* Reference lines */}
+					<line
+						opacity="0.1"
+						stroke="white"
+						x1={padding.left}
+						x2={width - padding.right}
+						y1={padding.top + chartHeight * 0.2}
+						y2={padding.top + chartHeight * 0.2}
+					/>
+					<line
+						opacity="0.1"
+						stroke="white"
+						x1={padding.left}
+						x2={width - padding.right}
+						y1={padding.top + chartHeight * 0.5}
+						y2={padding.top + chartHeight * 0.5}
+					/>
+
+					{/* Area fill */}
+					<path d={areaD} fill="url(#complianceTrendGradient)" />
+
+					{/* Line */}
+					<path
+						d={pathD}
+						fill="none"
+						stroke={color}
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth="2"
+					/>
+
+					{/* End point */}
+					<circle cx={lastPoint.x} cy={lastPoint.y} fill={color} r="3" />
+				</svg>
+
+				{/* Legend */}
+				<div className="mt-2 flex items-center justify-between">
+					<span className="font-mono text-[9px] text-muted-foreground">
+						{sortedTrades.length} trades
+					</span>
+					<span className="font-mono text-[10px]" style={{ color }}>
+						Latest: {lastPoint.compliance.toFixed(0)}%
+					</span>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// =============================================================================
+// RECENT TRADES LIST COMPONENT
+// =============================================================================
+
+interface RecentTradesListProps {
+	tradeCompliance: TradeComplianceData[];
+}
+
+function RecentTradesList({ tradeCompliance }: RecentTradesListProps) {
+	// Sort by exitTime (most recent first) and take last 5
+	const tradesWithExit = tradeCompliance.filter(
+		(t): t is TradeComplianceData & { exitTime: Date | string } =>
+			t.exitTime !== null,
+	);
+	const recentTrades = [...tradesWithExit]
+		.sort((a, b) => {
+			const dateA = new Date(a.exitTime).getTime();
+			const dateB = new Date(b.exitTime).getTime();
+			return dateB - dateA;
+		})
+		.slice(0, 5);
+
+	if (recentTrades.length === 0) {
+		return null;
+	}
+
+	return (
+		<div className="space-y-2">
+			<h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+				Recent Trades
+			</h3>
+			<div className="space-y-1.5">
+				{recentTrades.map((trade) => {
+					const complianceColor = getComplianceColor(trade.compliance);
+					const pnlColor = trade.pnl >= 0 ? "#00ff88" : "#ff3b3b";
+					const exitDate = trade.exitTime
+						? new Date(trade.exitTime).toLocaleDateString("en-US", {
+								month: "short",
+								day: "numeric",
+							})
+						: "—";
+
+					return (
+						<div
+							className="flex items-center justify-between gap-3 rounded border border-white/5 bg-white/2 px-3 py-2"
+							key={trade.tradeId}
+						>
+							<div className="flex items-center gap-3">
+								<span className="font-mono text-xs">{trade.symbol}</span>
+								<span className="font-mono text-[10px] text-muted-foreground">
+									{exitDate}
+								</span>
+							</div>
+							<div className="flex items-center gap-3">
+								<span className="font-mono text-xs" style={{ color: pnlColor }}>
+									{trade.pnl >= 0 ? "+" : ""}$
+									{Math.abs(trade.pnl).toLocaleString("en-US", {
+										minimumFractionDigits: 0,
+										maximumFractionDigits: 0,
+									})}
+								</span>
+								<span
+									className="rounded px-1.5 py-0.5 font-medium font-mono text-[10px]"
+									style={{
+										backgroundColor: `${complianceColor}15`,
+										color: complianceColor,
+									}}
+								>
+									{trade.checkedCount}/{trade.totalRules}
+								</span>
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+// =============================================================================
+// IMPROVEMENT TIPS COMPONENT
+// =============================================================================
+
+interface ImprovementTipsProps {
+	ruleCompliance: RuleComplianceData[];
+}
+
+function ImprovementTips({ ruleCompliance }: ImprovementTipsProps) {
+	// Get rules with compliance < 70% sorted by lowest first
+	const weakRules = [...ruleCompliance]
+		.filter((r) => r.compliance < 70)
+		.sort((a, b) => a.compliance - b.compliance)
+		.slice(0, 3);
+
+	if (weakRules.length === 0) {
+		return (
+			<div className="rounded border border-profit/20 bg-profit/5 p-4">
+				<div className="flex items-center gap-2">
+					<CheckCircle2 className="h-4 w-4 text-profit" />
+					<span className="font-mono text-profit text-sm">
+						Great job! All rules are above 70% compliance.
+					</span>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-2">
+			<h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+				Improvement Focus
+			</h3>
+			<div className="space-y-2">
+				{weakRules.map((rule, index) => (
+					<div
+						className="rounded border border-white/5 bg-white/2 p-3"
+						key={rule.ruleId}
+					>
+						<div className="flex items-start gap-2">
+							<span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-loss/20 font-mono text-[10px] text-loss">
+								{index + 1}
+							</span>
+							<div className="flex-1">
+								<p className="font-mono text-sm">{rule.ruleText}</p>
+								<p className="mt-1 font-mono text-[10px] text-muted-foreground">
+									Only followed in {rule.compliance.toFixed(0)}% of trades (
+									{rule.checkedCount}/{rule.totalTrades})
+								</p>
+							</div>
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	);
 }
 
 // =============================================================================
@@ -392,7 +689,10 @@ function HighlightsSection({ ruleCompliance }: HighlightsSectionProps) {
  * Rules Compliance Panel - Shows overall and per-rule compliance statistics.
  * Features:
  * - Circular gauge for overall compliance percentage
+ * - Compliance trend chart over time
  * - Category breakdown (Entry, Exit, Risk, Management)
+ * - Recent trades list with compliance badges
+ * - Improvement tips based on lowest compliance rules
  * - Individual rule compliance list sorted by compliance
  * - Most Followed and Most Skipped highlights
  */
@@ -400,9 +700,11 @@ export function RulesCompliancePanel({
 	avgCompliance,
 	totalTrades,
 	ruleCompliance,
+	tradeCompliance,
 	className,
 }: RulesCompliancePanelProps) {
 	const hasData = totalTrades > 0;
+	const hasTradeCompliance = tradeCompliance && tradeCompliance.length > 0;
 
 	return (
 		<div
@@ -422,8 +724,23 @@ export function RulesCompliancePanel({
 				</div>
 			)}
 
+			{/* Compliance trend chart */}
+			{hasTradeCompliance && (
+				<ComplianceTrendChart tradeCompliance={tradeCompliance} />
+			)}
+
 			{/* Category breakdown */}
 			{hasData && <CategoryBreakdown ruleCompliance={ruleCompliance} />}
+
+			{/* Recent trades list */}
+			{hasTradeCompliance && (
+				<RecentTradesList tradeCompliance={tradeCompliance} />
+			)}
+
+			{/* Improvement tips */}
+			{hasData && ruleCompliance.length > 0 && (
+				<ImprovementTips ruleCompliance={ruleCompliance} />
+			)}
 
 			{/* Highlights section */}
 			{hasData && <HighlightsSection ruleCompliance={ruleCompliance} />}

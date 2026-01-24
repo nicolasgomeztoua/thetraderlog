@@ -436,6 +436,7 @@ export default function StrategyDetailPage() {
 								avgCompliance={compliance.avgCompliance}
 								ruleCompliance={compliance.ruleCompliance}
 								totalTrades={compliance.totalTrades}
+								tradeCompliance={compliance.tradeCompliance}
 							/>
 						) : (
 							<div className="py-8 text-center font-mono text-muted-foreground text-sm">
