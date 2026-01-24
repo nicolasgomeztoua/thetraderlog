@@ -26,6 +26,7 @@ export interface TradeForCompliance {
 	quantity: number;
 	realizedPnl: number | null;
 	entryTime?: Date | string;
+	exitTime?: Date | string | null;
 }
 
 /**
@@ -311,6 +312,70 @@ export function checkDailyLossCompliance(
 		note: passed
 			? `P&L was ${actualPercent.toFixed(2)}% before this trade, within -${dailyLossLimit.value}% limit`
 			: `P&L was ${actualPercent.toFixed(2)}% before this trade, exceeded -${dailyLossLimit.value}% limit`,
+	};
+}
+
+/**
+ * Check if a trade violated the max concurrent positions limit
+ *
+ * Counts how many trades were open at this trade's entry time
+ * and compares to the maxConcurrentPositions limit.
+ */
+export function checkConcurrentPositions(
+	trade: TradeForCompliance,
+	maxConcurrentPositions: number,
+	allTrades: TradeForCompliance[],
+): ComplianceCheck {
+	// Need entry time to check concurrent positions
+	if (!trade.entryTime) {
+		return {
+			param: "maxConcurrentPositions",
+			passed: null,
+			actual: null,
+			limit: maxConcurrentPositions,
+			note: "Unable to check: missing entry time",
+		};
+	}
+
+	const tradeEntryTime = new Date(trade.entryTime);
+
+	// Count trades that were open at this trade's entry time
+	// A trade is "open" if:
+	// 1. It's not the current trade
+	// 2. Its entry time is before or at the current trade's entry time
+	// 3. Its exit time is null (still open) OR after the current trade's entry time
+	const concurrentCount = allTrades.filter((t) => {
+		// Skip the current trade
+		if (t.id === trade.id) return false;
+
+		// Need entry time to determine if trade was open
+		if (!t.entryTime) return false;
+
+		const otherEntryTime = new Date(t.entryTime);
+		const otherExitTime = t.exitTime ? new Date(t.exitTime) : null;
+
+		// Trade must have started before or at the current trade's entry
+		if (otherEntryTime > tradeEntryTime) return false;
+
+		// Trade must still be open (no exit) OR exited after current trade's entry
+		if (otherExitTime === null) return true;
+		if (otherExitTime > tradeEntryTime) return true;
+
+		return false;
+	}).length;
+
+	// The current trade being opened adds 1 to the count
+	const totalConcurrent = concurrentCount + 1;
+	const passed = totalConcurrent <= maxConcurrentPositions;
+
+	return {
+		param: "maxConcurrentPositions",
+		passed,
+		actual: totalConcurrent,
+		limit: maxConcurrentPositions,
+		note: passed
+			? `${totalConcurrent} concurrent position(s) at entry, within ${maxConcurrentPositions} limit`
+			: `${totalConcurrent} concurrent position(s) at entry, exceeded ${maxConcurrentPositions} limit`,
 	};
 }
 
