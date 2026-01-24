@@ -6,7 +6,9 @@ import {
 	type TestCaller,
 	truncateAllTables,
 } from "../utils";
-import { trades } from "../utils/db";
+import { schema } from "../utils/db";
+
+const { trades } = schema;
 
 describe("strategies.getPerformanceByStrategy", () => {
 	let caller: TestCaller;
