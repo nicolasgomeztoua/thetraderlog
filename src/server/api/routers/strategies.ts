@@ -530,11 +530,31 @@ export const strategiesRouter = createTRPCRouter({
 				};
 			});
 
+			// Calculate compliance per category
+			const categories = ["entry", "exit", "risk", "management"] as const;
+			const categoryCompliance = categories.map((category) => {
+				const rulesInCategory = ruleCompliance.filter(
+					(r) => r.category === category,
+				);
+				const avgCategoryCompliance =
+					rulesInCategory.length > 0
+						? rulesInCategory.reduce((sum, r) => sum + r.compliance, 0) /
+							rulesInCategory.length
+						: 0;
+
+				return {
+					category,
+					rulesCount: rulesInCategory.length,
+					compliance: avgCategoryCompliance,
+				};
+			});
+
 			return {
 				totalTrades: strategyTrades.length,
 				avgCompliance,
 				tradeCompliance,
 				ruleCompliance,
+				categoryCompliance,
 			};
 		}),
 
