@@ -1,122 +1,55 @@
 # Ralph Progress Log
-Started: Sat Jan 17 22:31:13 +01 2026
+Started: Sat Jan 24 17:48:14 WET 2026
 ---
 
 ## Codebase Patterns
-- Playwright config uses projects for browser separation with auth state dependency
-- E2E tests live in tests/e2e/ directory
-- Auth state stored in playwright/.clerk/user.json
+
+### Analytics Utilities
+- **Location:** `src/lib/analytics/` contains all shared analytics utilities
+- **Key file:** `stats.ts:131` - `calculateAggregateStats()` is the main function for computing trade statistics
+- **Returns:** `AggregateStats` interface with totalTrades, wins, losses, breakevens, winRate, totalPnl, avgPnl, grossProfit, grossLoss, profitFactor, avgWin, avgLoss, avgRMultiple
+- **Usage:** Import from `@/lib/analytics` (barrel export in index.ts)
+- **Breakeven threshold:** Use `getUserBreakevenThreshold()` from `@/server/api/helpers` to get user's BE threshold
+
+### Chart Components (Reusable)
+- **EquityCurve** (`src/components/analytics/equity-curve.tsx`) - Full AG Charts cumulative P&L with drawdown highlighting
+- **MetricCard** (`src/components/analytics/metric-card.tsx`) - Terminal-styled metric display with tooltips
+- **RiskGauge** (`src/components/analytics/risk-gauge.tsx`) - Circular SVG gauge for percentages (0-100)
+- **Note for mini charts:** EquityCurve is heavyweight (AG Charts). For small sparklines, create lightweight SVG/canvas component
+
+### Existing Strategy Queries
+- **Location:** `src/server/api/routers/strategies.ts`
+- `getStats` (line 415) - Returns basic stats for a single strategy using `calculateAggregateStats`
+- `getAllStats` (line 698) - Batch stats for all strategies (win rate, P&L, profit factor)
+- `getComparativeData` (line 753) - Cumulative P&L curves for charting
+- `getRuleCompliance` (line 461) - Per-rule and per-trade compliance percentages
+
+### Strategy Performance Query (Needed)
+- US-008 requires `getPerformanceByStrategy` that returns recent P&L series (last 20 trades) for mini charts
+- Can reuse `calculateAggregateStats` for metrics
+- Need to add recent trades with cumulative P&L for sparkline data
+
+### Rules Compliance Query (Needed)
+- US-012 requires `getRulesCompliance` - similar to existing `getRuleCompliance` but with per-category rollups
+- Existing query already does per-rule compliance, need to add category aggregation
+
 ---
 
-## 2026-01-18 - US-001
-- What was implemented:
-  - Installed @playwright/test@1.57.0 and @clerk/testing@1.13.29
-  - Created playwright.config.ts with webServer, baseURL, and auth projects
-  - Added test:e2e and test:e2e:ui scripts to package.json
-  - Added playwright/.clerk/, /playwright-report/, /blob-report/, /test-results/ to .gitignore
-- Files changed:
-  - package.json (added scripts)
-  - bun.lock (deps installed)
-  - playwright.config.ts (new)
-  - .gitignore (added playwright paths)
+## 2026-01-24 18:XX - US-000
+- **Completed:** Audit of existing utilities for strategy analytics
+- **Files examined:**
+  - `src/lib/analytics/index.ts:1` - Barrel export for all analytics utilities
+  - `src/lib/analytics/stats.ts:131` - `calculateAggregateStats()` - REUSE THIS for all stats
+  - `src/lib/analytics/calculations.ts:1` - Threshold lookups, formatters, chart utilities
+  - `src/components/analytics/equity-curve.tsx:1` - Full equity curve (AG Charts) - TOO HEAVY for mini charts
+  - `src/components/analytics/metric-card.tsx:1` - MetricCard component - REUSE for displaying metrics
+  - `src/components/analytics/risk-gauge.tsx:1` - Circular gauge - Could adapt for compliance gauge
+  - `src/server/api/routers/strategies.ts:415` - `getStats` already calculates basic stats
+  - `src/server/api/routers/strategies.ts:461` - `getRuleCompliance` already calculates per-rule compliance
+  - `src/lib/trades/running-pnl.ts:1` - P&L series generation utilities
 - **Learnings for future iterations:**
-  - Playwright config uses `projects` array for setup dependencies
-  - Auth state is stored via `storageState` in project config
-  - Use `dependencies: ["setup"]` to ensure global setup runs first
----
-
-## 2026-01-18 - US-002
-- What was implemented:
-  - Created tests/e2e/global.setup.ts with Clerk authentication
-  - Uses clerkSetup() from @clerk/testing/playwright to initialize
-  - Signs in with clerk.signIn() using password strategy from env vars
-  - Validates auth by navigating to /dashboard and waiting for "Trading Overview" heading
-  - Saves auth state to playwright/.clerk/user.json for test reuse
-- Files changed:
-  - tests/e2e/global.setup.ts (new)
-  - tests/e2e/.gitkeep (deleted - no longer needed)
-  - scripts/ralph/prd.json (updated US-002 to passes: true)
-- **Learnings for future iterations:**
-  - Clerk global setup requires serial mode: `setup.describe.configure({ mode: "serial" })`
-  - Must navigate to `/` first to load Clerk before calling clerk.signIn()
-  - clerk.signIn() uses `identifier` (not `email`) for the user identifier param
-  - Auth validation: navigate to protected route and wait for expected element
----
-
-## 2026-01-18 - US-003
-- What was implemented:
-  - Created tests/e2e/README.md with comprehensive setup instructions
-  - Documents: Clerk test user creation, email/password auth setup, env vars
-  - Created .env.test.example with E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD
-  - Includes troubleshooting section for common issues
-- Files changed:
-  - tests/e2e/README.md (new)
-  - .env.test.example (new)
-  - scripts/ralph/prd.json (updated US-003 to passes: true)
-- **Learnings for future iterations:**
-  - E2E env vars pattern: use .env.test.example for test-specific variables
-  - README should reference the skill file for writing tests: .claude/skills/e2e-testing/SKILL.md
----
-
-## 2026-01-18 - US-004
-- What was implemented:
-  - Created tests/e2e/dashboard.spec.ts with 3 E2E tests
-  - Test 1: Verifies dashboard loads with "Trading Overview" heading visible
-  - Test 2: Verifies stats grid displays all expected stat cards (Net P&L, Win Rate, etc.)
-  - Test 3: Verifies start journal hero section is visible (Start button or Journal Started)
-- Files changed:
-  - tests/e2e/dashboard.spec.ts (new)
-  - scripts/ralph/prd.json (updated US-004 to passes: true)
-- **Learnings for future iterations:**
-  - Use `expect(locator).toBeVisible()` for checking element visibility
-  - Dashboard stat card labels: "Net P&L", "Win Rate", "Profit Factor", "Avg Win", "Avg Loss"
-  - For state-dependent UI (like journal status), test for OR conditions using multiple locators
----
-
-## 2026-01-18 - US-005
-- What was implemented:
-  - Created tests/e2e/auth.spec.ts with 3 tests for auth redirect behavior
-  - Test 1: Unauthenticated user visiting /dashboard redirects to /sign-in
-  - Test 2: Unauthenticated user visiting /journal redirects to /sign-in
-  - Test 3: Unauthenticated user visiting /analytics redirects to /sign-in
-- Files changed:
-  - tests/e2e/auth.spec.ts (new)
-  - scripts/ralph/prd.json (updated US-005 to passes: true)
-- **Learnings for future iterations:**
-  - To test as unauthenticated, use `test.use({ storageState: { cookies: [], origins: [] } })` to clear auth state
-  - Use `page.waitForURL(/pattern/, { timeout: 15000 })` to wait for redirect completion
-  - Clerk sign-in elements can be located with `[class*="cl-signIn"]` selector
----
-
-## 2026-01-18 - US-006
-- What was implemented:
-  - Created .claude/skills/e2e-testing/SKILL.md with comprehensive E2E testing documentation
-  - Documented: test commands (bun run test:e2e, test:e2e:ui)
-  - Documented: Playwright + @clerk/testing setup architecture with global setup flow
-  - Documented: data-testid naming convention ([component]-[element]-[qualifier])
-  - Documented: How to add data-testid during feature development
-  - Documented: Test patterns for authenticated, unauthenticated, form submission, and state-dependent UI
-  - Updated tests/e2e/README.md to reference the skill file
-- Files changed:
-  - .claude/skills/e2e-testing/SKILL.md (new)
-  - tests/e2e/README.md (updated)
-  - scripts/ralph/prd.json (updated US-006 to passes: true)
-- **Learnings for future iterations:**
-  - Skill files follow consistent structure: Tech Stack table, Commands table, Project Structure, Patterns, Best Practices, Troubleshooting
-  - data-testid convention is [component]-[element]-[qualifier] e.g., "trade-form-button-submit"
-  - Cross-reference between README and skill files for discoverability
----
-
-## 2026-01-18 - US-007
-- What was implemented:
-  - Updated scripts/ralph/prompt.md with new "E2E Testing Requirements (UI Stories)" section
-  - Added reference to E2E testing skill (.claude/skills/e2e-testing/SKILL.md)
-  - Added data-testid guidance with examples for forms, data displays, and navigation
-  - Added optional bun run test:e2e command for UI stories (after backend tests)
-- Files changed:
-  - scripts/ralph/prompt.md (updated)
-  - scripts/ralph/prd.json (updated US-007 to passes: true)
-- **Learnings for future iterations:**
-  - Ralph prompt.md has sections for different story types: Testing Requirements (backend), E2E Testing Requirements (UI)
-  - E2E tests are optional for UI stories since they require Clerk test user setup
+  - Always use `calculateAggregateStats` from `@/lib/analytics` - never duplicate P&L/win rate calculations
+  - For mini sparkline charts, don't use AG Charts - create lightweight SVG component
+  - `RiskGauge` pattern with SVG circles can be adapted for compliance percentage gauges
+  - Strategy router already has `getRuleCompliance` - US-012 should extend it, not duplicate
 ---
