@@ -50,8 +50,8 @@
         "Verify in browser: can type, clear, and re-enter values"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated risk-config, scaling-config, trailing-config to use NumericInput"
     },
     {
       "id": "US-003",

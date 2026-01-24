@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 
 export interface ScalingRules {
 	scaleIn?: Array<{
@@ -132,18 +133,12 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 											Size %
 										</span>
-										<Input
+										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
-											inputMode="decimal"
-											onChange={(e) =>
-												updateScaleIn(
-													idx,
-													"sizePercent",
-													parseFloat(e.target.value) || 0,
-												)
+											onChange={(val) =>
+												updateScaleIn(idx, "sizePercent", val ?? 0)
 											}
-											step="5"
-											type="number"
+											step={5}
 											value={rule.sizePercent}
 										/>
 									</div>
@@ -210,18 +205,12 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 											Size %
 										</span>
-										<Input
+										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
-											inputMode="decimal"
-											onChange={(e) =>
-												updateScaleOut(
-													idx,
-													"sizePercent",
-													parseFloat(e.target.value) || 0,
-												)
+											onChange={(val) =>
+												updateScaleOut(idx, "sizePercent", val ?? 0)
 											}
-											step="5"
-											type="number"
+											step={5}
 											value={rule.sizePercent}
 										/>
 									</div>

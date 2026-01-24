@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
 	Select,
 	SelectContent,
@@ -118,35 +118,25 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Trigger at R
 							</span>
-							<Input
+							<NumericInput
 								className="min-h-[44px] font-mono sm:min-h-0"
-								inputMode="decimal"
-								onChange={(e) =>
-									updateBreakeven("triggerR", parseFloat(e.target.value) || 0)
-								}
+								onChange={(val) => updateBreakeven("triggerR", val ?? 0)}
 								placeholder="1.0"
-								step="0.1"
-								type="number"
-								value={trailingRules.moveToBreakeven?.triggerR ?? ""}
+								step={0.1}
+								value={trailingRules.moveToBreakeven?.triggerR}
 							/>
 						</div>
 						<div className="space-y-1">
 							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Offset (ticks)
 							</span>
-							<Input
+							<NumericInput
+								allowDecimals={false}
 								className="min-h-[44px] font-mono sm:min-h-0"
-								inputMode="numeric"
-								onChange={(e) =>
-									updateBreakeven(
-										"offsetTicks",
-										parseInt(e.target.value, 10) || 0,
-									)
-								}
+								onChange={(val) => updateBreakeven("offsetTicks", val ?? 0)}
 								placeholder="0"
-								step="1"
-								type="number"
-								value={trailingRules.moveToBreakeven?.offsetTicks ?? ""}
+								step={1}
+								value={trailingRules.moveToBreakeven?.offsetTicks}
 							/>
 						</div>
 					</div>
@@ -187,18 +177,12 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 											At R
 										</span>
-										<Input
+										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
-											inputMode="decimal"
-											onChange={(e) =>
-												updateTrailStop(
-													idx,
-													"triggerR",
-													parseFloat(e.target.value) || 0,
-												)
+											onChange={(val) =>
+												updateTrailStop(idx, "triggerR", val ?? 0)
 											}
-											step="0.1"
-											type="number"
+											step={0.1}
 											value={rule.triggerR}
 										/>
 									</div>
@@ -206,18 +190,12 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 											Value
 										</span>
-										<Input
+										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
-											inputMode="decimal"
-											onChange={(e) =>
-												updateTrailStop(
-													idx,
-													"value",
-													parseFloat(e.target.value) || 0,
-												)
+											onChange={(val) =>
+												updateTrailStop(idx, "value", val ?? 0)
 											}
-											step="1"
-											type="number"
+											step={1}
 											value={rule.value}
 										/>
 									</div>

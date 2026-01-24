@@ -75,3 +75,19 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - TypeScript `data-testid` attribute needs explicit declaration in interface
   - Use destructuring with rename (`"data-testid": testId`) for hyphenated props
 ---
+
+## 2026-01-24 18:XX - US-002
+- **Completed:** Update Strategy Form to Use NumericInput
+- **Files modified:**
+  - `src/components/strategy/risk-config.tsx` - Replaced 7 Input components with NumericInput
+  - `src/components/strategy/scaling-config.tsx` - Replaced 2 Input components with NumericInput
+  - `src/components/strategy/trailing-config.tsx` - Replaced 4 Input components with NumericInput
+- **Key changes:**
+  - NumericInput's `onChange` takes `(val: number | undefined)` directly - no need for `parseFloat(e.target.value)`
+  - Use `val ?? 0` for required numeric fields that can't be undefined
+  - Use `allowDecimals={false}` for integer-only fields (maxConcurrentPositions, offsetTicks)
+  - Removed unused Input imports after migration
+- **Learnings:**
+  - Migration pattern: replace `type="number"` with NumericInput, update onChange to use value directly
+  - Keep Input import only for text fields (trigger descriptions in scaling rules)
+---
