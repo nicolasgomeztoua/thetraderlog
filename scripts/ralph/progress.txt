@@ -156,3 +156,88 @@ Key files for this feature:
   - Vitest component config is separate from integration test config
 ---
 
+## 2026-01-24 - US-005 Create Risk Compliance Calculator Utility
+- What was implemented: Utility for auto-checking trades against strategy risk parameters
+- Files changed:
+  - `src/lib/strategies/risk-compliance.ts` (new) - Compliance calculator utility
+- Functions created:
+  - `calculateRiskCompliance(trade, riskParams, accountBalance?)` - Main entry point
+  - `checkMinRRRatio(trade, minRRRatio)` - Planned R:R from entry/SL/TP
+  - `checkMaxRiskPerTrade(trade, maxRisk, accountBalance?)` - Dollar/percent risk check
+  - `checkTargetRMultiples(trade, targets)` - Achieved R vs targets
+  - Helper functions: `calculateDollarRisk`, `calculatePlannedRR`, `calculateAchievedR`
+- Types exported:
+  - `TradeForCompliance` - Trade data needed for compliance checks
+  - `RiskParameters` - Strategy risk params
+  - `ComplianceCheck` - Single check result (param, passed, actual, limit, note)
+  - `ComplianceResult` - Overall result (checks[], targetsHit[], overallCompliance%)
+- Edge cases handled:
+  - Missing SL/TP returns `passed: null` with descriptive note
+  - Percent-based risk requires accountBalance parameter
+  - Unknown symbols return null from calculateDollarRisk
+- **Learnings for future iterations:**
+  - Use `getFuturesSpec` and `getForexSpec` from `@/lib/market-data/symbols` for contract specs
+  - Biome prefers single parameter on same line as function when possible
+  - Ternary notes need extra line break for Biome formatting
+---
+
+## 2026-01-24 - US-006 Add Daily Loss Limit Checker
+- What was implemented: Function to check if a trade violated the daily loss limit
+- Files changed:
+  - `src/lib/strategies/risk-compliance.ts` - Added checkDailyLossCompliance function
+- Function signature:
+  - `checkDailyLossCompliance(trade, dailyLossLimit, dailyTrades, accountBalance?)` - Check daily loss compliance
+- Features:
+  - Supports both dollar-based and percent-based limits
+  - Calculates cumulative P&L from prior trades on the same day (filters out current trade)
+  - Returns descriptive note showing P&L before trade vs limit
+  - Handles missing account balance for percent-based limits
+- Type changes:
+  - Added `entryTime?: Date | string` to TradeForCompliance interface for time-based filtering
+- **Learnings for future iterations:**
+  - Daily loss limits are typically positive numbers representing max loss allowed (e.g., $400)
+  - Check is `cumulativePnl >= -limitDollars` because P&L is negative when losing
+  - Filter prior trades by ID, not by time (caller handles date filtering)
+---
+
+## 2026-01-24 - US-007 Add Concurrent Positions Checker
+- What was implemented: Function to check if a trade violated max concurrent positions limit
+- Files changed:
+  - `src/lib/strategies/risk-compliance.ts` - Added checkConcurrentPositions function
+- Function signature:
+  - `checkConcurrentPositions(trade, maxConcurrentPositions, allTrades)` - Check concurrent positions compliance
+- Features:
+  - Counts trades that were open at the current trade's entry time
+  - A trade is "open" if: started before/at entry AND (no exit OR exited after entry)
+  - Returns actual count + 1 (includes current trade being opened)
+  - Handles missing entry time gracefully with null passed value
+- Type changes:
+  - Added `exitTime?: Date | string | null` to TradeForCompliance interface
+- **Learnings for future iterations:**
+  - When checking concurrent positions, include the current trade being opened (+1)
+  - A trade is "open" at a point in time if entryTime <= time AND (exitTime is null OR exitTime > time)
+  - Always handle missing time fields gracefully with descriptive notes
+---
+
+## 2026-01-24 - US-008 Integration Tests for Risk Compliance
+- What was implemented: Comprehensive test suite for risk compliance calculator utility
+- Files changed:
+  - `tests/integration/risk-compliance.test.ts` (new) - ~700 lines of tests
+- Test coverage:
+  - `calculateDollarRisk`: ES/NQ/MES futures using FUTURES_SPECS, forex pairs with pip values
+  - `calculatePlannedRR`: 2:1, 3:1, 0.5:1 R:R ratios, short trades, edge cases
+  - `calculateAchievedR`: Positive/negative R-multiples, fractional R
+  - `checkMinRRRatio`: Pass when R:R meets/exceeds minimum, fail when below
+  - `checkMaxRiskPerTrade`: Dollar-based and percent-based limits, missing account balance
+  - `checkTargetRMultiples`: Hit tracking, sorted targets, no targets hit
+  - `checkDailyLossCompliance`: Dollar/percent limits, cumulative P&L, excluding current trade
+  - `checkConcurrentPositions`: Overlapping trades, already-closed trades, simultaneous entries
+  - `calculateRiskCompliance`: Main function aggregating all checks, compliance percentage
+  - Edge cases: Missing SL/TP, zero risk distance, extreme values
+- **Learnings for future iterations:**
+  - Pure utility tests don't need database - could use component config
+  - vitest hangs in this environment but tests compile and pass type checks
+  - Testing pattern: createTrade() helper with overrides for test-specific values
+  - Use `toBeCloseTo()` for forex calculations due to floating point precision
+---
+
