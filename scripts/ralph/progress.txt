@@ -193,3 +193,21 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - Pattern: fetch all trades once, then filter/map per strategy
   - Sort trades ascending by exitTime for cumulative P&L calculation
 ---
+
+## 2026-01-24 18:XX - US-009
+- **Completed:** Integration Tests for Strategy Performance Query
+- **Files created:**
+  - `tests/integration/strategy-performance.test.ts`
+- **Test cases:**
+  1. Returns empty array when no strategies exist
+  2. Returns strategy with zero metrics when no trades
+  3. Calculates correct metrics for winning trades
+  4. Calculates correct metrics for mixed win/loss trades
+  5. Only includes active strategies
+  6. Builds recentPnlSeries with last 20 trades only
+- **Note:** Tests require Docker running for Testcontainers PostgreSQL
+- **Learnings:**
+  - Use `getTestDb()` and `db.insert()` for direct database setup in tests
+  - Don't use module-level `let` variables that aren't used (biome lint error)
+  - Import `trades` from `../utils/db` for direct DB operations
+---
