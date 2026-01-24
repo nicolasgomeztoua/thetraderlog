@@ -91,3 +91,24 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - Migration pattern: replace `type="number"` with NumericInput, update onChange to use value directly
   - Keep Input import only for text fields (trigger descriptions in scaling rules)
 ---
+
+## 2026-01-24 18:XX - US-003
+- **Completed:** Create StrategyStepper Component
+- **Files created:**
+  - `src/components/strategy/strategy-stepper.tsx`
+- **Key features:**
+  - Vertical stepper for desktop (hidden on mobile with md:flex)
+  - Horizontal stepper for mobile (hidden on desktop with md:hidden)
+  - Numbered steps with checkmark icons for completed steps
+  - Active step highlighted with primary color background
+  - Exports `STRATEGY_WIZARD_STEPS` constant for default wizard steps
+  - Added data-testid attributes for E2E testing
+- **API:**
+  - `steps: StepConfig[]` - array of {id, label, shortLabel?}
+  - `currentStep: number` - current step index
+  - `completedSteps: Set<number>` - set of completed step indices
+  - `onStepClick: (stepIndex: number) => void` - click handler
+- **Learnings:**
+  - Use `aria-current="step"` for accessibility
+  - Biome auto-fixes can reformat ternaries and class sorting
+---
