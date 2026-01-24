@@ -61,7 +61,7 @@ function PerformanceComparisonTable() {
 	);
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-4" data-testid="strategies-performance-table">
 			<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
 				Performance Comparison
 			</h2>
@@ -223,11 +223,17 @@ export default function StrategiesPage() {
 	const isMobile = useIsMobile();
 
 	return (
-		<div className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
+		<div
+			className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6"
+			data-testid="strategies-page"
+		>
 			{/* Header */}
 			<div className="flex items-center justify-between gap-3">
 				<div className="min-w-0 flex-1">
-					<h1 className="font-bold text-xl tracking-tight sm:text-2xl">
+					<h1
+						className="font-bold text-xl tracking-tight sm:text-2xl"
+						data-testid="strategies-heading"
+					>
 						Strategies
 					</h1>
 					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
@@ -238,6 +244,7 @@ export default function StrategiesPage() {
 				<Button
 					asChild
 					className="min-h-[44px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+					data-testid="strategies-button-new"
 				>
 					<Link href="/strategies/new">
 						<Plus className="h-4 w-4 sm:mr-2" />
@@ -253,7 +260,10 @@ export default function StrategiesPage() {
 
 			{/* Loading state */}
 			{isLoading && (
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+				<div
+					className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+					data-testid="strategies-loading"
+				>
 					{[1, 2, 3].map((i) => (
 						<Skeleton className="h-40 sm:h-48" key={i} />
 					))}
@@ -262,8 +272,13 @@ export default function StrategiesPage() {
 
 			{/* Empty state */}
 			{!isLoading && (!strategies || strategies.length === 0) && (
-				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
-					<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
+				<div
+					className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16"
+					data-testid="strategies-empty-state"
+				>
+					<div className="mb-4 flex h-16 w-16 items-center justify-center rounded border border-white/10 bg-white/5 sm:h-20 sm:w-20">
+						<BookMarked className="h-8 w-8 text-muted-foreground/50 sm:h-10 sm:w-10" />
+					</div>
 					<h2 className="font-semibold text-base sm:text-lg">
 						No strategies yet
 					</h2>
@@ -274,6 +289,7 @@ export default function StrategiesPage() {
 					<Button
 						asChild
 						className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+						data-testid="strategies-empty-button-create"
 					>
 						<Link href="/strategies/new">
 							<Plus className="mr-2 h-4 w-4" />
@@ -285,11 +301,14 @@ export default function StrategiesPage() {
 
 			{/* Strategies grid */}
 			{!isLoading && strategies && strategies.length > 0 && (
-				<div className="space-y-3 sm:space-y-4">
+				<div className="space-y-4">
 					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
 						Your Strategies
 					</h2>
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+					<div
+						className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+						data-testid="strategies-grid"
+					>
 						{strategies.map((strategy) => (
 							<StrategyCard
 								isMobile={isMobile}
