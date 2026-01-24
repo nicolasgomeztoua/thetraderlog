@@ -25,6 +25,7 @@ export interface TradeForCompliance {
 	takeProfit: number | null;
 	quantity: number;
 	realizedPnl: number | null;
+	entryTime?: Date | string;
 }
 
 /**
@@ -242,6 +243,74 @@ export function checkTargetRMultiples(
 					: `Did not hit any targets (achieved ${achievedR.toFixed(2)}R)`,
 		},
 		targetsHit,
+	};
+}
+
+/**
+ * Check if a trade violated the daily loss limit
+ *
+ * Calculates cumulative P&L for trades on the same day (before this trade)
+ * and checks if the limit was already breached when this trade was taken.
+ */
+export function checkDailyLossCompliance(
+	trade: TradeForCompliance,
+	dailyLossLimit: { type: "dollars" | "percent"; value: number },
+	dailyTrades: TradeForCompliance[],
+	accountBalance?: number,
+): ComplianceCheck {
+	// Filter out the current trade and trades without P&L
+	const priorTrades = dailyTrades.filter(
+		(t) => t.id !== trade.id && t.realizedPnl !== null,
+	);
+
+	// Calculate cumulative P&L before this trade
+	const cumulativePnl = priorTrades.reduce(
+		(sum, t) => sum + (t.realizedPnl ?? 0),
+		0,
+	);
+
+	if (dailyLossLimit.type === "dollars") {
+		// For dollar-based limit, check if cumulative loss exceeded limit
+		// Note: loss limit is typically a positive number representing max loss allowed
+		// A P&L of -$500 with a limit of $400 means the limit was breached
+		const limitDollars = dailyLossLimit.value;
+		const passed = cumulativePnl >= -limitDollars;
+
+		return {
+			param: "dailyLossLimit",
+			passed,
+			actual: Math.round(cumulativePnl * 100) / 100,
+			limit: limitDollars,
+			note: passed
+				? `P&L was $${cumulativePnl.toFixed(2)} before this trade, within -$${limitDollars} limit`
+				: `P&L was $${cumulativePnl.toFixed(2)} before this trade, exceeded -$${limitDollars} limit`,
+		};
+	}
+
+	// Percent-based limit requires account balance
+	if (!accountBalance) {
+		return {
+			param: "dailyLossLimit",
+			passed: null,
+			actual: null,
+			limit: dailyLossLimit.value,
+			note: "Unable to check: account balance required for percent-based limit",
+		};
+	}
+
+	// Calculate percent loss
+	const limitDollars = (dailyLossLimit.value / 100) * accountBalance;
+	const passed = cumulativePnl >= -limitDollars;
+	const actualPercent = (cumulativePnl / accountBalance) * 100;
+
+	return {
+		param: "dailyLossLimit",
+		passed,
+		actual: Math.round(actualPercent * 100) / 100,
+		limit: dailyLossLimit.value,
+		note: passed
+			? `P&L was ${actualPercent.toFixed(2)}% before this trade, within -${dailyLossLimit.value}% limit`
+			: `P&L was ${actualPercent.toFixed(2)}% before this trade, exceeded -${dailyLossLimit.value}% limit`,
 	};
 }
 
