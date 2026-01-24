@@ -175,3 +175,21 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - Use `aria-hidden="true"` for decorative SVGs to pass accessibility linting
   - Calculate normalized Y coordinates by inverting (1 - normalized) since SVG Y increases downward
 ---
+
+## 2026-01-24 18:XX - US-008
+- **Completed:** Add Strategy Performance tRPC Query
+- **Files modified:**
+  - `src/server/api/routers/strategies.ts` - Added `getPerformanceByStrategy` query
+- **Key features:**
+  - Returns data for ALL active strategies in one call (batch for card gallery)
+  - Uses `calculateAggregateStats` for stats (no duplication)
+  - Builds `recentPnlSeries` (last 20 trades, cumulative P&L) for mini charts
+  - Returns: strategyId, strategyName, strategyColor, tradesCount, winRate, totalPnl, profitFactor, avgPnl, recentPnlSeries
+- **API design decision:**
+  - Returns all strategies (not per-strategy query) for efficiency
+  - Frontend can filter by strategyId if needed
+  - This avoids N+1 queries when rendering strategy card gallery
+- **Learnings:**
+  - Pattern: fetch all trades once, then filter/map per strategy
+  - Sort trades ascending by exitTime for cumulative P&L calculation
+---

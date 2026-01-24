@@ -812,4 +812,78 @@ export const strategiesRouter = createTRPCRouter({
 
 		return curves;
 	}),
+
+	// Get performance data for all strategies (for cards/overview)
+	getPerformanceByStrategy: protectedProcedure.query(async ({ ctx }) => {
+		// Get user's breakeven threshold
+		const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+
+		// Get all active strategies
+		const allStrategies = await ctx.db.query.strategies.findMany({
+			where: and(
+				eq(strategies.userId, ctx.user.id),
+				eq(strategies.isActive, true),
+			),
+			columns: {
+				id: true,
+				name: true,
+				color: true,
+			},
+		});
+
+		// Get all closed trades, ordered by exit time
+		const allTrades = await ctx.db.query.trades.findMany({
+			where: and(
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+			),
+			columns: {
+				id: true,
+				strategyId: true,
+				netPnl: true,
+				exitTime: true,
+			},
+			orderBy: [desc(trades.exitTime)],
+		});
+
+		// Calculate performance for each strategy
+		const performanceData = allStrategies.map((strategy) => {
+			// Filter trades for this strategy
+			const strategyTrades = allTrades
+				.filter((t) => t.strategyId === strategy.id)
+				// Sort by exit time ascending for cumulative calculation
+				.sort((a, b) => {
+					if (!a.exitTime || !b.exitTime) return 0;
+					return (
+						new Date(a.exitTime).getTime() - new Date(b.exitTime).getTime()
+					);
+				});
+
+			// Use shared stats calculator
+			const stats = calculateAggregateStats(strategyTrades, beThreshold);
+
+			// Build recent P&L series for mini chart (last 20 trades, cumulative)
+			const recentTrades = strategyTrades.slice(-20);
+			let cumulative = 0;
+			const recentPnlSeries = recentTrades.map((trade) => {
+				cumulative += trade.netPnl ? parseFloat(trade.netPnl) : 0;
+				return cumulative;
+			});
+
+			return {
+				strategyId: strategy.id,
+				strategyName: strategy.name,
+				strategyColor: strategy.color ?? "#d4ff00",
+				tradesCount: stats.totalTrades,
+				winRate: stats.winRate,
+				totalPnl: stats.totalPnl,
+				profitFactor: stats.profitFactor,
+				avgPnl: stats.avgPnl,
+				recentPnlSeries,
+			};
+		});
+
+		return performanceData;
+	}),
 });

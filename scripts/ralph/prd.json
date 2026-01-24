@@ -141,8 +141,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Returns all active strategies performance. Uses calculateAggregateStats, builds recentPnlSeries (last 20 trades cumulative)"
     },
     {
       "id": "US-009",
