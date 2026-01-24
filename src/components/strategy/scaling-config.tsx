@@ -8,11 +8,11 @@ import { NumericInput } from "@/components/ui/numeric-input";
 export interface ScalingRules {
 	scaleIn?: Array<{
 		trigger: string;
-		sizePercent: number;
+		sizePercent: number | undefined;
 	}>;
 	scaleOut?: Array<{
 		trigger: string;
-		sizePercent: number;
+		sizePercent: number | undefined;
 	}>;
 }
 
@@ -47,7 +47,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const updateScaleIn = (
 		idx: number,
 		field: "trigger" | "sizePercent",
-		fieldValue: string | number,
+		fieldValue: string | number | undefined,
 	) => {
 		const newScaleIn = [...(scalingRules.scaleIn ?? [])];
 		const existing = newScaleIn[idx] ?? { trigger: "", sizePercent: 0 };
@@ -58,7 +58,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const updateScaleOut = (
 		idx: number,
 		field: "trigger" | "sizePercent",
-		fieldValue: string | number,
+		fieldValue: string | number | undefined,
 	) => {
 		const newScaleOut = [...(scalingRules.scaleOut ?? [])];
 		const existing = newScaleOut[idx] ?? { trigger: "", sizePercent: 0 };
@@ -113,7 +113,8 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 						{(scalingRules.scaleIn ?? []).map((rule, idx) => (
 							<div
 								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
-								key={`scalein-${rule.trigger || idx}`}
+								// biome-ignore lint/suspicious/noArrayIndexKey: Index key required to prevent focus loss
+								key={`scalein-${idx}`}
 							>
 								<div className="flex-1 space-y-1">
 									<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
@@ -135,9 +136,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										</span>
 										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
-											onChange={(val) =>
-												updateScaleIn(idx, "sizePercent", val ?? 0)
-											}
+											onChange={(val) => updateScaleIn(idx, "sizePercent", val)}
 											step={5}
 											value={rule.sizePercent}
 										/>
@@ -185,7 +184,8 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 						{(scalingRules.scaleOut ?? []).map((rule, idx) => (
 							<div
 								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
-								key={`scaleout-${rule.trigger || idx}`}
+								// biome-ignore lint/suspicious/noArrayIndexKey: Index key required to prevent focus loss
+								key={`scaleout-${idx}`}
 							>
 								<div className="flex-1 space-y-1">
 									<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
@@ -208,7 +208,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											onChange={(val) =>
-												updateScaleOut(idx, "sizePercent", val ?? 0)
+												updateScaleOut(idx, "sizePercent", val)
 											}
 											step={5}
 											value={rule.sizePercent}

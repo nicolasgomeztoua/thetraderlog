@@ -14,13 +14,13 @@ import {
 
 export interface TrailingRules {
 	moveToBreakeven?: {
-		triggerR: number;
-		offsetTicks?: number;
+		triggerR: number | undefined;
+		offsetTicks?: number | undefined;
 	};
 	trailStops?: Array<{
-		triggerR: number;
+		triggerR: number | undefined;
 		method: "fixed_ticks" | "atr_multiple" | "swing_low";
-		value: number;
+		value: number | undefined;
 	}>;
 }
 
@@ -47,9 +47,11 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 
 	const updateBreakeven = (
 		field: "triggerR" | "offsetTicks",
-		fieldValue: number,
+		fieldValue: number | undefined,
 	) => {
-		const currentBreakeven = trailingRules.moveToBreakeven ?? { triggerR: 1 };
+		const currentBreakeven = trailingRules.moveToBreakeven ?? {
+			triggerR: undefined,
+		};
 		onChange({
 			...trailingRules,
 			moveToBreakeven: {
@@ -72,7 +74,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 	const updateTrailStop = (
 		idx: number,
 		field: "triggerR" | "method" | "value",
-		fieldValue: number | string,
+		fieldValue: number | string | undefined,
 	) => {
 		const newTrailStops = [...(trailingRules.trailStops ?? [])];
 		const existing = newTrailStops[idx] ?? {
@@ -120,7 +122,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 							</span>
 							<NumericInput
 								className="min-h-[44px] font-mono sm:min-h-0"
-								onChange={(val) => updateBreakeven("triggerR", val ?? 0)}
+								onChange={(val) => updateBreakeven("triggerR", val)}
 								placeholder="1.0"
 								step={0.1}
 								value={trailingRules.moveToBreakeven?.triggerR}
@@ -133,7 +135,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 							<NumericInput
 								allowDecimals={false}
 								className="min-h-[44px] font-mono sm:min-h-0"
-								onChange={(val) => updateBreakeven("offsetTicks", val ?? 0)}
+								onChange={(val) => updateBreakeven("offsetTicks", val)}
 								placeholder="0"
 								step={1}
 								value={trailingRules.moveToBreakeven?.offsetTicks}
@@ -170,7 +172,8 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 						{(trailingRules.trailStops ?? []).map((rule, idx) => (
 							<div
 								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
-								key={`trail-${rule.triggerR}-${rule.method}`}
+								// biome-ignore lint/suspicious/noArrayIndexKey: Index key required to prevent focus loss
+								key={`trail-${idx}`}
 							>
 								<div className="grid grid-cols-2 gap-2 sm:contents">
 									<div className="space-y-1 sm:w-24">
@@ -179,9 +182,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										</span>
 										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
-											onChange={(val) =>
-												updateTrailStop(idx, "triggerR", val ?? 0)
-											}
+											onChange={(val) => updateTrailStop(idx, "triggerR", val)}
 											step={0.1}
 											value={rule.triggerR}
 										/>
@@ -192,9 +193,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										</span>
 										<NumericInput
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
-											onChange={(val) =>
-												updateTrailStop(idx, "value", val ?? 0)
-											}
+											onChange={(val) => updateTrailStop(idx, "value", val)}
 											step={1}
 											value={rule.value}
 										/>

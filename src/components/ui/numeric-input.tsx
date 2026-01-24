@@ -58,9 +58,14 @@ function NumericInput({
 	const [internalValue, setInternalValue] = React.useState<string>(
 		value !== undefined ? String(value) : "",
 	);
+	// Track focus to avoid sync during editing
+	const [isFocused, setIsFocused] = React.useState(false);
 
-	// Sync internal state when external value changes
+	// Sync internal state when external value changes (only when not focused)
 	React.useEffect(() => {
+		// Skip sync while user is actively editing
+		if (isFocused) return;
+
 		const externalStr = value !== undefined ? String(value) : "";
 		// Only update if the parsed value is different
 		// This prevents cursor jumps when user is typing
@@ -72,7 +77,7 @@ function NumericInput({
 		) {
 			setInternalValue(externalStr);
 		}
-	}, [value, internalValue]);
+	}, [value, internalValue, isFocused]);
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const rawValue = e.target.value;
@@ -132,7 +137,14 @@ function NumericInput({
 		onChange(clampedValue);
 	};
 
+	const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+		setIsFocused(true);
+		props.onFocus?.(e);
+	};
+
 	const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+		setIsFocused(false);
+
 		// On blur, clean up the display value
 		if (value !== undefined) {
 			// Format to proper decimal places if needed
@@ -163,6 +175,7 @@ function NumericInput({
 			inputMode={allowDecimals ? "decimal" : "numeric"}
 			onBlur={handleBlur}
 			onChange={handleChange}
+			onFocus={handleFocus}
 			placeholder={placeholder}
 			step={step}
 			type="text"

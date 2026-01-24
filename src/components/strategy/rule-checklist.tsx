@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Circle } from "lucide-react";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOptimisticState } from "@/hooks/use-debounced-mutation";
@@ -56,20 +56,48 @@ export function RuleChecklist({
 		updates: optimisticUpdates,
 	} = useOptimisticState<{ checked: boolean }>();
 
+	// Track in-flight mutations per rule to prevent premature clearing of optimistic state
+	const inFlightMutationsRef = useRef<Map<string, number>>(new Map());
+
 	const checkRule = api.strategies.checkRule.useMutation({
 		onMutate: ({ ruleId, checked }) => {
+			// Increment in-flight count for this rule
+			const currentCount = inFlightMutationsRef.current.get(ruleId) ?? 0;
+			inFlightMutationsRef.current.set(ruleId, currentCount + 1);
 			// Apply optimistic update immediately
 			applyOptimisticUpdate(ruleId, { checked });
 		},
 		onError: (_error, variables) => {
-			// On error, clear only this rule's optimistic state
-			clearOptimisticUpdate(variables.ruleId);
+			// Decrement in-flight count
+			const currentCount =
+				inFlightMutationsRef.current.get(variables.ruleId) ?? 1;
+			const newCount = currentCount - 1;
+			if (newCount <= 0) {
+				inFlightMutationsRef.current.delete(variables.ruleId);
+				// Only clear optimistic state if no more mutations in flight
+				clearOptimisticUpdate(variables.ruleId);
+			} else {
+				inFlightMutationsRef.current.set(variables.ruleId, newCount);
+			}
 			toast.error("Failed to update rule");
 		},
-		onSettled: async (_data, _error, variables) => {
-			// Wait for refetch to complete, then clear only this rule's optimistic state
-			await onUpdate?.();
-			clearOptimisticUpdate(variables.ruleId);
+		onSettled: async (_data, error, variables) => {
+			// Skip if onError already handled this
+			if (error) return;
+
+			// Decrement in-flight count
+			const currentCount =
+				inFlightMutationsRef.current.get(variables.ruleId) ?? 1;
+			const newCount = currentCount - 1;
+
+			if (newCount <= 0) {
+				inFlightMutationsRef.current.delete(variables.ruleId);
+				// Only refetch and clear optimistic state when last mutation completes
+				await onUpdate?.();
+				clearOptimisticUpdate(variables.ruleId);
+			} else {
+				inFlightMutationsRef.current.set(variables.ruleId, newCount);
+			}
 		},
 	});
 

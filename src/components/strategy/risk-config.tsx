@@ -20,11 +20,11 @@ export interface RiskParameters {
 	};
 	maxRiskPerTrade?: {
 		type: "dollars" | "percent";
-		value: number;
+		value: number | undefined;
 	};
 	dailyLossLimit?: {
 		type: "dollars" | "percent";
-		value: number;
+		value: number | undefined;
 	};
 	maxConcurrentPositions?: number;
 	minRRRatio?: number;
@@ -67,7 +67,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							}
 							value={riskParams.positionSizing?.method ?? ""}
 						>
-							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
+							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0 [&>span]:truncate">
 								<SelectValue placeholder="Select method..." />
 							</SelectTrigger>
 							<SelectContent>
@@ -197,7 +197,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							onChange={(val) =>
 								updateField("maxRiskPerTrade", {
 									type: riskParams.maxRiskPerTrade?.type ?? "dollars",
-									value: val ?? 0,
+									value: val,
 								})
 							}
 							placeholder="100"
@@ -250,7 +250,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							onChange={(val) =>
 								updateField("dailyLossLimit", {
 									type: riskParams.dailyLossLimit?.type ?? "dollars",
-									value: val ?? 0,
+									value: val,
 								})
 							}
 							placeholder="500"

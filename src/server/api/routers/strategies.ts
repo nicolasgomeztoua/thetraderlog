@@ -26,13 +26,13 @@ const riskParametersSchema = z.object({
 	maxRiskPerTrade: z
 		.object({
 			type: z.enum(["dollars", "percent"]),
-			value: z.number(),
+			value: z.number().optional(),
 		})
 		.optional(),
 	dailyLossLimit: z
 		.object({
 			type: z.enum(["dollars", "percent"]),
-			value: z.number(),
+			value: z.number().optional(),
 		})
 		.optional(),
 	maxConcurrentPositions: z.number().optional(),
@@ -45,7 +45,7 @@ const scalingRulesSchema = z.object({
 		.array(
 			z.object({
 				trigger: z.string(),
-				sizePercent: z.number(),
+				sizePercent: z.number().optional(),
 			}),
 		)
 		.optional(),
@@ -53,7 +53,7 @@ const scalingRulesSchema = z.object({
 		.array(
 			z.object({
 				trigger: z.string(),
-				sizePercent: z.number(),
+				sizePercent: z.number().optional(),
 			}),
 		)
 		.optional(),
@@ -62,16 +62,16 @@ const scalingRulesSchema = z.object({
 const trailingRulesSchema = z.object({
 	moveToBreakeven: z
 		.object({
-			triggerR: z.number(),
+			triggerR: z.number().optional(),
 			offsetTicks: z.number().optional(),
 		})
 		.optional(),
 	trailStops: z
 		.array(
 			z.object({
-				triggerR: z.number(),
+				triggerR: z.number().optional(),
 				method: z.enum(["fixed_ticks", "atr_multiple", "swing_low"]),
-				value: z.number(),
+				value: z.number().optional(),
 			}),
 		)
 		.optional(),
