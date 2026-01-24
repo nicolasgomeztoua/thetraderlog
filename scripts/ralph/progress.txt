@@ -151,3 +151,27 @@ Started: Sat Jan 24 17:48:14 WET 2026
 - **Learnings:**
   - StrategyWizard is a drop-in replacement - same props as StrategyForm
 ---
+
+## 2026-01-24 18:XX - US-006
+- **Completed:** Create StrategyMiniChart Component
+- **Files created:**
+  - `src/components/strategy/strategy-mini-chart.tsx`
+- **Files modified:**
+  - `src/components/strategy/index.ts` - Added StrategyMiniChart export
+- **Key features:**
+  - Lightweight SVG sparkline (no AG Charts dependency)
+  - Profit green or loss red based on trend (final vs initial value)
+  - Gradient area fill under the line
+  - Handles empty data (shows "No data" placeholder)
+  - Handles single data point (shows flat line)
+  - End point indicator (small circle)
+  - Configurable width/height and "line" or "area" variants
+- **API:**
+  - `data: number[]` - Array of P&L values
+  - `width?: number` - Default 100px
+  - `height?: number` - Default 40px
+  - `variant?: "line" | "area"` - Default "area"
+- **Learnings:**
+  - Use `aria-hidden="true"` for decorative SVGs to pass accessibility linting
+  - Calculate normalized Y coordinates by inverting (1 - normalized) since SVG Y increases downward
+---
