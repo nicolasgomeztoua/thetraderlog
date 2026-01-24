@@ -2,6 +2,11 @@ export { ComplianceBadge } from "./compliance-badge";
 export type { RiskParameters } from "./risk-config";
 export { RiskConfig } from "./risk-config";
 export { RuleChecklist } from "./rule-checklist";
+export type {
+	RuleComplianceData,
+	RulesCompliancePanelProps,
+} from "./rules-compliance-panel";
+export { RulesCompliancePanel } from "./rules-compliance-panel";
 export type { ScalingRules } from "./scaling-config";
 export { ScalingConfig } from "./scaling-config";
 export { StrategyCard } from "./strategy-card";
