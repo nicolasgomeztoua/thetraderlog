@@ -112,3 +112,28 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - Use `aria-current="step"` for accessibility
   - Biome auto-fixes can reformat ternaries and class sorting
 ---
+
+## 2026-01-24 18:XX - US-004
+- **Completed:** Create StrategyWizard Component
+- **Files created:**
+  - `src/components/strategy/strategy-wizard.tsx`
+- **Files modified:**
+  - `src/components/strategy/index.ts` - Added exports for StrategyStepper and StrategyWizard
+- **Key features:**
+  - Two-column layout: stepper sidebar (md:w-56) + content area
+  - Terminal header with traffic lights (loss/breakeven/profit colors)
+  - Form state management with auto-save between steps
+  - Back/Continue buttons for navigation
+  - Final step shows "Create Strategy" with Check icon
+  - All form fields have data-testid attributes for E2E testing
+  - Same form field rendering as StrategyForm but in wizard layout
+- **API:**
+  - `initialData?: Partial<StrategyFormData>` - pre-populate form
+  - `onSubmit: (data: StrategyFormData) => void` - submit handler
+  - `isSubmitting?: boolean` - disable buttons during submit
+  - `submitLabel?: string` - customize submit button text
+- **Terminal header pattern:**
+  - `bg-secondary` background
+  - Three dots: `bg-loss/60`, `bg-breakeven/60`, `bg-profit/60`
+  - Title in monospace: "strategy-wizard"
+---
