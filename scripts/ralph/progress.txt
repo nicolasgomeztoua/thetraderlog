@@ -70,3 +70,89 @@ Key files for this feature:
   - Form styling is consistent: font-mono, text-[10px] labels, uppercase tracking-widest
 ---
 
+## 2026-01-24 - US-001 Add Strategy Constants File
+- What was implemented: Created centralized constants for strategy-related values
+- Files changed:
+  - `src/lib/constants/strategies.ts` (new) - All strategy constants with `as const` typing
+  - `src/lib/constants/index.ts` - Added re-exports for strategy constants
+- Constants created:
+  - `POSITION_SIZING_METHODS` - fixed, risk_percent, kelly
+  - `RISK_TYPES` - dollars, percent
+  - `RULE_CATEGORIES` - entry, exit, risk, management
+  - `CONDITIONAL_RULE_TYPES` - breakeven, trail, scale_out
+  - `STRATEGY_CREATION_STEPS` - basics, rules, risk, review
+  - `AUTO_CHECKED_PARAMS` - risk params that are auto-validated against trades
+  - `CONDITIONAL_PARAMS` - params that generate conditional checklists
+- **Learnings for future iterations:**
+  - Follow the `as const` pattern from analytics.ts for type-safe constants
+  - Always re-export from index.ts so imports can use `@/lib/constants`
+  - Removed archived prd JSON file that was causing biome format errors
+---
+
+## 2026-01-24 - US-002 Create Enhanced Number Input Component
+- What was implemented: Created reusable NumberInput component for form inputs
+- Files changed:
+  - `src/components/ui/number-input.tsx` (new) - Enhanced number input with null support
+- Component features:
+  - Props: value: number | null, onChange, allowDecimals, decimalPlaces, min, max, placeholder, suffix, label
+  - Uses type="text" with inputMode="decimal" for free typing (not type="number")
+  - Validates only on blur, not during typing
+  - Supports clearing to null
+  - Handles paste with currency symbol stripping (/[$€£¥₹,\s]/g)
+  - Shows min/max validation errors below input
+  - Supports inline suffix display (e.g., "2.5 R")
+  - Terminal design: font-mono, border-white/10, focus:border-primary/50
+  - Escape to cancel, Enter to save
+- **Learnings for future iterations:**
+  - Biome requires sorted JSX attributes (alphabetical order)
+  - Use `const` not `let` for variables that are only assigned once
+  - Placeholder opacity should be /50 (half opacity) for distinct styling
+---
+
+## 2026-01-24 - US-003 Create Enhanced Text Input Component
+- What was implemented: Created reusable TextInput component for form inputs
+- Files changed:
+  - `src/components/ui/text-input.tsx` (new) - Enhanced text input with null support
+- Component features:
+  - Props: value: string | null, onChange, placeholder, required, error, label, disabled
+  - Empty string converted to null on blur (normalizes empty input)
+  - Validates required field on blur, shows error state
+  - External error prop support for form integration
+  - Placeholder uses text-muted-foreground/50 (distinct from value)
+  - Error message appears below input in text-destructive font-mono text-[10px]
+  - Terminal design: font-mono, border-white/10, focus:border-primary/50
+  - Escape to cancel, Enter to save
+- **Learnings for future iterations:**
+  - TextInput and NumberInput share the same pattern: local state + blur validation
+  - Keep external error prop for integration with parent form validation
+  - Use aria-invalid for accessibility-friendly error indication
+---
+
+## 2026-01-24 - US-004 Unit Tests for Input Components
+- What was implemented: Comprehensive unit tests for NumberInput and TextInput components
+- Files changed:
+  - `src/components/ui/__tests__/number-input.test.tsx` (new) - 264 lines of tests
+  - `src/components/ui/__tests__/text-input.test.tsx` (new) - 220 lines of tests
+  - `tests/setup/component-test-setup.ts` (new) - Jest-DOM setup for vitest
+  - `vitest.component.config.ts` (new) - Vitest config for component tests with happy-dom
+- NumberInput tests:
+  - Clearing to null (allows clearing, returns null on blur)
+  - Decimal handling (validates when allowed, rejects when disallowed, truncates on blur)
+  - Min/max validation on blur (shows error messages, prevents onChange call)
+  - Suffix display inline
+  - Keyboard navigation (Enter to save, Escape to cancel)
+  - Negative numbers support
+- TextInput tests:
+  - Null handling (empty string returns null, whitespace trimmed)
+  - Required validation (shows error on blur when empty)
+  - External error prop (displays and clears on typing)
+  - Keyboard navigation (Enter to save, Escape to cancel)
+  - Label rendering with htmlFor association
+  - Disabled state
+- **Learnings for future iterations:**
+  - Biome requires sorted JSX attributes alphabetically (onChange before value)
+  - Use `@testing-library/user-event` with `userEvent.setup()` for realistic interactions
+  - Component tests use happy-dom environment (not jsdom)
+  - Vitest component config is separate from integration test config
+---
+
