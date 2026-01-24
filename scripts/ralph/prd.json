@@ -1,122 +1,776 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/e2e-testing-infrastructure",
-  "description": "Set up frontend E2E testing infrastructure with Playwright and @clerk/testing",
+  "branchName": "ralph/strategies-redesign",
+  "description": "Redesign strategies section with auto-compliance, creation wizard, and enhanced edit experience",
   "userStories": [
     {
-      "id": "US-001",
-      "title": "Install Playwright and Clerk Testing",
-      "description": "As a developer, I want Playwright and @clerk/testing installed so that E2E tests can run.",
+      "id": "US-000",
+      "title": "Audit Existing Form Utilities and Input Patterns",
+      "description": "As a developer, I want to audit existing input handling utilities before implementing the redesign so that we reuse patterns and avoid duplication.",
       "acceptanceCriteria": [
-        "Run bun add -D @playwright/test @clerk/testing",
-        "Run bunx playwright install to install browsers",
-        "Create playwright.config.ts with base URL localhost:3000",
-        "Configure webServer to start bun run dev before tests",
-        "Add test:e2e script to package.json: playwright test",
-        "Add test:e2e:ui script for debugging: playwright test --ui",
-        "Add playwright/.clerk/ to .gitignore",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Search src/lib/ for existing form/input utilities",
+        "Search src/components/ui/ for input component patterns (reference: src/components/ui/input.tsx:1-24 for base Input)",
+        "Search src/hooks/ for form-related hooks (debounce, validation)",
+        "Document findings in scripts/ralph/progress.txt with file:line references",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Completed: Installed deps, created playwright.config.ts, added scripts to package.json, updated .gitignore"
+      "notes": "Completed: Documented existing patterns in progress.txt - found useDebouncedMutation hook, EditableField number validation patterns, base Input/Textarea components, react-hook-form integration"
+    },
+    {
+      "id": "US-001",
+      "title": "Add Strategy Constants File",
+      "description": "As a developer, I want centralized constants for strategy-related values so that they're not hardcoded across the codebase.",
+      "acceptanceCriteria": [
+        "Create src/lib/constants/strategies.ts following existing pattern in src/lib/constants/analytics.ts",
+        "Export POSITION_SIZING_METHODS: [{ value: 'fixed', label: 'Fixed Size' }, { value: 'risk_percent', label: 'Risk % of Account' }, { value: 'kelly', label: 'Kelly Criterion' }]",
+        "Export RISK_TYPES: [{ value: 'dollars', label: 'Dollars ($)' }, { value: 'percent', label: 'Percent (%)' }]",
+        "Export RULE_CATEGORIES: [{ value: 'entry', label: 'Entry' }, { value: 'exit', label: 'Exit' }, { value: 'risk', label: 'Risk' }, { value: 'management', label: 'Management' }]",
+        "Export CONDITIONAL_RULE_TYPES: [{ value: 'breakeven', label: 'Move to Breakeven' }, { value: 'trail', label: 'Trail Stop' }, { value: 'scale_out', label: 'Scale Out' }]",
+        "Export STRATEGY_CREATION_STEPS: ['basics', 'rules', 'risk', 'review']",
+        "Export AUTO_CHECKED_PARAMS: ['minRRRatio', 'maxRiskPerTrade', 'dailyLossLimit', 'maxConcurrentPositions']",
+        "Export CONDITIONAL_PARAMS: ['moveToBreakeven', 'trailStops', 'scaleOut', 'targetRMultiples']",
+        "Re-export from src/lib/constants/index.ts following existing pattern",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Clerk Global Setup for Auth State",
-      "description": "As a test author, I want Clerk authentication handled in global setup so tests start authenticated.",
+      "title": "Create Enhanced Number Input Component",
+      "description": "As a user, I want number inputs that allow clearing to empty, support decimals when needed, and validate only on blur so that I can type freely without interruption.",
       "acceptanceCriteria": [
-        "Create tests/e2e/global.setup.ts",
-        "Use clerkSetup() from @clerk/testing/playwright",
-        "Sign in with test user credentials from environment variables (E2E_CLERK_USER_EMAIL, E2E_CLERK_USER_PASSWORD)",
-        "Save auth state to playwright/.clerk/user.json",
-        "Configure Playwright to load this state in authenticated tests",
-        "Typecheck passes (bun run check)"
+        "Create src/components/ui/number-input.tsx extending base Input pattern from src/components/ui/input.tsx",
+        "Props: value: number | null, onChange: (value: number | null) => void, allowDecimals?: boolean, decimalPlaces?: number, min?: number, max?: number, placeholder?: string, suffix?: string",
+        "Input uses type='text' with inputMode='decimal' (not type='number') to allow free typing",
+        "Value can be cleared (returns null to parent)",
+        "Validates and formats only on blur, not during typing",
+        "Shows validation error via aria-invalid and error border (uses existing border-destructive pattern)",
+        "Placeholder uses distinct styling: text-muted-foreground/50 (half opacity of muted)",
+        "Supports suffix display inline (e.g., '2.5 R')",
+        "Uses Terminal design: font-mono, border-white/10, focus:border-primary/50 (from base Input)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: can clear, type freely, validates on blur"
       ],
-      "priority": 2,
-      "passes": true,
-      "notes": "Created global.setup.ts with clerkSetup() and clerk.signIn() for password strategy, auth state saved to playwright/.clerk/user.json"
+      "priority": 3,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Test User Setup Documentation",
-      "description": "As a developer, I want clear documentation on setting up the Clerk test user.",
+      "title": "Create Enhanced Text Input Component",
+      "description": "As a user, I want text inputs with clear placeholder styling and proper validation feedback so that I know when a field is empty versus filled.",
       "acceptanceCriteria": [
-        "Create tests/e2e/README.md with setup instructions",
-        "Document: Create test user in Clerk dev dashboard (e.g., e2e-test@edgejournal.dev)",
-        "Document: Enable email/password auth in Clerk",
-        "Document: Required env vars (E2E_CLERK_USER_EMAIL, E2E_CLERK_USER_PASSWORD)",
-        "Create .env.test.example with placeholders for E2E env vars",
-        "Typecheck passes (bun run check)"
+        "Create src/components/ui/text-input.tsx extending base Input pattern",
+        "Props: value: string | null, onChange: (value: string | null) => void, placeholder?: string, required?: boolean, error?: string",
+        "Empty string passed as null to parent (not empty string)",
+        "Validates on blur, shows error state via border and message",
+        "Placeholder uses distinct styling: text-muted-foreground/50 (clearly different from value)",
+        "Error message appears below input in text-destructive font-mono text-[10px]",
+        "Uses Terminal design system styling from DESIGN_REFERENCE.md",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: placeholder distinct, validation works"
       ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Created tests/e2e/README.md with Clerk test user setup instructions and .env.test.example with E2E env var placeholders"
+      "priority": 4,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Example E2E Test - Dashboard Loads",
-      "description": "As a developer, I want an example test that verifies the dashboard loads when authenticated.",
+      "title": "Unit Tests for Input Components",
+      "description": "As a developer, I want unit tests for the enhanced input components so that we verify the value handling and validation behavior.",
       "acceptanceCriteria": [
-        "Create tests/e2e/dashboard.spec.ts",
-        "Test: Navigate to /dashboard",
-        "Test: Page loads without error",
-        "Test: Some expected element is visible (e.g., heading or nav)",
-        "All E2E tests pass (bun run test:e2e)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "Created dashboard.spec.ts with 3 tests: dashboard loads, stats grid displays, and start journal hero section"
-    },
-    {
-      "id": "US-005",
-      "title": "Example E2E Test - Auth Redirect",
-      "description": "As a developer, I want an example test that verifies unauthenticated users are redirected.",
-      "acceptanceCriteria": [
-        "Create tests/e2e/auth.spec.ts",
-        "Test: Unauthenticated user visiting /dashboard redirects to /sign-in",
-        "All E2E tests pass (bun run test:e2e)",
+        "Create src/components/ui/__tests__/number-input.test.tsx",
+        "Test: allows clearing to null",
+        "Test: validates decimals when allowDecimals=true",
+        "Test: rejects decimals when allowDecimals=false",
+        "Test: validates min/max on blur",
+        "Test: formats value with suffix on blur",
+        "Create src/components/ui/__tests__/text-input.test.tsx",
+        "Test: returns null for empty string",
+        "Test: shows error on blur when required and empty",
+        "All tests pass (bun run test)",
         "Typecheck passes (bun run check)"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Created auth.spec.ts with 3 tests verifying unauthenticated users are redirected to /sign-in from /dashboard, /journal, and /analytics. Uses test.use({ storageState: { cookies: [], origins: [] } }) to clear auth state."
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Create Risk Compliance Calculator Utility",
+      "description": "As a developer, I want a utility that calculates compliance for validatable risk parameters so that we can auto-check trades against strategy rules.",
+      "acceptanceCriteria": [
+        "Create src/lib/strategies/risk-compliance.ts",
+        "Function calculateRiskCompliance(trade: Trade, strategy: Strategy, symbolSpecs: SymbolSpecs): ComplianceResult",
+        "Use FUTURES_SPECS from src/lib/market-data/symbols.ts:22 for pointValue lookup",
+        "Check minRRRatio: Calculate planned R:R from entry/SL/TP, compare to limit",
+        "Check maxRiskPerTrade: Calculate dollar risk from entry/SL/qty/specs, compare to limit",
+        "Check targetRMultiples: Calculate achieved R, check which targets were hit",
+        "Returns: { checks: [{ param: string, passed: boolean, actual: number, limit: number }], overallCompliance: number }",
+        "Handles edge cases: missing SL/TP returns 'unable to check'",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "E2E Testing Skill",
-      "description": "As Ralph, I want an E2E testing skill so I know how to write and run frontend tests.",
+      "title": "Add Daily Loss Limit Checker",
+      "description": "As a developer, I want to check if a trade violated the daily loss limit so that compliance includes intraday risk rules.",
       "acceptanceCriteria": [
-        "Create .claude/skills/e2e-testing/SKILL.md",
-        "Document: How to run tests (bun run test:e2e)",
-        "Document: Playwright + @clerk/testing setup overview",
-        "Document: data-testid naming convention ([component]-[element]-[qualifier])",
-        "Document: How to add data-testid to components during feature development",
-        "Document: Example test patterns (auth, page loads, form submission)",
-        "Document: Global setup and auth state persistence",
-        "Update tests/e2e/README.md to reference the skill",
-        "Typecheck passes (bun run check)"
+        "Add function checkDailyLossCompliance(trade: Trade, strategy: Strategy, dailyTrades: Trade[]): ComplianceCheck to risk-compliance.ts",
+        "Calculates cumulative P&L for trades on same day (before this trade)",
+        "Checks if taking this trade would violate daily loss limit",
+        "Returns: { param: 'dailyLossLimit', passed: boolean, actual: number, limit: number, note: string }",
+        "Note explains: 'P&L was -$X before this trade, limit is -$Y'",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
       ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Created .claude/skills/e2e-testing/SKILL.md with complete documentation covering test commands, data-testid conventions, test patterns (authenticated, unauthenticated, forms, state-dependent UI), global setup architecture, and troubleshooting. Updated tests/e2e/README.md with reference to the skill."
+      "priority": 7,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-007",
-      "title": "Ralph Loop Integration",
-      "description": "As Ralph, I want to run E2E tests after implementation.",
+      "title": "Add Concurrent Positions Checker",
+      "description": "As a developer, I want to check if a trade violated max concurrent positions so that position sizing rules are enforced.",
       "acceptanceCriteria": [
-        "Update scripts/ralph/prompt.md to reference E2E testing skill (.claude/skills/e2e-testing/SKILL.md)",
-        "Add section: When implementing UI features, read the E2E testing skill",
-        "Add guidance: add data-testid attributes when creating testable UI",
-        "Add guidance: run bun run test:e2e for UI stories (optional, after backend tests)",
+        "Add function checkConcurrentPositions(trade: Trade, strategy: Strategy, openTrades: Trade[]): ComplianceCheck to risk-compliance.ts",
+        "Counts how many trades were open at this trade's entry time",
+        "Compares to maxConcurrentPositions limit",
+        "Returns: { param: 'maxConcurrentPositions', passed: boolean, actual: number, limit: number }",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Integration Tests for Risk Compliance",
+      "description": "As a developer, I want tests for the compliance calculator so that we verify the logic is correct.",
+      "acceptanceCriteria": [
+        "Create tests/integration/risk-compliance.test.ts",
+        "Use setupTrader() fixture from tests/utils (see .claude/skills/testing/SKILL.md)",
+        "Test: minRRRatio check with valid/invalid planned R:R",
+        "Test: maxRiskPerTrade check with futures contract using FUTURES_SPECS",
+        "Test: targetRMultiples shows which targets were hit",
+        "Test: dailyLossLimit check with multiple trades",
+        "Test: concurrent positions check",
+        "Test: handles missing SL/TP gracefully",
+        "All tests pass (bun run test)",
         "Typecheck passes (bun run check)"
       ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Added E2E Testing Requirements section to prompt.md with: skill reference, data-testid naming convention, examples for forms/data displays/navigation, and optional bun run test:e2e command after backend tests."
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Create Conditional Checklists Generator",
+      "description": "As a developer, I want to generate conditional checklist items when trades hit R thresholds so that users can confirm they followed management rules.",
+      "acceptanceCriteria": [
+        "Create src/lib/strategies/conditional-checklists.ts",
+        "Function generateConditionalChecklists(trade: Trade, strategy: Strategy): ConditionalChecklistItem[]",
+        "For Move to Breakeven: If trade.rMultiple >= strategy trailing rule triggerR, generate checklist item",
+        "For Trail Stops: For each trail rule where trade.rMultiple >= rule.triggerR, generate checklist item",
+        "For Scale Out: For each scale rule where trade.rMultiple >= rule.triggerR, generate checklist item",
+        "Items that weren't triggered marked with triggered: false",
+        "Use CONDITIONAL_RULE_TYPES constant from src/lib/constants/strategies.ts",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Add Auto-Compliance Display to Trade Detail",
+      "description": "As a user, I want to see auto-calculated compliance on the trade detail page so that I know if I followed my strategy rules.",
+      "acceptanceCriteria": [
+        "Create src/components/trade/auto-compliance-display.tsx",
+        "Fetches strategy risk parameters for trade's strategy",
+        "Runs compliance calculator for each validatable parameter",
+        "Displays results: Green checkmark for passed, Red X for failed, Gray dash for unable to check",
+        "Shows target R multiples achieved: 'Hit 1R, 2R targets'",
+        "Terminal styling: font-mono, text-profit (#00ff88) / text-loss (#ff3b3b) colors",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: compliance displays on trade detail"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add Conditional Checklist Display to Trade Detail",
+      "description": "As a user, I want to see conditional checklist items and mark them complete when my trade hit R thresholds.",
+      "acceptanceCriteria": [
+        "Create src/components/trade/conditional-checklist-display.tsx",
+        "Shows triggered items as checkable (user marks yes/no)",
+        "Shows non-triggered items as grayed out with 'Trade didn't hit {X}R'",
+        "Saves checks to tradeRuleChecks table using strategies.checkRule mutation (src/server/api/routers/strategies.ts:542)",
+        "Terminal styling following DESIGN_REFERENCE.md",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: conditional checklists appear when thresholds met"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Create Strategy Stats Summary Component",
+      "description": "As a user, I want to see lightweight performance and compliance stats for each strategy so that I can quickly assess strategy health.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/strategy-stats-summary.tsx",
+        "Props: strategyId: string, compact?: boolean",
+        "Fetches stats via strategies.getStats query (src/server/api/routers/strategies.ts:415)",
+        "Compact mode (for cards): Win Rate, Total P&L, Profit Factor (3 metrics)",
+        "Full mode: adds Trades count, Avg R, Compliance %",
+        "Uses text-profit (#00ff88) / text-loss (#ff3b3b) color coding",
+        "Shows Skeleton during loading",
+        "Terminal design: font-mono, text-[10px] labels, text-sm values",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: stats display correctly with colors"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Redesign Strategy Card Component",
+      "description": "As a user, I want strategy cards that show essential info at a glance with elegant Terminal styling so that I can quickly navigate my strategies.",
+      "acceptanceCriteria": [
+        "Update src/components/strategy/strategy-card.tsx",
+        "Layout: Color bar on left edge (4px wide, full height), strategy name, description truncated to 2 lines, stats row using strategy-stats-summary compact, rules count badge, active/inactive indicator",
+        "Hover effect: hover:border-white/10 hover:-translate-y-0.5 transition-all",
+        "Click navigates to strategy detail page",
+        "Dropdown menu (kebab) for: Edit, Duplicate, Delete",
+        "Terminal design: bg-white/1, border-white/5, rounded (not rounded-lg)",
+        "Mobile responsive: stacks appropriately",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: card interactions work, hover effects visible"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Redesign Strategies List Page Layout",
+      "description": "As a user, I want an elegant strategies list page that shows my strategies with a performance overview so that I can manage my trading systems effectively.",
+      "acceptanceCriteria": [
+        "Update src/app/(protected)/strategies/page.tsx",
+        "Layout: Header with title and 'New Strategy' button, performance summary table, strategy grid (3 cols desktop, 2 tablet, 1 mobile), empty state with terminal-style illustration",
+        "Grid uses gap-4 spacing",
+        "Section headers: font-mono text-[11px] text-muted-foreground uppercase tracking-widest",
+        "New Strategy button: primary variant with Plus icon",
+        "Terminal design throughout following DESIGN_REFERENCE.md",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: responsive layout works, navigation functional"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "E2E Tests for Strategies List Page",
+      "description": "As a developer, I want E2E tests for the strategies list page so that we verify the UI works correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/strategies-list.spec.ts following patterns in .claude/skills/e2e-testing/SKILL.md",
+        "Test: page loads with strategies grid",
+        "Test: empty state shows when no strategies",
+        "Test: clicking strategy card navigates to detail",
+        "Test: New Strategy button navigates to creation wizard",
+        "Test: dropdown menu actions work (duplicate triggers mutation)",
+        "All UI elements have data-testid attributes (e.g., strategy-card-{id}, strategies-grid)",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Create Multi-Step Wizard Container Component",
+      "description": "As a user, I want a guided wizard experience for creating strategies so that the process feels manageable and professional.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/creation-wizard/wizard-container.tsx",
+        "Props: steps: WizardStep[], onComplete: (data: StrategyFormData) => void",
+        "Step indicator at top showing: step name, step number, progress line between steps",
+        "Current step highlighted with text-primary, completed steps with checkmark",
+        "Next/Back buttons: 'Back' (ghost variant), 'Continue' or 'Create Strategy' (primary variant)",
+        "Continue validates current step before proceeding",
+        "Stores form data across steps (no loss on back/forward)",
+        "Keyboard navigation: Enter to continue (when valid)",
+        "Terminal design: monospace step labels, subtle step indicators",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: can navigate steps, data persists"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Create Wizard Step 1 - Basics",
+      "description": "As a user, I want the first step to capture strategy name, description, and color so that I establish the strategy identity.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/creation-wizard/step-basics.tsx",
+        "Fields: Name (required, TextInput), Description (optional, textarea), Color (preset color picker)",
+        "Validation: name is required, minimum 2 characters",
+        "Shows validation errors below fields",
+        "Auto-focuses name input on mount",
+        "Terminal styling: labels in font-mono text-[10px] uppercase tracking-wider",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: validation works, color picker works"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Create Wizard Step 2 - Rules",
+      "description": "As a user, I want the second step to define my entry/exit criteria and checklist rules so that I document my trading approach.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/creation-wizard/step-rules.tsx",
+        "Sections: Entry Criteria (textarea), Exit Rules (textarea), Checklist Rules (dynamic list with category)",
+        "Checklist rules: Add button per category using RULE_CATEGORIES constant, each rule has category dropdown/text input/delete button",
+        "All fields optional (can proceed with empty)",
+        "Explain text: 'These rules will appear as a checklist when you log trades'",
+        "Uses enhanced input components from US-002/US-003",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: can add/edit/remove rules"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Create Wizard Step 3 - Risk Management",
+      "description": "As a user, I want the third step to configure risk parameters and management rules so that I codify my trading rules.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/creation-wizard/step-risk.tsx",
+        "Auto-validated parameters section (checkmark icon): Min R:R Ratio, Max Risk Per Trade (type dropdown + value), Daily Loss Limit, Max Concurrent Positions",
+        "Conditional checklist parameters section (clipboard icon): Move to Breakeven trigger R, Trail Stops trigger R, Scale Out Rules list, Target R Multiples list",
+        "Use AUTO_CHECKED_PARAMS and CONDITIONAL_PARAMS constants",
+        "Clear distinction between auto-checked (green checkmark) and manual checklist (clipboard)",
+        "Each field has help text explaining behavior",
+        "All fields optional",
+        "Uses NumberInput with allowDecimals where appropriate",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: all inputs work, help text visible"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Create Wizard Step 4 - Review",
+      "description": "As a user, I want a review step showing all my inputs before creating so that I can verify everything is correct.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/creation-wizard/step-review.tsx",
+        "Displays all entered data in read-only format: Basics section (name, description, color swatch), Rules section (entry/exit criteria, checklist rules count), Risk section (configured parameters only)",
+        "'Edit' link next to each section jumps back to that step",
+        "Summary styled in terminal-wrapped cards",
+        "Shows 'Create Strategy' as final button label",
+        "Note: 'Risk parameters will be auto-checked against your trades'",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: review shows correct data, edit links work"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Create Strategy Creation Page",
+      "description": "As a user, I want a dedicated creation page at /strategies/new that hosts the wizard so that I have a clean creation experience.",
+      "acceptanceCriteria": [
+        "Update src/app/(protected)/strategies/new/page.tsx",
+        "Uses wizard container with all 4 steps",
+        "On complete: calls strategies.create mutation (src/server/api/routers/strategies.ts:223)",
+        "Shows loading state during creation",
+        "On success: redirects to new strategy detail page with success toast",
+        "On error: shows error toast, stays on review step",
+        "Back link to strategies list",
+        "Page title: 'New Strategy'",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: full creation flow works"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "E2E Tests for Creation Wizard",
+      "description": "As a developer, I want E2E tests for the creation wizard so that we verify the multi-step flow works correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/strategy-creation.spec.ts",
+        "Test: can navigate through all steps",
+        "Test: validation prevents proceeding without required fields",
+        "Test: data persists when going back and forward",
+        "Test: complete flow creates strategy and redirects",
+        "Test: cancel/back link returns to list",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Create Strategy Edit Page Route",
+      "description": "As a user, I want to edit strategies on a dedicated spacious page so that I have room to work with all the details.",
+      "acceptanceCriteria": [
+        "Create src/app/(protected)/strategies/[id]/edit/page.tsx",
+        "Fetches strategy via strategies.getById (src/server/api/routers/strategies.ts:189)",
+        "Shows loading skeleton while fetching",
+        "Shows 404 if strategy not found",
+        "Redirects if not owner (shouldn't happen with auth but safeguard)",
+        "Layout: spacious max-w-4xl centered container",
+        "Back link to strategy detail page",
+        "Page title: strategy name",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: page loads at /strategies/[id]/edit"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Create Auto-Save Form Hook",
+      "description": "As a developer, I want a hook for auto-saving form changes so that the edit page can persist changes automatically.",
+      "acceptanceCriteria": [
+        "Create src/hooks/use-auto-save.ts",
+        "Props: data: T, onSave: (data: T) => Promise<void>, debounceMs?: number",
+        "Debounces save calls (default 800ms)",
+        "Returns: { isSaving, lastSavedAt, error, saveNow }",
+        "Tracks save status for UI feedback",
+        "Handles save errors gracefully",
+        "Skips save if data unchanged (deep comparison)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Create Save Status Indicator Component",
+      "description": "As a user, I want to see the auto-save status so that I know my changes are being persisted.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/save-status-indicator.tsx",
+        "Props: isSaving: boolean, lastSavedAt: Date | null, error: string | null",
+        "States: Saving (yellow dot pulsing + 'Saving...'), Saved (green dot + 'All changes saved' + relative time), Error (red dot + error message), Idle (nothing shown)",
+        "Uses font-mono text-[10px] styling",
+        "Positioned fixed or in header area",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: status transitions work"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Build Strategy Edit Form - Basic Info Section",
+      "description": "As a user, I want to edit the basic info (name, description, color) with a spacious layout so that editing feels comfortable.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/edit-form/basic-info-section.tsx",
+        "Fields: name, description, color picker",
+        "Uses enhanced input components from US-002/US-003",
+        "Active/Inactive toggle switch",
+        "Spacious layout with space-y-6 between fields",
+        "Section wrapped in terminal-style card (bg-white/1, border-white/5)",
+        "Auto-saves changes via parent hook",
+        "Validation: name required, shown on blur",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: edits trigger auto-save"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Build Strategy Edit Form - Rules Section",
+      "description": "As a user, I want to edit rules in a dedicated section with good affordances so that managing rules is easy.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/edit-form/rules-section.tsx",
+        "Sub-sections: Entry Criteria textarea, Exit Rules textarea, Checklist Rules editor",
+        "Checklist rules: Grouped by category with headers, add button per category, inline editing with text input, delete button per rule, visual category indicators",
+        "Uses enhanced input components",
+        "Auto-saves on change (debounced)",
+        "Section wrapped in terminal-style card",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: CRUD operations work, auto-save triggers"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "Build Strategy Edit Form - Risk Section",
+      "description": "As a user, I want to edit all risk parameters in a dedicated section so that I can refine my risk and management rules.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/edit-form/risk-section.tsx",
+        "Auto-validated parameters section: Min R:R Ratio, Max Risk Per Trade (type + value), Daily Loss Limit (type + value), Max Concurrent Positions - each with 'Auto-checked' badge",
+        "Conditional checklist parameters section: Move to Breakeven, Trail Stops, Scale Out Rules (list of {triggerR, sizePercent}), Target R Multiples (list) - each with 'Shows checklist' badge",
+        "Visual distinction: auto-checked (checkmark icon), conditional (clipboard icon)",
+        "Clear button to reset each parameter to null",
+        "Uses NumberInput with decimals where appropriate",
+        "Auto-saves on change (debounced)",
+        "Section wrapped in terminal-style card",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: all inputs work, decimals supported"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "Assemble Strategy Edit Page",
+      "description": "As a user, I want the edit page to combine all sections in a spacious, tabbed layout so that editing is organized and pleasant.",
+      "acceptanceCriteria": [
+        "Update src/app/(protected)/strategies/[id]/edit/page.tsx",
+        "Layout: Header (strategy name, color indicator, save status indicator), Tabs (Overview, Rules, Risk Management), Back button to detail page, Delete button with confirmation dialog",
+        "Each tab contains relevant section component",
+        "Form state managed centrally with auto-save hook",
+        "Validation errors scroll to first error on save attempt",
+        "Toast feedback for validation errors",
+        "Responsive: full-width on mobile, max-w-4xl on desktop",
+        "Terminal styling",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: full edit flow works with auto-save"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "E2E Tests for Strategy Edit Page",
+      "description": "As a developer, I want E2E tests for the strategy edit page so that we verify the edit flow works correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/strategy-edit.spec.ts",
+        "Test: page loads with strategy data populated",
+        "Test: editing name triggers auto-save",
+        "Test: adding a rule triggers auto-save",
+        "Test: can switch between tabs",
+        "Test: delete button shows confirmation, deletes on confirm",
+        "Test: validation prevents saving invalid data",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-031",
+      "title": "Redesign Strategy Detail Page",
+      "description": "As a user, I want the strategy detail page to show comprehensive information with auto-compliance stats so that I can view my strategy effectiveness.",
+      "acceptanceCriteria": [
+        "Update src/app/(protected)/strategies/[id]/page.tsx",
+        "Layout: Header (strategy name with color, Edit button, actions dropdown), Stats row (Win Rate, Total P&L, Profit Factor, Trades, Avg R), Auto-Compliance section showing risk params and overall compliance %, Manual Compliance section, Rules display (categorized read-only list), Risk parameters display (with 'Auto-checked' badges)",
+        "Stats use terminal-style cards (same pattern as analytics pages)",
+        "Edit button navigates to /strategies/[id]/edit",
+        "Terminal styling throughout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: detail view looks polished"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-032",
+      "title": "Create Combined Compliance Display Component",
+      "description": "As a user, I want to see both manual and auto-compliance stats so that I understand my overall strategy adherence.",
+      "acceptanceCriteria": [
+        "Create src/components/strategy/compliance-display.tsx",
+        "Props: strategyId: string",
+        "Fetches manual compliance via strategies.getRuleCompliance (src/server/api/routers/strategies.ts:461)",
+        "Fetches auto compliance calculated from trade data + risk params",
+        "Shows combined view: Overall compliance % (weighted average), Manual rules section (per-rule breakdown), Auto-checks section (per-parameter breakdown)",
+        "Color coding: green >80%, yellow 50-80%, red <50%",
+        "Explains which checks are manual vs automatic",
+        "Only shows sections that have data",
+        "Skeleton loading state",
+        "Terminal design: wrapped in terminal card",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: compliance displays correctly"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-033",
+      "title": "E2E Tests for Strategy Detail Page",
+      "description": "As a developer, I want E2E tests for the strategy detail page so that we verify all elements display correctly.",
+      "acceptanceCriteria": [
+        "Create tests/e2e/strategy-detail.spec.ts",
+        "Test: page loads with strategy details",
+        "Test: stats display with correct values",
+        "Test: compliance section shows when rules/params exist",
+        "Test: Edit button navigates to edit page",
+        "Test: Duplicate action creates copy",
+        "Test: Delete action with confirmation works",
+        "All UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-034",
+      "title": "Add Strategy Autosave Endpoint",
+      "description": "As a frontend, I want an autosave endpoint that accepts partial updates so that auto-save can be efficient.",
+      "acceptanceCriteria": [
+        "Add autosave mutation to src/server/api/routers/strategies.ts",
+        "Input: { id: string, ...partialStrategyFields }",
+        "Only updates fields that are provided (sparse update)",
+        "Validates ownership using protectedProcedure pattern",
+        "Returns { updatedAt: Date } for UI confirmation",
+        "Does not invalidate list queries (silent save)",
+        "Handles rules array: replace all if provided",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-035",
+      "title": "Add Auto-Compliance Query Endpoint",
+      "description": "As a frontend, I want an endpoint that calculates auto-compliance for a strategy so that the detail page can show it.",
+      "acceptanceCriteria": [
+        "Add getAutoCompliance query to src/server/api/routers/strategies.ts",
+        "Input: { strategyId: string }",
+        "Fetches strategy risk parameters",
+        "Fetches all closed trades with this strategy",
+        "Runs compliance calculator from src/lib/strategies/risk-compliance.ts",
+        "Aggregates results: Per-parameter compliance %, failing trades count, Overall weighted compliance %",
+        "Returns structured compliance data",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-036",
+      "title": "Integration Tests for Backend Endpoints",
+      "description": "As a developer, I want integration tests for the new backend endpoints so that we verify correct behavior.",
+      "acceptanceCriteria": [
+        "Add tests to tests/integration/strategies.test.ts",
+        "Use setupTrader() and setupTraderWithTrades() fixtures",
+        "Test: autosave updates only provided fields",
+        "Test: autosave returns updatedAt",
+        "Test: autosave rejects if not owner",
+        "Test: getAutoCompliance returns correct calculations",
+        "Test: getAutoCompliance handles trades without SL/TP",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-037",
+      "title": "Add Conditional Checklist Type to Strategy Rules",
+      "description": "As a developer, I want to store conditional checklist rules alongside manual rules so that they can be checked on trades.",
+      "acceptanceCriteria": [
+        "Update strategyRuleCategoryEnum in src/server/db/schema.ts to include: 'conditional_breakeven', 'conditional_trail', 'conditional_scale'",
+        "When strategy has trailingRules.moveToBreakeven, generate conditional rule on save",
+        "When strategy has scalingRules.scaleOut[], generate conditional rules on save",
+        "Conditional rules stored in strategyRules table (src/server/db/schema.ts:616) with special category",
+        "tradeRuleChecks table works as-is (links trade to rule, stores checked boolean)",
+        "Run bun run db:push to apply schema changes",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-038",
+      "title": "Integration Tests for Conditional Checklists",
+      "description": "As a developer, I want tests for the conditional checklist generation so that we verify correct behavior.",
+      "acceptanceCriteria": [
+        "Add tests to tests/integration/strategies.test.ts",
+        "Test: strategy with moveToBreakeven generates conditional rule",
+        "Test: strategy with scaleOut rules generates multiple conditional rules",
+        "Test: conditional rules appear in getTradeRuleChecks when trade hits threshold",
+        "Test: conditional rules don't appear when trade doesn't hit threshold",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
