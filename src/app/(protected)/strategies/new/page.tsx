@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { StrategyFormData } from "@/components/strategy";
-import { StrategyForm } from "@/components/strategy";
+import { StrategyWizard } from "@/components/strategy";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/react";
 
@@ -40,12 +40,16 @@ export default function NewStrategyPage() {
 	};
 
 	return (
-		<div className="mx-auto w-[95%] max-w-4xl space-y-4 py-4 sm:space-y-8 sm:py-6">
+		<div
+			className="mx-auto w-[95%] max-w-5xl space-y-4 py-4 sm:space-y-6 sm:py-6"
+			data-testid="new-strategy-page"
+		>
 			{/* Header */}
 			<div className="flex items-center gap-2 sm:gap-3">
 				<Button
 					asChild
 					className="min-h-[44px] min-w-[44px] shrink-0 sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
+					data-testid="new-strategy-back-button"
 					size="icon"
 					variant="ghost"
 				>
@@ -54,7 +58,10 @@ export default function NewStrategyPage() {
 					</Link>
 				</Button>
 				<div className="min-w-0">
-					<h1 className="font-bold text-lg tracking-tight sm:text-2xl">
+					<h1
+						className="font-bold text-lg tracking-tight sm:text-2xl"
+						data-testid="new-strategy-heading"
+					>
 						New Strategy
 					</h1>
 					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
@@ -64,14 +71,12 @@ export default function NewStrategyPage() {
 				</div>
 			</div>
 
-			{/* Form */}
-			<div className="rounded border border-white/5 bg-white/2 p-4 sm:p-6">
-				<StrategyForm
-					isSubmitting={createMutation.isPending}
-					onSubmit={handleSubmit}
-					submitLabel="Create Strategy"
-				/>
-			</div>
+			{/* Wizard */}
+			<StrategyWizard
+				isSubmitting={createMutation.isPending}
+				onSubmit={handleSubmit}
+				submitLabel="Create Strategy"
+			/>
 		</div>
 	);
 }

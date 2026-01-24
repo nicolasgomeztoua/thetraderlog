@@ -106,8 +106,8 @@
         "Verify in browser: complete wizard flow works"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced StrategyForm with StrategyWizard, maintained all submission logic and redirects"
     },
     {
       "id": "US-006",

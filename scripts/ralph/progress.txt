@@ -137,3 +137,17 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - Three dots: `bg-loss/60`, `bg-breakeven/60`, `bg-profit/60`
   - Title in monospace: "strategy-wizard"
 ---
+
+## 2026-01-24 18:XX - US-005
+- **Completed:** Update New Strategy Page to Use Wizard
+- **Files modified:**
+  - `src/app/(protected)/strategies/new/page.tsx`
+- **Key changes:**
+  - Replaced `StrategyForm` with `StrategyWizard`
+  - Widened max-width from 4xl to 5xl (wizard needs more space for two-column layout)
+  - Removed wrapping container (wizard has its own border/bg)
+  - Added data-testid attributes to page elements
+  - Maintained exact same mutation logic and handlers
+- **Learnings:**
+  - StrategyWizard is a drop-in replacement - same props as StrategyForm
+---
