@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Plus } from "lucide-react";
+import { BookMarked, Plus, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -16,156 +16,86 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 // =============================================================================
-// PERFORMANCE COMPARISON TABLE
+// LOADING SKELETON
 // =============================================================================
 
-function PerformanceComparisonTable() {
-	const { data: stats, isLoading } = api.strategies.getAllStats.useQuery();
-
-	if (isLoading) {
-		return (
-			<div className="space-y-2">
-				{[...Array(3)].map((_, i) => (
-					<Skeleton className="h-10 w-full" key={`skeleton-${i.toString()}`} />
-				))}
-			</div>
-		);
-	}
-
-	if (!stats || stats.length === 0) {
-		return null;
-	}
-
-	// Only show strategies with trades
-	const strategiesWithTrades = stats.filter((s) => s.totalTrades > 0);
-	if (strategiesWithTrades.length === 0) {
-		return null;
-	}
-
-	// Sort by total P&L descending
-	const sortedStats = [...strategiesWithTrades].sort(
-		(a, b) => b.totalPnl - a.totalPnl,
-	);
-
+function StrategyCardSkeleton() {
 	return (
-		<div className="space-y-4">
-			<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-				Performance Comparison
-			</h2>
-			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-				<div className="min-w-[600px] overflow-hidden rounded border border-border sm:min-w-0">
-					<Table>
-						<TableHeader>
-							<TableRow className="border-border hover:bg-transparent">
-								<TableHead className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Strategy
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Trades
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Win Rate
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Profit Factor
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Total P&L
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Avg R
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{sortedStats.map((s) => (
-								<TableRow className="border-border" key={s.strategyId}>
-									<TableCell>
-										<Link
-											className="flex items-center gap-2 transition-colors hover:text-primary"
-											href={`/strategies/${s.strategyId}`}
-										>
-											<div
-												className="h-2 w-2 shrink-0 rounded-full"
-												style={{
-													backgroundColor: s.strategyColor ?? "#d4ff00",
-												}}
-											/>
-											<span className="font-medium font-mono text-sm">
-												{s.strategyName}
-											</span>
-										</Link>
-									</TableCell>
-									<TableCell className="text-right font-mono text-sm">
-										{s.totalTrades}
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.winRate >= 50 ? "text-profit" : "text-loss",
-											)}
-										>
-											{s.winRate.toFixed(1)}%
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.profitFactor >= 1 ? "text-profit" : "text-loss",
-											)}
-										>
-											{s.profitFactor === Infinity
-												? "∞"
-												: s.profitFactor.toFixed(2)}
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-bold font-mono text-sm",
-												s.totalPnl >= 0 ? "text-profit" : "text-loss",
-											)}
-										>
-											{formatCurrency(s.totalPnl)}
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.avgRMultiple !== null
-													? s.avgRMultiple >= 0
-														? "text-profit"
-														: "text-loss"
-													: "text-muted-foreground",
-											)}
-										>
-											{s.avgRMultiple !== null
-												? `${s.avgRMultiple.toFixed(2)}R`
-												: "—"}
-										</span>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
+		<div className="overflow-hidden rounded-lg border border-white/5 bg-card">
+			{/* Top color bar skeleton */}
+			<Skeleton className="h-1 w-full" />
+			<div className="p-4 sm:p-5">
+				{/* Header */}
+				<div className="mb-4 flex items-start justify-between gap-3">
+					<div className="flex-1 space-y-2">
+						<div className="flex items-center gap-2">
+							<Skeleton className="h-5 w-32" />
+							<Skeleton className="h-5 w-16" />
+						</div>
+						<Skeleton className="h-4 w-48" />
+					</div>
+					<Skeleton className="h-8 w-8" />
+				</div>
+				{/* Stats row */}
+				<div className="flex items-end justify-between gap-4">
+					<div className="grid grid-cols-3 gap-4">
+						<div className="space-y-1">
+							<Skeleton className="h-3 w-12" />
+							<Skeleton className="h-6 w-8" />
+						</div>
+						<div className="space-y-1">
+							<Skeleton className="h-3 w-16" />
+							<Skeleton className="h-6 w-12" />
+						</div>
+						<div className="space-y-1">
+							<Skeleton className="h-3 w-8" />
+							<Skeleton className="h-6 w-16" />
+						</div>
+					</div>
+					{/* Mini chart skeleton */}
+					<Skeleton className="h-12 w-[100px]" />
+				</div>
+				{/* Footer */}
+				<div className="mt-4 border-border border-t pt-3">
+					<Skeleton className="h-3 w-24" />
 				</div>
 			</div>
+		</div>
+	);
+}
+
+// =============================================================================
+// EMPTY STATE
+// =============================================================================
+
+function EmptyState() {
+	return (
+		<div
+			className="flex flex-col items-center justify-center rounded-lg border border-white/5 bg-card px-6 py-16 text-center"
+			data-testid="strategies-empty-state"
+		>
+			<div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+				<BookMarked className="h-8 w-8 text-primary" />
+			</div>
+			<h2 className="font-mono font-semibold text-lg">No strategies yet</h2>
+			<p className="mt-2 max-w-md font-mono text-muted-foreground text-sm leading-relaxed">
+				Create your first strategy to document your trading approach, define
+				entry rules, and track rule compliance across your trades.
+			</p>
+			<Button
+				asChild
+				className="mt-8 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+				data-testid="create-first-strategy-btn"
+			>
+				<Link href="/strategies/new">
+					<Plus className="mr-2 h-4 w-4" />
+					Create Your First Strategy
+				</Link>
+			</Button>
 		</div>
 	);
 }
@@ -178,18 +108,42 @@ export default function StrategiesPage() {
 	const router = useRouter();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [strategyToDelete, setStrategyToDelete] = useState<string | null>(null);
+	const isMobile = useIsMobile();
 
 	const utils = api.useUtils();
 
-	const { data: strategies, isLoading } = api.strategies.getAll.useQuery({
-		includeInactive: true,
-	});
+	// Fetch strategies
+	const { data: strategies, isLoading: strategiesLoading } =
+		api.strategies.getAll.useQuery({
+			includeInactive: true,
+		});
+
+	// Fetch performance data for mini charts
+	const { data: performanceData, isLoading: performanceLoading } =
+		api.strategies.getPerformanceByStrategy.useQuery();
+
+	const isLoading = strategiesLoading || performanceLoading;
+
+	// Create a map of strategyId -> performance data
+	const performanceMap = new Map(
+		performanceData?.map((p) => [
+			p.strategyId,
+			{
+				winRate: p.winRate,
+				totalPnl: p.totalPnl,
+				profitFactor: p.profitFactor,
+				avgPnl: p.avgPnl,
+				tradesCount: p.tradesCount,
+				recentPnlSeries: p.recentPnlSeries,
+			},
+		]) ?? [],
+	);
 
 	const deleteMutation = api.strategies.delete.useMutation({
 		onSuccess: () => {
 			toast.success("Strategy deleted");
 			utils.strategies.getAll.invalidate();
-			utils.strategies.getAllStats.invalidate();
+			utils.strategies.getPerformanceByStrategy.invalidate();
 			setDeleteDialogOpen(false);
 			setStrategyToDelete(null);
 		},
@@ -202,6 +156,7 @@ export default function StrategiesPage() {
 		onSuccess: (newStrategy) => {
 			toast.success("Strategy duplicated");
 			utils.strategies.getAll.invalidate();
+			utils.strategies.getPerformanceByStrategy.invalidate();
 			router.push(`/strategies/${newStrategy.id}`);
 		},
 		onError: (error) => {
@@ -220,96 +175,64 @@ export default function StrategiesPage() {
 		}
 	};
 
-	// Get stats for each strategy
-	const strategyStats = api.useQueries((t) =>
-		(strategies ?? []).map((s) => t.strategies.getStats({ id: s.id })),
-	);
-
-	const statsMap = new Map<
-		string,
-		{ winRate: number; totalPnl: number; avgPnl: number }
-	>();
-	strategies?.forEach((s, i) => {
-		const stats = strategyStats[i]?.data;
-		if (stats) {
-			statsMap.set(s.id, {
-				winRate: stats.winRate,
-				totalPnl: stats.totalPnl,
-				avgPnl: stats.avgPnl,
-			});
-		}
-	});
-
-	const isMobile = useIsMobile();
-
 	return (
-		<div className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
-			{/* Header */}
-			<div className="flex items-center justify-between gap-3">
-				<div className="min-w-0 flex-1">
-					<h1 className="font-bold text-xl tracking-tight sm:text-2xl">
+		<div
+			className="mx-auto w-[95%] max-w-7xl space-y-8 py-6 sm:py-8"
+			data-testid="strategies-page"
+		>
+			{/* Terminal-styled Header */}
+			<div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+				<div className="space-y-2">
+					<span className="font-mono text-primary text-xs uppercase tracking-wider">
+						Trading Playbook
+					</span>
+					<h1 className="flex items-center gap-3 font-bold text-2xl tracking-tight sm:text-3xl">
+						<TrendingUp className="h-7 w-7 text-primary sm:h-8 sm:w-8" />
 						Strategies
 					</h1>
-					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
+					<p className="max-w-lg font-mono text-muted-foreground text-sm leading-relaxed">
 						Document your trading strategies with entry rules, risk management,
-						and checklists.
+						and checklists. Track performance and rule compliance.
 					</p>
 				</div>
 				<Button
 					asChild
-					className="min-h-[44px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+					className="min-h-[44px] w-full shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
+					data-testid="create-strategy-btn"
 				>
 					<Link href="/strategies/new">
-						<Plus className="h-4 w-4 sm:mr-2" />
-						<span className="hidden sm:inline">New Strategy</span>
+						<Plus className="mr-2 h-4 w-4" />
+						New Strategy
 					</Link>
 				</Button>
 			</div>
 
-			{/* Performance Comparison Table */}
-			{!isLoading && strategies && strategies.length > 0 && (
-				<PerformanceComparisonTable />
-			)}
-
 			{/* Loading state */}
 			{isLoading && (
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+				<div
+					className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+					data-testid="strategies-loading"
+				>
 					{[1, 2, 3].map((i) => (
-						<Skeleton className="h-40 sm:h-48" key={i} />
+						<StrategyCardSkeleton key={i} />
 					))}
 				</div>
 			)}
 
 			{/* Empty state */}
-			{!isLoading && (!strategies || strategies.length === 0) && (
-				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
-					<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
-					<h2 className="font-semibold text-base sm:text-lg">
-						No strategies yet
-					</h2>
-					<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-xs sm:text-sm">
-						Create your first strategy to document your trading approach and
-						track rule compliance.
-					</p>
-					<Button
-						asChild
-						className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
-					>
-						<Link href="/strategies/new">
-							<Plus className="mr-2 h-4 w-4" />
-							Create Strategy
-						</Link>
-					</Button>
-				</div>
-			)}
+			{!isLoading && (!strategies || strategies.length === 0) && <EmptyState />}
 
 			{/* Strategies grid */}
 			{!isLoading && strategies && strategies.length > 0 && (
-				<div className="space-y-3 sm:space-y-4">
+				<div className="space-y-4">
 					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-						Your Strategies
+						{strategies.length}{" "}
+						{strategies.length === 1 ? "Strategy" : "Strategies"}
 					</h2>
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+					<div
+						className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+						data-testid="strategies-grid"
+					>
 						{strategies.map((strategy) => (
 							<StrategyCard
 								isMobile={isMobile}
@@ -319,7 +242,7 @@ export default function StrategiesPage() {
 									duplicateMutation.mutate({ id: strategy.id })
 								}
 								onEdit={() => router.push(`/strategies/${strategy.id}`)}
-								stats={statsMap.get(strategy.id) ?? null}
+								performance={performanceMap.get(strategy.id) ?? null}
 								strategy={strategy}
 							/>
 						))}
