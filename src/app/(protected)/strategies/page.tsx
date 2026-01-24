@@ -220,26 +220,6 @@ export default function StrategiesPage() {
 		}
 	};
 
-	// Get stats for each strategy
-	const strategyStats = api.useQueries((t) =>
-		(strategies ?? []).map((s) => t.strategies.getStats({ id: s.id })),
-	);
-
-	const statsMap = new Map<
-		string,
-		{ winRate: number; totalPnl: number; avgPnl: number }
-	>();
-	strategies?.forEach((s, i) => {
-		const stats = strategyStats[i]?.data;
-		if (stats) {
-			statsMap.set(s.id, {
-				winRate: stats.winRate,
-				totalPnl: stats.totalPnl,
-				avgPnl: stats.avgPnl,
-			});
-		}
-	});
-
 	const isMobile = useIsMobile();
 
 	return (
@@ -319,7 +299,6 @@ export default function StrategiesPage() {
 									duplicateMutation.mutate({ id: strategy.id })
 								}
 								onEdit={() => router.push(`/strategies/${strategy.id}`)}
-								stats={statsMap.get(strategy.id) ?? null}
 								strategy={strategy}
 							/>
 						))}
