@@ -52,4 +52,26 @@ Started: Sat Jan 24 17:48:14 WET 2026
   - For mini sparkline charts, don't use AG Charts - create lightweight SVG component
   - `RiskGauge` pattern with SVG circles can be adapted for compliance percentage gauges
   - Strategy router already has `getRuleCompliance` - US-012 should extend it, not duplicate
+
+### NumericInput Component Pattern
+- **Location:** `src/components/ui/numeric-input.tsx`
+- Manages string state internally for smooth typing UX
+- External value is `number | undefined` (undefined for empty)
+- Supports `min`, `max`, `step`, `allowDecimals`, `decimalPlaces`
+- Style matches existing Input component (copy-paste CSS classes)
+---
+
+## 2026-01-24 18:XX - US-001
+- **Completed:** Create NumericInput component
+- **Files created:**
+  - `src/components/ui/numeric-input.tsx`
+- **Key features:**
+  - Internal string state prevents React controlled input issues with empty values
+  - Empty maps to `undefined` (not 0) for optional fields
+  - Validates numeric input on the fly
+  - Supports decimal places limiting
+  - Styled to match existing Input component
+- **Learnings:**
+  - TypeScript `data-testid` attribute needs explicit declaration in interface
+  - Use destructuring with rename (`"data-testid": testId`) for hyphenated props
 ---
