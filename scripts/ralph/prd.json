@@ -191,8 +191,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/lib/strategies/conditional-checklists.ts with generateConditionalChecklists function. Generates checklist items for moveToBreakeven, trailStops, and scaleOut rules. Items are marked with triggered: true/false based on whether trade.achievedR >= rule.triggerR. Uses CONDITIONAL_RULE_TYPES constant. Also exports getTriggeredChecklists and getNonTriggeredChecklists helper functions."
     },
     {
       "id": "US-010",
@@ -210,8 +210,8 @@
         "Verify in browser: compliance displays on trade detail"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/trade/auto-compliance-display.tsx with ComplianceCheckItem, TargetsHitDisplay components. Fetches strategy via api.strategies.getById, runs calculateRiskCompliance, displays results with green check/red X/gray dash icons. Shows targets hit as 'Hit 1R, 2R targets'. Terminal styling with font-mono, text-profit/text-loss colors. Exported from src/components/trade/index.ts."
     },
     {
       "id": "US-011",
@@ -228,8 +228,8 @@
         "Verify in browser: conditional checklists appear when thresholds met"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/trade/conditional-checklist-display.tsx with ConditionalChecklistDisplay and ChecklistItem components. Uses generateConditionalChecklists utility to generate items based on strategy's trailingRules and scalingRules. Triggered items are checkable via Checkbox component, non-triggered items show grayed out with 'Trade didn't hit {X}R'. Saves checks via strategies.checkRule mutation with onSuccess invalidation. Terminal styling with font-mono, text-profit/loss colors. Shows achieved R display and completion counter."
     },
     {
       "id": "US-012",
@@ -249,8 +249,8 @@
         "Verify in browser: stats display correctly with colors"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/strategy-stats-summary.tsx with compact (3 metrics) and full (6 metrics) modes. Compact shows Win Rate, Total P&L, Profit Factor. Full adds Trades, Avg R, Compliance. Uses strategies.getStats query, Terminal design with font-mono, color coding for profit/loss. Skeleton loading state."
     },
     {
       "id": "US-013",
@@ -269,8 +269,8 @@
         "Verify in browser: card interactions work, hover effects visible"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Updated strategy-card.tsx with StrategyStatsSummary compact mode, hover:-translate-y-0.5 effect, bg-white/1 background, rules count badge with ListChecks icon, data-testid attributes. Removed redundant stats fetching from strategies page since StrategyStatsSummary fetches internally."
     },
     {
       "id": "US-014",
@@ -288,8 +288,8 @@
         "Verify in browser: responsive layout works, navigation functional"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Added data-testid attributes for E2E testing (strategies-page, strategies-heading, strategies-button-new, strategies-grid, strategies-empty-state, strategies-empty-button-create, strategies-loading, strategies-performance-table). Updated gap-4 spacing consistently across grid. Enhanced empty state with terminal-style icon container. All acceptance criteria met - grid uses correct columns (3/2/1), gap-4 spacing, Terminal design with section headers."
     },
     {
       "id": "US-015",
@@ -307,8 +307,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created tests/e2e/strategies-list.spec.ts with 7 tests across 3 describe blocks. Tests cover: page load with heading, content after loading (grid or empty state), New Strategy button navigation, loading state, strategy card navigation to detail, dropdown menu with edit/duplicate/delete options, performance table display, and auth redirect for unauthenticated users. All data-testid attributes were already present on page components. Tests pass in chromium."
     },
     {
       "id": "US-016",
