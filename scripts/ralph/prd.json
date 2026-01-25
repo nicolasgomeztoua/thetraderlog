@@ -677,8 +677,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 34,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created tests/e2e/strategy-detail.spec.ts with 14 tests: page loads with header/description/color/buttons, description display, stats display with labels (Win Rate, P&L, Profit Factor, Trades, Avg R), rules section when rules exist, risk params section with Auto-Checked badge and values, Edit button navigation, back button navigation, actions dropdown with duplicate/delete options, duplicate creates copy with '(Copy)' suffix, delete shows confirmation and deletes on confirm, not found state for invalid ID with extended timeout, auth redirect for unauthenticated users. Tests use beforeAll to create test strategy with rule and min R:R ratio. All 14 tests pass on chromium."
     },
     {
       "id": "US-034",

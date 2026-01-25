@@ -983,3 +983,36 @@ Key files for this feature:
   - TypeScript strict mode requires explicit handling of potentially undefined map lookups - use `let agg = obj[key]; if (!agg) { agg = {...}; obj[key] = agg; }` pattern
   - For aggregate compliance calculations, track passed/failed/unable separately, then calculate % from passed/total
 ---
+
+## 2026-01-25 - US-033 E2E Tests for Strategy Detail Page
+- What was implemented: Comprehensive E2E tests for strategy detail page functionality
+- Files changed:
+  - `tests/e2e/strategy-detail.spec.ts` (new) - 14 E2E tests
+- Test structure:
+  - `beforeAll`: Creates test strategy with name, description, rule, and min R:R ratio
+  - Extracts strategy ID from URL after creation redirect
+  - Tests use shared strategy for consistent verification
+- Tests:
+  1. page loads with strategy details (heading, color, back/edit/actions buttons)
+  2. displays description when present
+  3. stats display with correct labels (Win Rate, Total P&L, Profit Factor, Trades, Avg R)
+  4. rules section shows when rules exist (with category header)
+  5. risk parameters section shows when params exist (Auto-Checked badge, 2R value)
+  6. Edit button navigates to edit page
+  7. back button navigates to strategies list
+  8. actions dropdown shows duplicate and delete options
+  9. duplicate action creates copy (redirects to new strategy with "(Copy)" suffix)
+  10. delete action shows confirmation and deletes on confirm (separate strategy)
+  11. shows not found for invalid strategy ID (extended timeout 60s)
+  12. redirects unauthenticated user to sign-in
+- Test patterns:
+  - Uses `test.skip(!strategyId, ...)` for conditional test execution
+  - Delete test creates its own strategy to avoid affecting other tests
+  - Not found test uses extended timeout (45s) for loading → not-found transition
+  - Auth redirect test clears storage state with `test.use({ storageState: { cookies: [], origins: [] } })`
+- **Learnings for future iterations:**
+  - For tests that depend on async state transitions (loading → content), use `expect().toBeVisible({ timeout })` not `waitFor()` - polling assertions handle transitions better
+  - Tests that share state need to create their test data in `beforeAll`, not `beforeEach`
+  - Delete confirmation tests should create their own data to avoid affecting parallel test runs
+  - Extended test timeouts can be set per-test with `test.setTimeout(ms)` instead of globally
+---
