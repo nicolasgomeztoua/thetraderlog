@@ -11,7 +11,14 @@ import { api } from "@/trpc/react";
 interface Rule {
 	id: string;
 	text: string;
-	category: "entry" | "exit" | "risk" | "management";
+	category:
+		| "entry"
+		| "exit"
+		| "risk"
+		| "management"
+		| "conditional_breakeven"
+		| "conditional_trail"
+		| "conditional_scale";
 	order: number;
 }
 
@@ -33,6 +40,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 	exit: "Exit Rules",
 	risk: "Risk Rules",
 	management: "Management Rules",
+	conditional_breakeven: "Breakeven Check",
+	conditional_trail: "Trail Stop Check",
+	conditional_scale: "Scale Out Check",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -40,6 +50,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 	exit: "text-loss",
 	risk: "text-breakeven",
 	management: "text-accent",
+	conditional_breakeven: "text-ice",
+	conditional_trail: "text-ice",
+	conditional_scale: "text-ice",
 };
 
 export function RuleChecklist({
@@ -161,7 +174,17 @@ export function RuleChecklist({
 			</div>
 
 			{/* Rules by category */}
-			{(["entry", "exit", "risk", "management"] as const).map((category) => {
+			{(
+				[
+					"entry",
+					"exit",
+					"risk",
+					"management",
+					"conditional_breakeven",
+					"conditional_trail",
+					"conditional_scale",
+				] as const
+			).map((category) => {
 				const categoryRules = groupedRules[category];
 				if (!categoryRules || categoryRules.length === 0) return null;
 

@@ -137,6 +137,76 @@ const autosaveStrategySchema = z.object({
 });
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+type TrailingRulesInput = z.infer<typeof trailingRulesSchema>;
+type ScalingRulesInput = z.infer<typeof scalingRulesSchema>;
+
+interface ConditionalRule {
+	text: string;
+	category: "conditional_breakeven" | "conditional_trail" | "conditional_scale";
+	order: number;
+}
+
+/**
+ * Generate conditional checklist rules from trailingRules and scalingRules.
+ * These rules are auto-generated and stored in strategyRules table for tracking
+ * via tradeRuleChecks when a trade hits the trigger threshold.
+ */
+function generateConditionalRules(
+	trailingRules?: TrailingRulesInput | null,
+	scalingRules?: ScalingRulesInput | null,
+): ConditionalRule[] {
+	const rules: ConditionalRule[] = [];
+	let order = 1000; // Start at high number to sort after manual rules
+
+	// Generate breakeven rule
+	if (trailingRules?.moveToBreakeven) {
+		const { triggerR, offsetTicks } = trailingRules.moveToBreakeven;
+		const offsetText =
+			offsetTicks !== undefined && offsetTicks > 0
+				? ` (+${offsetTicks} ticks offset)`
+				: "";
+		rules.push({
+			text: `Move stop to breakeven at ${triggerR}R${offsetText}`,
+			category: "conditional_breakeven",
+			order: order++,
+		});
+	}
+
+	// Generate trail stop rules
+	if (trailingRules?.trailStops && trailingRules.trailStops.length > 0) {
+		for (const trail of trailingRules.trailStops) {
+			const methodLabels: Record<string, string> = {
+				fixed_ticks: "fixed ticks",
+				atr_multiple: "ATR multiple",
+				swing_low: "swing low",
+			};
+			const methodLabel = methodLabels[trail.method] ?? trail.method;
+			rules.push({
+				text: `Trail stop at ${trail.triggerR}R (${methodLabel}: ${trail.value})`,
+				category: "conditional_trail",
+				order: order++,
+			});
+		}
+	}
+
+	// Generate scale out rules
+	if (scalingRules?.scaleOut && scalingRules.scaleOut.length > 0) {
+		for (const scale of scalingRules.scaleOut) {
+			rules.push({
+				text: `Scale out ${scale.sizePercent}% at ${scale.trigger}`,
+				category: "conditional_scale",
+				order: order++,
+			});
+		}
+	}
+
+	return rules;
+}
+
+// =============================================================================
 // ROUTER
 // =============================================================================
 
@@ -264,10 +334,26 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Failed to create strategy");
 			}
 
-			// Create rules if provided
+			// Create manual rules if provided
 			if (rules && rules.length > 0) {
 				await ctx.db.insert(strategyRules).values(
 					rules.map((rule) => ({
+						strategyId: newStrategy.id,
+						text: rule.text,
+						category: rule.category,
+						order: rule.order,
+					})),
+				);
+			}
+
+			// Generate and create conditional rules from trailingRules/scalingRules
+			const conditionalRules = generateConditionalRules(
+				trailingRules,
+				scalingRules,
+			);
+			if (conditionalRules.length > 0) {
+				await ctx.db.insert(strategyRules).values(
+					conditionalRules.map((rule) => ({
 						strategyId: newStrategy.id,
 						text: rule.text,
 						category: rule.category,
@@ -326,17 +412,66 @@ export const strategiesRouter = createTRPCRouter({
 				.where(eq(strategies.id, id))
 				.returning();
 
-			// Update rules if provided
+			// Update manual rules if provided
 			if (rules !== undefined) {
-				// Delete existing rules
+				// Delete existing manual rules (not conditional ones)
 				await ctx.db
 					.delete(strategyRules)
-					.where(eq(strategyRules.strategyId, id));
+					.where(
+						and(
+							eq(strategyRules.strategyId, id),
+							sql`${strategyRules.category} NOT IN ('conditional_breakeven', 'conditional_trail', 'conditional_scale')`,
+						),
+					);
 
-				// Insert new rules
+				// Insert new manual rules
 				if (rules.length > 0) {
 					await ctx.db.insert(strategyRules).values(
 						rules.map((rule) => ({
+							strategyId: id,
+							text: rule.text,
+							category: rule.category,
+							order: rule.order,
+						})),
+					);
+				}
+			}
+
+			// Regenerate conditional rules if trailingRules or scalingRules changed
+			if (trailingRules !== undefined || scalingRules !== undefined) {
+				// Delete existing conditional rules
+				await ctx.db
+					.delete(strategyRules)
+					.where(
+						and(
+							eq(strategyRules.strategyId, id),
+							sql`${strategyRules.category} IN ('conditional_breakeven', 'conditional_trail', 'conditional_scale')`,
+						),
+					);
+
+				// Determine effective rules to generate from
+				// If not provided in this update, parse from existing strategy data
+				const effectiveTrailingRules =
+					trailingRules !== undefined
+						? trailingRules
+						: existingStrategy.trailingRules
+							? JSON.parse(existingStrategy.trailingRules)
+							: null;
+				const effectiveScalingRules =
+					scalingRules !== undefined
+						? scalingRules
+						: existingStrategy.scalingRules
+							? JSON.parse(existingStrategy.scalingRules)
+							: null;
+
+				// Generate and insert new conditional rules
+				const conditionalRules = generateConditionalRules(
+					effectiveTrailingRules,
+					effectiveScalingRules,
+				);
+				if (conditionalRules.length > 0) {
+					await ctx.db.insert(strategyRules).values(
+						conditionalRules.map((rule) => ({
 							strategyId: id,
 							text: rule.text,
 							category: rule.category,
@@ -415,17 +550,65 @@ export const strategiesRouter = createTRPCRouter({
 					.where(eq(strategies.id, id));
 			}
 
-			// Handle rules array: replace all if provided
+			// Handle manual rules array: replace all if provided
 			if ("rules" in input && rules !== undefined) {
-				// Delete existing rules
+				// Delete existing manual rules (not conditional ones)
 				await ctx.db
 					.delete(strategyRules)
-					.where(eq(strategyRules.strategyId, id));
+					.where(
+						and(
+							eq(strategyRules.strategyId, id),
+							sql`${strategyRules.category} NOT IN ('conditional_breakeven', 'conditional_trail', 'conditional_scale')`,
+						),
+					);
 
-				// Insert new rules
+				// Insert new manual rules
 				if (rules.length > 0) {
 					await ctx.db.insert(strategyRules).values(
 						rules.map((rule) => ({
+							strategyId: id,
+							text: rule.text,
+							category: rule.category,
+							order: rule.order,
+						})),
+					);
+				}
+			}
+
+			// Regenerate conditional rules if trailingRules or scalingRules changed
+			if ("trailingRules" in input || "scalingRules" in input) {
+				// Delete existing conditional rules
+				await ctx.db
+					.delete(strategyRules)
+					.where(
+						and(
+							eq(strategyRules.strategyId, id),
+							sql`${strategyRules.category} IN ('conditional_breakeven', 'conditional_trail', 'conditional_scale')`,
+						),
+					);
+
+				// Determine effective rules to generate from
+				const effectiveTrailingRules =
+					"trailingRules" in input
+						? trailingRules
+						: existingStrategy.trailingRules
+							? JSON.parse(existingStrategy.trailingRules)
+							: null;
+				const effectiveScalingRules =
+					"scalingRules" in input
+						? scalingRules
+						: existingStrategy.scalingRules
+							? JSON.parse(existingStrategy.scalingRules)
+							: null;
+
+				// Generate and insert new conditional rules
+				const conditionalRules = generateConditionalRules(
+					effectiveTrailingRules,
+					effectiveScalingRules,
+				);
+				if (conditionalRules.length > 0) {
+					await ctx.db.insert(strategyRules).values(
+						conditionalRules.map((rule) => ({
 							strategyId: id,
 							text: rule.text,
 							category: rule.category,

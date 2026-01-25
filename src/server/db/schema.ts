@@ -83,6 +83,10 @@ export const strategyRuleCategoryEnum = pgEnum("strategy_rule_category", [
 	"exit",
 	"risk",
 	"management",
+	// Conditional checklist categories (auto-generated from strategy rules)
+	"conditional_breakeven", // Move to breakeven rule
+	"conditional_trail", // Trail stop rule
+	"conditional_scale", // Scale out rule
 ]);
 export const dataQualityEnum = pgEnum("data_quality", [
 	"full", // Complete OHLC data for trade duration
