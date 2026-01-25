@@ -634,8 +634,8 @@
         "Verify in browser: detail view looks polished"
       ],
       "priority": 32,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Redesigned strategy detail page with comprehensive layout. Header with strategy name, color indicator, Edit button, and actions dropdown (duplicate, delete). Stats row showing Win Rate, Total P&L, Profit Factor, Trades, and Avg R with terminal-style cards. Rule Compliance section with overall percentage and per-rule breakdown with color-coded status (green >80%, yellow 50-80%, red <50%). Risk Parameters section with 'Auto-Checked' badge showing Min R:R Ratio, Max Risk, Daily Loss Limit, Max Positions, Target R Multiples. Rules display categorized by Entry/Exit/Risk/Management. Entry/Exit Criteria sections for long-form text. All data-testid attributes added for E2E testing."
     },
     {
       "id": "US-032",
@@ -657,8 +657,8 @@
         "Verify in browser: compliance displays correctly"
       ],
       "priority": 33,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/compliance-display.tsx with ComplianceDisplay component. Fetches manual compliance via getRuleCompliance and auto-compliance from trades via getAll + calculateRiskCompliance. Shows overall weighted compliance %, manual rules section with per-rule breakdown (category badge, rule text, checked/total, compliance %), auto-checks section with per-parameter breakdown (status icon, param name, passed/total, compliance %). Color coding: green >=80%, yellow 50-79%, red <50%. Helper components: RuleComplianceItem, OverallComplianceBadge, SectionHeader, ComplianceDisplaySkeleton. Terminal styling with bg-white/1, border-white/5. Data-testid attributes: compliance-display, compliance-display-loading, compliance-display-header, compliance-display-manual-rules, compliance-display-auto-checks."
     },
     {
       "id": "US-033",

@@ -910,3 +910,76 @@ Key files for this feature:
   - Playwright fill() doesn't always trigger React onChange in all browsers
   - Use locator chaining for finding nested elements: section.locator("input").first()
 ---
+
+## 2026-01-25 - US-031 Redesign Strategy Detail Page
+- What was implemented: Complete redesign of strategy detail page with comprehensive layout
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/page.tsx` - Complete rewrite with new layout
+- New page layout:
+  - Header: back button, strategy name + color indicator, inactive badge (if applicable), Edit button, actions dropdown (duplicate, delete)
+  - Description: displays if present
+  - Stats row: 5 stat cards (Win Rate, Total P&L, Profit Factor, Trades, Avg R) in terminal-style cards
+  - Rule Compliance section: overall compliance %, per-rule breakdown with category badges, color-coded indicators (green/yellow/red based on 80%/50% thresholds)
+  - Risk Parameters section: displays all configured risk params with 'Auto-Checked' badge
+  - Trading Rules section: grouped by category (Entry, Exit, Risk, Management) with bullet points
+  - Entry/Exit Criteria section: displays long-form text when present
+  - Delete confirmation dialog with AlertDialog
+- Components created:
+  - `StatCard` - terminal-style stat display card
+  - `RiskParamItem` - single risk parameter row display
+- Queries used:
+  - `api.strategies.getById` for strategy data
+  - `api.strategies.getStats` for performance stats
+  - `api.strategies.getRuleCompliance` for compliance data
+- Data-testid attributes:
+  - strategy-detail-page, strategy-detail-loading, strategy-detail-not-found
+  - strategy-detail-heading, strategy-detail-color, strategy-detail-description
+  - strategy-detail-button-back, strategy-detail-button-edit, strategy-detail-button-actions
+  - strategy-detail-action-duplicate, strategy-detail-action-delete, strategy-detail-button-delete-confirm
+  - strategy-detail-stats, strategy-detail-compliance, strategy-detail-risk-params
+  - strategy-detail-rules, strategy-detail-criteria
+- Removed:
+  - StrategyForm from detail page (replaced with read-only display, edit is on /edit page)
+- **Learnings for future iterations:**
+  - When displaying risk params with type/value objects, use helper function `formatRiskValue()`
+  - Color-coded compliance: green >=80%, yellow >=50%, red <50%
+  - TypeScript requires explicit typing for .map() callbacks when iterating over JSON arrays (e.g., `(r: number) => ...`)
+  - Removed update mutation and form from detail page - edit functionality is on dedicated edit page now
+---
+
+## 2026-01-25 - US-032 Create Combined Compliance Display Component
+- What was implemented: Combined compliance display component showing both manual and auto-compliance stats
+- Files changed:
+  - `src/components/strategy/compliance-display.tsx` (new) - Main component with helper components
+  - `src/components/strategy/index.ts` - Added ComplianceDisplay export
+- Component features:
+  - `ComplianceDisplay`: Main component accepting strategyId prop
+  - Fetches data from three sources:
+    - `api.strategies.getRuleCompliance` for manual rules compliance
+    - `api.strategies.getById` for risk parameters
+    - `api.trades.getAll` with strategyId filter for trade data (auto-compliance)
+  - Calculates auto-compliance by running `calculateRiskCompliance` on each trade
+  - Aggregates per-parameter compliance (passed/failed/unable counts)
+  - Calculates weighted overall compliance (manual + auto weighted by rule/check count)
+- Helper components:
+  - `RuleComplianceItem`: Per-rule display with category badge, text, checked/total, compliance %
+  - `OverallComplianceBadge`: Badge with icon showing overall compliance
+  - `SectionHeader`: Section header with icon (ClipboardCheck for manual, CheckCircle2 for auto)
+  - `ComplianceDisplaySkeleton`: Loading skeleton
+  - `getComplianceColorClass`/`getComplianceBgClass`: Color helpers for thresholds
+- Display sections:
+  - Overall compliance badge in header
+  - Manual Rules section: per-rule breakdown with category, text, checked/total, compliance %
+  - Auto-Checks section: per-parameter breakdown with status icon, param name, passed/total/N/A, compliance %
+  - Explanation note describing what each section means
+- Data-testid attributes:
+  - compliance-display, compliance-display-loading, compliance-display-header
+  - compliance-display-manual-rules, compliance-display-auto-checks
+- Terminal styling:
+  - bg-white/1, border-white/5 terminal card
+  - Color coding: green >=80% (text-profit, bg-profit/10), yellow 50-79% (text-breakeven), red <50% (text-loss)
+- **Learnings for future iterations:**
+  - api.trades.getAll returns `items` not `trades` (cursor-based pagination response)
+  - TypeScript strict mode requires explicit handling of potentially undefined map lookups - use `let agg = obj[key]; if (!agg) { agg = {...}; obj[key] = agg; }` pattern
+  - For aggregate compliance calculations, track passed/failed/unable separately, then calculate % from passed/total
+---

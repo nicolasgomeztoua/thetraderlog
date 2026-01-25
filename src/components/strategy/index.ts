@@ -1,4 +1,5 @@
 export { ComplianceBadge } from "./compliance-badge";
+export { ComplianceDisplay } from "./compliance-display";
 export type { WizardStep } from "./creation-wizard";
 export {
 	StepBasics,
