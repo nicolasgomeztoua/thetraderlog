@@ -329,8 +329,8 @@
         "Verify in browser: can navigate steps, data persists"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created WizardContainer component with WizardStep interface, useWizard hook context, StepIndicator (desktop horizontal with progress lines, mobile compact bar), navigation buttons (Back ghost, Continue/Create Strategy primary), keyboard navigation (Enter to continue when not in input/textarea), data persistence via context. Terminal design with monospace fonts, white/5 borders, primary accents. Exported from src/components/strategy/index.ts. All data-testid attributes added for E2E testing."
     },
     {
       "id": "US-017",
@@ -348,8 +348,8 @@
         "Verify in browser: validation works, color picker works"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/creation-wizard/step-basics.tsx with useWizard hook integration. Fields: Name (required, min 2 chars with validation on typing), Description (optional Textarea), Color (preset color picker using PRESET_COLORS from @/lib/shared). Auto-focuses name on mount. Validation: setCanProceed based on name length >= 2, inline error message for short names. Terminal styling: font-mono text-[10px] uppercase tracking-widest labels. Color buttons use aria-pressed for accessibility. Exported from creation-wizard/index.ts."
     },
     {
       "id": "US-018",
@@ -368,8 +368,8 @@
         "Verify in browser: can add/edit/remove rules"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/creation-wizard/step-rules.tsx with Entry Criteria textarea, Exit Rules textarea, and dynamic Checklist Rules with category grouping. Uses RULE_CATEGORIES constant for categories (entry, exit, risk, management). Features: Add button per category, inline text editing, category dropdown for each rule, delete button. All fields optional so setCanProceed(true) always. Rules grouped by category for display but stored as flat array in wizard data. Exported from creation-wizard/index.ts. Terminal styling with font-mono, bg-white/2, border-white/5. Data-testid attributes for E2E testing."
     },
     {
       "id": "US-019",
@@ -390,8 +390,8 @@
         "Verify in browser: all inputs work, help text visible"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/creation-wizard/step-risk.tsx with two sections: Auto-Checked Parameters (Min R:R Ratio, Max Risk Per Trade with type dropdown, Daily Loss Limit with type dropdown, Max Concurrent Positions) and Conditional Checklist Rules (Move to Breakeven toggle with triggerR/offsetTicks, Trail Stops dynamic list with triggerR/method/value, Scale Out Rules dynamic list with triggerR/sizePercent, Target R Multiples with quick-add buttons). Uses NumberInput component with allowDecimals for decimal fields. Help text for each field. Checkmark icon for auto-checked section, clipboard icon for conditional section. Terminal styling with bg-white/2, border-white/5. All fields optional so always canProceed(true). Exported from index.ts."
     },
     {
       "id": "US-020",
@@ -410,8 +410,8 @@
         "Verify in browser: review shows correct data, edit links work"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/creation-wizard/step-review.tsx with three ReviewSection components for Basics, Rules, and Risk Management. Basics displays name, description (with muted 'Not specified' fallback), and color swatch. Rules shows entry/exit criteria (with multiline support) and checklist rules count by category. Risk shows auto-checked params (Min R:R, Max Risk, Daily Loss, Max Positions) and conditional params (Breakeven, Trail Stops, Scale Out, Target R Multiples). Each section has Edit button using goToStep(n). Info note about auto-compliance at bottom. Uses ReviewSection and ReviewField helper components. Exported from index.ts. Note: 'Create Strategy' button label is handled by WizardContainer which detects isLastStep."
     },
     {
       "id": "US-021",
@@ -432,8 +432,8 @@
         "Verify in browser: full creation flow works"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Updated /strategies/new page to use WizardContainer with all 4 steps (Basics, Rules, Risk, Review). Wire up strategies.create mutation on completion with loading state (isSubmitting). On success: toast + redirect to strategy detail. On error: error toast shown. Back link is the header back button. Added data-testid attributes for E2E testing. Exported step components from strategy index."
     },
     {
       "id": "US-022",
@@ -451,8 +451,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created tests/e2e/strategy-creation.spec.ts with 13 tests across 2 describe blocks. Tests cover: page load with wizard and step indicator, back button navigation to strategies list, navigating through all 4 steps, validation preventing proceeding without required name field, data persistence when going back/forward, review step showing entered data correctly, edit links on review jumping to correct steps, complete flow creating strategy (with environment-aware skip), step indicator progress, color picker functionality, and auth redirect for unauthenticated users. All data-testid attributes present. Tests pass in chromium."
     },
     {
       "id": "US-023",

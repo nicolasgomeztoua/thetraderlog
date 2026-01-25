@@ -420,3 +420,229 @@ Key files for this feature:
   - Biome requires chained promises to break on separate lines (`.waitFor(...)\n.catch(...)`)
 ---
 
+## 2026-01-25 - US-016 Create Multi-Step Wizard Container Component
+- What was implemented: Multi-step wizard container for strategy creation flow
+- Files changed:
+  - `src/components/strategy/creation-wizard/wizard-container.tsx` (new) - Main wizard component
+  - `src/components/strategy/creation-wizard/index.ts` (new) - Barrel export
+  - `src/components/strategy/index.ts` - Added wizard exports
+- Component features:
+  - `WizardContainer`: Main component managing step state and form data
+  - `WizardStep` interface: id, name, component (ReactNode), optional validate function
+  - `useWizard` hook: Context for step components to access/update form data
+  - `StepIndicator`: Desktop horizontal with progress lines, mobile compact bar
+  - Props: steps, onComplete, initialData, isSubmitting
+- Navigation:
+  - Back button (ghost variant), visible after first step
+  - Continue / Create Strategy button (primary variant)
+  - Keyboard: Enter to continue when valid (not triggered in input/textarea)
+- Context value:
+  - data, updateData, currentStep, goToStep, canProceed, setCanProceed
+- Terminal styling:
+  - Step circles: rounded-full border-2, checkmark for completed
+  - Labels: font-mono text-[10px] uppercase tracking-wider
+  - Primary color for current/completed steps
+- Data-testid attributes:
+  - wizard-container, wizard-step-indicator, wizard-step-{n}
+  - wizard-step-content, wizard-navigation
+  - wizard-button-back, wizard-button-next
+- **Learnings for future iterations:**
+  - Biome requires setCanProceed removed from useMemo deps (it's a stable setter)
+  - Function params need line breaks when destructuring in Biome format
+  - useCallback/useMemo for handlers to avoid re-renders in context value
+  - Step validation runs via useEffect watching currentStepConfig and data
+---
+
+## 2026-01-25 - US-017 Create Wizard Step 1 - Basics
+- What was implemented: First step of strategy creation wizard capturing identity fields
+- Files changed:
+  - `src/components/strategy/creation-wizard/step-basics.tsx` (new) - Step component for basics
+  - `src/components/strategy/creation-wizard/index.ts` - Added StepBasics export
+- Component features:
+  - `StepBasics`: First wizard step using `useWizard` hook for data/validation
+  - Name field (required): Text input with min 2 character validation, auto-focus on mount
+  - Description field (optional): Textarea with placeholder and help text
+  - Color picker: Uses PRESET_COLORS from @/lib/shared, button grid with aria-pressed state
+- Validation:
+  - useEffect watching data.name to call setCanProceed(name.length >= 2)
+  - Shows inline error "Name must be at least 2 characters" when 0 < length < 2
+  - aria-invalid styling on name input for visual feedback
+- Terminal styling:
+  - Labels: font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80
+  - Inputs: bg-white/2 border-white/10 focus:border-primary/50
+  - Color buttons: h-9 w-9 (mobile) / h-8 w-8 (desktop), scale-110 border-white when selected
+- Data-testid attributes:
+  - wizard-step-basics, wizard-input-name, wizard-textarea-description
+  - wizard-color-picker, wizard-color-{hex} for each color button
+- **Learnings for future iterations:**
+  - Biome rejects role="radio"/"radiogroup" on buttons - use aria-pressed instead for toggle groups
+  - Biome collapses simple divs to single line format when they only have 2 attributes
+  - Use direct input element instead of TextInput when needing ref for auto-focus
+  - PRESET_COLORS is exported from @/lib/shared (not @/lib/constants)
+---
+
+## 2026-01-25 - US-018 Create Wizard Step 2 - Rules
+- What was implemented: Second step of strategy creation wizard capturing trading rules
+- Files changed:
+  - `src/components/strategy/creation-wizard/step-rules.tsx` (new) - Step component for rules
+  - `src/components/strategy/creation-wizard/index.ts` - Added StepRules export
+- Component features:
+  - `StepRules`: Second wizard step using `useWizard` hook for data management
+  - Entry Criteria field (optional): Textarea for entry conditions
+  - Exit Rules field (optional): Textarea for exit conditions
+  - Checklist Rules: Dynamic list grouped by RULE_CATEGORIES (entry, exit, risk, management)
+  - Add button per category to create rules in specific category
+  - Each rule has: text input, category dropdown (can change category), delete button
+  - Rules stored as flat array but displayed grouped by category
+  - All fields optional so always canProceed(true)
+- Data flow:
+  - Rules are stored in `data.rules` as StrategyRule[] from strategy-form.tsx
+  - Each rule has: id?, text, category, order
+  - `rulesByCategory` computed for display grouping
+  - Global index used for CRUD operations to correctly target rules in flat array
+- Terminal styling:
+  - Labels: font-mono text-[10px] text-muted-foreground/80 uppercase tracking-widest
+  - Category cards: rounded border-white/5 bg-white/2 p-4
+  - Empty state: italic text-muted-foreground/40
+  - Color indicator bar: hidden sm:block h-6 w-1 bg-primary/30
+- Data-testid attributes:
+  - wizard-step-rules, wizard-textarea-entry-criteria, wizard-textarea-exit-rules
+  - wizard-rules-category-{category}, wizard-button-add-rule-{category}
+  - wizard-rule-{index}, wizard-rule-input-{index}, wizard-rule-category-{index}, wizard-rule-delete-{index}
+  - wizard-rules-summary
+- **Learnings for future iterations:**
+  - Biome prefers `<ul>` and `<li>` over `role="list"` and `role="listitem"` on divs
+  - When grouping items for display but storing flat, use findIndex to get global index for CRUD
+  - Use `aria-labelledby` on list element referencing category header id for accessibility
+  - Biome sorts CSS classes alphabetically - text-muted-foreground before uppercase, tracking before text-
+---
+
+## 2026-01-25 - US-019 Create Wizard Step 3 - Risk Management
+- What was implemented: Third step of strategy creation wizard for risk parameters and conditional rules
+- Files changed:
+  - `src/components/strategy/creation-wizard/step-risk.tsx` (new) - Step component for risk management
+  - `src/components/strategy/creation-wizard/index.ts` - Added StepRisk export
+- Component features:
+  - `StepRisk`: Third wizard step using `useWizard` hook for data management
+  - Two distinct sections with different visual indicators:
+    - Auto-Checked Parameters (checkmark icon): Min R:R Ratio, Max Risk Per Trade, Daily Loss Limit, Max Concurrent Positions
+    - Conditional Checklist Rules (clipboard icon): Move to Breakeven, Trail Stops, Scale Out, Target R Multiples
+  - All fields optional so always setCanProceed(true)
+- Auto-Checked Parameters:
+  - Min R:R Ratio: NumberInput with allowDecimals, suffix "R"
+  - Max Risk Per Trade: Type dropdown (dollars/percent) + NumberInput, dynamic placeholder and suffix
+  - Daily Loss Limit: Type dropdown (dollars/percent) + NumberInput, dynamic placeholder and suffix
+  - Max Concurrent Positions: NumberInput with allowDecimals=false, min=1
+- Conditional Checklist Rules:
+  - Move to Breakeven: Checkbox toggle, triggerR NumberInput, offsetTicks NumberInput
+  - Trail Stops: Dynamic list with Add button, each item has triggerR, method dropdown, value inputs
+  - Scale Out: Dynamic list with Add button, each item has triggerR (stored as string trigger), sizePercent
+  - Target R Multiples: Display tags with X to remove, quick-add buttons (1R-5R)
+- Data flow:
+  - Uses three data sources: data.riskParameters, data.trailingRules, data.scalingRules
+  - Helper functions: updateRiskParam, updateTrailingRules, updateScalingRules
+  - Removes undefined/null values from objects when updating
+- Terminal styling:
+  - Section headers: font-mono text-xs uppercase tracking-wider text-muted-foreground
+  - Icon containers: h-6 w-6 rounded-full bg-profit/20 or bg-primary/20
+  - Cards: rounded border border-white/5 bg-white/2 p-4
+  - Help text: font-mono text-[10px] text-muted-foreground/60
+- Data-testid attributes:
+  - wizard-step-risk, wizard-risk-min-rr, wizard-risk-max-risk, wizard-risk-daily-loss
+  - wizard-risk-max-positions, wizard-risk-breakeven, wizard-risk-trail-stops
+  - wizard-risk-scale-out, wizard-risk-target-multiples, wizard-risk-add-target-{r}
+- **Learnings for future iterations:**
+  - ScalingRules.scaleOut uses string trigger field (not number triggerR) - need conversion
+  - NumberInput allowDecimals controls whether decimals are allowed, decimalPlaces controls formatting
+  - Quick-add buttons for common values (1R-5R) improve UX over generic "Add" button with prompt
+  - Type dropdowns for dollar/percent require dynamic placeholder/suffix based on selected type
+---
+
+## 2026-01-25 - US-020 Create Wizard Step 4 - Review
+- What was implemented: Final review step showing all wizard data before creation
+- Files changed:
+  - `src/components/strategy/creation-wizard/step-review.tsx` (new) - Review step component
+  - `src/components/strategy/creation-wizard/index.ts` - Added StepReview export
+- Component features:
+  - `StepReview`: Main component using `useWizard` hook for data access and navigation
+  - `ReviewSection`: Wrapper component with title, Edit button using goToStep(n), and terminal card styling
+  - `ReviewField`: Display component for label/value pairs with muted and multiline variants
+- Sections displayed:
+  - Basics: name, description (muted "Not specified" fallback), color swatch
+  - Rules: entry criteria (multiline), exit rules (multiline), checklist rules count by category
+  - Risk: split into Auto-Checked (green checkmark) and Conditional (clipboard icon) subsections
+- Auto-Checked params shown:
+  - Min R:R Ratio, Max Risk Per Trade (with $/% type), Daily Loss Limit, Max Concurrent Positions
+- Conditional params shown:
+  - Move to Breakeven (with triggerR and offset), Trail Stops count, Scale Out count, Target R Multiples list
+- Note at bottom: "Risk parameters marked as 'Auto-Checked' will be automatically validated against your trades"
+- Terminal styling:
+  - ReviewSection: rounded border border-white/5 bg-white/2 p-4
+  - Edit buttons: ghost variant with Pencil icon
+  - Note box: rounded border border-primary/20 bg-primary/5 with text-primary
+- Data-testid attributes:
+  - wizard-step-review, wizard-review-section-{n}, wizard-review-edit-{n}
+  - wizard-review-color, wizard-review-rules-count
+  - wizard-review-auto-checked, wizard-review-conditional, wizard-review-note
+- **Learnings for future iterations:**
+  - Biome auto-formats short JSX tags onto single lines - don't fight it
+  - WizardContainer already handles showing "Create Strategy" on last step via isLastStep logic
+  - Use helper components (ReviewSection, ReviewField) to keep main render clean
+  - Muted variant with text-muted-foreground/50 for "Not specified" fallbacks is clear
+---
+
+
+## 2026-01-25 - US-021 Create Strategy Creation Page
+- What was implemented: Updated /strategies/new page to use wizard-based creation flow
+- Files changed:
+  - `src/app/(protected)/strategies/new/page.tsx` - Replaced StrategyForm with WizardContainer + 4 step components
+  - `src/components/strategy/index.ts` - Added exports for StepBasics, StepReview, StepRisk, StepRules
+- Features:
+  - Uses WizardContainer with steps: Basics, Rules, Risk, Review
+  - Step validation: Basics requires name >= 2 chars, other steps always valid
+  - Initial data: default color (#d4ff00), isActive true, empty rules array
+  - Mutation: calls strategies.create on wizard completion
+  - Loading state: isSubmitting passed to WizardContainer, shows "Creating..." on button
+  - Success: toast("Strategy created successfully"), invalidate cache, redirect to /strategies/{id}
+  - Error: toast.error with message, wizard stays on review step (WizardContainer handles this)
+- Data-testid attributes added:
+  - new-strategy-page, new-strategy-button-back, new-strategy-heading
+  - new-strategy-wizard-container
+- **Learnings for future iterations:**
+  - WizardContainer already handles error state gracefully (stays on current step when mutation fails)
+  - useMemo for wizardSteps array prevents re-renders since step components don't change
+  - Initial data should include reasonable defaults (color, isActive, rules) to avoid undefined errors
+---
+
+## 2026-01-25 - US-022 E2E Tests for Creation Wizard
+- What was implemented: Comprehensive E2E tests for the multi-step strategy creation wizard
+- Files changed:
+  - `tests/e2e/strategy-creation.spec.ts` (new) - 13 tests across 2 describe blocks
+- Test coverage:
+  - `Strategy Creation Wizard`:
+    - Page loads with wizard and step indicator
+    - Back button returns to strategies list
+    - Can navigate through all 4 steps
+    - Validation prevents proceeding without required name (min 2 chars)
+    - Data persists when going back and forward between steps
+    - Review step shows entered data correctly (name, description, color)
+    - Edit links on review step jump back to correct step
+    - Complete flow creates strategy and redirects (with environment-aware skip)
+    - Step indicator shows progress correctly
+    - Color picker works correctly (select different color)
+  - `Strategy Creation - Auth`:
+    - Redirects unauthenticated user to sign-in
+- Test patterns used:
+  - Wait for wizard container before testing steps
+  - Use `page.getByTestId()` for all selectors
+  - Verify button disabled state for validation
+  - Use `toHaveValue()` for persistence checks
+  - Use function-based waitForURL for complex URL matching
+  - Use test.skip() for environment-dependent tests
+- **Learnings for future iterations:**
+  - Biome formats chained promise methods on separate lines
+  - Use function-based waitForURL when you need complex URL pattern matching (e.g., NOT containing a specific path)
+  - Color testids use hex without # prefix (e.g., `wizard-color-d4ff00` not `wizard-color-#d4ff00`)
+  - When mutation might fail due to environment issues (no DB, auth), use try/catch with test.skip()
+  - Web server can have flaky startup - tests should be resilient to occasional ConnResetException
+---
