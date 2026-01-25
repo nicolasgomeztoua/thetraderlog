@@ -1016,3 +1016,115 @@ Key files for this feature:
   - Delete confirmation tests should create their own data to avoid affecting parallel test runs
   - Extended test timeouts can be set per-test with `test.setTimeout(ms)` instead of globally
 ---
+
+## 2026-01-25 - US-034 Add Strategy Autosave Endpoint
+- What was implemented: Autosave mutation for efficient partial strategy updates
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Added autosave mutation with autosaveStrategySchema
+- Features:
+  - Sparse update: uses `"field" in input` checks to only update explicitly provided fields
+  - Validates ownership via protectedProcedure + existingStrategy query
+  - Returns `{ updatedAt: Date }` for UI confirmation (minimal response)
+  - Handles JSON fields (riskParameters, scalingRules, trailingRules) with JSON.stringify
+  - Replaces rules array entirely when provided (delete all + insert new)
+  - Does not return full strategy object - designed for silent auto-save without cache invalidation
+- **Learnings for future iterations:**
+  - Use `"field" in input` pattern for sparse updates instead of checking `!== undefined` (handles explicit null)
+  - Remove rest spread (`...data`) when using explicit field checks to avoid Biome unused variable warning
+  - Autosave endpoints should return minimal response (just updatedAt) for UI status indicator
+---
+
+## 2026-01-25 - US-035 Add Auto-Compliance Query Endpoint
+- What was implemented: Query endpoint for calculating auto-compliance based on risk parameters
+- Files changed:
+  - `src/server/api/routers/strategies.ts` - Added getAutoCompliance query with calculateRiskCompliance integration
+- Features:
+  - Input: `{ strategyId: string }`
+  - Fetches strategy and parses riskParameters from JSON
+  - Fetches all closed trades with this strategy
+  - Converts trades to `TradeForCompliance` format (parsing decimal strings to numbers)
+  - Runs `calculateRiskCompliance` for each trade
+  - Aggregates per-parameter compliance: `{ param, compliance, passed, failed, unable, total }`
+  - Tracks failing trades: `{ tradeId, symbol, failedChecks: ComplianceCheck[] }`
+  - Returns `{ totalTrades, overallCompliance, parameterCompliance, failingTrades }`
+  - Returns 100% compliance when no risk params or no trades
+- **Learnings for future iterations:**
+  - Biome auto-sorts type imports before value imports (type ComplianceCheck before calculateRiskCompliance)
+  - Decimal fields from DB (entryPrice, stopLoss, etc.) must be parsed with parseFloat()
+  - Use Record<string, T> with explicit aggregation object creation pattern for TypeScript strict mode
+---
+
+## 2026-01-25 - US-036 Integration Tests for Backend Endpoints
+- What was implemented: Integration tests for strategies.autosave and strategies.getAutoCompliance endpoints
+- Files changed:
+  - `tests/integration/strategies.test.ts` (new) - ~265 lines of comprehensive tests
+- Test structure:
+  - `beforeAll`: truncateAllTables, setupTrader for main user + other user (for ownership tests), create test strategy
+  - `afterAll`: truncateAllTables cleanup
+  - Uses createTestTrade for compliance testing
+- autosave tests (7 tests):
+  - Sparse update (only updates provided fields)
+  - Returns updatedAt timestamp
+  - Rejects non-owner access
+  - Updates riskParameters JSON correctly
+  - Replaces rules array entirely when provided
+  - Allows clearing nullable fields to null
+  - Unauthenticated rejection
+- getAutoCompliance tests (7 tests):
+  - Returns 100% when no trades exist
+  - Calculates correct compliance for passing trades
+  - Tracks failing trades with failedChecks array
+  - Handles trades without SL/TP gracefully (unable counts)
+  - Returns empty compliance when no risk params
+  - Rejects non-existent strategy
+  - Rejects non-owner access
+  - Unauthenticated rejection
+- **Learnings for future iterations:**
+  - Biome sorts type imports before value imports in alphabetical order within groups
+  - Use createTestTrade with strategyId to associate trades with strategies for compliance testing
+  - Test ownership with separate user setup (setupTrader with different email)
+---
+
+## 2026-01-25 - US-037 Add Conditional Checklist Type to Strategy Rules
+- What was implemented: Conditional rule generation from trailingRules and scalingRules
+- Files changed:
+  - `src/server/db/schema.ts` - Added conditional_breakeven, conditional_trail, conditional_scale to strategyRuleCategoryEnum
+  - `src/server/api/routers/strategies.ts` - Added generateConditionalRules helper, updated create/update/autosave mutations
+  - `src/components/strategy/rule-checklist.tsx` - Updated Rule interface and added category labels/colors
+- Features:
+  - Schema: New enum values for conditional rule categories
+  - Helper: generateConditionalRules() generates rules from trailingRules.moveToBreakeven and scalingRules.scaleOut[]
+  - Create: Generates conditional rules when strategy is created with trailing/scaling rules
+  - Update/Autosave: Regenerates conditional rules when trailing/scaling rules change
+  - Separation: Uses SQL IN/NOT IN to separately manage manual vs conditional rules
+  - UI: RuleChecklist shows conditional rules with ice blue color and appropriate labels
+- **Learnings for future iterations:**
+  - Use SQL template literals for IN clauses: `sql\`${column} IN ('a', 'b')\``
+  - When updating rules, separate conditional from manual to avoid deleting conditional when manual changes
+  - Conditional rules start at order 1000 to sort after manual rules
+  - Schema enum changes require `bun run db:push` to apply
+---
+
+## 2026-01-25 - US-038 Integration Tests for Conditional Checklists
+- What was implemented: Integration tests for conditional rule generation and checking
+- Files changed:
+  - `tests/integration/strategies.test.ts` - Added 9 tests in new "conditional checklists" describe block
+- Tests added:
+  1. moveToBreakeven generates conditional_breakeven rule with offset text
+  2. moveToBreakeven generates rule without offset when offsetTicks is 0
+  3. scaleOut generates multiple conditional_scale rules (tested 3 rules)
+  4. trailStops generates conditional_trail rules with different methods
+  5. Manual rules preserved when updating with trailing rules
+  6. Conditional rules regenerate when trailingRules updated
+  7. Conditional rules cleared when trailingRules set to null
+  8. Conditional rules appear in getTradeRuleChecks for trades with strategy
+  9. Conditional rules can be checked via checkRule mutation
+- Test patterns:
+  - Create strategy -> getById -> filter rules by category
+  - Update strategy -> verify rules regenerated
+  - Create trade with strategy -> getTradeRuleChecks -> checkRule -> verify checked
+- **Learnings for future iterations:**
+  - Use filter().length to count rules by category
+  - Use .some() with includes() to check text content without exact matching
+  - Conditional rules can be checked same way as manual rules via checkRule mutation
+---

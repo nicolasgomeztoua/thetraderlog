@@ -696,8 +696,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 35,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Added autosave mutation to strategies router with sparse update logic. Uses 'field in input' checks to only update provided fields. Handles JSON fields (riskParameters, scalingRules, trailingRules) and replaces rules array when provided. Returns { updatedAt: Date } for UI confirmation. Validates ownership via protectedProcedure."
     },
     {
       "id": "US-035",
@@ -715,8 +715,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 36,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Added getAutoCompliance query that fetches strategy risk params and all closed trades, converts to TradeForCompliance format, runs calculateRiskCompliance for each trade, and aggregates results. Returns { totalTrades, overallCompliance, parameterCompliance: [{param, compliance, passed, failed, unable, total}], failingTrades: [{tradeId, symbol, failedChecks}] }."
     },
     {
       "id": "US-036",
@@ -734,8 +734,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 37,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created tests/integration/strategies.test.ts with 14 tests across 3 describe blocks. autosave tests: sparse update, returns updatedAt, rejects non-owner, updates riskParameters, replaces rules array, clears nullable fields to null. getAutoCompliance tests: 100% when no trades, correct compliance for passing trades, tracks failing trades, handles missing SL/TP with 'unable' counts, returns empty when no risk params, rejects non-existent/non-owned. Auth tests: rejects unauthenticated for both endpoints."
     },
     {
       "id": "US-037",
@@ -752,8 +752,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 38,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Added conditional_breakeven, conditional_trail, conditional_scale to strategyRuleCategoryEnum. Created generateConditionalRules helper that creates rules from trailingRules.moveToBreakeven and scalingRules.scaleOut[]. Updated create, update, autosave mutations to generate conditional rules on save (using SQL IN/NOT IN to separate manual vs conditional rule operations). Updated RuleChecklist component to support new categories with labels and ice blue coloring."
     },
     {
       "id": "US-038",
@@ -769,8 +769,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 39,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Added 9 tests to strategies.test.ts: moveToBreakeven generates rule with/without offset, scaleOut generates multiple rules, trailStops generates rules with different methods, manual rules preserved when adding trailing, conditional rules regenerate on update, conditional rules clear when set to null, conditional rules checkable via tradeRuleChecks API. Tests verify rule text content, category assignment, and update/clear behavior."
     }
   ]
 }

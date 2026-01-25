@@ -74,6 +74,31 @@ test.describe("Auth Redirects", () => {
 });
 ```
 
+### Testing Conditional Rules
+**When:** Testing strategy conditional rule generation (conditional_breakeven, conditional_trail, conditional_scale)
+**How:** Create strategy with trailingRules/scalingRules, getById, filter rules by category:
+```typescript
+const strategy = await caller.strategies.getById({ id: strategyId });
+const conditionalRules = strategy.rules.filter((r) => r.category.startsWith("conditional_"));
+const breakevenRule = strategy.rules.find((r) => r.category === "conditional_breakeven");
+```
+Use `.some()` with `.includes()` to check text content without exact matching:
+```typescript
+expect(scaleRules.some((r) => r.text.includes("25%") && r.text.includes("1R"))).toBe(true);
+```
+
+### Testing Sparse Updates
+**When:** Testing autosave or partial update mutations
+**How:** Get state before, apply partial update, verify only provided fields changed:
+```typescript
+const before = await caller.strategies.getById({ id });
+expect(before.name).toBe("Original");
+await caller.strategies.autosave({ id, description: "New" });
+const after = await caller.strategies.getById({ id });
+expect(after.name).toBe("Original");  // Unchanged
+expect(after.description).toBe("New");  // Changed
+```
+
 ## Gotchas
 
 ### Docker Required for Integration Tests
@@ -83,6 +108,10 @@ test.describe("Auth Redirects", () => {
 ### E2E Tests Need Dev Server
 **Problem:** Tests timeout or fail to connect
 **Solution:** The Playwright config auto-starts the dev server, but ensure port 3000 is free
+
+### Biome Sorts Type Imports
+**Problem:** Import order causes lint errors after adding imports
+**Solution:** Run `bun run check --fix` - Biome puts type imports before value imports alphabetically
 
 ## Decisions
 
