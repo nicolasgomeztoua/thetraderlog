@@ -11,6 +11,7 @@ export {
 export type { RiskParameters } from "./risk-config";
 export { RiskConfig } from "./risk-config";
 export { RuleChecklist } from "./rule-checklist";
+export { SaveStatusIndicator } from "./save-status-indicator";
 export type { ScalingRules } from "./scaling-config";
 export { ScalingConfig } from "./scaling-config";
 export { StrategyCard } from "./strategy-card";
