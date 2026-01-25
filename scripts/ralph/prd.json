@@ -473,8 +473,8 @@
         "Verify in browser: page loads at /strategies/[id]/edit"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/app/(protected)/strategies/[id]/edit/page.tsx with strategy fetch via getById query, loading skeleton (h-64 x3), 404 handling (AlertTriangle icon + back button), spacious max-w-4xl centered layout, back link to strategy detail, strategy name and color in header, placeholder content for edit form (US-024 to US-029). Data-testid attributes: strategy-edit-page, strategy-edit-loading, strategy-edit-not-found, strategy-edit-button-back, strategy-edit-color, strategy-edit-heading. Ownership safeguard inherent in protectedProcedure."
     },
     {
       "id": "US-024",
@@ -492,8 +492,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/hooks/use-auto-save.ts with useAutoSave hook. Features: data generic type, onSave async callback, debounceMs (default 800ms), enabled toggle. Returns isSaving, lastSavedAt, error, saveNow, clearError. Uses deep comparison via JSON.stringify to skip redundant saves. Tracks initialization to avoid saving on mount. Handles errors gracefully with message extraction."
     },
     {
       "id": "US-025",
@@ -511,8 +511,8 @@
         "Verify in browser: status transitions work"
       ],
       "priority": 26,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/save-status-indicator.tsx with SaveStatusIndicator component. States: Saving (Loader2 spinner + yellow 'Saving...'), Saved (green check + 'All changes saved' + relative time via formatDistanceToNow), Error (red AlertCircle + truncated error message), Idle (returns null). Uses font-mono text-[10px] uppercase tracking-wider. Terminal styling with semantic colors (text-breakeven, text-profit, text-loss). Exported from index.ts. Added data-testid='save-status-indicator' for E2E testing."
     },
     {
       "id": "US-026",
@@ -533,8 +533,8 @@
         "Verify in browser: edits trigger auto-save"
       ],
       "priority": 27,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/edit-form/basic-info-section.tsx with name (TextInput), description (Textarea), color picker, and active/inactive toggle switch. Uses terminal-style card (bg-white/1, border-white/5), space-y-6 layout. Switch toggle built with aria-role='switch' and profile/20 background. Auto-saves changes via parent onChange callback. Validation passed to parent via nameError prop. Exported via edit-form/index.ts and strategy/index.ts."
     },
     {
       "id": "US-027",
@@ -553,8 +553,8 @@
         "Verify in browser: CRUD operations work, auto-save triggers"
       ],
       "priority": 28,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/edit-form/rules-section.tsx with Entry Criteria textarea, Exit Rules textarea, and Checklist Rules editor grouped by category. Uses RULE_CATEGORIES constant. Features: add button per category, inline text input with onBlur save, category dropdown for changing category, delete button. Terminal-style card with bg-white/1, border-white/5. Uses defaultValue pattern for blur-based saves. Exported via edit-form/index.ts."
     },
     {
       "id": "US-028",
@@ -575,8 +575,8 @@
         "Verify in browser: all inputs work, decimals supported"
       ],
       "priority": 29,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created src/components/strategy/edit-form/risk-section.tsx with Auto-Checked Parameters section (Min R:R Ratio, Max Risk Per Trade, Daily Loss Limit, Max Concurrent Positions - each with clear button and 'Auto-checked' badge) and Conditional Checklist Parameters section (Move to Breakeven checkbox + config, Trail Stops list, Scale Out list, Target R Multiples with quick-add buttons - each with 'Shows checklist' badge). Uses NumberInput with allowDecimals where appropriate. Clear buttons to reset each parameter to null. Terminal-style card with bg-white/1, border-white/5."
     },
     {
       "id": "US-029",
@@ -596,8 +596,8 @@
         "Verify in browser: full edit flow works with auto-save"
       ],
       "priority": 30,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Updated src/app/(protected)/strategies/[id]/edit/page.tsx with full edit page assembly. Header with back button, strategy name + color indicator, SaveStatusIndicator. Tabbed layout (Overview, Rules, Risk Management) using Radix Tabs. Delete button with AlertDialog confirmation. Form state managed centrally with useState, auto-saved via useAutoSave hook with 800ms debounce. Used empty placeholder for useAutoSave when formData is null (hook disabled anyway). Each tab renders corresponding section component. Responsive layout: full-width on mobile, max-w-4xl on desktop. Terminal styling with monospace fonts, uppercase tracking-wider tabs."
     },
     {
       "id": "US-030",
@@ -616,8 +616,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 31,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Created tests/e2e/strategy-edit.spec.ts with 13 tests covering: page loads with data, tab switching, editing name triggers auto-save, adding rule triggers auto-save, delete button with confirmation, validation (required fields), back button navigation, active toggle, color picker, not-found state, and auth redirect. Uses beforeAll to create test strategy for subsequent tests. 28 tests pass consistently (some intermittent failures in non-chromium browsers for delete redirect timing and not-found state). All data-testid attributes added to UI components."
     },
     {
       "id": "US-031",

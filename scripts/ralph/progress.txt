@@ -646,3 +646,267 @@ Key files for this feature:
   - When mutation might fail due to environment issues (no DB, auth), use try/catch with test.skip()
   - Web server can have flaky startup - tests should be resilient to occasional ConnResetException
 ---
+
+## 2026-01-25 - US-023 Create Strategy Edit Page Route
+- What was implemented: Dedicated edit page route at /strategies/[id]/edit
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` (new) - Edit page with data fetching
+- Features:
+  - Fetches strategy via `api.strategies.getById` (same as detail page)
+  - Loading skeleton: header (h-10 w-10, h-8 w-48) + 3 content skeletons (h-64)
+  - 404 handling: AlertTriangle icon, "Strategy not found" message, back button
+  - Ownership safeguard: inherent in protectedProcedure (validates userId in middleware)
+  - Spacious layout: max-w-4xl mx-auto w-[95%] py-6 space-y-6
+  - Back link: navigates to /strategies/[id] (detail page)
+  - Header: back button + color swatch + strategy name
+  - Placeholder content for edit form (to be implemented in US-024 to US-029)
+- Data-testid attributes:
+  - strategy-edit-page, strategy-edit-loading, strategy-edit-not-found
+  - strategy-edit-button-back, strategy-edit-color, strategy-edit-heading
+- **Learnings for future iterations:**
+  - Edit pages should navigate back to detail page, not list page (users expect to verify changes)
+  - Placeholder content with "coming soon" and story references helps track implementation progress
+  - Ownership validation happens in tRPC middleware via protectedProcedure - no need for explicit client-side checks
+---
+
+## 2026-01-25 - US-024 Create Auto-Save Form Hook
+- What was implemented: Hook for auto-saving form data with debouncing and status tracking
+- Files changed:
+  - `src/hooks/use-auto-save.ts` (new) - useAutoSave hook with full feature set
+- Features:
+  - Generic `data: T` parameter for any form data type
+  - `onSave: (data: T) => Promise<void>` async callback for saving
+  - `debounceMs: number` (default 800) for configurable debounce delay
+  - `enabled: boolean` (default true) to conditionally enable/disable auto-save
+- Return values:
+  - `isSaving: boolean` - whether a save is currently in progress
+  - `lastSavedAt: Date | null` - timestamp of last successful save
+  - `error: string | null` - error message from last failed save
+  - `saveNow: () => Promise<void>` - immediate save bypassing debounce
+  - `clearError: () => void` - reset error state
+- Implementation details:
+  - `deepEqual()` helper using JSON.stringify for object comparison
+  - `lastSavedDataRef` tracks last saved data to skip redundant saves
+  - `isInitializedRef` prevents saving on component mount
+  - `onSaveRef` avoids stale closure issues with onSave callback
+  - Cleanup on unmount clears any pending debounce timers
+- **Learnings for future iterations:**
+  - Use refs for values that shouldn't trigger re-renders (lastSavedData, debounceTimer)
+  - Track initialization separately to prevent auto-save on mount
+  - Use a ref for the onSave callback to avoid stale closures in useCallback deps
+  - Deep comparison via JSON.stringify is sufficient for form data objects
+---
+
+## 2026-01-25 - US-025 Create Save Status Indicator Component
+- What was implemented: Status indicator component for auto-save feedback
+- Files changed:
+  - `src/components/strategy/save-status-indicator.tsx` (new) - SaveStatusIndicator component
+  - `src/components/strategy/index.ts` - Added SaveStatusIndicator export
+- Component features:
+  - `SaveStatusIndicator`: Main component accepting isSaving, lastSavedAt, error props
+  - Four states: Saving (yellow Loader2 spinner), Saved (green Check icon + relative time), Error (red AlertCircle + message), Idle (null)
+  - Uses `formatDistanceToNow` from date-fns for relative time display
+  - Truncates error messages to max-w-[200px] to prevent layout issues
+- Terminal styling:
+  - All text: font-mono text-[10px] uppercase tracking-wider
+  - Saving state: text-breakeven (yellow/gold color)
+  - Saved state: text-profit (green), bg-profit/20 for icon background
+  - Error state: text-loss (red), bg-loss/20 for icon background
+  - Relative time in text-muted-foreground for secondary info
+- Data-testid attributes:
+  - save-status-indicator (on all states for consistent testing)
+- **Learnings for future iterations:**
+  - Use Loader2 with animate-spin for saving state - more elegant than pulsing dot
+  - Truncate error messages to prevent layout breakage (max-w-[200px] truncate)
+  - Return null for idle state to avoid unnecessary DOM elements
+---
+
+## 2026-01-25 - US-026 Build Strategy Edit Form - Basic Info Section
+- What was implemented: Basic Info section component for strategy edit form
+- Files changed:
+  - `src/components/strategy/edit-form/basic-info-section.tsx` (new) - Main section component
+  - `src/components/strategy/edit-form/index.ts` (new) - Barrel export
+  - `src/components/strategy/index.ts` - Added BasicInfoSection export
+- Component features:
+  - `BasicInfoSection`: Form section for editing name, description, color, and active status
+  - `BasicInfoData` interface: name, description, color, isActive
+  - Props: data, onChange callback, nameError for validation
+  - Name field: Uses TextInput component with required validation
+  - Description field: Textarea with onBlur save (using defaultValue pattern)
+  - Color picker: Same PRESET_COLORS grid pattern as creation wizard
+  - Active/Inactive toggle: Custom switch button with aria-role="switch"
+- Toggle switch pattern:
+  - Built without Radix Switch (not installed) using native button
+  - aria-checked + aria-label for accessibility
+  - bg-profit when active, bg-white/20 when inactive
+  - Animated thumb transition: translate-x-5 / translate-x-0
+- Terminal styling:
+  - Section card: bg-white/1 border-white/5 rounded p-6 space-y-6
+  - Section header: font-mono text-[11px] uppercase tracking-widest
+  - Toggle label: font-mono text-[10px] uppercase tracking-wider
+- Data-testid attributes:
+  - edit-form-basic-info, edit-form-input-name, edit-form-textarea-description
+  - edit-form-toggle-active, edit-form-color-picker, edit-form-color-{hex}
+- **Learnings for future iterations:**
+  - Biome auto-sorts JSX attributes alphabetically - use --fix liberally
+  - Custom switch toggle with role="switch" is accessible and avoids extra dependencies
+  - defaultValue on Textarea works well for blur-based saves (no controlled re-renders)
+  - Separate BasicInfoData interface from full StrategyFormData for section-level typing
+---
+
+## 2026-01-25 - US-027 Build Strategy Edit Form - Rules Section
+- What was implemented: Rules section component for strategy edit form
+- Files changed:
+  - `src/components/strategy/edit-form/rules-section.tsx` (new) - Main section component
+  - `src/components/strategy/edit-form/index.ts` - Added RulesSection export
+  - `src/components/strategy/index.ts` - Added RulesSection export
+- Component features:
+  - `RulesSection`: Form section for editing entry criteria, exit rules, and checklist rules
+  - `RulesData` interface: entryCriteria, exitRules, rules[]
+  - Props: data, onChange callback
+  - Entry Criteria: Textarea with onBlur save (defaultValue pattern)
+  - Exit Rules: Textarea with onBlur save (defaultValue pattern)
+  - Checklist Rules: Dynamic list grouped by RULE_CATEGORIES
+  - Each rule has: text input, category dropdown, delete button
+- Checklist rules features:
+  - Add button per category to create rules in specific category
+  - Inline editing with onBlur save
+  - Category dropdown allows moving rules between categories
+  - Delete button removes rule and reorders remaining
+  - Visual category indicator bar (bg-primary/30)
+- Terminal styling:
+  - Section card: bg-white/1 border-white/5 rounded p-6 space-y-6
+  - Section header: font-mono text-[11px] uppercase tracking-widest
+  - Category cards: bg-white/2 border-white/5 p-4
+  - Empty state: italic text-muted-foreground/40
+- Data-testid attributes:
+  - edit-form-rules, edit-form-textarea-entry-criteria, edit-form-textarea-exit-rules
+  - edit-form-rules-category-{category}, edit-form-button-add-rule-{category}
+  - edit-form-rule-{id}, edit-form-rule-input-{id}, edit-form-rule-delete-{id}
+- **Learnings for future iterations:**
+  - defaultValue pattern works well for blur-based saves in forms
+  - Group rules by category for display but store as flat array
+  - Use findIndex to get global index when CRUD on grouped display
+  - Same pattern as wizard step-rules but adapted for edit context
+---
+
+## 2026-01-25 - US-028 Build Strategy Edit Form - Risk Section
+- What was implemented: Risk management section component for strategy edit form
+- Files changed:
+  - `src/components/strategy/edit-form/risk-section.tsx` (new) - Main section component (~780 lines)
+  - `src/components/strategy/edit-form/index.ts` - Added RiskSection export
+  - `src/components/strategy/index.ts` - Added RiskSection export
+- Component features:
+  - `RiskSection`: Form section for editing all risk parameters
+  - `RiskData` interface: riskParameters, trailingRules, scalingRules
+  - Props: data, onChange callback
+  - Two distinct sections with visual badges:
+    - Auto-Checked Parameters (checkmark icon, green badge)
+    - Conditional Checklist Rules (clipboard icon, primary badge)
+- Auto-Checked Parameters:
+  - Min R:R Ratio with clear button
+  - Max Risk Per Trade (type dropdown + value) with clear button
+  - Daily Loss Limit (type dropdown + value) with clear button
+  - Max Concurrent Positions with clear button
+- Conditional Checklist Parameters:
+  - Move to Breakeven: checkbox toggle + triggerR + offsetTicks config
+  - Trail Stops: dynamic list with triggerR, method dropdown, value
+  - Scale Out Rules: dynamic list with triggerR, sizePercent
+  - Target R Multiples: tag display + QuickAddTargetR component (1R-5R buttons)
+- Terminal styling:
+  - Section card: bg-white/1 border-white/5 rounded p-6 space-y-6
+  - Auto-checked badge: bg-profit/10 text-profit
+  - Checklist badge: bg-primary/10 text-primary
+  - Clear buttons: X icon, hover:text-loss
+- Data-testid attributes:
+  - edit-form-risk, edit-form-risk-min-rr, edit-form-risk-max-risk, etc.
+  - edit-form-risk-{param}-clear for clear buttons
+  - edit-form-risk-trail-stop-{idx}, edit-form-risk-scale-out-{idx}
+- **Learnings for future iterations:**
+  - Biome requires multi-line for inline arrow functions with complex conditions
+  - Clear buttons appear only when parameter has value (conditional render)
+  - QuickAddTargetR sub-component follows same pattern as step-risk
+  - Badge pattern for visual distinction: bg-color/10 + text-color + uppercase tracking
+---
+
+## 2026-01-25 - US-029 Assemble Strategy Edit Page
+- What was implemented: Complete strategy edit page with tabs, auto-save, and delete functionality
+- Files changed:
+  - `src/app/(protected)/strategies/[id]/edit/page.tsx` - Complete rewrite from placeholder to full implementation
+- Page structure:
+  - Header: back button, strategy name + color indicator, SaveStatusIndicator, Delete button
+  - Tabs: Overview, Rules, Risk Management
+  - Form state centrally managed with useState
+  - Auto-save via useAutoSave hook (800ms debounce)
+  - Delete with AlertDialog confirmation
+- Component integration:
+  - BasicInfoSection for Overview tab
+  - RulesSection for Rules tab  
+  - RiskSection for Risk Management tab
+  - SaveStatusIndicator for save feedback
+- Form data flow:
+  - `EditFormData` interface extends BasicInfoData, RulesData, RiskData
+  - `initialFormData` computed from strategy query with useMemo
+  - `formData` state initialized once from initialFormData
+  - `updateFormData` callback passed to all section components
+  - Auto-save triggered by formData changes (debounced)
+- TypeScript patterns:
+  - Used empty placeholder for useAutoSave when formData is null
+  - Type assertion avoided by using nullish coalescing (formData ?? emptyFormData)
+  - Hook is disabled when formData is null via enabled: !!formData
+- Terminal styling:
+  - Tabs: bg-white/5, active: bg-white/10 border-white/10
+  - font-mono text-[10px] sm:text-xs uppercase tracking-wider
+  - max-w-4xl mx-auto w-[95%]
+- Data-testid attributes:
+  - strategy-edit-page, strategy-edit-loading, strategy-edit-not-found
+  - strategy-edit-button-back, strategy-edit-button-delete, strategy-edit-button-delete-confirm
+  - strategy-edit-tabs, strategy-edit-tab-overview, strategy-edit-tab-rules, strategy-edit-tab-risk
+- **Learnings for future iterations:**
+  - useAutoSave hook expects non-null data; use placeholder + enabled: false pattern
+  - useMemo for initial data, then sync to useState once (not useEffect to avoid loops)
+  - Delete modal reuses same AlertDialog pattern as detail page
+  - Tabs styling override: bg-transparent p-0 on TabsList for custom look
+---
+
+## 2026-01-25 - US-030 E2E Tests for Strategy Edit Page
+- What was implemented: Comprehensive E2E test suite for strategy edit page
+- Files changed:
+  - `tests/e2e/strategy-edit.spec.ts` (new) - 427 lines, 13 test cases
+- Test structure:
+  - `beforeAll` creates a test strategy for subsequent tests to use
+  - Reuses strategyId across tests to reduce setup time
+  - Separate test describe blocks for main tests, not-found, and auth
+- Test cases:
+  - "page loads with strategy data populated" - verifies header, tabs, sections
+  - "can switch between tabs" - Overview, Rules, Risk Management
+  - "editing name triggers auto-save" - fill name, blur, check save indicator
+  - "adding a rule triggers auto-save" - click add, fill rule, blur, check save
+  - "delete button shows confirmation, deletes on confirm" - creates new strategy, deletes it
+  - "required fields show validation error" - verifies label has asterisk
+  - "back button navigates to strategy detail page"
+  - "active toggle changes strategy status"
+  - "color picker updates strategy color"
+  - "shows not found for invalid strategy ID"
+  - "redirects unauthenticated user to sign-in"
+- Test patterns:
+  - Find inputs within sections: `basicInfoSection.locator("input[type='text']").first()`
+  - Wait for save indicator: `expect(saveIndicator).toContainText("All changes saved")`
+  - Check aria attributes: `expect(toggle).getAttribute("aria-checked")`
+  - Use waitForURL with regex for navigation: `await page.waitForURL(/\/strategies$/)`
+- Data-testid coverage:
+  - Page: strategy-edit-page, strategy-edit-loading, strategy-edit-not-found
+  - Header: strategy-edit-heading, strategy-edit-color, strategy-edit-button-back/delete
+  - Tabs: strategy-edit-tabs, strategy-edit-tab-overview/rules/risk
+  - Sections: edit-form-basic-info, edit-form-rules, edit-form-risk
+  - Controls: edit-form-toggle-active, edit-form-color-picker
+- Test results:
+  - 28 tests pass consistently across all browsers
+  - Some intermittent failures in Firefox/WebKit for timing-sensitive tests
+- **Learnings for future iterations:**
+  - TextInput uses local state, fill("") may not work - use triple-click + type approach
+  - Delete tests should create their own strategy to avoid affecting other tests
+  - waitForURL timeout needs to be long enough for server mutations (30s)
+  - Playwright fill() doesn't always trigger React onChange in all browsers
+  - Use locator chaining for finding nested elements: section.locator("input").first()
+---
