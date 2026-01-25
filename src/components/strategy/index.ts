@@ -1,4 +1,6 @@
 export { ComplianceBadge } from "./compliance-badge";
+export type { WizardStep } from "./creation-wizard";
+export { useWizard, WizardContainer } from "./creation-wizard";
 export type { RiskParameters } from "./risk-config";
 export { RiskConfig } from "./risk-config";
 export { RuleChecklist } from "./rule-checklist";
