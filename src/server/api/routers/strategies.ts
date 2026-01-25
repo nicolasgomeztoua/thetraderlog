@@ -1,6 +1,12 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
+import {
+	type ComplianceCheck,
+	calculateRiskCompliance,
+	type RiskParameters,
+	type TradeForCompliance,
+} from "@/lib/strategies/risk-compliance";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
@@ -563,6 +569,168 @@ export const strategiesRouter = createTRPCRouter({
 				profitFactor: stats.profitFactor,
 				avgWin: stats.avgWin,
 				avgLoss: stats.avgLoss,
+			};
+		}),
+
+	// Get auto-compliance for a strategy based on risk parameters
+	// Calculates compliance by running risk compliance checks against all closed trades
+	getAutoCompliance: protectedProcedure
+		.input(z.object({ strategyId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			// Fetch strategy with risk parameters
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Parse risk parameters from JSON
+			const riskParams: RiskParameters | null = strategy.riskParameters
+				? JSON.parse(strategy.riskParameters)
+				: null;
+
+			// If no risk parameters configured, return empty compliance
+			if (!riskParams) {
+				return {
+					totalTrades: 0,
+					overallCompliance: 100,
+					parameterCompliance: [],
+					failingTrades: [],
+				};
+			}
+
+			// Get all closed trades for this strategy
+			const strategyTrades = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.strategyId, input.strategyId),
+					eq(trades.userId, ctx.user.id),
+					eq(trades.status, "closed"),
+					isNull(trades.deletedAt),
+				),
+			});
+
+			if (strategyTrades.length === 0) {
+				return {
+					totalTrades: 0,
+					overallCompliance: 100,
+					parameterCompliance: [],
+					failingTrades: [],
+				};
+			}
+
+			// Convert trades to TradeForCompliance format
+			const tradesForCompliance: TradeForCompliance[] = strategyTrades.map(
+				(t) => ({
+					id: t.id,
+					symbol: t.symbol,
+					instrumentType: t.instrumentType,
+					direction: t.direction,
+					entryPrice: parseFloat(t.entryPrice),
+					exitPrice: t.exitPrice ? parseFloat(t.exitPrice) : null,
+					stopLoss: t.stopLoss ? parseFloat(t.stopLoss) : null,
+					takeProfit: t.takeProfit ? parseFloat(t.takeProfit) : null,
+					quantity: parseFloat(t.quantity),
+					realizedPnl: t.netPnl ? parseFloat(t.netPnl) : null,
+					entryTime: t.entryTime,
+					exitTime: t.exitTime,
+				}),
+			);
+
+			// Run compliance calculations for each trade
+			interface ParameterAggregation {
+				param: string;
+				passed: number;
+				failed: number;
+				unable: number;
+				total: number;
+			}
+
+			const paramAggregations: Record<string, ParameterAggregation> = {};
+			const failingTrades: {
+				tradeId: string;
+				symbol: string;
+				failedChecks: ComplianceCheck[];
+			}[] = [];
+
+			for (const trade of tradesForCompliance) {
+				const result = calculateRiskCompliance(trade, riskParams);
+
+				// Aggregate per-parameter results
+				for (const check of result.checks) {
+					let agg = paramAggregations[check.param];
+					if (!agg) {
+						agg = {
+							param: check.param,
+							passed: 0,
+							failed: 0,
+							unable: 0,
+							total: 0,
+						};
+						paramAggregations[check.param] = agg;
+					}
+
+					agg.total += 1;
+					if (check.passed === true) {
+						agg.passed += 1;
+					} else if (check.passed === false) {
+						agg.failed += 1;
+					} else {
+						agg.unable += 1;
+					}
+				}
+
+				// Track failing trades
+				const failedChecks = result.checks.filter((c) => c.passed === false);
+				if (failedChecks.length > 0) {
+					failingTrades.push({
+						tradeId: trade.id,
+						symbol: trade.symbol,
+						failedChecks,
+					});
+				}
+			}
+
+			// Calculate per-parameter compliance percentages
+			const parameterCompliance = Object.values(paramAggregations).map(
+				(agg) => {
+					const checkable = agg.passed + agg.failed;
+					const compliance =
+						checkable > 0 ? (agg.passed / checkable) * 100 : 100;
+					return {
+						param: agg.param,
+						compliance: Math.round(compliance * 100) / 100,
+						passed: agg.passed,
+						failed: agg.failed,
+						unable: agg.unable,
+						total: agg.total,
+					};
+				},
+			);
+
+			// Calculate overall weighted compliance
+			const totalCheckable = parameterCompliance.reduce(
+				(sum, p) => sum + p.passed + p.failed,
+				0,
+			);
+			const totalPassed = parameterCompliance.reduce(
+				(sum, p) => sum + p.passed,
+				0,
+			);
+			const overallCompliance =
+				totalCheckable > 0
+					? Math.round((totalPassed / totalCheckable) * 100 * 100) / 100
+					: 100;
+
+			return {
+				totalTrades: strategyTrades.length,
+				overallCompliance,
+				parameterCompliance,
+				failingTrades,
 			};
 		}),
 
