@@ -362,4 +362,303 @@ describe("strategies router", () => {
 			).rejects.toThrow();
 		});
 	});
+
+	// =========================================================================
+	// CONDITIONAL CHECKLIST TESTS (US-038)
+	// =========================================================================
+
+	describe("conditional checklists", () => {
+		it("should generate conditional rule when strategy has moveToBreakeven", async () => {
+			const strategyWithBreakeven = await caller.strategies.create({
+				name: "Breakeven Strategy",
+				color: "#00ff00",
+				trailingRules: {
+					moveToBreakeven: {
+						triggerR: 1.5,
+						offsetTicks: 2,
+					},
+				},
+			});
+
+			const strategy = await caller.strategies.getById({
+				id: strategyWithBreakeven.id,
+			});
+
+			// Should have a conditional_breakeven rule
+			const breakevenRule = strategy.rules.find(
+				(r) => r.category === "conditional_breakeven",
+			);
+			expect(breakevenRule).toBeDefined();
+			expect(breakevenRule?.text).toContain("breakeven");
+			expect(breakevenRule?.text).toContain("1.5R");
+			expect(breakevenRule?.text).toContain("+2 ticks offset");
+		});
+
+		it("should generate conditional rule without offset when offsetTicks is 0", async () => {
+			const strategyNoOffset = await caller.strategies.create({
+				name: "Breakeven No Offset Strategy",
+				color: "#00ff00",
+				trailingRules: {
+					moveToBreakeven: {
+						triggerR: 2,
+						offsetTicks: 0,
+					},
+				},
+			});
+
+			const strategy = await caller.strategies.getById({
+				id: strategyNoOffset.id,
+			});
+
+			const breakevenRule = strategy.rules.find(
+				(r) => r.category === "conditional_breakeven",
+			);
+			expect(breakevenRule).toBeDefined();
+			expect(breakevenRule?.text).toContain("2R");
+			expect(breakevenRule?.text).not.toContain("offset");
+		});
+
+		it("should generate multiple conditional rules for scaleOut rules", async () => {
+			const strategyWithScaling = await caller.strategies.create({
+				name: "Scaling Strategy",
+				color: "#00ff00",
+				scalingRules: {
+					scaleOut: [
+						{ trigger: "1R", sizePercent: 25 },
+						{ trigger: "2R", sizePercent: 50 },
+						{ trigger: "3R", sizePercent: 25 },
+					],
+				},
+			});
+
+			const strategy = await caller.strategies.getById({
+				id: strategyWithScaling.id,
+			});
+
+			// Should have 3 conditional_scale rules
+			const scaleRules = strategy.rules.filter(
+				(r) => r.category === "conditional_scale",
+			);
+			expect(scaleRules.length).toBe(3);
+
+			// Check that each scale out rule is represented
+			expect(
+				scaleRules.some((r) => r.text.includes("25%") && r.text.includes("1R")),
+			).toBe(true);
+			expect(
+				scaleRules.some((r) => r.text.includes("50%") && r.text.includes("2R")),
+			).toBe(true);
+			expect(
+				scaleRules.some((r) => r.text.includes("25%") && r.text.includes("3R")),
+			).toBe(true);
+		});
+
+		it("should generate trail stop conditional rules", async () => {
+			const strategyWithTrails = await caller.strategies.create({
+				name: "Trail Strategy",
+				color: "#00ff00",
+				trailingRules: {
+					trailStops: [
+						{ triggerR: 2, method: "fixed_ticks", value: 10 },
+						{ triggerR: 3, method: "atr_multiple", value: 1.5 },
+					],
+				},
+			});
+
+			const strategy = await caller.strategies.getById({
+				id: strategyWithTrails.id,
+			});
+
+			// Should have 2 conditional_trail rules
+			const trailRules = strategy.rules.filter(
+				(r) => r.category === "conditional_trail",
+			);
+			expect(trailRules.length).toBe(2);
+
+			// Check that each trail rule is represented
+			expect(
+				trailRules.some(
+					(r) => r.text.includes("2R") && r.text.includes("fixed ticks"),
+				),
+			).toBe(true);
+			expect(
+				trailRules.some(
+					(r) => r.text.includes("3R") && r.text.includes("ATR multiple"),
+				),
+			).toBe(true);
+		});
+
+		it("should preserve manual rules when updating with trailing rules", async () => {
+			// Create strategy with manual rules
+			const strategyWithRules = await caller.strategies.create({
+				name: "Manual and Conditional",
+				color: "#00ff00",
+				rules: [
+					{ text: "Wait for confirmation", category: "entry", order: 0 },
+					{ text: "Use proper position size", category: "risk", order: 1 },
+				],
+			});
+
+			// Now add trailing rules
+			await caller.strategies.update({
+				id: strategyWithRules.id,
+				trailingRules: {
+					moveToBreakeven: {
+						triggerR: 1,
+					},
+				},
+			});
+
+			const strategy = await caller.strategies.getById({
+				id: strategyWithRules.id,
+			});
+
+			// Should still have manual rules
+			const manualRules = strategy.rules.filter(
+				(r) => !r.category.startsWith("conditional_"),
+			);
+			expect(manualRules.length).toBe(2);
+
+			// Should also have conditional rule
+			const conditionalRules = strategy.rules.filter((r) =>
+				r.category.startsWith("conditional_"),
+			);
+			expect(conditionalRules.length).toBe(1);
+		});
+
+		it("should regenerate conditional rules when trailingRules are updated", async () => {
+			// Create with initial trailing rules
+			const strategy = await caller.strategies.create({
+				name: "Update Trailing",
+				color: "#00ff00",
+				trailingRules: {
+					moveToBreakeven: {
+						triggerR: 1,
+					},
+				},
+			});
+
+			// Verify initial conditional rule
+			let fetched = await caller.strategies.getById({ id: strategy.id });
+			expect(
+				fetched.rules.filter((r) => r.category === "conditional_breakeven")
+					.length,
+			).toBe(1);
+
+			// Update trailing rules to include more
+			await caller.strategies.autosave({
+				id: strategy.id,
+				trailingRules: {
+					moveToBreakeven: {
+						triggerR: 2,
+					},
+					trailStops: [{ triggerR: 3, method: "swing_low", value: 0 }],
+				},
+			});
+
+			// Verify updated conditional rules
+			fetched = await caller.strategies.getById({ id: strategy.id });
+			const conditionalRules = fetched.rules.filter((r) =>
+				r.category.startsWith("conditional_"),
+			);
+
+			// Should have 1 breakeven + 1 trail
+			expect(conditionalRules.length).toBe(2);
+			expect(
+				conditionalRules.some((r) => r.category === "conditional_breakeven"),
+			).toBe(true);
+			expect(
+				conditionalRules.some((r) => r.category === "conditional_trail"),
+			).toBe(true);
+		});
+
+		it("should clear conditional rules when trailingRules are removed", async () => {
+			// Create with trailing rules
+			const strategy = await caller.strategies.create({
+				name: "Remove Trailing",
+				color: "#00ff00",
+				trailingRules: {
+					moveToBreakeven: {
+						triggerR: 1,
+					},
+				},
+			});
+
+			// Verify conditional rule exists
+			let fetched = await caller.strategies.getById({ id: strategy.id });
+			expect(
+				fetched.rules.filter((r) => r.category.startsWith("conditional_"))
+					.length,
+			).toBe(1);
+
+			// Remove trailing rules by setting to null
+			await caller.strategies.autosave({
+				id: strategy.id,
+				trailingRules: null,
+			});
+
+			// Verify conditional rules are gone
+			fetched = await caller.strategies.getById({ id: strategy.id });
+			expect(
+				fetched.rules.filter((r) => r.category.startsWith("conditional_"))
+					.length,
+			).toBe(0);
+		});
+
+		it("should allow checking conditional rules via tradeRuleChecks", async () => {
+			// Create strategy with conditional rule
+			const conditionalStrategy = await caller.strategies.create({
+				name: "Checkable Conditional",
+				color: "#00ff00",
+				trailingRules: {
+					moveToBreakeven: {
+						triggerR: 1,
+					},
+				},
+			});
+
+			// Create a trade with this strategy
+			const trade = await createTestTrade(userId, accountId, {
+				symbol: "ES",
+				instrumentType: "futures",
+				direction: "long",
+				status: "closed",
+				strategyId: conditionalStrategy.id,
+				entryPrice: "5000",
+				exitPrice: "5020",
+				stopLoss: "4990",
+				quantity: "1",
+				realizedPnl: "1000",
+				netPnl: "1000",
+			});
+
+			// Get rule checks for this trade
+			const ruleChecksData = await caller.strategies.getTradeRuleChecks({
+				tradeId: trade.id,
+			});
+
+			// Should have the conditional rule available
+			expect(ruleChecksData.rules.length).toBeGreaterThan(0);
+			const conditionalRule = ruleChecksData.rules.find(
+				(r) => r.category === "conditional_breakeven",
+			);
+			expect(conditionalRule).toBeDefined();
+
+			// Should be able to check the conditional rule
+			await caller.strategies.checkRule({
+				tradeId: trade.id,
+				ruleId: conditionalRule?.id ?? "",
+				checked: true,
+			});
+
+			// Verify it was checked
+			const updatedData = await caller.strategies.getTradeRuleChecks({
+				tradeId: trade.id,
+			});
+			const check = updatedData.checks.find(
+				(c) => c.ruleId === conditionalRule?.id,
+			);
+			expect(check?.checked).toBe(true);
+		});
+	});
 });
