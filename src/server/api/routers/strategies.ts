@@ -115,6 +115,21 @@ const updateStrategySchema = z.object({
 	rules: z.array(strategyRuleSchema).optional(),
 });
 
+// Autosave schema - same as update but returns minimal response
+const autosaveStrategySchema = z.object({
+	id: z.string(),
+	name: z.string().min(1).max(100).optional(),
+	description: z.string().nullish(),
+	color: z.string().optional(),
+	entryCriteria: z.string().nullish(),
+	exitRules: z.string().nullish(),
+	riskParameters: riskParametersSchema.nullish(),
+	scalingRules: scalingRulesSchema.nullish(),
+	trailingRules: trailingRulesSchema.nullish(),
+	isActive: z.boolean().optional(),
+	rules: z.array(strategyRuleSchema).optional(),
+});
+
 // =============================================================================
 // ROUTER
 // =============================================================================
@@ -326,6 +341,100 @@ export const strategiesRouter = createTRPCRouter({
 			}
 
 			return updated;
+		}),
+
+	// Autosave a strategy - sparse update for auto-save functionality
+	// Returns only updatedAt for UI confirmation, does not trigger list invalidation
+	autosave: protectedProcedure
+		.input(autosaveStrategySchema)
+		.mutation(async ({ ctx, input }) => {
+			const { id, rules, riskParameters, scalingRules, trailingRules } = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(eq(strategies.id, id), eq(strategies.userId, ctx.user.id)),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Build sparse update - only include fields that were actually provided
+			const updateData: Record<string, unknown> = {};
+
+			// Only add fields that were explicitly provided in the input
+			if ("name" in input && input.name !== undefined) {
+				updateData.name = input.name;
+			}
+			if ("description" in input) {
+				updateData.description = input.description ?? null;
+			}
+			if ("color" in input && input.color !== undefined) {
+				updateData.color = input.color;
+			}
+			if ("entryCriteria" in input) {
+				updateData.entryCriteria = input.entryCriteria ?? null;
+			}
+			if ("exitRules" in input) {
+				updateData.exitRules = input.exitRules ?? null;
+			}
+			if ("isActive" in input && input.isActive !== undefined) {
+				updateData.isActive = input.isActive;
+			}
+
+			// Handle JSON fields
+			if ("riskParameters" in input) {
+				updateData.riskParameters = riskParameters
+					? JSON.stringify(riskParameters)
+					: null;
+			}
+			if ("scalingRules" in input) {
+				updateData.scalingRules = scalingRules
+					? JSON.stringify(scalingRules)
+					: null;
+			}
+			if ("trailingRules" in input) {
+				updateData.trailingRules = trailingRules
+					? JSON.stringify(trailingRules)
+					: null;
+			}
+
+			// Always set updatedAt when any field changes
+			if (Object.keys(updateData).length > 0) {
+				updateData.updatedAt = new Date();
+
+				await ctx.db
+					.update(strategies)
+					.set(updateData)
+					.where(eq(strategies.id, id));
+			}
+
+			// Handle rules array: replace all if provided
+			if ("rules" in input && rules !== undefined) {
+				// Delete existing rules
+				await ctx.db
+					.delete(strategyRules)
+					.where(eq(strategyRules.strategyId, id));
+
+				// Insert new rules
+				if (rules.length > 0) {
+					await ctx.db.insert(strategyRules).values(
+						rules.map((rule) => ({
+							strategyId: id,
+							text: rule.text,
+							category: rule.category,
+							order: rule.order,
+						})),
+					);
+				}
+			}
+
+			// Return minimal response for UI confirmation
+			return {
+				updatedAt: updateData.updatedAt
+					? (updateData.updatedAt as Date)
+					: new Date(),
+			};
 		}),
 
 	// Delete a strategy (soft delete by setting inactive)
