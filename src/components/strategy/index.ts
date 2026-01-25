@@ -8,6 +8,8 @@ export {
 	useWizard,
 	WizardContainer,
 } from "./creation-wizard";
+export type { BasicInfoData } from "./edit-form";
+export { BasicInfoSection } from "./edit-form";
 export type { RiskParameters } from "./risk-config";
 export { RiskConfig } from "./risk-config";
 export { RuleChecklist } from "./rule-checklist";
