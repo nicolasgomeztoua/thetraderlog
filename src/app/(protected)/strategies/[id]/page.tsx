@@ -118,7 +118,17 @@ export default function StrategyDetailPage() {
 				className="mx-auto w-[95%] max-w-4xl space-y-4 py-4 sm:space-y-6 sm:py-6"
 				data-testid="strategy-detail-loading"
 			>
-				{/* Loading skeleton for hero */}
+				{/* Action bar skeleton */}
+				<div className="flex items-center justify-between gap-2">
+					<Skeleton className="h-10 w-40" />
+					<div className="flex gap-2">
+						<Skeleton className="h-9 w-9 sm:w-20" />
+						<Skeleton className="h-9 w-9 sm:w-24" />
+						<Skeleton className="h-9 w-9 sm:w-20" />
+					</div>
+				</div>
+
+				{/* Loading skeleton for hero with terminal chrome */}
 				<div className="overflow-hidden rounded border border-white/10">
 					<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
 						<div className="flex items-center gap-1.5">
@@ -130,17 +140,65 @@ export default function StrategyDetailPage() {
 						<div className="w-14" />
 					</div>
 					<div className="p-6 sm:p-8">
-						<Skeleton className="mb-4 h-6 w-24" />
-						<Skeleton className="mb-2 h-10 w-64" />
-						<Skeleton className="h-5 w-32" />
+						<div className="mb-4 flex items-center gap-3">
+							<Skeleton className="h-4 w-4 rounded" />
+							<Skeleton className="h-3 w-20" />
+						</div>
+						<Skeleton className="mb-3 h-10 w-64 sm:h-12" />
+						<div className="mb-6 flex items-center gap-2">
+							<Skeleton className="h-2 w-2 rounded-full" />
+							<Skeleton className="h-3 w-16" />
+						</div>
+						<Skeleton className="h-11 w-36" />
 					</div>
 				</div>
+
+				{/* Stats grid skeleton */}
 				<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-					<Skeleton className="h-24" />
-					<Skeleton className="h-24" />
-					<Skeleton className="h-24" />
-					<Skeleton className="h-24" />
+					{[1, 2, 3, 4].map((i) => (
+						<div
+							className="rounded border border-white/5 bg-white/2 p-3 sm:p-4"
+							key={i}
+						>
+							<Skeleton className="mb-2 h-3 w-12" />
+							<Skeleton className="h-7 w-16" />
+						</div>
+					))}
 				</div>
+
+				{/* Rules section skeleton */}
+				<div>
+					<Skeleton className="mb-4 h-3 w-32" />
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+						{[1, 2, 3, 4].map((i) => (
+							<div
+								className="overflow-hidden rounded border border-white/10"
+								key={i}
+							>
+								<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2">
+									<div className="flex items-center gap-1.5">
+										<Skeleton className="h-2 w-2 rounded-full" />
+										<Skeleton className="h-2 w-2 rounded-full" />
+										<Skeleton className="h-2 w-2 rounded-full" />
+									</div>
+									<Skeleton className="h-2.5 w-20" />
+								</div>
+								<div className="p-4">
+									<div className="mb-3 flex items-center gap-2">
+										<Skeleton className="h-4 w-4" />
+										<Skeleton className="h-4 w-24" />
+									</div>
+									<div className="space-y-2">
+										<Skeleton className="h-3 w-full" />
+										<Skeleton className="h-3 w-3/4" />
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+
+				{/* Form section skeleton */}
 				<Skeleton className="h-96" />
 			</div>
 		);
@@ -179,7 +237,7 @@ export default function StrategyDetailPage() {
 
 	return (
 		<div
-			className="mx-auto w-[95%] max-w-4xl space-y-6 py-4 sm:space-y-8 sm:py-6"
+			className="stagger-sections mx-auto w-[95%] max-w-4xl space-y-6 py-4 sm:space-y-8 sm:py-6"
 			data-testid="strategy-detail-page"
 		>
 			{/* Action Bar */}
@@ -360,7 +418,7 @@ export default function StrategyDetailPage() {
 				className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"
 				data-testid="strategy-detail-stats"
 			>
-				<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Trades
 					</div>
@@ -368,7 +426,7 @@ export default function StrategyDetailPage() {
 						{hasTrades ? stats.totalTrades : "—"}
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Win Rate
 					</div>
@@ -385,7 +443,7 @@ export default function StrategyDetailPage() {
 						{hasTrades ? `${stats.winRate.toFixed(0)}%` : "—"}
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Total P&L
 					</div>
@@ -409,7 +467,7 @@ export default function StrategyDetailPage() {
 							: "—"}
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-3 sm:p-4">
+				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Profit Factor
 					</div>

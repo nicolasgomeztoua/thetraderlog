@@ -183,10 +183,81 @@ export default function StrategiesPage() {
 
 				{/* Loading state */}
 				{isLoading && (
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-						{[1, 2, 3].map((i) => (
-							<Skeleton className="h-40 sm:h-48" key={i} />
-						))}
+					<div className="space-y-6 sm:space-y-8">
+						{/* Leaderboard skeleton */}
+						<div className="overflow-hidden rounded border border-white/10">
+							<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
+								<div className="flex items-center gap-1.5">
+									<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
+									<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
+									<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+								</div>
+								<Skeleton className="h-3 w-28" />
+								<div className="w-14" />
+							</div>
+							<div className="p-4 sm:p-6">
+								<div className="space-y-3">
+									{[1, 2, 3].map((i) => (
+										<div
+											className="flex items-center justify-between rounded border border-white/5 bg-white/2 p-3"
+											key={i}
+										>
+											<div className="flex items-center gap-3">
+												<Skeleton className="h-6 w-6 rounded-full" />
+												<Skeleton className="h-4 w-32" />
+											</div>
+											<Skeleton className="h-4 w-20" />
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+
+						{/* Cards grid skeleton */}
+						<div className="space-y-3 sm:space-y-4">
+							<Skeleton className="h-3 w-28" />
+							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+								{[1, 2, 3].map((i) => (
+									<div
+										className="overflow-hidden rounded border border-white/10"
+										key={i}
+									>
+										{/* Terminal chrome header */}
+										<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2">
+											<div className="flex items-center gap-1.5">
+												<div className="h-2 w-2 rounded-full bg-loss/60" />
+												<div className="h-2 w-2 rounded-full bg-breakeven/60" />
+												<div className="h-2 w-2 rounded-full bg-profit/60" />
+											</div>
+											<Skeleton className="h-2.5 w-24" />
+											<Skeleton className="h-5 w-5 rounded" />
+										</div>
+										{/* Color gradient header skeleton */}
+										<div className="relative h-16 bg-gradient-to-br from-white/5 via-white/2 to-transparent sm:h-20">
+											<div className="absolute top-3 left-3 flex items-center gap-2">
+												<Skeleton className="h-3 w-3 rounded-full" />
+												<Skeleton className="h-2.5 w-12" />
+											</div>
+											<div className="absolute right-3 bottom-3">
+												<Skeleton className="h-5 w-20" />
+											</div>
+										</div>
+										{/* Card content skeleton */}
+										<div className="bg-white/1 p-4">
+											<Skeleton className="mb-3 h-5 w-32" />
+											<div className="grid grid-cols-3 gap-3">
+												{[1, 2, 3].map((j) => (
+													<div key={j}>
+														<Skeleton className="mb-1 h-2.5 w-10" />
+														<Skeleton className="h-5 w-12" />
+													</div>
+												))}
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
 					</div>
 				)}
 
