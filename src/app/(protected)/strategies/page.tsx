@@ -192,24 +192,80 @@ export default function StrategiesPage() {
 
 				{/* Empty state */}
 				{!isLoading && (!strategies || strategies.length === 0) && (
-					<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
-						<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
-						<h2 className="font-semibold text-base sm:text-lg">
-							No strategies yet
-						</h2>
-						<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-xs sm:text-sm">
-							Create your first strategy to document your trading approach and
-							track rule compliance.
-						</p>
-						<Button
-							asChild
-							className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
-						>
-							<Link href="/strategies/new">
-								<Plus className="mr-2 h-4 w-4" />
-								Create Strategy
-							</Link>
-						</Button>
+					<div
+						className="relative overflow-hidden rounded border border-white/10 bg-white/2"
+						data-testid="strategies-empty-state"
+					>
+						{/* Grid pattern background */}
+						<div
+							className="pointer-events-none absolute inset-0 opacity-40"
+							style={{
+								backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+								backgroundSize: "40px 40px",
+							}}
+						/>
+
+						{/* Terminal window chrome */}
+						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
+							<div className="flex items-center gap-1.5">
+								<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
+								<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
+								<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+							</div>
+							<span className="font-mono text-[10px] text-muted-foreground">
+								playbooks — empty
+							</span>
+							<div className="w-14" />
+						</div>
+
+						{/* Content area */}
+						<div className="relative flex flex-col items-center justify-center px-6 py-16 sm:py-20">
+							{/* Icon with terminal styling */}
+							<div className="mb-6 flex h-16 w-16 items-center justify-center rounded border border-white/10 bg-white/5 sm:h-20 sm:w-20">
+								<BookMarked className="h-8 w-8 text-muted-foreground/60 sm:h-10 sm:w-10" />
+							</div>
+
+							{/* Command prompt indicator */}
+							<div className="mb-3 flex items-center gap-2">
+								<span className="font-mono text-primary text-sm">$</span>
+								<span className="font-mono text-[11px] text-primary uppercase tracking-widest">
+									NO PLAYBOOKS DEFINED
+								</span>
+							</div>
+
+							{/* Main message */}
+							<h2 className="font-semibold text-lg sm:text-xl">
+								Start building your edge
+							</h2>
+
+							{/* Description */}
+							<p className="mt-3 max-w-md text-center font-mono text-muted-foreground text-xs leading-relaxed sm:text-sm">
+								Playbooks document your trading strategies with entry rules,
+								risk parameters, and pre-trade checklists. Track what works.
+							</p>
+
+							{/* Terminal-style command hint */}
+							<div className="mt-6 rounded border border-white/5 bg-white/2 px-4 py-2">
+								<div className="flex items-center gap-2 font-mono text-muted-foreground text-xs">
+									<span className="text-primary">→</span>
+									<span>Create your first playbook to begin tracking</span>
+								</div>
+							</div>
+
+							{/* CTA Button */}
+							<Button
+								asChild
+								className="group mt-8 min-h-[48px] px-8 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+								data-testid="strategies-empty-state-cta"
+							>
+								<Link href="/strategies/new">
+									<span className="mr-2 text-primary-foreground/70">$</span>
+									CREATE FIRST PLAYBOOK
+									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+								</Link>
+							</Button>
+						</div>
 					</div>
 				)}
 
