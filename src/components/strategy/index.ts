@@ -5,6 +5,7 @@ export { RuleChecklist } from "./rule-checklist";
 export type { ScalingRules } from "./scaling-config";
 export { ScalingConfig } from "./scaling-config";
 export { StrategyCard } from "./strategy-card";
+export { StrategyCriteriaDisplay } from "./strategy-criteria-display";
 export type { StrategyFormData, StrategyRule } from "./strategy-form";
 export { StrategyForm } from "./strategy-form";
 export { StrategyLeaderboard } from "./strategy-leaderboard";
