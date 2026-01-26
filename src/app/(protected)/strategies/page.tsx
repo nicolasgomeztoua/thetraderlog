@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Plus } from "lucide-react";
+import { ArrowRight, BookMarked, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -243,121 +243,163 @@ export default function StrategiesPage() {
 	const isMobile = useIsMobile();
 
 	return (
-		<div className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
-			{/* Header */}
-			<div className="flex items-center justify-between gap-3">
-				<div className="min-w-0 flex-1">
-					<h1 className="font-bold text-xl tracking-tight sm:text-2xl">
-						Strategies
-					</h1>
-					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
-						Document your trading strategies with entry rules, risk management,
-						and checklists.
-					</p>
-				</div>
-				<Button
-					asChild
-					className="min-h-[44px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
-				>
-					<Link href="/strategies/new">
-						<Plus className="h-4 w-4 sm:mr-2" />
-						<span className="hidden sm:inline">New Strategy</span>
-					</Link>
-				</Button>
+		<div className="relative min-h-screen">
+			{/* Background Effects */}
+			<div className="pointer-events-none absolute inset-0 overflow-hidden">
+				{/* Grid pattern */}
+				<div
+					className="absolute inset-0 opacity-30"
+					style={{
+						backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+						backgroundSize: "60px 60px",
+					}}
+				/>
+				{/* Primary gradient orb */}
+				<div className="-left-32 absolute top-0 h-[600px] w-[600px] rounded-full bg-primary/5 blur-[150px]" />
+				{/* Accent gradient orb */}
+				<div className="-right-32 absolute top-1/3 h-[400px] w-[400px] rounded-full bg-accent/5 blur-[120px]" />
 			</div>
 
-			{/* Performance Comparison Table */}
-			{!isLoading && strategies && strategies.length > 0 && (
-				<PerformanceComparisonTable />
-			)}
+			<div className="relative mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
+				{/* Hero Header */}
+				<div
+					className="relative overflow-hidden rounded border border-white/10 bg-white/2 p-6 sm:p-8"
+					data-testid="strategies-header"
+				>
+					{/* Header background accent */}
+					<div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 
-			{/* Loading state */}
-			{isLoading && (
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-					{[1, 2, 3].map((i) => (
-						<Skeleton className="h-40 sm:h-48" key={i} />
-					))}
-				</div>
-			)}
+					<div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+						<div className="space-y-3">
+							{/* Section label with command prompt */}
+							<div className="flex items-center gap-2">
+								<span className="font-mono text-primary text-sm">$</span>
+								<span className="font-mono text-[11px] text-primary uppercase tracking-widest">
+									PLAYBOOKS
+								</span>
+							</div>
 
-			{/* Empty state */}
-			{!isLoading && (!strategies || strategies.length === 0) && (
-				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
-					<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
-					<h2 className="font-semibold text-base sm:text-lg">
-						No strategies yet
-					</h2>
-					<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-xs sm:text-sm">
-						Create your first strategy to document your trading approach and
-						track rule compliance.
-					</p>
-					<Button
-						asChild
-						className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
-					>
-						<Link href="/strategies/new">
-							<Plus className="mr-2 h-4 w-4" />
-							Create Strategy
-						</Link>
-					</Button>
-				</div>
-			)}
+							{/* Main headline */}
+							<h1 className="font-bold text-3xl tracking-tight sm:text-4xl lg:text-5xl">
+								Your Trading <span className="text-primary">Playbooks</span>
+							</h1>
 
-			{/* Strategies grid */}
-			{!isLoading && strategies && strategies.length > 0 && (
-				<div className="space-y-3 sm:space-y-4">
-					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-						Your Strategies
-					</h2>
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-						{strategies.map((strategy) => (
-							<StrategyCard
-								isMobile={isMobile}
-								key={strategy.id}
-								onDelete={() => handleDelete(strategy.id)}
-								onDuplicate={() =>
-									duplicateMutation.mutate({ id: strategy.id })
-								}
-								onEdit={() => router.push(`/strategies/${strategy.id}`)}
-								stats={statsMap.get(strategy.id) ?? null}
-								strategy={strategy}
-							/>
-						))}
+							{/* Subheadline */}
+							<p className="max-w-xl font-mono text-muted-foreground text-sm leading-relaxed">
+								Document your edge with entry rules, risk parameters, and
+								pre-trade checklists. Track which strategies generate alpha.
+							</p>
+						</div>
+
+						{/* CTA Button */}
+						<Button
+							asChild
+							className="group min-h-[48px] shrink-0 px-6 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+							data-testid="strategies-header-new-button"
+						>
+							<Link href="/strategies/new">
+								<Plus className="mr-2 h-4 w-4" />
+								New Playbook
+								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+							</Link>
+						</Button>
 					</div>
 				</div>
-			)}
 
-			{/* Delete confirmation dialog */}
-			<Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
-				<DialogContent className="border-border bg-background">
-					<DialogHeader>
-						<DialogTitle className="font-mono uppercase tracking-wider">
-							Delete Strategy
-						</DialogTitle>
-						<DialogDescription className="font-mono text-xs">
-							Are you sure you want to delete this strategy? This will remove it
-							from all associated trades.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+				{/* Performance Comparison Table */}
+				{!isLoading && strategies && strategies.length > 0 && (
+					<PerformanceComparisonTable />
+				)}
+
+				{/* Loading state */}
+				{isLoading && (
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+						{[1, 2, 3].map((i) => (
+							<Skeleton className="h-40 sm:h-48" key={i} />
+						))}
+					</div>
+				)}
+
+				{/* Empty state */}
+				{!isLoading && (!strategies || strategies.length === 0) && (
+					<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
+						<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
+						<h2 className="font-semibold text-base sm:text-lg">
+							No strategies yet
+						</h2>
+						<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-xs sm:text-sm">
+							Create your first strategy to document your trading approach and
+							track rule compliance.
+						</p>
 						<Button
-							className="min-h-[44px] sm:min-h-0"
-							onClick={() => setDeleteDialogOpen(false)}
-							variant="ghost"
+							asChild
+							className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
 						>
-							Cancel
+							<Link href="/strategies/new">
+								<Plus className="mr-2 h-4 w-4" />
+								Create Strategy
+							</Link>
 						</Button>
-						<Button
-							className="min-h-[44px] sm:min-h-0"
-							disabled={deleteMutation.isPending}
-							onClick={confirmDelete}
-							variant="destructive"
-						>
-							{deleteMutation.isPending ? "Deleting..." : "Delete"}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+					</div>
+				)}
+
+				{/* Strategies grid */}
+				{!isLoading && strategies && strategies.length > 0 && (
+					<div className="space-y-3 sm:space-y-4">
+						<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
+							Your Strategies
+						</h2>
+						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+							{strategies.map((strategy) => (
+								<StrategyCard
+									isMobile={isMobile}
+									key={strategy.id}
+									onDelete={() => handleDelete(strategy.id)}
+									onDuplicate={() =>
+										duplicateMutation.mutate({ id: strategy.id })
+									}
+									onEdit={() => router.push(`/strategies/${strategy.id}`)}
+									stats={statsMap.get(strategy.id) ?? null}
+									strategy={strategy}
+								/>
+							))}
+						</div>
+					</div>
+				)}
+
+				{/* Delete confirmation dialog */}
+				<Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
+					<DialogContent className="border-border bg-background">
+						<DialogHeader>
+							<DialogTitle className="font-mono uppercase tracking-wider">
+								Delete Strategy
+							</DialogTitle>
+							<DialogDescription className="font-mono text-xs">
+								Are you sure you want to delete this strategy? This will remove
+								it from all associated trades.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+							<Button
+								className="min-h-[44px] sm:min-h-0"
+								onClick={() => setDeleteDialogOpen(false)}
+								variant="ghost"
+							>
+								Cancel
+							</Button>
+							<Button
+								className="min-h-[44px] sm:min-h-0"
+								disabled={deleteMutation.isPending}
+								onClick={confirmDelete}
+								variant="destructive"
+							>
+								{deleteMutation.isPending ? "Deleting..." : "Delete"}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			</div>
 		</div>
 	);
 }

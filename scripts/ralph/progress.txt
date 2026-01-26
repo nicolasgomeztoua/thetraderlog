@@ -1,122 +1,44 @@
-# Ralph Progress Log
-Started: Sat Jan 17 22:31:13 +01 2026
+# Ralph Progress Log - Strategies Redesign
+Started: Sun Jan 26 2026
+Branch: ralph/strategies-redesign
 ---
 
-## Codebase Patterns
+## Feature Overview
+Redesign the strategies page and strategy detail page with distinctive Terminal-inspired UI.
+Transform generic strategy cards into visually memorable "Playbook" cards with terminal chrome,
+performance-based styling, and clear visual hierarchy.
+
+## Codebase Patterns (from previous work)
 - Playwright config uses projects for browser separation with auth state dependency
 - E2E tests live in tests/e2e/ directory
 - Auth state stored in playwright/.clerk/user.json
+- data-testid convention: [component]-[element]-[qualifier]
+- Terminal design: traffic light dots, command prompts ($, →), monospace fonts
+
+## Design System Reference
+- Primary: #d4ff00 (Electric Chartreuse)
+- Accent: #00d4ff (Ice Blue)
+- Profit: #00ff88
+- Loss: #ff3b3b
+- Background: #050505
+- Terminal chrome pattern in DESIGN_REFERENCE.md
+
 ---
 
-## 2026-01-18 - US-001
-- What was implemented:
-  - Installed @playwright/test@1.57.0 and @clerk/testing@1.13.29
-  - Created playwright.config.ts with webServer, baseURL, and auth projects
-  - Added test:e2e and test:e2e:ui scripts to package.json
-  - Added playwright/.clerk/, /playwright-report/, /blob-report/, /test-results/ to .gitignore
-- Files changed:
-  - package.json (added scripts)
-  - bun.lock (deps installed)
-  - playwright.config.ts (new)
-  - .gitignore (added playwright paths)
+## Sun Jan 26 2026 - US-001
+- Implemented redesigned strategy list page header
+- Files changed: src/app/(protected)/strategies/page.tsx
+- **What was implemented:**
+  - Added atmospheric background effects (grid pattern with 60px cells, primary/accent gradient orbs)
+  - New hero header card with subtle gradient background
+  - Command prompt section label ("$ PLAYBOOKS")
+  - Bold headline with "Playbooks" in accent color
+  - Monospace subheadline describing purpose
+  - Terminal-style "New Playbook" button with arrow and hover animation
+  - Added data-testid attributes for E2E testing
 - **Learnings for future iterations:**
-  - Playwright config uses `projects` array for setup dependencies
-  - Auth state is stored via `storageState` in project config
-  - Use `dependencies: ["setup"]` to ensure global setup runs first
+  - Use inline styles for grid background pattern rather than CSS class (more flexible)
+  - Hero headers should use relative overflow-hidden for contained background effects
+  - Biome formatter requires single-line span elements, don't use {"  "} for space
 ---
 
-## 2026-01-18 - US-002
-- What was implemented:
-  - Created tests/e2e/global.setup.ts with Clerk authentication
-  - Uses clerkSetup() from @clerk/testing/playwright to initialize
-  - Signs in with clerk.signIn() using password strategy from env vars
-  - Validates auth by navigating to /dashboard and waiting for "Trading Overview" heading
-  - Saves auth state to playwright/.clerk/user.json for test reuse
-- Files changed:
-  - tests/e2e/global.setup.ts (new)
-  - tests/e2e/.gitkeep (deleted - no longer needed)
-  - scripts/ralph/prd.json (updated US-002 to passes: true)
-- **Learnings for future iterations:**
-  - Clerk global setup requires serial mode: `setup.describe.configure({ mode: "serial" })`
-  - Must navigate to `/` first to load Clerk before calling clerk.signIn()
-  - clerk.signIn() uses `identifier` (not `email`) for the user identifier param
-  - Auth validation: navigate to protected route and wait for expected element
----
-
-## 2026-01-18 - US-003
-- What was implemented:
-  - Created tests/e2e/README.md with comprehensive setup instructions
-  - Documents: Clerk test user creation, email/password auth setup, env vars
-  - Created .env.test.example with E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD
-  - Includes troubleshooting section for common issues
-- Files changed:
-  - tests/e2e/README.md (new)
-  - .env.test.example (new)
-  - scripts/ralph/prd.json (updated US-003 to passes: true)
-- **Learnings for future iterations:**
-  - E2E env vars pattern: use .env.test.example for test-specific variables
-  - README should reference the skill file for writing tests: .claude/skills/e2e-testing/SKILL.md
----
-
-## 2026-01-18 - US-004
-- What was implemented:
-  - Created tests/e2e/dashboard.spec.ts with 3 E2E tests
-  - Test 1: Verifies dashboard loads with "Trading Overview" heading visible
-  - Test 2: Verifies stats grid displays all expected stat cards (Net P&L, Win Rate, etc.)
-  - Test 3: Verifies start journal hero section is visible (Start button or Journal Started)
-- Files changed:
-  - tests/e2e/dashboard.spec.ts (new)
-  - scripts/ralph/prd.json (updated US-004 to passes: true)
-- **Learnings for future iterations:**
-  - Use `expect(locator).toBeVisible()` for checking element visibility
-  - Dashboard stat card labels: "Net P&L", "Win Rate", "Profit Factor", "Avg Win", "Avg Loss"
-  - For state-dependent UI (like journal status), test for OR conditions using multiple locators
----
-
-## 2026-01-18 - US-005
-- What was implemented:
-  - Created tests/e2e/auth.spec.ts with 3 tests for auth redirect behavior
-  - Test 1: Unauthenticated user visiting /dashboard redirects to /sign-in
-  - Test 2: Unauthenticated user visiting /journal redirects to /sign-in
-  - Test 3: Unauthenticated user visiting /analytics redirects to /sign-in
-- Files changed:
-  - tests/e2e/auth.spec.ts (new)
-  - scripts/ralph/prd.json (updated US-005 to passes: true)
-- **Learnings for future iterations:**
-  - To test as unauthenticated, use `test.use({ storageState: { cookies: [], origins: [] } })` to clear auth state
-  - Use `page.waitForURL(/pattern/, { timeout: 15000 })` to wait for redirect completion
-  - Clerk sign-in elements can be located with `[class*="cl-signIn"]` selector
----
-
-## 2026-01-18 - US-006
-- What was implemented:
-  - Created .claude/skills/e2e-testing/SKILL.md with comprehensive E2E testing documentation
-  - Documented: test commands (bun run test:e2e, test:e2e:ui)
-  - Documented: Playwright + @clerk/testing setup architecture with global setup flow
-  - Documented: data-testid naming convention ([component]-[element]-[qualifier])
-  - Documented: How to add data-testid during feature development
-  - Documented: Test patterns for authenticated, unauthenticated, form submission, and state-dependent UI
-  - Updated tests/e2e/README.md to reference the skill file
-- Files changed:
-  - .claude/skills/e2e-testing/SKILL.md (new)
-  - tests/e2e/README.md (updated)
-  - scripts/ralph/prd.json (updated US-006 to passes: true)
-- **Learnings for future iterations:**
-  - Skill files follow consistent structure: Tech Stack table, Commands table, Project Structure, Patterns, Best Practices, Troubleshooting
-  - data-testid convention is [component]-[element]-[qualifier] e.g., "trade-form-button-submit"
-  - Cross-reference between README and skill files for discoverability
----
-
-## 2026-01-18 - US-007
-- What was implemented:
-  - Updated scripts/ralph/prompt.md with new "E2E Testing Requirements (UI Stories)" section
-  - Added reference to E2E testing skill (.claude/skills/e2e-testing/SKILL.md)
-  - Added data-testid guidance with examples for forms, data displays, and navigation
-  - Added optional bun run test:e2e command for UI stories (after backend tests)
-- Files changed:
-  - scripts/ralph/prompt.md (updated)
-  - scripts/ralph/prd.json (updated US-007 to passes: true)
-- **Learnings for future iterations:**
-  - Ralph prompt.md has sections for different story types: Testing Requirements (backend), E2E Testing Requirements (UI)
-  - E2E tests are optional for UI stories since they require Clerk test user setup
----
