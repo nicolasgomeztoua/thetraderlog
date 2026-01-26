@@ -42,3 +42,80 @@ performance-based styling, and clear visual hierarchy.
   - Biome formatter requires single-line span elements, don't use {"  "} for space
 ---
 
+## Sun Jan 26 2026 - US-002
+- Implemented Performance Leaderboard component
+- Files changed:
+  - src/components/strategy/strategy-leaderboard.tsx (new)
+  - src/components/strategy/index.ts (added export)
+  - src/app/(protected)/strategies/page.tsx (replaced PerformanceComparisonTable)
+- **What was implemented:**
+  - Terminal window chrome with traffic light dots (red/yellow/green) and "leaderboard.tsx" title
+  - RankBadge component with distinct styling per rank (1st: primary glow, 2nd: white, 3rd: accent)
+  - Top 3 strategies as clickable entries with rank, color dot, name, trades, win rate, P&L
+  - #1 strategy gets highlighted border with primary color glow
+  - Falls back gracefully when fewer than 3 strategies have trades
+  - Loading skeleton matching terminal chrome design
+  - "+X more strategies" indicator when more than 3 exist
+- **Learnings for future iterations:**
+  - Biome CSS class ordering: border color classes must come before border style (border-white/5 before border-b)
+  - Use font-bold before font-mono for proper class ordering
+  - api.strategies.getAllStats.useQuery() returns strategyId, strategyName, strategyColor, totalPnl, winRate, totalTrades
+---
+
+## Sun Jan 26 2026 - US-003
+- Redesigned Strategy Card component with Terminal-inspired UI
+- Files changed: src/components/strategy/strategy-card.tsx
+- **What was implemented:**
+  - Terminal window chrome header with traffic light dots (red/yellow/green)
+  - Title bar shows strategy name in monospace with strategy's color
+  - Color gradient header area using strategy color (linear gradient from 20% to transparent)
+  - Pulsing green dot status indicator for active strategies, muted text for inactive
+  - Stats grid with 3 columns: Trades, Win Rate, Total P&L (all with micro-labels)
+  - "X RULES DEFINED" badge in header area
+  - Hover glow effect using strategy's color (inset box-shadow)
+  - Dropdown menu positioned in terminal chrome header area (doesn't obstruct card)
+  - Added data-testid attributes: strategy-card, strategy-card-title, strategy-card-menu-trigger, strategy-card-link, strategy-card-stats
+- **Learnings for future iterations:**
+  - Use CSS custom properties (--strategy-color) for dynamic colors in hover effects
+  - animate-ping with relative positioned sibling creates nice pulsing status indicators
+  - Biome requires {" "} for intentional spaces in JSX (don't combine text/expressions on one line)
+  - Inactive strategies use opacity-60 on container, not individual element styling
+---
+
+## Sun Jan 26 2026 - US-004
+- Added Strategy Card Visual Variants for performance differentiation
+- Files changed:
+  - src/components/strategy/strategy-card.tsx (added isTopPerformer prop, visual variants)
+  - src/app/(protected)/strategies/page.tsx (calculates topPerformerId, passes prop)
+- **What was implemented:**
+  - P&L-based border accents: border-profit/30 for positive, border-loss/30 for negative
+  - Top performer highlighting: border-primary/50 with persistent glow effect
+  - "★ Top Performer" badge in primary color for the #1 strategy
+  - "No trades yet" badge for strategies without any trades
+  - Inactive strategies maintain opacity-60 muting with no glow effects
+  - topPerformerId calculation in page: finds highest positive P&L among active strategies with trades
+  - Added data-testid attributes: strategy-card-top-performer-badge, strategy-card-no-trades-badge
+- **Learnings for future iterations:**
+  - Use IIFE pattern `(() => { ... })()` for derived values that need loop logic in components
+  - Conditional glow effects: render different div elements rather than conditional className
+  - Badge positioning in absolute containers: use top-3 right-3 for consistent spacing
+---
+
+## Sun Jan 26 2026 - US-005
+- Implemented improved strategy list grid layout with animations
+- Files changed:
+  - src/app/(protected)/strategies/page.tsx (added stagger-children, CTA card)
+  - src/styles/globals.css (extended stagger-children to 12 items, added prefers-reduced-motion)
+- **What was implemented:**
+  - Added `stagger-children` class to the strategies grid for staggered fade-in animation
+  - Extended CSS with child delays for nth-child 9-12 (animation-delay: 0.9s-1.2s)
+  - Added @media (prefers-reduced-motion) query to disable animations when user prefers reduced motion
+  - Created "Create New Playbook" CTA card with dashed border at end of grid
+  - CTA card has circular Plus icon, monospace text, and hover state with primary color transition
+  - Added data-testid attributes: strategies-grid, strategies-create-cta
+- **Learnings for future iterations:**
+  - Use existing stagger-children class from globals.css for grid fade-in animations
+  - Always add prefers-reduced-motion support when adding animations
+  - CTA cards in grids should use min-h to match other cards visually
+---
+

@@ -219,7 +219,10 @@ export default function StrategiesPage() {
 						<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
 							Your Strategies
 						</h2>
-						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+						<div
+							className="stagger-children grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
+							data-testid="strategies-grid"
+						>
 							{strategies.map((strategy) => (
 								<StrategyCard
 									isMobile={isMobile}
@@ -234,6 +237,21 @@ export default function StrategiesPage() {
 									strategy={strategy}
 								/>
 							))}
+							{/* Create Strategy CTA Card */}
+							<Link
+								className="group flex min-h-[200px] flex-col items-center justify-center gap-4 rounded border-2 border-white/10 border-dashed bg-white/2 p-6 transition-all hover:border-primary/50 hover:bg-white/5"
+								data-testid="strategies-create-cta"
+								href="/strategies/new"
+							>
+								<div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors group-hover:border-primary/50 group-hover:bg-primary/10">
+									<Plus className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
+								</div>
+								<div className="text-center">
+									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors group-hover:text-primary">
+										Create New Playbook
+									</span>
+								</div>
+							</Link>
 						</div>
 					</div>
 				)}

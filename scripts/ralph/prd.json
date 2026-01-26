@@ -40,8 +40,8 @@
         "Verify in browser: leaderboard is eye-catching"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created StrategyLeaderboard component with terminal window chrome (traffic light dots), rank badges (1st/2nd/3rd with different styling), strategy color dots, P&L and win rate display. Top performer gets primary glow effect. Replaced PerformanceComparisonTable with leaderboard. Shows remaining strategy count when >3 strategies exist."
     },
     {
       "id": "US-003",
@@ -62,8 +62,8 @@
         "Verify in browser: cards are distinctive and scannable"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Redesigned strategy card with terminal window chrome header (traffic light dots), title bar showing strategy name in strategy color, color gradient header area, pulsing green status indicator for active, 3-column stats grid (Trades, Win Rate, Total P&L), 'X RULES DEFINED' badge, hover glow effect using strategy color, and dropdown menu in terminal chrome. Added data-testid attributes for E2E testing."
     },
     {
       "id": "US-004",
@@ -80,8 +80,8 @@
         "Verify in browser: can visually distinguish strategy performance"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added P&L-based border accents (profit/loss colors), top performer highlighting with primary border and persistent glow, 'Top Performer' and 'No trades yet' badges, and opacity muting for inactive strategies. Page now calculates topPerformerId and passes isTopPerformer prop to cards."
     },
     {
       "id": "US-005",
@@ -97,8 +97,8 @@
         "Verify in browser: grid adapts nicely to different amounts of content"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added stagger-children animation class to grid, extended CSS with more child delays (9-12) and prefers-reduced-motion support. Added 'Create New Playbook' CTA card at end of grid with dashed border, Plus icon in circle, hover effects transitioning to primary color. Grid already had responsive classes. Added data-testid for E2E testing."
     },
     {
       "id": "US-006",
