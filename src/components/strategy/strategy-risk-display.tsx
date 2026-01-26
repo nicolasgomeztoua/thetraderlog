@@ -16,13 +16,13 @@ interface RiskValueProps {
 function RiskValue({ label, value, testId }: RiskValueProps) {
 	return (
 		<div
-			className="flex flex-col gap-1 border-white/5 border-b p-3 last:border-b-0 sm:border-r sm:border-b-0 sm:p-4 sm:last:border-r-0"
+			className="flex flex-col gap-0.5 border-white/5 border-b p-2.5 odd:border-r sm:gap-1 sm:border-r sm:border-b-0 sm:p-4 sm:last:border-r-0 [&:nth-last-child(-n+2)]:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
 			data-testid={testId}
 		>
-			<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
+			<span className="font-mono text-[8px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 				{label}
 			</span>
-			<span className="font-bold font-mono text-lg sm:text-xl">
+			<span className="font-bold font-mono text-base sm:text-xl">
 				{value ?? "—"}
 			</span>
 		</div>
@@ -101,30 +101,32 @@ export function StrategyRiskDisplay({
 				data-testid="strategy-risk-display-empty"
 			>
 				{/* Terminal window chrome header */}
-				<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-					<div className="flex items-center gap-1.5">
-						<div className="h-2 w-2 rounded-full bg-loss/60" />
-						<div className="h-2 w-2 rounded-full bg-breakeven/60" />
-						<div className="h-2 w-2 rounded-full bg-profit/60" />
+				<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+					<div className="flex items-center gap-1 sm:gap-1.5">
+						<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+						<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+						<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 					</div>
-					<span className="font-mono text-[10px] text-muted-foreground">
+					<span className="font-mono text-[9px] text-muted-foreground sm:text-[10px]">
 						risk.config
 					</span>
-					<div className="w-14" />
+					<div className="w-10 sm:w-14" />
 				</div>
 
 				{/* Section header with command prompt */}
-				<div className="flex items-center gap-2 border-white/5 border-b bg-white/2 px-4 py-3">
-					<span className="font-mono text-breakeven text-xs">{">"}</span>
-					<ShieldAlert className="h-4 w-4 text-breakeven" />
-					<span className="font-mono text-breakeven text-xs uppercase tracking-wider">
+				<div className="flex items-center gap-1.5 border-white/5 border-b bg-white/2 px-3 py-2 sm:gap-2 sm:px-4 sm:py-3">
+					<span className="font-mono text-[10px] text-breakeven sm:text-xs">
+						{">"}
+					</span>
+					<ShieldAlert className="h-3.5 w-3.5 text-breakeven sm:h-4 sm:w-4" />
+					<span className="font-mono text-[10px] text-breakeven uppercase tracking-wider sm:text-xs">
 						Risk Parameters
 					</span>
 				</div>
 
 				{/* Empty state */}
-				<div className="p-8 text-center">
-					<p className="font-mono text-muted-foreground/60 text-xs">
+				<div className="p-6 text-center sm:p-8">
+					<p className="font-mono text-[10px] text-muted-foreground/60 sm:text-xs">
 						Risk parameters not configured
 					</p>
 				</div>
@@ -138,29 +140,31 @@ export function StrategyRiskDisplay({
 			data-testid="strategy-risk-display"
 		>
 			{/* Terminal window chrome header */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-				<div className="flex items-center gap-1.5">
-					<div className="h-2 w-2 rounded-full bg-loss/60" />
-					<div className="h-2 w-2 rounded-full bg-breakeven/60" />
-					<div className="h-2 w-2 rounded-full bg-profit/60" />
+			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+				<div className="flex items-center gap-1 sm:gap-1.5">
+					<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 				</div>
-				<span className="font-mono text-[10px] text-muted-foreground">
+				<span className="font-mono text-[9px] text-muted-foreground sm:text-[10px]">
 					risk.config
 				</span>
-				<div className="w-14" />
+				<div className="w-10 sm:w-14" />
 			</div>
 
 			{/* Section header with command prompt */}
-			<div className="flex items-center gap-2 border-white/5 border-b bg-white/2 px-4 py-3">
-				<span className="font-mono text-breakeven text-xs">{">"}</span>
-				<ShieldAlert className="h-4 w-4 text-breakeven" />
-				<span className="font-mono text-breakeven text-xs uppercase tracking-wider">
+			<div className="flex items-center gap-1.5 border-white/5 border-b bg-white/2 px-3 py-2 sm:gap-2 sm:px-4 sm:py-3">
+				<span className="font-mono text-[10px] text-breakeven sm:text-xs">
+					{">"}
+				</span>
+				<ShieldAlert className="h-3.5 w-3.5 text-breakeven sm:h-4 sm:w-4" />
+				<span className="font-mono text-[10px] text-breakeven uppercase tracking-wider sm:text-xs">
 					Risk Parameters
 				</span>
 			</div>
 
 			{/* Risk values grid */}
-			<div className="grid grid-cols-1 sm:grid-cols-5">
+			<div className="grid grid-cols-2 sm:grid-cols-5">
 				<RiskValue
 					label="Position Sizing"
 					testId="strategy-risk-position-sizing"

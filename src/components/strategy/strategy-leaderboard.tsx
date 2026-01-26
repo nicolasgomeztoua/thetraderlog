@@ -50,7 +50,7 @@ function RankBadge({ rank }: { rank: 1 | 2 | 3 }) {
 	return (
 		<div
 			className={cn(
-				"flex h-8 w-8 items-center justify-center rounded-full border font-bold font-mono text-sm",
+				"flex h-7 w-7 shrink-0 items-center justify-center rounded-full border font-bold font-mono text-xs sm:h-8 sm:w-8 sm:text-sm",
 				style.bg,
 				style.border,
 				style.text,
@@ -78,7 +78,7 @@ function LeaderboardRow({
 	return (
 		<Link
 			className={cn(
-				"group flex items-center gap-4 rounded border bg-white/2 p-3 transition-all hover:bg-white/5 sm:p-4",
+				"group flex min-h-[56px] items-center gap-3 rounded border bg-white/2 p-3 transition-all hover:bg-white/5 sm:min-h-0 sm:gap-4 sm:p-4",
 				isTopPerformer
 					? "border-primary/30 shadow-[0_0_15px_rgba(212,255,0,0.15)]"
 					: "border-white/5 hover:border-white/10",
@@ -93,20 +93,20 @@ function LeaderboardRow({
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-2">
 					<div
-						className="h-2.5 w-2.5 shrink-0 rounded-full"
+						className="h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5"
 						style={{ backgroundColor: entry.strategyColor ?? "#d4ff00" }}
 					/>
 					<span className="truncate font-mono font-semibold text-sm transition-colors group-hover:text-primary sm:text-base">
 						{entry.strategyName}
 					</span>
 				</div>
-				<div className="mt-1 flex items-center gap-3 font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-xs">
+				<div className="mt-0.5 flex items-center gap-2 font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:mt-1 sm:gap-3 sm:text-xs">
 					<span>{entry.totalTrades} trades</span>
 					<span className="text-white/20">|</span>
 					<span
 						className={cn(entry.winRate >= 50 ? "text-profit" : "text-loss")}
 					>
-						{entry.winRate.toFixed(1)}% win
+						{entry.winRate.toFixed(0)}%
 					</span>
 				</div>
 			</div>
@@ -115,7 +115,7 @@ function LeaderboardRow({
 			<div className="text-right">
 				<span
 					className={cn(
-						"font-bold font-mono text-base sm:text-lg",
+						"font-bold font-mono text-sm sm:text-lg",
 						entry.totalPnl >= 0 ? "text-profit" : "text-loss",
 					)}
 				>
@@ -137,22 +137,22 @@ function LeaderboardSkeleton() {
 			data-testid="leaderboard-section"
 		>
 			{/* Terminal header */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-				<div className="flex items-center gap-2">
-					<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
-					<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
-					<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4">
+				<div className="flex items-center gap-1.5 sm:gap-2">
+					<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+					<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+					<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 				</div>
-				<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+				<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 					leaderboard.tsx
 				</span>
 			</div>
 
 			{/* Content */}
-			<div className="space-y-3 p-4">
-				<Skeleton className="h-16 w-full" />
-				<Skeleton className="h-16 w-full" />
-				<Skeleton className="h-16 w-full" />
+			<div className="space-y-2 p-3 sm:p-4">
+				<Skeleton className="h-14 w-full sm:h-16" />
+				<Skeleton className="h-14 w-full sm:h-16" />
+				<Skeleton className="h-14 w-full sm:h-16" />
 			</div>
 		</div>
 	);
@@ -191,29 +191,29 @@ export function StrategyLeaderboard() {
 			data-testid="leaderboard-section"
 		>
 			{/* Terminal header with traffic light dots */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-				<div className="flex items-center gap-2">
-					<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
-					<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
-					<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4">
+				<div className="flex items-center gap-1.5 sm:gap-2">
+					<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+					<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+					<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 				</div>
-				<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+				<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 					leaderboard.tsx
 				</span>
 			</div>
 
 			{/* Content */}
-			<div className="p-4">
+			<div className="p-3 sm:p-4">
 				{/* Section header */}
-				<div className="mb-4 flex items-center gap-2">
-					<Trophy className="h-4 w-4 text-primary" />
-					<h2 className="font-mono text-[11px] text-primary uppercase tracking-widest">
+				<div className="mb-3 flex items-center gap-2 sm:mb-4">
+					<Trophy className="h-3.5 w-3.5 text-primary sm:h-4 sm:w-4" />
+					<h2 className="font-mono text-[10px] text-primary uppercase tracking-widest sm:text-[11px]">
 						Top Performers
 					</h2>
 				</div>
 
 				{/* Leaderboard entries */}
-				<div className="space-y-2 sm:space-y-3">
+				<div className="space-y-2">
 					{topThree.map((entry, index) => (
 						<LeaderboardRow
 							entry={entry}
@@ -226,8 +226,8 @@ export function StrategyLeaderboard() {
 
 				{/* Show count of remaining strategies */}
 				{sortedStats.length > 3 && (
-					<div className="mt-4 border-white/5 border-t pt-3">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+					<div className="mt-3 border-white/5 border-t pt-2 sm:mt-4 sm:pt-3">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							+{sortedStats.length - 3} more{" "}
 							{sortedStats.length - 3 === 1 ? "strategy" : "strategies"}
 						</span>

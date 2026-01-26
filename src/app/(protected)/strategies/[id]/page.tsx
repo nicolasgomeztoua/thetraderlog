@@ -332,39 +332,39 @@ export default function StrategyDetailPage() {
 				data-testid="strategy-detail-hero"
 			>
 				{/* Terminal window chrome header */}
-				<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-					<div className="flex items-center gap-1.5">
-						<div className="h-2 w-2 rounded-full bg-loss/60" />
-						<div className="h-2 w-2 rounded-full bg-breakeven/60" />
-						<div className="h-2 w-2 rounded-full bg-profit/60" />
+				<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+					<div className="flex items-center gap-1 sm:gap-1.5">
+						<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+						<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+						<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 					</div>
-					<span className="font-mono text-[10px] text-muted-foreground">
+					<span className="max-w-[180px] truncate font-mono text-[9px] text-muted-foreground sm:max-w-none sm:text-[10px]">
 						playbook — {strategy.name.toLowerCase().replace(/\s+/g, "-")}
 					</span>
-					<div className="w-14" />
+					<div className="w-10 sm:w-14" />
 				</div>
 
 				{/* Hero content with strategy color gradient */}
 				<div
-					className="relative p-6 sm:p-8"
+					className="relative p-4 sm:p-8"
 					style={{
 						background: `linear-gradient(135deg, ${color}15 0%, ${color}05 30%, transparent 70%)`,
 					}}
 				>
 					{/* Strategy color indicator */}
-					<div className="mb-4 flex items-center gap-3">
+					<div className="mb-3 flex items-center gap-2 sm:mb-4 sm:gap-3">
 						<div
-							className="h-4 w-4 rounded"
+							className="h-3 w-3 rounded sm:h-4 sm:w-4"
 							style={{ backgroundColor: color }}
 						/>
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							$ PLAYBOOK
 						</span>
 					</div>
 
 					{/* Strategy name */}
 					<h1
-						className="mb-3 font-bold text-3xl tracking-tight sm:text-4xl"
+						className="mb-2 font-bold text-2xl tracking-tight sm:mb-3 sm:text-4xl"
 						data-testid="strategy-detail-name"
 					>
 						{strategy.name}
@@ -372,7 +372,7 @@ export default function StrategyDetailPage() {
 
 					{/* Status badge */}
 					<div
-						className="mb-6 flex items-center gap-2"
+						className="mb-4 flex items-center gap-1.5 sm:mb-6 sm:gap-2"
 						data-testid="strategy-detail-status"
 					>
 						{isActive ? (
@@ -381,14 +381,14 @@ export default function StrategyDetailPage() {
 									<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-profit opacity-75" />
 									<span className="relative inline-flex h-2 w-2 rounded-full bg-profit" />
 								</span>
-								<span className="font-mono text-profit text-xs uppercase tracking-wider">
+								<span className="font-mono text-[10px] text-profit uppercase tracking-wider sm:text-xs">
 									Active
 								</span>
 							</>
 						) : (
 							<>
 								<span className="h-2 w-2 rounded-full bg-muted-foreground" />
-								<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
+								<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-xs">
 									Inactive
 								</span>
 							</>
@@ -397,7 +397,7 @@ export default function StrategyDetailPage() {
 
 					{/* Description if available */}
 					{strategy.description && (
-						<p className="mb-6 max-w-2xl font-mono text-muted-foreground text-sm">
+						<p className="mb-4 max-w-2xl font-mono text-muted-foreground text-xs sm:mb-6 sm:text-sm">
 							{strategy.description}
 						</p>
 					)}

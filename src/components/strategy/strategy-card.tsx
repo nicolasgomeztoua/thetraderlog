@@ -102,14 +102,14 @@ export function StrategyCard({
 			)}
 
 			{/* Terminal window chrome header */}
-			<div className="relative flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2">
-				<div className="flex items-center gap-1.5">
-					<div className="h-2 w-2 rounded-full bg-loss/60" />
-					<div className="h-2 w-2 rounded-full bg-breakeven/60" />
-					<div className="h-2 w-2 rounded-full bg-profit/60" />
+			<div className="relative flex min-h-[36px] items-center justify-between border-white/5 border-b bg-white/2 px-2 py-1.5 sm:min-h-0 sm:px-3 sm:py-2">
+				<div className="flex items-center gap-1 sm:gap-1.5">
+					<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 				</div>
 				<span
-					className="font-mono text-[10px] uppercase tracking-wider"
+					className="max-w-[120px] truncate font-mono text-[9px] uppercase tracking-wider sm:max-w-none sm:text-[10px]"
 					data-testid="strategy-card-title"
 					style={{ color }}
 				>
@@ -119,14 +119,14 @@ export function StrategyCard({
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"h-6 w-6 shrink-0 transition-opacity",
+								"h-8 w-8 shrink-0 transition-opacity sm:h-6 sm:w-6",
 								isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100",
 							)}
 							data-testid="strategy-card-menu-trigger"
 							size="icon"
 							variant="ghost"
 						>
-							<MoreVertical className="h-3 w-3" />
+							<MoreVertical className="h-4 w-4 sm:h-3 sm:w-3" />
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">

@@ -38,25 +38,27 @@ function CriteriaCard({
 			data-testid={testId}
 		>
 			{/* Terminal window chrome header */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-				<div className="flex items-center gap-1.5">
-					<div className="h-2 w-2 rounded-full bg-loss/60" />
-					<div className="h-2 w-2 rounded-full bg-breakeven/60" />
-					<div className="h-2 w-2 rounded-full bg-profit/60" />
+			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+				<div className="flex items-center gap-1 sm:gap-1.5">
+					<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 				</div>
-				<span className="font-mono text-[10px] text-muted-foreground">
+				<span className="font-mono text-[9px] text-muted-foreground sm:text-[10px]">
 					{filename}
 				</span>
-				<div className="w-14" />
+				<div className="w-10 sm:w-14" />
 			</div>
 
 			{/* Section header with command prompt */}
-			<div className="flex items-center gap-2 border-white/5 border-b bg-white/2 px-4 py-3">
-				<span className={cn("font-mono text-xs", colorClass)}>{">"}</span>
-				<Icon className={cn("h-4 w-4", colorClass)} />
+			<div className="flex items-center gap-1.5 border-white/5 border-b bg-white/2 px-3 py-2 sm:gap-2 sm:px-4 sm:py-3">
+				<span className={cn("font-mono text-[10px] sm:text-xs", colorClass)}>
+					{">"}
+				</span>
+				<Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", colorClass)} />
 				<span
 					className={cn(
-						"font-mono text-xs uppercase tracking-wider",
+						"font-mono text-[10px] uppercase tracking-wider sm:text-xs",
 						colorClass,
 					)}
 				>
@@ -65,13 +67,13 @@ function CriteriaCard({
 			</div>
 
 			{/* Content area */}
-			<div className="p-4">
+			<div className="p-3 sm:p-4">
 				{hasContent ? (
-					<div className="whitespace-pre-wrap font-mono text-foreground/80 text-sm leading-relaxed">
+					<div className="whitespace-pre-wrap font-mono text-foreground/80 text-xs leading-relaxed sm:text-sm">
 						{content}
 					</div>
 				) : (
-					<p className="py-4 text-center font-mono text-muted-foreground/60 text-xs">
+					<p className="py-3 text-center font-mono text-[10px] text-muted-foreground/60 sm:py-4 sm:text-xs">
 						{emptyText}
 					</p>
 				)}

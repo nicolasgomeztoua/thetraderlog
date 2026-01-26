@@ -133,29 +133,31 @@ export default function StrategiesPage() {
 			<div className="relative mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
 				{/* Hero Header */}
 				<div
-					className="relative overflow-hidden rounded border border-white/10 bg-white/2 p-6 sm:p-8"
+					className="relative overflow-hidden rounded border border-white/10 bg-white/2 p-4 sm:p-8"
 					data-testid="strategies-header"
 				>
 					{/* Header background accent */}
 					<div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 
 					<div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-						<div className="space-y-3">
+						<div className="space-y-2 sm:space-y-3">
 							{/* Section label with command prompt */}
-							<div className="flex items-center gap-2">
-								<span className="font-mono text-primary text-sm">$</span>
-								<span className="font-mono text-[11px] text-primary uppercase tracking-widest">
+							<div className="flex items-center gap-1.5 sm:gap-2">
+								<span className="font-mono text-primary text-xs sm:text-sm">
+									$
+								</span>
+								<span className="font-mono text-[10px] text-primary uppercase tracking-widest sm:text-[11px]">
 									PLAYBOOKS
 								</span>
 							</div>
 
 							{/* Main headline */}
-							<h1 className="font-bold text-3xl tracking-tight sm:text-4xl lg:text-5xl">
+							<h1 className="font-bold text-2xl tracking-tight sm:text-4xl lg:text-5xl">
 								Your Trading <span className="text-primary">Playbooks</span>
 							</h1>
 
 							{/* Subheadline */}
-							<p className="max-w-xl font-mono text-muted-foreground text-sm leading-relaxed">
+							<p className="max-w-xl font-mono text-muted-foreground text-xs leading-relaxed sm:text-sm">
 								Document your edge with entry rules, risk parameters, and
 								pre-trade checklists. Track which strategies generate alpha.
 							</p>
@@ -164,7 +166,7 @@ export default function StrategiesPage() {
 						{/* CTA Button */}
 						<Button
 							asChild
-							className="group min-h-[48px] shrink-0 px-6 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+							className="group min-h-[48px] shrink-0 px-4 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:px-6"
 							data-testid="strategies-header-new-button"
 						>
 							<Link href="/strategies/new">
@@ -186,27 +188,27 @@ export default function StrategiesPage() {
 					<div className="space-y-6 sm:space-y-8">
 						{/* Leaderboard skeleton */}
 						<div className="overflow-hidden rounded border border-white/10">
-							<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-								<div className="flex items-center gap-1.5">
-									<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
-									<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
-									<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+							<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+								<div className="flex items-center gap-1 sm:gap-1.5">
+									<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+									<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+									<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 								</div>
-								<Skeleton className="h-3 w-28" />
-								<div className="w-14" />
+								<Skeleton className="h-2.5 w-20 sm:h-3 sm:w-28" />
+								<div className="w-10 sm:w-14" />
 							</div>
-							<div className="p-4 sm:p-6">
-								<div className="space-y-3">
+							<div className="p-3 sm:p-6">
+								<div className="space-y-2 sm:space-y-3">
 									{[1, 2, 3].map((i) => (
 										<div
-											className="flex items-center justify-between rounded border border-white/5 bg-white/2 p-3"
+											className="flex min-h-[48px] items-center justify-between rounded border border-white/5 bg-white/2 p-2.5 sm:min-h-0 sm:p-3"
 											key={i}
 										>
-											<div className="flex items-center gap-3">
-												<Skeleton className="h-6 w-6 rounded-full" />
-												<Skeleton className="h-4 w-32" />
+											<div className="flex items-center gap-2 sm:gap-3">
+												<Skeleton className="h-5 w-5 rounded-full sm:h-6 sm:w-6" />
+												<Skeleton className="h-3 w-24 sm:h-4 sm:w-32" />
 											</div>
-											<Skeleton className="h-4 w-20" />
+											<Skeleton className="h-3 w-16 sm:h-4 sm:w-20" />
 										</div>
 									))}
 								</div>
@@ -215,7 +217,7 @@ export default function StrategiesPage() {
 
 						{/* Cards grid skeleton */}
 						<div className="space-y-3 sm:space-y-4">
-							<Skeleton className="h-3 w-28" />
+							<Skeleton className="h-2.5 w-24 sm:h-3 sm:w-28" />
 							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
 								{[1, 2, 3].map((i) => (
 									<div
@@ -223,33 +225,33 @@ export default function StrategiesPage() {
 										key={i}
 									>
 										{/* Terminal chrome header */}
-										<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2">
-											<div className="flex items-center gap-1.5">
-												<div className="h-2 w-2 rounded-full bg-loss/60" />
-												<div className="h-2 w-2 rounded-full bg-breakeven/60" />
-												<div className="h-2 w-2 rounded-full bg-profit/60" />
+										<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-2 py-1.5 sm:px-3 sm:py-2">
+											<div className="flex items-center gap-1 sm:gap-1.5">
+												<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+												<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+												<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 											</div>
-											<Skeleton className="h-2.5 w-24" />
-											<Skeleton className="h-5 w-5 rounded" />
+											<Skeleton className="h-2 w-20 sm:h-2.5 sm:w-24" />
+											<Skeleton className="h-6 w-6 rounded sm:h-5 sm:w-5" />
 										</div>
 										{/* Color gradient header skeleton */}
 										<div className="relative h-16 bg-gradient-to-br from-white/5 via-white/2 to-transparent sm:h-20">
-											<div className="absolute top-3 left-3 flex items-center gap-2">
-												<Skeleton className="h-3 w-3 rounded-full" />
-												<Skeleton className="h-2.5 w-12" />
+											<div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 sm:top-3 sm:left-3 sm:gap-2">
+												<Skeleton className="h-2.5 w-2.5 rounded-full sm:h-3 sm:w-3" />
+												<Skeleton className="h-2 w-10 sm:h-2.5 sm:w-12" />
 											</div>
-											<div className="absolute right-3 bottom-3">
-												<Skeleton className="h-5 w-20" />
+											<div className="absolute right-2.5 bottom-2.5 sm:right-3 sm:bottom-3">
+												<Skeleton className="h-4 w-16 sm:h-5 sm:w-20" />
 											</div>
 										</div>
 										{/* Card content skeleton */}
-										<div className="bg-white/1 p-4">
-											<Skeleton className="mb-3 h-5 w-32" />
-											<div className="grid grid-cols-3 gap-3">
+										<div className="bg-white/1 p-3 sm:p-4">
+											<Skeleton className="mb-2.5 h-4 w-28 sm:mb-3 sm:h-5 sm:w-32" />
+											<div className="grid grid-cols-3 gap-2 sm:gap-3">
 												{[1, 2, 3].map((j) => (
 													<div key={j}>
-														<Skeleton className="mb-1 h-2.5 w-10" />
-														<Skeleton className="h-5 w-12" />
+														<Skeleton className="mb-1 h-2 w-8 sm:h-2.5 sm:w-10" />
+														<Skeleton className="h-4 w-10 sm:h-5 sm:w-12" />
 													</div>
 												))}
 											</div>
@@ -278,47 +280,49 @@ export default function StrategiesPage() {
 						/>
 
 						{/* Terminal window chrome */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
-							<div className="flex items-center gap-1.5">
-								<div className="h-2.5 w-2.5 rounded-full bg-loss/60" />
-								<div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
-								<div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
+						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+							<div className="flex items-center gap-1 sm:gap-1.5">
+								<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+								<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+								<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 							</div>
-							<span className="font-mono text-[10px] text-muted-foreground">
+							<span className="font-mono text-[9px] text-muted-foreground sm:text-[10px]">
 								playbooks — empty
 							</span>
-							<div className="w-14" />
+							<div className="w-10 sm:w-14" />
 						</div>
 
 						{/* Content area */}
-						<div className="relative flex flex-col items-center justify-center px-6 py-16 sm:py-20">
+						<div className="relative flex flex-col items-center justify-center px-4 py-12 sm:px-6 sm:py-20">
 							{/* Icon with terminal styling */}
-							<div className="mb-6 flex h-16 w-16 items-center justify-center rounded border border-white/10 bg-white/5 sm:h-20 sm:w-20">
-								<BookMarked className="h-8 w-8 text-muted-foreground/60 sm:h-10 sm:w-10" />
+							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded border border-white/10 bg-white/5 sm:mb-6 sm:h-20 sm:w-20">
+								<BookMarked className="h-7 w-7 text-muted-foreground/60 sm:h-10 sm:w-10" />
 							</div>
 
 							{/* Command prompt indicator */}
-							<div className="mb-3 flex items-center gap-2">
-								<span className="font-mono text-primary text-sm">$</span>
-								<span className="font-mono text-[11px] text-primary uppercase tracking-widest">
+							<div className="mb-2 flex items-center gap-1.5 sm:mb-3 sm:gap-2">
+								<span className="font-mono text-primary text-xs sm:text-sm">
+									$
+								</span>
+								<span className="font-mono text-[10px] text-primary uppercase tracking-widest sm:text-[11px]">
 									NO PLAYBOOKS DEFINED
 								</span>
 							</div>
 
 							{/* Main message */}
-							<h2 className="font-semibold text-lg sm:text-xl">
+							<h2 className="font-semibold text-base sm:text-xl">
 								Start building your edge
 							</h2>
 
 							{/* Description */}
-							<p className="mt-3 max-w-md text-center font-mono text-muted-foreground text-xs leading-relaxed sm:text-sm">
+							<p className="mt-2 max-w-md text-center font-mono text-[10px] text-muted-foreground leading-relaxed sm:mt-3 sm:text-sm">
 								Playbooks document your trading strategies with entry rules,
 								risk parameters, and pre-trade checklists. Track what works.
 							</p>
 
 							{/* Terminal-style command hint */}
-							<div className="mt-6 rounded border border-white/5 bg-white/2 px-4 py-2">
-								<div className="flex items-center gap-2 font-mono text-muted-foreground text-xs">
+							<div className="mt-4 rounded border border-white/5 bg-white/2 px-3 py-1.5 sm:mt-6 sm:px-4 sm:py-2">
+								<div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground sm:gap-2 sm:text-xs">
 									<span className="text-primary">→</span>
 									<span>Create your first playbook to begin tracking</span>
 								</div>
@@ -327,7 +331,7 @@ export default function StrategiesPage() {
 							{/* CTA Button */}
 							<Button
 								asChild
-								className="group mt-8 min-h-[48px] px-8 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+								className="group mt-6 min-h-[48px] px-6 font-mono text-xs uppercase tracking-wider sm:mt-8 sm:min-h-0 sm:px-8"
 								data-testid="strategies-empty-state-cta"
 							>
 								<Link href="/strategies/new">
