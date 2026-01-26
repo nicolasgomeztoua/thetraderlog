@@ -16,6 +16,7 @@ import type { RiskParameters, StrategyFormData } from "@/components/strategy";
 import {
 	StrategyCriteriaDisplay,
 	StrategyForm,
+	StrategyPlaceholder,
 	StrategyRiskDisplay,
 	StrategyRulesDisplay,
 } from "@/components/strategy";
@@ -441,6 +442,14 @@ export default function StrategyDetailPage() {
 				<StrategyRiskDisplay
 					riskParameters={strategy.riskParameters as RiskParameters | null}
 				/>
+			</section>
+
+			{/* Placeholder Sections (Coming Soon) */}
+			<section data-testid="strategy-detail-placeholders">
+				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
+					→ Performance Analytics
+				</h2>
+				<StrategyPlaceholder />
 			</section>
 
 			{/* Form Section */}
