@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { StrategyCard } from "@/components/strategy";
+import { StrategyCard, StrategyLeaderboard } from "@/components/strategy";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -16,159 +16,8 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
-
-// =============================================================================
-// PERFORMANCE COMPARISON TABLE
-// =============================================================================
-
-function PerformanceComparisonTable() {
-	const { data: stats, isLoading } = api.strategies.getAllStats.useQuery();
-
-	if (isLoading) {
-		return (
-			<div className="space-y-2">
-				{[...Array(3)].map((_, i) => (
-					<Skeleton className="h-10 w-full" key={`skeleton-${i.toString()}`} />
-				))}
-			</div>
-		);
-	}
-
-	if (!stats || stats.length === 0) {
-		return null;
-	}
-
-	// Only show strategies with trades
-	const strategiesWithTrades = stats.filter((s) => s.totalTrades > 0);
-	if (strategiesWithTrades.length === 0) {
-		return null;
-	}
-
-	// Sort by total P&L descending
-	const sortedStats = [...strategiesWithTrades].sort(
-		(a, b) => b.totalPnl - a.totalPnl,
-	);
-
-	return (
-		<div className="space-y-4">
-			<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-				Performance Comparison
-			</h2>
-			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-				<div className="min-w-[600px] overflow-hidden rounded border border-border sm:min-w-0">
-					<Table>
-						<TableHeader>
-							<TableRow className="border-border hover:bg-transparent">
-								<TableHead className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Strategy
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Trades
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Win Rate
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Profit Factor
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Total P&L
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Avg R
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{sortedStats.map((s) => (
-								<TableRow className="border-border" key={s.strategyId}>
-									<TableCell>
-										<Link
-											className="flex items-center gap-2 transition-colors hover:text-primary"
-											href={`/strategies/${s.strategyId}`}
-										>
-											<div
-												className="h-2 w-2 shrink-0 rounded-full"
-												style={{
-													backgroundColor: s.strategyColor ?? "#d4ff00",
-												}}
-											/>
-											<span className="font-medium font-mono text-sm">
-												{s.strategyName}
-											</span>
-										</Link>
-									</TableCell>
-									<TableCell className="text-right font-mono text-sm">
-										{s.totalTrades}
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.winRate >= 50 ? "text-profit" : "text-loss",
-											)}
-										>
-											{s.winRate.toFixed(1)}%
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.profitFactor >= 1 ? "text-profit" : "text-loss",
-											)}
-										>
-											{s.profitFactor === Infinity
-												? "∞"
-												: s.profitFactor.toFixed(2)}
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-bold font-mono text-sm",
-												s.totalPnl >= 0 ? "text-profit" : "text-loss",
-											)}
-										>
-											{formatCurrency(s.totalPnl)}
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.avgRMultiple !== null
-													? s.avgRMultiple >= 0
-														? "text-profit"
-														: "text-loss"
-													: "text-muted-foreground",
-											)}
-										>
-											{s.avgRMultiple !== null
-												? `${s.avgRMultiple.toFixed(2)}R`
-												: "—"}
-										</span>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
-			</div>
-		</div>
-	);
-}
 
 // =============================================================================
 // MAIN PAGE
@@ -307,9 +156,9 @@ export default function StrategiesPage() {
 					</div>
 				</div>
 
-				{/* Performance Comparison Table */}
+				{/* Strategy Leaderboard */}
 				{!isLoading && strategies && strategies.length > 0 && (
-					<PerformanceComparisonTable />
+					<StrategyLeaderboard />
 				)}
 
 				{/* Loading state */}
