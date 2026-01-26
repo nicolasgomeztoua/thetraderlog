@@ -12,10 +12,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import type { StrategyFormData } from "@/components/strategy";
+import type { RiskParameters, StrategyFormData } from "@/components/strategy";
 import {
 	StrategyCriteriaDisplay,
 	StrategyForm,
+	StrategyRiskDisplay,
 	StrategyRulesDisplay,
 } from "@/components/strategy";
 import {
@@ -429,6 +430,16 @@ export default function StrategyDetailPage() {
 				<StrategyCriteriaDisplay
 					entryCriteria={strategy.entryCriteria}
 					exitRules={strategy.exitRules}
+				/>
+			</section>
+
+			{/* Risk Parameters Section */}
+			<section data-testid="strategy-detail-risk">
+				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
+					→ Risk Parameters
+				</h2>
+				<StrategyRiskDisplay
+					riskParameters={strategy.riskParameters as RiskParameters | null}
 				/>
 			</section>
 

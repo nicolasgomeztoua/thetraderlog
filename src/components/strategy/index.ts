@@ -9,6 +9,7 @@ export { StrategyCriteriaDisplay } from "./strategy-criteria-display";
 export type { StrategyFormData, StrategyRule } from "./strategy-form";
 export { StrategyForm } from "./strategy-form";
 export { StrategyLeaderboard } from "./strategy-leaderboard";
+export { StrategyRiskDisplay } from "./strategy-risk-display";
 export { StrategyRulesDisplay } from "./strategy-rules-display";
 export type { TrailingRules } from "./trailing-config";
 export { TrailingConfig } from "./trailing-config";
