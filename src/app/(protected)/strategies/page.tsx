@@ -89,6 +89,26 @@ export default function StrategiesPage() {
 		}
 	});
 
+	// Find the top performer (highest positive P&L among strategies with trades)
+	const topPerformerId = (() => {
+		let topId: string | null = null;
+		let topPnl = 0;
+		for (const [id, stats] of statsMap) {
+			const strategy = strategies?.find((s) => s.id === id);
+			// Only consider active strategies with trades
+			if (
+				strategy &&
+				strategy.isActive !== false &&
+				strategy._count.trades > 0 &&
+				stats.totalPnl > topPnl
+			) {
+				topId = id;
+				topPnl = stats.totalPnl;
+			}
+		}
+		return topId;
+	})();
+
 	const isMobile = useIsMobile();
 
 	return (
@@ -203,6 +223,7 @@ export default function StrategiesPage() {
 							{strategies.map((strategy) => (
 								<StrategyCard
 									isMobile={isMobile}
+									isTopPerformer={strategy.id === topPerformerId}
 									key={strategy.id}
 									onDelete={() => handleDelete(strategy.id)}
 									onDuplicate={() =>

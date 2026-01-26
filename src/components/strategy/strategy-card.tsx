@@ -33,6 +33,7 @@ interface StrategyCardProps {
 	onDuplicate?: () => void;
 	onDelete?: () => void;
 	isMobile?: boolean;
+	isTopPerformer?: boolean;
 }
 
 export function StrategyCard({
@@ -42,18 +43,32 @@ export function StrategyCard({
 	onDuplicate,
 	onDelete,
 	isMobile = false,
+	isTopPerformer = false,
 }: StrategyCardProps) {
 	const color = strategy.color ?? "#d4ff00";
 	const hasTrades = strategy._count.trades > 0;
 	const isActive = strategy.isActive !== false;
+	const pnl = stats?.totalPnl ?? 0;
+	const isProfit = hasTrades && pnl > 0;
+	const isLoss = hasTrades && pnl < 0;
 
 	return (
 		<div
 			className={cn(
 				"group relative overflow-hidden rounded border transition-all duration-200",
-				isActive
-					? "border-white/5 hover:border-white/20"
-					: "border-white/5 opacity-60",
+				// Base border styling
+				!isActive && "opacity-60",
+				// Top performer gets primary border and glow
+				isTopPerformer && isActive && "border-primary/50",
+				// P&L-based border accents (only when not top performer)
+				!isTopPerformer && isActive && isProfit && "border-profit/30",
+				!isTopPerformer && isActive && isLoss && "border-loss/30",
+				// Default border for strategies without clear P&L status
+				!isTopPerformer && isActive && !isProfit && !isLoss && "border-white/5",
+				// Inactive strategies get muted border
+				!isActive && "border-white/5",
+				// Hover states (only for active)
+				isActive && "hover:border-white/20",
 			)}
 			data-testid="strategy-card"
 			style={
@@ -62,16 +77,29 @@ export function StrategyCard({
 				} as React.CSSProperties
 			}
 		>
-			{/* Hover glow effect using strategy color */}
-			<div
-				className={cn(
-					"absolute inset-0 opacity-0 transition-opacity duration-200",
-					isActive && "group-hover:opacity-100",
-				)}
-				style={{
-					boxShadow: `inset 0 0 30px ${color}15, 0 0 20px ${color}10`,
-				}}
-			/>
+			{/* Top performer persistent glow */}
+			{isTopPerformer && isActive && (
+				<div
+					className="absolute inset-0"
+					style={{
+						boxShadow:
+							"inset 0 0 40px rgba(212, 255, 0, 0.08), 0 0 30px rgba(212, 255, 0, 0.05)",
+					}}
+				/>
+			)}
+
+			{/* Hover glow effect using strategy color (only for active, non-top-performer) */}
+			{!isTopPerformer && (
+				<div
+					className={cn(
+						"absolute inset-0 opacity-0 transition-opacity duration-200",
+						isActive && "group-hover:opacity-100",
+					)}
+					style={{
+						boxShadow: `inset 0 0 30px ${color}15, 0 0 20px ${color}10`,
+					}}
+				/>
+			)}
 
 			{/* Terminal window chrome header */}
 			<div className="relative flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2">
@@ -157,6 +185,30 @@ export function StrategyCard({
 						</span>
 					)}
 				</div>
+
+				{/* Top performer badge */}
+				{isTopPerformer && isActive && (
+					<div
+						className="absolute top-3 right-3"
+						data-testid="strategy-card-top-performer-badge"
+					>
+						<span className="rounded border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] text-primary uppercase tracking-wider">
+							★ Top Performer
+						</span>
+					</div>
+				)}
+
+				{/* No trades badge */}
+				{!hasTrades && isActive && !isTopPerformer && (
+					<div
+						className="absolute top-3 right-3"
+						data-testid="strategy-card-no-trades-badge"
+					>
+						<span className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+							No trades yet
+						</span>
+					</div>
+				)}
 
 				{/* Rule count badge */}
 				<div className="absolute right-3 bottom-3">
