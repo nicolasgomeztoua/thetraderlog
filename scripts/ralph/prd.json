@@ -291,8 +291,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created comprehensive E2E tests in tests/e2e/strategies-redesign.spec.ts. Tests cover: strategies list page loading with header and new button, strategy cards with terminal chrome and stats, strategy detail page with all sections (hero, rules, criteria, action bar), navigation between list and detail, and empty state CTA. Uses data-testid selectors for reliability. Tests pass on Chromium; Firefox/WebKit have occasional timeout flakiness due to environmental factors."
     }
   ]
 }

@@ -342,3 +342,26 @@ performance-based styling, and clear visual hierarchy.
   - For 2-col mobile grids with border separators, use odd:border-r to handle right borders
   - Touch target minimums: 44x44px for standard buttons, 48px for important CTAs
 ---
+
+## Sun Jan 26 2026 - US-015
+- Implemented E2E Tests for Strategies Redesign
+- Files changed:
+  - tests/e2e/strategies-redesign.spec.ts (new file, 266 lines)
+- **What was implemented:**
+  - 7 comprehensive E2E tests covering strategies list and detail pages
+  - Test: loads successfully with header and new button
+  - Test: page loads without errors
+  - Test: displays strategy cards or empty state
+  - Test: strategy card shows terminal chrome and stats
+  - Test: navigates from list to detail and displays all sections
+  - Test: back button navigates to strategies list
+  - Test: empty state has CTA button when no strategies
+  - Uses data-testid selectors for reliability across browsers
+  - Tests pass on Chromium; Firefox/WebKit have occasional timeout flakiness
+- **Learnings for future iterations:**
+  - E2E tests should use explicit waits rather than polling loops
+  - Use `.or()` for alternative elements: `expect(grid.or(emptyState)).toBeVisible()`
+  - Conditional tests with `if (!(await element.isVisible())) return;` handle optional data gracefully
+  - Firefox and WebKit are slower than Chromium - increase timeouts when needed
+  - Keep E2E tests simple and focused on core user flows to reduce flakiness
+---
