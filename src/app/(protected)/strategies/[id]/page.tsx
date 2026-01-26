@@ -190,6 +190,7 @@ export default function StrategyDetailPage() {
 				<Button
 					asChild
 					className="min-h-[44px] gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+					data-testid="strategy-detail-action-back"
 					variant="ghost"
 				>
 					<Link href="/strategies">
@@ -201,6 +202,17 @@ export default function StrategyDetailPage() {
 				<div className="flex shrink-0 items-center gap-1 sm:gap-2">
 					<Button
 						className="min-h-[36px] min-w-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
+						data-testid="strategy-detail-action-edit"
+						onClick={scrollToForm}
+						size={isMobile ? "icon" : "sm"}
+						variant="outline"
+					>
+						<Pencil className="h-3.5 w-3.5 sm:mr-2 sm:h-3 sm:w-3" />
+						<span className="hidden sm:inline">Edit</span>
+					</Button>
+					<Button
+						className="min-h-[36px] min-w-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
+						data-testid="strategy-detail-action-duplicate"
 						onClick={() => duplicateMutation.mutate({ id: strategyId })}
 						size={isMobile ? "icon" : "sm"}
 						variant="outline"
@@ -212,6 +224,7 @@ export default function StrategyDetailPage() {
 						<AlertDialogTrigger asChild>
 							<Button
 								className="min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0"
+								data-testid="strategy-detail-action-delete"
 								size={isMobile ? "icon" : "sm"}
 								variant="ghost"
 							>
