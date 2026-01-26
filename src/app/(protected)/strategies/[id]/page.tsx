@@ -13,7 +13,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { StrategyFormData } from "@/components/strategy";
-import { StrategyForm } from "@/components/strategy";
+import { StrategyForm, StrategyRulesDisplay } from "@/components/strategy";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -408,6 +408,14 @@ export default function StrategyDetailPage() {
 					</div>
 				</div>
 			</div>
+
+			{/* Rules Display Section */}
+			<section data-testid="strategy-detail-rules">
+				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
+					→ Playbook Rules
+				</h2>
+				<StrategyRulesDisplay rules={formRules} />
+			</section>
 
 			{/* Form Section */}
 			<div
