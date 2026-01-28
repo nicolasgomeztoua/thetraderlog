@@ -105,10 +105,10 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 						onCheckedChange={(checked) => toggleBreakeven(checked === true)}
 					/>
 					<label
-						className="cursor-pointer font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]"
+						className="cursor-pointer font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]"
 						htmlFor="breakeven-toggle"
 					>
-						Move to Breakeven
+						→ Move to Breakeven
 					</label>
 				</div>
 
@@ -156,11 +156,11 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 			{/* Trail Stops */}
 			<div className="space-y-3">
 				<div className="flex items-center justify-between">
-					<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
-						Trailing Stop Rules
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Trailing Stop Rules
 					</h4>
 					<Button
-						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
+						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 						onClick={addTrailStop}
 						size="sm"
 						type="button"
@@ -179,7 +179,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 					<div className="space-y-2">
 						{(trailingRules.trailStops ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`trail-${rule.triggerR}-${rule.method}`}
 							>
 								<div className="grid grid-cols-2 gap-2 sm:contents">

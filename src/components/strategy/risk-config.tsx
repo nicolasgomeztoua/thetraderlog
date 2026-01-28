@@ -50,8 +50,8 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 		<div className="space-y-4 sm:space-y-6">
 			{/* Position Sizing */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
-					Position Sizing
+				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+					→ Position Sizing
 				</h4>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
@@ -160,8 +160,8 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Max Risk Per Trade */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
-					Max Risk Per Trade
+				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+					→ Max Risk Per Trade
 				</h4>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
@@ -214,8 +214,8 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Daily Loss Limit */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
-					Daily Loss Limit
+				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+					→ Daily Loss Limit
 				</h4>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
@@ -268,8 +268,8 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Other Settings */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
-					Other Settings
+				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+					→ Other Settings
 				</h4>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
@@ -315,13 +315,13 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Target R Multiples */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-primary/80 uppercase tracking-wider sm:text-[11px]">
-					Target R Multiples
+				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+					→ Target R Multiples
 				</h4>
 				<div className="flex flex-wrap gap-2">
 					{(riskParams.targetRMultiples ?? []).map((r) => (
 						<div
-							className="flex min-h-[36px] items-center gap-1 rounded border border-white/10 bg-white/2 px-2 py-1 sm:min-h-0"
+							className="flex min-h-[36px] items-center gap-1.5 rounded border border-primary/30 bg-primary/5 px-2.5 py-1 sm:min-h-0"
 							key={r}
 						>
 							<span className="font-mono text-sm">{r}R</span>
@@ -343,7 +343,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						</div>
 					))}
 					<Button
-						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
+						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 						onClick={() => {
 							const newValue = prompt("Enter R multiple (e.g., 2):");
 							if (newValue) {

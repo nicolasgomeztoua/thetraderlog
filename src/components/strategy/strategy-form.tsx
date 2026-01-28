@@ -128,20 +128,21 @@ export function StrategyForm({
 
 	return (
 		<form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
-			{/* Section Tabs */}
+			{/* Section Tabs - Terminal Style Navigation */}
 			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-				<div className="flex gap-1.5 border-border border-b pb-4 sm:flex-wrap sm:gap-2">
+				<div className="flex gap-1 border-white/10 border-b pb-3 sm:flex-wrap sm:gap-1.5 sm:pb-4">
 					{sections.map((section) => (
 						<button
-							className={`min-h-[36px] shrink-0 rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:min-h-0 sm:px-3 sm:text-xs ${
+							className={`min-h-[36px] shrink-0 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all sm:min-h-0 sm:px-3 sm:text-xs ${
 								activeSection === section.id
-									? "bg-primary text-primary-foreground"
-									: "text-muted-foreground hover:bg-white/5"
+									? "border-primary/50 bg-primary/10 text-primary"
+									: "border-transparent bg-white/2 text-muted-foreground hover:border-white/10 hover:bg-white/5"
 							}`}
 							key={section.id}
 							onClick={() => setActiveSection(section.id)}
 							type="button"
 						>
+							<span className="mr-1 opacity-60">{activeSection === section.id ? "→" : "$"}</span>
 							{section.label}
 						</button>
 					))}
@@ -151,10 +152,10 @@ export function StrategyForm({
 			{/* Basic Info Section */}
 			{activeSection === "basic" && (
 				<div className="space-y-4 sm:space-y-6">
-					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Strategy Name *
-						</span>
+					<div className="space-y-2">
+						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+							→ Strategy Name <span className="text-loss">*</span>
+						</label>
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
 							onChange={(e) => updateField("name", e.target.value)}
@@ -164,10 +165,10 @@ export function StrategyForm({
 						/>
 					</div>
 
-					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Description
-						</span>
+					<div className="space-y-2">
+						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+							→ Description
+						</label>
 						<Textarea
 							className="font-mono"
 							onChange={(e) => updateField("description", e.target.value)}
@@ -178,9 +179,9 @@ export function StrategyForm({
 					</div>
 
 					<div className="space-y-2">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Color
-						</span>
+						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+							→ Color
+						</label>
 						<div className="flex flex-wrap gap-2">
 							{PRESET_COLORS.map((color) => (
 								<button
@@ -203,10 +204,10 @@ export function StrategyForm({
 			{/* Strategy Section */}
 			{activeSection === "strategy" && (
 				<div className="space-y-4 sm:space-y-6">
-					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Entry Criteria
-						</span>
+					<div className="space-y-2">
+						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+							→ Entry Criteria
+						</label>
 						<Textarea
 							className="font-mono text-sm"
 							onChange={(e) => updateField("entryCriteria", e.target.value)}
@@ -216,10 +217,10 @@ export function StrategyForm({
 						/>
 					</div>
 
-					<div className="space-y-1">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-							Exit Rules
-						</span>
+					<div className="space-y-2">
+						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+							→ Exit Rules
+						</label>
 						<Textarea
 							className="font-mono text-sm"
 							onChange={(e) => updateField("exitRules", e.target.value)}
@@ -260,11 +261,11 @@ export function StrategyForm({
 				<div className="space-y-4">
 					<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 						<p className="font-mono text-muted-foreground text-xs sm:text-sm">
-							Define rules that you&apos;ll check off when taking trades with
+							→ Define rules that you&apos;ll check off when taking trades with
 							this strategy.
 						</p>
 						<Button
-							className="min-h-[36px] shrink-0 font-mono text-xs sm:min-h-0"
+							className="min-h-[36px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 							onClick={addRule}
 							size="sm"
 							type="button"
@@ -276,25 +277,36 @@ export function StrategyForm({
 					</div>
 
 					{formData.rules.length === 0 ? (
-						<div className="rounded border border-white/5 bg-white/2 py-6 text-center sm:py-8">
-							<p className="font-mono text-muted-foreground text-xs sm:text-sm">
-								No rules defined yet
-							</p>
-							<Button
-								className="mt-4 min-h-[36px] font-mono text-xs sm:min-h-0"
-								onClick={addRule}
-								type="button"
-								variant="outline"
-							>
-								<Plus className="mr-1 h-3 w-3" />
-								Add Your First Rule
-							</Button>
+						<div className="overflow-hidden rounded border border-white/10 border-dashed">
+							<div className="flex items-center justify-between border-white/5 border-b border-dashed bg-white/2 px-3 py-1.5">
+								<div className="flex items-center gap-1">
+									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+								</div>
+								<span className="font-mono text-[9px] text-muted-foreground">rules.empty</span>
+								<div className="w-10" />
+							</div>
+							<div className="py-6 text-center sm:py-8">
+								<p className="mb-4 font-mono text-muted-foreground text-xs sm:text-sm">
+									No rules defined yet
+								</p>
+								<Button
+									className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+									onClick={addRule}
+									type="button"
+									variant="outline"
+								>
+									<Plus className="mr-1 h-3 w-3" />
+									Add Your First Rule
+								</Button>
+							</div>
 						</div>
 					) : (
 						<div className="space-y-2">
 							{formData.rules.map((rule, idx) => (
 								<div
-									className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-center sm:gap-3"
+									className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-center sm:gap-3"
 									key={rule.id ?? `new-${rule.order}`}
 								>
 									<div className="flex items-center gap-2 sm:gap-3">
@@ -357,9 +369,9 @@ export function StrategyForm({
 			)}
 
 			{/* Submit Button */}
-			<div className="flex items-center justify-end gap-3 border-border border-t pt-4 sm:pt-6">
+			<div className="flex items-center justify-end gap-3 border-white/10 border-t pt-4 sm:pt-6">
 				<Button
-					className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
+					className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
 					disabled={isSubmitting || !formData.name}
 					type="submit"
 				>
