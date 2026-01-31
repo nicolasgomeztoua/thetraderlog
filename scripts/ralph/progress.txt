@@ -1,367 +1,291 @@
-# Ralph Progress Log - Strategies Redesign
-Started: Sun Jan 26 2026
-Branch: ralph/strategies-redesign
+# Ralph Progress Log
+Started: Sat Jan 31 13:26:41 WET 2026
 ---
 
-## Feature Overview
-Redesign the strategies page and strategy detail page with distinctive Terminal-inspired UI.
-Transform generic strategy cards into visually memorable "Strategy" cards with terminal chrome,
-performance-based styling, and clear visual hierarchy.
-
-## Codebase Patterns (from previous work)
-- Playwright config uses projects for browser separation with auth state dependency
-- E2E tests live in tests/e2e/ directory
-- Auth state stored in playwright/.clerk/user.json
-- data-testid convention: [component]-[element]-[qualifier]
-- Terminal design: traffic light dots, command prompts ($, →), monospace fonts
-
-## Design System Reference
-- Primary: #d4ff00 (Electric Chartreuse)
-- Accent: #00d4ff (Ice Blue)
-- Profit: #00ff88
-- Loss: #ff3b3b
-- Background: #050505
-- Terminal chrome pattern in DESIGN_REFERENCE.md
+## Codebase Patterns
+- Strategy types go in src/lib/strategy/ module
+- Use discriminated unions with `type` field for condition types
+- Export from index.ts barrel files
+- Unit tests (no DB needed): `bunx vitest run --config vitest.config.unit.ts`
+- Integration tests (needs Docker): `bun run test`
 
 ---
 
-## Sun Jan 26 2026 - US-001
-- Implemented redesigned strategy list page header
-- Files changed: src/app/(protected)/strategies/page.tsx
-- **What was implemented:**
-  - Added atmospheric background effects (grid pattern with 60px cells, primary/accent gradient orbs)
-  - New hero header card with subtle gradient background
-  - Command prompt section label ("$ STRATEGIES")
-  - Bold headline with "Strategies" in accent color
-  - Monospace subheadline describing purpose
-  - Terminal-style "New Strategy" button with arrow and hover animation
-  - Added data-testid attributes for E2E testing
-- **Learnings for future iterations:**
-  - Use inline styles for grid background pattern rather than CSS class (more flexible)
-  - Hero headers should use relative overflow-hidden for contained background effects
-  - Biome formatter requires single-line span elements, don't use {"  "} for space
----
-
-## Sun Jan 26 2026 - US-002
-- Implemented Performance Leaderboard component
+## 2026-01-31 - US-002
+- What was implemented: Auto-evaluation type system for strategy rules
 - Files changed:
-  - src/components/strategy/strategy-leaderboard.tsx (new)
-  - src/components/strategy/index.ts (added export)
-  - src/app/(protected)/strategies/page.tsx (replaced PerformanceComparisonTable)
-- **What was implemented:**
-  - Terminal window chrome with traffic light dots (red/yellow/green) and "leaderboard.tsx" title
-  - RankBadge component with distinct styling per rank (1st: primary glow, 2nd: white, 3rd: accent)
-  - Top 3 strategies as clickable entries with rank, color dot, name, trades, win rate, P&L
-  - #1 strategy gets highlighted border with primary color glow
-  - Falls back gracefully when fewer than 3 strategies have trades
-  - Loading skeleton matching terminal chrome design
-  - "+X more strategies" indicator when more than 3 exist
+  - src/lib/strategy/types.ts (created)
+  - src/lib/strategy/index.ts (created)
 - **Learnings for future iterations:**
-  - Biome CSS class ordering: border color classes must come before border style (border-white/5 before border-b)
-  - Use font-bold before font-mono for proper class ordering
-  - api.strategies.getAllStats.useQuery() returns strategyId, strategyName, strategyColor, totalPnl, winRate, totalTrades
+  - Created discriminated union pattern for AutoCondition types
+  - DataQuality enum matches schema's dataQualityEnum concept
+  - All condition interfaces have a `type` discriminator field
 ---
 
-## Sun Jan 26 2026 - US-003
-- Redesigned Strategy Card component with Terminal-inspired UI
-- Files changed: src/components/strategy/strategy-card.tsx
-- **What was implemented:**
-  - Terminal window chrome header with traffic light dots (red/yellow/green)
-  - Title bar shows strategy name in monospace with strategy's color
-  - Color gradient header area using strategy color (linear gradient from 20% to transparent)
-  - Pulsing green dot status indicator for active strategies, muted text for inactive
-  - Stats grid with 3 columns: Trades, Win Rate, Total P&L (all with micro-labels)
-  - "X RULES DEFINED" badge in header area
-  - Hover glow effect using strategy's color (inset box-shadow)
-  - Dropdown menu positioned in terminal chrome header area (doesn't obstruct card)
-  - Added data-testid attributes: strategy-card, strategy-card-title, strategy-card-menu-trigger, strategy-card-link, strategy-card-stats
-- **Learnings for future iterations:**
-  - Use CSS custom properties (--strategy-color) for dynamic colors in hover effects
-  - animate-ping with relative positioned sibling creates nice pulsing status indicators
-  - Biome requires {" "} for intentional spaces in JSX (don't combine text/expressions on one line)
-  - Inactive strategies use opacity-60 on container, not individual element styling
----
-
-## Sun Jan 26 2026 - US-004
-- Added Strategy Card Visual Variants for performance differentiation
+## 2026-01-31 - US-003
+- What was implemented: Rule generation service that transforms strategy config into checklist rules
 - Files changed:
-  - src/components/strategy/strategy-card.tsx (added isTopPerformer prop, visual variants)
-  - src/app/(protected)/strategies/page.tsx (calculates topPerformerId, passes prop)
-- **What was implemented:**
-  - P&L-based border accents: border-profit/30 for positive, border-loss/30 for negative
-  - Top performer highlighting: border-primary/50 with persistent glow effect
-  - "★ Top Performer" badge in primary color for the #1 strategy
-  - "No trades yet" badge for strategies without any trades
-  - Inactive strategies maintain opacity-60 muting with no glow effects
-  - topPerformerId calculation in page: finds highest positive P&L among active strategies with trades
-  - Added data-testid attributes: strategy-card-top-performer-badge, strategy-card-no-trades-badge
+  - src/lib/strategy/rule-generator.ts (created)
+  - src/lib/strategy/index.ts (updated barrel export)
 - **Learnings for future iterations:**
-  - Use IIFE pattern `(() => { ... })()` for derived values that need loop logic in components
-  - Conditional glow effects: render different div elements rather than conditional className
-  - Badge positioning in absolute containers: use top-3 right-3 for consistent spacing
+  - Use `node:crypto` protocol for Node.js imports (Biome enforces this)
+  - parseRLevelFromTrigger regex: `/\+?(\d+(?:\.\d+)?)\s*R\b/i` handles +1R, +1.5R, 2R patterns
+  - Config interfaces (RiskParameters, ScalingRules, TrailingRules) are in component files, not lib
+  - hashConfig uses MD5 first 16 chars - consistent format for change detection
+  - Rule types: risk params → auto, scale-in → manual, scale-out → auto if R-level parseable, trailing fixed_ticks → semi_auto, ATR/swing → manual
 ---
 
-## Sun Jan 26 2026 - US-005
-- Implemented improved strategy list grid layout with animations
+## 2026-01-31 - US-004
+- What was implemented: Unit tests for the rule generator service
 - Files changed:
-  - src/app/(protected)/strategies/page.tsx (added stagger-children, CTA card)
-  - src/styles/globals.css (extended stagger-children to 12 items, added prefers-reduced-motion)
-- **What was implemented:**
-  - Added `stagger-children` class to the strategies grid for staggered fade-in animation
-  - Extended CSS with child delays for nth-child 9-12 (animation-delay: 0.9s-1.2s)
-  - Added @media (prefers-reduced-motion) query to disable animations when user prefers reduced motion
-  - Created "Create New Strategy" CTA card with dashed border at end of grid
-  - CTA card has circular Plus icon, monospace text, and hover state with primary color transition
-  - Added data-testid attributes: strategies-grid, strategies-create-cta
+  - tests/unit/rule-generator.test.ts (created) - 32 tests covering all generator functionality
+  - vitest.config.unit.ts (created) - separate config for unit tests without database
+  - vitest.config.ts (updated) - added unit test path to includes
 - **Learnings for future iterations:**
-  - Use existing stagger-children class from globals.css for grid fade-in animations
-  - Always add prefers-reduced-motion support when adding animations
-  - CTA cards in grids should use min-h to match other cards visually
+  - Unit tests don't need database - use separate vitest.config.unit.ts without globalSetup
+  - Run unit tests with: `bunx vitest run --config vitest.config.unit.ts`
+  - Integration tests still use: `bun run test` (requires Docker for PostgreSQL container)
+  - Biome auto-organizes imports when running `bunx biome check --write`
 ---
 
-## Sun Jan 26 2026 - US-006
-- Redesigned empty state with Terminal-style command prompt aesthetic
-- Files changed: src/app/(protected)/strategies/page.tsx
-- **What was implemented:**
-  - Terminal window chrome with traffic light dots (red/yellow/green) and "strategies — empty" title bar
-  - Grid pattern background at 40px cells with opacity-40
-  - BookMarked icon in terminal-style container (border, bg-white/5)
-  - "$ NO STRATEGIES DEFINED" command prompt label in primary color
-  - "Start building your edge" motivating headline
-  - Descriptive text about strategies' purpose
-  - Terminal-style command hint with → prefix: "Create your first strategy to begin tracking"
-  - "$ CREATE FIRST STRATEGY" CTA button with ArrowRight hover animation
-  - Added data-testid attributes: strategies-empty-state, strategies-empty-state-cta
-- **Learnings for future iterations:**
-  - Empty states benefit from terminal chrome wrapper to match other components
-  - Command prompt styling ($, →) adds Terminal personality to messages
-  - Grid pattern at 40px is denser than page background (60px), creating visual hierarchy
-  - Use px-8 for wider CTA buttons in empty states for more prominence
----
-
-## Sun Jan 26 2026 - US-007
-- Implemented Strategy Detail Page Layout with view-first experience
-- Files changed: src/app/(protected)/strategies/[id]/page.tsx
-- **What was implemented:**
-  - Restructured page for view-first experience (hero section first, form at bottom)
-  - Terminal window chrome wrapping hero with traffic light dots and dynamic title bar (strategy name as slug)
-  - Hero section with strategy color gradient background (135deg from color/15 to transparent)
-  - Large strategy name (text-3xl sm:text-4xl) prominently displayed
-  - Status badge with pulsing indicator for active, muted for inactive
-  - Strategy description displayed below status if available
-  - "Edit Strategy" button that scrolls to form section using ref
-  - Quick stats row with 4 metrics: Trades, Win Rate, Total P&L, Profit Factor
-  - Stats show "—" placeholder when no trades exist, profit/loss coloring when they do
-  - Action bar with back button (Back to Strategys), duplicate, and delete buttons
-  - Updated loading skeleton to match new hero/terminal chrome structure
-  - Added data-testid attributes: strategy-detail-page, strategy-detail-loading, strategy-detail-not-found, strategy-detail-action-bar, strategy-detail-hero, strategy-detail-name, strategy-detail-status, strategy-detail-stats, strategy-detail-form
-- **Learnings for future iterations:**
-  - Use useRef + scrollIntoView for "scroll to section" buttons instead of modals for simpler UX
-  - Biome CSS class ordering: text-profit/text-loss must come before text-xs (color before size)
-  - Biome formatting: long template literals need Math.abs on separate line for readability
-  - For strategy name in title bar, use .toLowerCase().replace(/\s+/g, "-") for slug format
----
-
-## Sun Jan 26 2026 - US-008
-- Implemented Strategy Detail - Rules Display Section
+## 2026-01-31 - US-005
+- What was implemented: Added enabled toggle flags to RiskParameters interface
 - Files changed:
-  - src/components/strategy/strategy-rules-display.tsx (new)
-  - src/components/strategy/index.ts (added export)
-  - src/app/(protected)/strategies/[id]/page.tsx (added rules section)
-- **What was implemented:**
-  - New StrategyRulesDisplay component with 2x2 grid layout (sm:grid-cols-2)
-  - Each category has terminal window chrome header with traffic light dots
-  - Title bar shows "{category}.rules" in terminal style
-  - Category header with icon (Target for entry, DoorOpen for exit, ShieldAlert for risk, LayoutGrid for management)
-  - Category colors: entry=profit, exit=loss, risk=breakeven, management=accent
-  - Rule count shown per category ("X rules" or "1 rule")
-  - Rules displayed as non-interactive checklist items with arrow indicator
-  - Empty categories show "No rules defined" placeholder
-  - Global empty state with terminal chrome and dashed border when no rules exist
-  - Section integrated into strategy detail page between stats and form
-  - Added data-testid attributes: strategy-rules-display, strategy-rules-display-empty, strategy-rules-display-{category}, strategy-rule-{id}
+  - src/components/strategy/risk-config.tsx (updated) - added enabled flags to interface
+  - src/server/api/routers/strategies.ts (updated) - updated Zod schema
 - **Learnings for future iterations:**
-  - Biome CSS class ordering: border-white/10 must come before border-dashed
-  - Biome formatting requires multiline object literals when line exceeds length
-  - Use Record<Category, Type> for type-safe category configs
-  - Category icons: Target (entry), DoorOpen (exit), ShieldAlert (risk), LayoutGrid (management)
+  - RiskParameters interface is in src/components/strategy/risk-config.tsx
+  - Nested objects like positionSizing, maxRiskPerTrade, dailyLossLimit get `.enabled` property
+  - Standalone fields like maxConcurrentPositions and minRRRatio use separate `*Enabled` boolean
+  - Zod schema in strategies router must mirror the TypeScript interface exactly
 ---
 
-## Sun Jan 26 2026 - US-009
-- Implemented Strategy Detail - Entry/Exit Criteria Display
+## 2026-01-31 - US-006
+- What was implemented: Toggle switches for "Track as rule" in Risk Config UI
 - Files changed:
-  - src/components/strategy/strategy-criteria-display.tsx (new)
-  - src/components/strategy/index.ts (added export)
-  - src/app/(protected)/strategies/[id]/page.tsx (added criteria section)
-- **What was implemented:**
-  - New StrategyCriteriaDisplay component with two-column grid layout (sm:grid-cols-2)
-  - CriteriaCard internal component for reusable card styling
-  - Terminal window chrome header with traffic light dots
-  - Title bar shows file name (entry.criteria, exit.rules)
-  - Command prompt prefix (>) with category icon and uppercase title
-  - Entry criteria: text-profit color, Target icon
-  - Exit rules: text-loss color, DoorOpen icon
-  - Text displayed in monospace with whitespace-pre-wrap for line breaks
-  - Empty state shows "Not defined" placeholder with centered text
-  - Dashed border when no content exists
-  - Section integrated into strategy detail page between rules and form sections
-  - Added data-testid attributes: strategy-criteria-display, strategy-criteria-entry, strategy-criteria-exit
+  - src/components/ui/switch.tsx (created) - Radix Switch component following Terminal design
+  - src/components/strategy/risk-config.tsx (updated) - Added toggle switches to all field sections
+  - package.json (updated) - Added @radix-ui/react-switch dependency
 - **Learnings for future iterations:**
-  - Re-use existing icon patterns from strategy-rules-display (Target for entry, DoorOpen for exit)
-  - whitespace-pre-wrap preserves line breaks in user-entered text
-  - Conditional border style (solid vs dashed) based on content availability
+  - Switch component uses @radix-ui/react-switch - must install package first
+  - Terminal design for Switch: border-white/20, bg-white/5, data-[state=checked]:bg-primary
+  - When updating nested objects (positionSizing, maxRiskPerTrade, etc.), use spread operator to preserve existing fields like `enabled`
+  - Biome enforces CSS class sorting - run check to see suggested fixes
 ---
 
-## Sun Jan 26 2026 - US-010
-- Implemented Strategy Detail - Risk Parameters Display
+## 2026-01-31 - US-007
+- What was implemented: Added enabled toggle flags to ScalingRules interface
 - Files changed:
-  - src/components/strategy/strategy-risk-display.tsx (new)
-  - src/components/strategy/index.ts (added export)
-  - src/app/(protected)/strategies/[id]/page.tsx (added risk section)
-- **What was implemented:**
-  - New StrategyRiskDisplay component with terminal window chrome
-  - Traffic light dots header with "risk.config" filename
-  - Command prompt header (>) with ShieldAlert icon in breakeven color
-  - 5-column responsive grid for risk values (stacks to single column on mobile)
-  - Position Sizing: Formats based on method (Fixed "X lots", Risk "X%", Kelly "X% Kelly")
-  - Max Risk/Trade: Formats as $ or % based on type
-  - Daily Loss Limit: Formats as $ or % based on type
-  - Max Positions: Simple number display
-  - Min R:R Ratio: Formats as "X.X:1" ratio
-  - Each value has micro-label above and large value below
-  - Empty values show "—" placeholder
-  - Empty state with dashed border and "Risk parameters not configured" message
-  - Section added to strategy detail page between criteria and form sections
-  - Added data-testid attributes: strategy-risk-display, strategy-risk-display-empty, strategy-risk-position-sizing, strategy-risk-max-risk, strategy-risk-daily-loss, strategy-risk-max-positions, strategy-risk-min-rr
+  - src/components/strategy/scaling-config.tsx (updated) - added enabled?: boolean to scaleIn and scaleOut array items
+  - src/server/api/routers/strategies.ts (updated) - updated Zod scalingRulesSchema
 - **Learnings for future iterations:**
-  - Import RiskParameters type from risk-config.tsx for type safety
-  - Use grid-cols-1 sm:grid-cols-5 for responsive risk value grids
-  - Format functions should return null (not undefined) for conditional rendering
-  - ShieldAlert icon fits well for risk-related sections
+  - ScalingRules interface is in src/components/strategy/scaling-config.tsx
+  - Array items (scaleIn/scaleOut rules) get their own `.enabled` property per item
+  - This is different from RiskParameters where enabled flags were on parent objects or as separate booleans
 ---
 
-## Sun Jan 26 2026 - US-011
-- Implemented Strategy Detail - Placeholder Sections
+## 2026-01-31 - US-008
+- What was implemented: Toggle switches for each scale-in and scale-out rule row
 - Files changed:
-  - src/components/strategy/strategy-placeholder.tsx (new)
-  - src/components/strategy/index.ts (added export)
-  - src/app/(protected)/strategies/[id]/page.tsx (added placeholder section)
-- **What was implemented:**
-  - New StrategyPlaceholder component with two-column grid layout (sm:grid-cols-2)
-  - PlaceholderSection internal component for reusable card styling
-  - Terminal window chrome with muted traffic light dots (opacity /40)
-  - Overall card opacity-60 for clear "coming soon" visual treatment
-  - Dashed borders throughout for placeholder aesthetic
-  - Equity Curve placeholder with LineChart icon and descriptive text
-  - Recent Trades placeholder with List icon and descriptive text
-  - COMING SOON badge in primary color for each section
-  - Descriptive filenames in title bar (equity-curve.chart, recent-trades.list)
-  - Icon containers with border + bg-white/2 styling
-  - Section added to strategy detail page under "→ Performance Analytics" heading
-  - Added data-testid attributes: strategy-placeholder-section, strategy-placeholder-equity-curve, strategy-placeholder-recent-trades
+  - src/components/strategy/scaling-config.tsx (updated) - added Switch import and compact toggle to each rule row
 - **Learnings for future iterations:**
-  - Use opacity-60 on entire container for clear placeholder treatment
-  - Muted traffic light dots (/40 instead of /60) distinguish placeholder chrome from active chrome
-  - Descriptive filenames with .chart/.list extensions add terminal authenticity
-  - Dashed borders throughout (border + border-b) maintain visual consistency
+  - For array item toggles, add a compact vertical layout: "Track" label + Switch below Size % input
+  - Update the field union type to include "enabled" in update functions (updateScaleIn, updateScaleOut)
+  - Reuse the existing Switch component from ui/switch.tsx
 ---
 
-
-## Sun Jan 26 2026 - US-012
-- Implemented Strategy Detail - Action Bar completion
-- Files changed: src/app/(protected)/strategies/[id]/page.tsx
-- **What was implemented:**
-  - Added Edit button to action bar (alongside existing Duplicate and Delete)
-  - Edit button scrolls to form section (reuses existing scrollToForm function)
-  - Added comprehensive data-testid attributes for E2E testing:
-    - strategy-detail-action-back (back button)
-    - strategy-detail-action-edit (edit button)
-    - strategy-detail-action-duplicate (duplicate button)
-    - strategy-detail-action-delete (delete button)
-  - All buttons follow Terminal design pattern (monospace, uppercase, tracking-wider)
-  - Mobile-friendly with 44px touch targets (min-h-[44px] or min-h-[36px] min-w-[36px] for icon buttons)
-  - Icon-only buttons on mobile, full labels on desktop (sm:inline)
-- **Learnings for future iterations:**
-  - Action bar buttons pattern: variant="outline" for primary actions, variant="ghost" for secondary (delete)
-  - Mobile icon buttons use size={isMobile ? "icon" : "sm"} pattern with useIsMobile() hook
-  - All interactive elements in action bar should have data-testid following [component]-[element]-[action] convention
----
-
-## Sun Jan 26 2026 - US-013
-- Implemented Page Transitions and Animations
+## 2026-01-31 - US-009
+- What was implemented: Added enabled toggle flags to TrailingRules interface
 - Files changed:
-  - src/styles/globals.css (new keyframes, stagger-sections class, updated timing)
-  - src/app/(protected)/strategies/page.tsx (loading skeletons updated)
-  - src/app/(protected)/strategies/[id]/page.tsx (stagger-sections class, loading skeletons, stat hover effects)
-- **What was implemented:**
-  - New `stagger-sections` CSS class for page-level sequential fade-in animations
-  - New `fade-in-up-subtle` keyframe with 10px translateY (vs 20px for regular fade-in-up)
-  - Strategy detail page uses stagger-sections for smooth section-by-section reveal
-  - Loading skeletons updated to match terminal-chrome card design:
-    - Action bar skeleton with proper sizing
-    - Hero section with terminal chrome header, color dot, title, status badge
-    - Stats grid with individual card skeletons
-    - Rules section with 2x2 grid of terminal-chrome cards
-  - Stat cards now have hover effects (transition-all duration-200, hover:border-white/10, hover:bg-white/3)
-  - Animation durations reduced: stagger-sections uses 250ms, stagger-children uses 300ms
-  - stagger-children delays tightened to 50ms intervals (was 100ms)
-  - prefers-reduced-motion properly disables all stagger and fade animations
+  - src/components/strategy/trailing-config.tsx (updated) - added enabled?: boolean to moveToBreakeven and trailStops array items
+  - src/server/api/routers/strategies.ts (updated) - updated Zod trailingRulesSchema
 - **Learnings for future iterations:**
-  - For page-level animations, use smaller translateY (10px) for subtlety vs grid items (20px)
-  - Keep animation durations in 200-300ms range for "quick but noticeable" feel
-  - Loading skeletons should mirror the actual component structure for smooth visual transition
-  - Always extend prefers-reduced-motion rules when adding new animation classes
+  - TrailingRules interface is in src/components/strategy/trailing-config.tsx
+  - moveToBreakeven is an optional object → add `.enabled` property inside it
+  - trailStops is an array → each item gets its own `.enabled` property
+  - Pattern matches ScalingRules: parent objects/arrays get enabled at the item level
 ---
 
-## Sun Jan 26 2026 - US-014
-- Implemented Mobile Optimization Pass for all strategy components
+## 2026-01-31 - US-010
+- What was implemented: Toggle switches for "Track" in Trailing Config UI
 - Files changed:
-  - src/components/strategy/strategy-leaderboard.tsx
-  - src/components/strategy/strategy-card.tsx
-  - src/components/strategy/strategy-rules-display.tsx
-  - src/components/strategy/strategy-criteria-display.tsx
-  - src/components/strategy/strategy-risk-display.tsx
-  - src/components/strategy/strategy-placeholder.tsx
-  - src/app/(protected)/strategies/page.tsx
-  - src/app/(protected)/strategies/[id]/page.tsx
-- **What was implemented:**
-  - Terminal chrome scaled down on mobile: traffic light dots 1.5px (sm:2px), padding reduced
-  - Responsive typography: text-[9px] on mobile vs text-[10px] desktop for micro-labels
-  - Leaderboard uses compact layout: gap-3 (sm:gap-4), space-y-2, rank badges 7px (sm:8px)
-  - Risk display uses 2-column grid on mobile (sm:grid-cols-5)
-  - All interactive elements maintain min-h-[44px] or min-h-[48px] for touch targets
-  - Title bar text truncated with max-w-[180px] on mobile to prevent overflow
-  - Loading skeletons updated to match mobile terminal chrome sizes
-  - Strategy card dropdown menu trigger 8px (sm:6px) for easier tapping
-  - Placeholder sections use smaller icons (6px vs 8px) and tighter padding
+  - src/components/strategy/trailing-config.tsx (updated) - Added Switch import, toggles to breakeven and trail stop rows
 - **Learnings for future iterations:**
-  - Use consistent responsive pattern: h-1.5 w-1.5 sm:h-2 sm:w-2 for traffic light dots
-  - Font sizes: text-[8px]/text-[9px] for mobile micro-labels, text-[10px]/text-[11px] for desktop
-  - Terminal chrome padding: px-3 py-1.5 sm:px-4 sm:py-2
-  - Right-side spacer widths: w-10 sm:w-14 to balance asymmetry
-  - For 2-col mobile grids with border separators, use odd:border-r to handle right borders
-  - Touch target minimums: 44x44px for standard buttons, 48px for important CTAs
+  - Pattern for adding toggles matches scaling-config.tsx exactly: flex col with "Track" label above Switch
+  - For move-to-breakeven: changed grid from 2 cols to 3 cols to accommodate toggle
+  - For trail stop rules: add toggle between Method select and Delete button
+  - Update function union type must include "enabled" (e.g., `field: "triggerR" | "method" | "value" | "enabled"`)
+  - Update function value type must include boolean for enabled field
 ---
 
-## Sun Jan 26 2026 - US-015
-- Implemented E2E Tests for Strategies Redesign
+## 2026-01-31 - US-011
+- What was implemented: tRPC endpoint to sync auto-generated rules with strategy config
 - Files changed:
-  - tests/e2e/strategies-redesign.spec.ts (new file, 266 lines)
-- **What was implemented:**
-  - 7 comprehensive E2E tests covering strategies list and detail pages
-  - Test: loads successfully with header and new button
-  - Test: page loads without errors
-  - Test: displays strategy cards or empty state
-  - Test: strategy card shows terminal chrome and stats
-  - Test: navigates from list to detail and displays all sections
-  - Test: back button navigates to strategies list
-  - Test: empty state has CTA button when no strategies
-  - Uses data-testid selectors for reliability across browsers
-  - Tests pass on Chromium; Firefox/WebKit have occasional timeout flakiness
+  - src/server/api/routers/strategies.ts (updated) - added syncGeneratedRules mutation
+  - src/lib/strategy/rule-generator.ts (updated) - rule generator now respects enabled flags
+  - tests/unit/rule-generator.test.ts (updated) - added enabled flags to test data, new tests for enabled behavior
 - **Learnings for future iterations:**
-  - E2E tests should use explicit waits rather than polling loops
-  - Use `.or()` for alternative elements: `expect(grid.or(emptyState)).toBeVisible()`
-  - Conditional tests with `if (!(await element.isVisible())) return;` handle optional data gracefully
-  - Firefox and WebKit are slower than Chromium - increase timeouts when needed
-  - Keep E2E tests simple and focused on core user flows to reduce flakiness
+  - Rule generator must check enabled flags before generating rules (e.g., `riskParams.maxRiskPerTrade?.enabled`)
+  - For risk params: nested objects have `.enabled` inside, standalone fields use separate `*Enabled` boolean
+  - For scaling/trailing: each array item has its own `.enabled` flag
+  - syncGeneratedRules compares by configSource key and sourceConfigHash for change detection
+  - Only isGenerated: true rules are synced; manual rules (isGenerated: false) are preserved
+  - Return { added, updated, deleted } counts for visibility into sync operations
+---
+
+## 2026-01-31 - US-012
+- What was implemented: Integrated rule sync into strategy create and update mutations
+- Files changed:
+  - src/server/api/routers/strategies.ts (updated) - added syncGeneratedRulesInternal helper, integrated into create/update/duplicate
+- **Learnings for future iterations:**
+  - Extract shared logic into internal helper functions for reuse across mutations
+  - syncGeneratedRulesInternal takes db, strategyId, and config objects directly (no need to fetch strategy again)
+  - When updating, preserve manual rules by only deleting isGenerated: false rules
+  - Duplicate mutation must copy ALL rule properties including ruleType, configSource, autoCondition, isGenerated, sourceConfigHash
+  - Import `PostgresJsDatabase` type from "drizzle-orm/postgres-js" for db parameter typing
+  - Import schema types with `import type * as schema from "@/server/db/schema"` for generic typing
+---
+
+## 2026-01-31 - US-013
+- What was implemented: Integration tests for rule syncing functionality
+- Files changed:
+  - tests/integration/strategy-rules-sync.test.ts (created) - 17 test cases covering all sync scenarios
+- **Learnings for future iterations:**
+  - Integration test pattern: beforeAll/afterAll with truncateAllTables(), setupTrader() or createTestUser() + createTestCaller()
+  - Test file structure: describe blocks for each acceptance criterion, it() for specific test cases
+  - Strategies router tests can use caller.strategies.create/update/getById to test full flow
+  - Manual rule insertion for testing orphaned rules: use getTestDb() to insert directly via db.insert(schema.strategyRules)
+  - Docker is REQUIRED for integration tests - testcontainers needs a running container runtime
+  - Test that hash prevents updates by creating strategy, getting hash, updating with same values, verifying hash unchanged
+  - Test config sections: riskParameters (nested .enabled), scalingRules (array item .enabled), trailingRules (mixed)
+---
+
+## 2026-01-31 - US-014
+- What was implemented: Auto-Evaluation Engine with 6 core evaluators for strategy rules
+- Files changed:
+  - src/lib/strategy/evaluation.ts (created) - 548 lines with all evaluators and context interface
+  - src/lib/strategy/index.ts (updated) - added evaluation export
+- **Learnings for future iterations:**
+  - Evaluation pattern: each evaluator returns AutoEvaluationResult with passed, actual, expected, details, dataQuality
+  - Three result helpers: passedResult(), failedResult(), unavailableResult() for consistent response format
+  - EvaluationContext provides: executions, dayTrades, concurrentTradesAtEntry, mfeR, accountBalance
+  - TradeForEvaluation is a minimal interface with only fields needed for evaluation
+  - calculatePlannedRR from src/lib/trades/calculations.ts is reusable for R:R calculation
+  - getPointValue from src/lib/market-data handles both futures and forex point values
+  - For breakeven trigger: if MFE doesn't reach trigger, rule passes as "not applicable"
+  - For scale out: allow 10% price tolerance and 20% quantity tolerance for matching executions
+  - trailingStopTrigger returns unavailable - it's semi_auto requiring manual verification
+  - Exhaustive switch statement requires block scope: `default: { const _exhaustive: never = ... }`
+---
+
+## 2026-01-31 - US-015
+- What was implemented: buildEvaluationContext helper to fetch all data required for auto-evaluation
+- Files changed:
+  - src/lib/strategy/evaluation.ts (updated) - added buildEvaluationContext and 4 helper functions
+- **Learnings for future iterations:**
+  - Use `typeof db from "@/server/db"` pattern for db type (same as helpers.ts uses)
+  - Promise.all for parallel queries minimizes DB round trips
+  - TradeWithAccount interface includes all fields needed for evaluation context building
+  - Same-day trades query uses getDayBoundsInTimezone with user's timezone setting
+  - Concurrent trades counted as: trades entered before this trade's entry AND (still open OR exited after entry)
+  - Account balance comes from account.initialBalance - may want current balance in future
+  - MFE in R already implemented as calculateMfeInR - just reused it
+---
+
+## 2026-01-31 - US-016
+- What was implemented: evaluateTradeRules tRPC endpoint for auto-evaluating strategy rules against trade data
+- Files changed:
+  - src/server/api/routers/strategies.ts (updated) - added evaluateTradeRules mutation
+- **Learnings for future iterations:**
+  - Import buildEvaluationContext and evaluateAutoCondition from "@/lib/strategy" barrel
+  - When upserting tradeRuleChecks, use onConflictDoUpdate on composite key [tradeId, ruleId]
+  - Don't overwrite userOverride field when auto-evaluating - preserve user's manual override
+  - Filter rules by `ruleType !== "manual"` to get auto/semi_auto rules
+  - Parse autoCondition as JSON from rule record before passing to evaluateAutoCondition
+  - Pass trade data as TradeForEvaluation interface (minimal subset) to evaluator
+---
+
+## 2026-01-31 - US-017
+- What was implemented: Integration tests for strategy auto-evaluation engine
+- Files changed:
+  - tests/integration/strategy-evaluation.test.ts (created) - 23 test cases
+- **Learnings for future iterations:**
+  - Test pattern for evaluators: create strategy with enabled config, create trade with DB insert, call evaluateTradeRules, assert on results
+  - For testing scale out evaluator, must create TradeExecution records via db.insert(schema.tradeExecutions)
+  - For testing daily loss limit, create multiple trades on same day before the test trade
+  - For testing concurrent positions, create trades with overlapping entry/exit times
+  - Missing data tests: omit stopLoss/takeProfit/mfePrice fields to trigger dataQuality: 'unavailable'
+  - Trade needs strategyId set to link to strategy, otherwise evaluateTradeRules throws "Trade has no strategy assigned"
+  - Use getTestDb() and schema.trades for direct trade insertion when testing specific field combinations
+  - Docker is REQUIRED for integration tests - testcontainers needs a running container runtime
+---
+
+## 2026-01-31 - US-018
+- What was implemented: Rule type badges (AUTO, SEMI, MANUAL) for strategy rules display
+- Files changed:
+  - src/components/strategy/strategy-rules-display.tsx (updated) - added RuleTypeBadge component with RULE_TYPE_CONFIG
+  - src/app/(protected)/strategies/[id]/page.tsx (updated) - formRules now includes ruleType
+- **Learnings for future iterations:**
+  - Use RULE_TYPE_CONFIG pattern for badge styling (label, icon, bgClass, textClass)
+  - Rule interface must include ruleType as optional for backwards compatibility
+  - When passing rules to display components, remember to include new fields from schema
+  - Badge styling: inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[8px]
+  - Test badges: data-testid={`rule-type-badge-${ruleType}`} for E2E testing
+---
+
+## 2026-01-31 - US-019
+- What was implemented: Enhanced trade checklist with auto-evaluation display
+- Files changed:
+  - src/components/strategy/rule-checklist.tsx (updated) - Added auto-evaluation display, override functionality
+  - src/server/api/routers/strategies.ts (updated) - checkRule mutation now supports userOverride field
+- **Learnings for future iterations:**
+  - Use parseEvaluationResult helper to safely parse JSON evaluation results from string
+  - AutoEvaluationResult type from lib/strategy provides proper typing for evaluation results
+  - For auto-evaluated rules: show CheckCircle (green) or XCircle (red) instead of checkbox
+  - Override mode uses local useState to track which rules user wants to override
+  - When overriding, pass userOverride: true to checkRule mutation
+  - Disabled checkboxes need cursor-default on label, and htmlFor should be undefined
+  - Pattern for conditional indicator: isAutoRule && isAutoEvaluated && !isInOverrideMode
+  - data-testid convention for rule items: rule-checklist-item-{id}, rule-eval-passed-{id}, rule-eval-failed-{id}
+  - RuleTypeBadge component can be reused - show OVERRIDDEN badge in orange when userOverride is true
+---
+
+## 2026-01-31 - US-020
+- What was implemented: User override for auto-evaluated rules (badge update)
+- Files changed:
+  - src/components/strategy/rule-checklist.tsx (updated) - Fixed isOverridden badge to show when in override mode
+- **Learnings for future iterations:**
+  - Most override functionality was already implemented in US-019 (Override button, handleCheck with userOverride, checkRule mutation)
+  - The missing piece was showing OVERRIDDEN badge when user enters override mode (not just when saved)
+  - Badge condition should be: hasUserOverride (from server) OR isInOverrideMode (local state)
+  - This provides immediate visual feedback when user clicks Override button
+---
+
+## 2026-01-31 - US-021
+- What was implemented: Auto-evaluation triggered when trade closes
+- Files changed:
+  - src/server/api/routers/trades.ts (updated) - Added autoEvaluateTradeRules helper and integrated into close/update mutations
+- **Learnings for future iterations:**
+  - Use same pattern as strategies router's evaluateTradeRules - reuse buildEvaluationContext and evaluateAutoCondition
+  - Helper function catches errors and logs them - trade close should NEVER fail due to evaluation errors
+  - Check for strategyId before calling evaluation (skip trades without strategies)
+  - For update mutation, check if isBeingClosed (status changing from non-closed to closed)
+  - Import type `db as DbType` for Db type definition (same pattern as evaluation.ts)
+  - Preserve userOverride field when upserting tradeRuleChecks - don't overwrite existing overrides
+---
+
+## 2026-01-31 - US-022
+- What was implemented: E2E tests for strategy checklist flow
+- Files changed:
+  - tests/e2e/strategy-checklist.spec.ts (created) - 10 E2E tests covering full checklist flow
+  - src/components/strategy/strategy-form.tsx (updated) - Added data-testid attributes
+  - src/components/strategy/risk-config.tsx (updated) - Added data-testid to toggle and input
+  - src/components/strategy/rule-checklist.tsx (updated) - Added data-testid to compliance section
+- **Learnings for future iterations:**
+  - data-testid naming: [component]-[element]-[qualifier] e.g., strategy-form-tab-risk
+  - E2E tests should gracefully handle cases where data doesn't exist (use .isVisible() checks)
+  - For tests that depend on existing data, use conditional logic to skip if no data exists
+  - Playwright strict mode: always use data-testid for reliable selectors, never CSS classes
+  - Use .first() when a testid might match multiple elements (e.g., autoBadge.first())
+  - waitForURL with regex pattern is useful for dynamic route navigation checks
 ---

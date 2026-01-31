@@ -128,8 +128,8 @@ export default function StrategyDetailPage() {
 				</div>
 
 				{/* Loading skeleton for hero with terminal chrome */}
-				<div className="overflow-hidden rounded border border-white/10">
-					<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
+				<div className="overflow-hidden rounded border border-border">
+					<div className="flex items-center justify-between border-border/50 border-b bg-muted px-4 py-2">
 						<div className="flex items-center gap-1.5">
 							<div className="h-2 w-2 rounded-full bg-loss/60" />
 							<div className="h-2 w-2 rounded-full bg-breakeven/60" />
@@ -156,7 +156,7 @@ export default function StrategyDetailPage() {
 				<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
 					{[1, 2, 3, 4].map((i) => (
 						<div
-							className="rounded border border-white/5 bg-white/2 p-3 sm:p-4"
+							className="rounded border border-border/50 bg-muted p-3 sm:p-4"
 							key={i}
 						>
 							<Skeleton className="mb-2 h-3 w-12" />
@@ -171,10 +171,10 @@ export default function StrategyDetailPage() {
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 						{[1, 2, 3, 4].map((i) => (
 							<div
-								className="overflow-hidden rounded border border-white/10"
+								className="overflow-hidden rounded border border-border"
 								key={i}
 							>
-								<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2">
+								<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-2">
 									<div className="flex items-center gap-1.5">
 										<Skeleton className="h-2 w-2 rounded-full" />
 										<Skeleton className="h-2 w-2 rounded-full" />
@@ -222,13 +222,24 @@ export default function StrategyDetailPage() {
 		);
 	}
 
-	// Transform rules for the form
-	const formRules = strategy.rules.map((rule) => ({
+	// All rules for display (includes generated rules from config toggles)
+	const allRules = strategy.rules.map((rule) => ({
 		id: rule.id,
 		text: rule.text,
 		category: rule.category,
 		order: rule.order,
+		ruleType: rule.ruleType,
 	}));
+
+	// Manual rules only for the form (generated rules can't be edited manually)
+	const manualRules = strategy.rules
+		.filter((rule) => !rule.isGenerated)
+		.map((rule) => ({
+			id: rule.id,
+			text: rule.text,
+			category: rule.category,
+			order: rule.order,
+		}));
 
 	const color = strategy.color ?? "#d4ff00";
 	const isActive = strategy.isActive !== false;
@@ -327,11 +338,11 @@ export default function StrategyDetailPage() {
 
 			{/* Hero Section with Terminal Chrome */}
 			<div
-				className="overflow-hidden rounded border border-white/10"
+				className="overflow-hidden rounded border border-border"
 				data-testid="strategy-detail-hero"
 			>
 				{/* Terminal window chrome header */}
-				<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+				<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 					<div className="flex items-center gap-1 sm:gap-1.5">
 						<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 						<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -417,7 +428,7 @@ export default function StrategyDetailPage() {
 				className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"
 				data-testid="strategy-detail-stats"
 			>
-				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
+				<div className="rounded border border-border/50 bg-muted p-3 transition-all duration-200 hover:border-border hover:bg-muted/80 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Trades
 					</div>
@@ -425,7 +436,7 @@ export default function StrategyDetailPage() {
 						{hasTrades ? stats.totalTrades : "—"}
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
+				<div className="rounded border border-border/50 bg-muted p-3 transition-all duration-200 hover:border-border hover:bg-muted/80 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Win Rate
 					</div>
@@ -442,7 +453,7 @@ export default function StrategyDetailPage() {
 						{hasTrades ? `${stats.winRate.toFixed(0)}%` : "—"}
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
+				<div className="rounded border border-border/50 bg-muted p-3 transition-all duration-200 hover:border-border hover:bg-muted/80 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Total P&L
 					</div>
@@ -466,7 +477,7 @@ export default function StrategyDetailPage() {
 							: "—"}
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-3 transition-all duration-200 hover:border-white/10 hover:bg-white/3 sm:p-4">
+				<div className="rounded border border-border/50 bg-muted p-3 transition-all duration-200 hover:border-border hover:bg-muted/80 sm:p-4">
 					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 						Profit Factor
 					</div>
@@ -490,7 +501,7 @@ export default function StrategyDetailPage() {
 				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
 					→ Strategy Rules
 				</h2>
-				<StrategyRulesDisplay rules={formRules} />
+				<StrategyRulesDisplay rules={allRules} />
 			</section>
 
 			{/* Entry/Exit Criteria Section */}
@@ -519,9 +530,9 @@ export default function StrategyDetailPage() {
 				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
 					→ Edit Strategy
 				</h2>
-				<div className="overflow-hidden rounded border border-white/10">
+				<div className="overflow-hidden rounded border border-border">
 					{/* Terminal window chrome header */}
-					<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+					<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 						<div className="flex items-center gap-1 sm:gap-1.5">
 							<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 							<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -544,7 +555,7 @@ export default function StrategyDetailPage() {
 								scalingRules: strategy.scalingRules,
 								trailingRules: strategy.trailingRules,
 								isActive: strategy.isActive ?? true,
-								rules: formRules,
+								rules: manualRules,
 							}}
 							isSubmitting={updateMutation.isPending}
 							onSubmit={handleSubmit}

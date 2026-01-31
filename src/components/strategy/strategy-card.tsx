@@ -64,11 +64,11 @@ export function StrategyCard({
 				!isTopPerformer && isActive && isProfit && "border-profit/30",
 				!isTopPerformer && isActive && isLoss && "border-loss/30",
 				// Default border for strategies without clear P&L status
-				!isTopPerformer && isActive && !isProfit && !isLoss && "border-white/5",
+				!isTopPerformer && isActive && !isProfit && !isLoss && "border-border",
 				// Inactive strategies get muted border
-				!isActive && "border-white/5",
+				!isActive && "border-border",
 				// Hover states (only for active)
-				isActive && "hover:border-white/20",
+				isActive && "hover:border-primary/30",
 			)}
 			data-testid="strategy-card"
 			style={
@@ -79,13 +79,7 @@ export function StrategyCard({
 		>
 			{/* Top performer persistent glow */}
 			{isTopPerformer && isActive && (
-				<div
-					className="absolute inset-0"
-					style={{
-						boxShadow:
-							"inset 0 0 40px rgba(212, 255, 0, 0.08), 0 0 30px rgba(212, 255, 0, 0.05)",
-					}}
-				/>
+				<div className="absolute inset-0 shadow-[inset_0_0_40px_hsl(var(--primary)/0.08),0_0_30px_hsl(var(--primary)/0.05)]" />
 			)}
 
 			{/* Hover glow effect using strategy color (only for active, non-top-performer) */}
@@ -102,7 +96,7 @@ export function StrategyCard({
 			)}
 
 			{/* Terminal window chrome header */}
-			<div className="relative flex min-h-[36px] items-center justify-between border-white/5 border-b bg-white/2 px-2 py-1.5 sm:min-h-0 sm:px-3 sm:py-2">
+			<div className="relative flex min-h-[36px] items-center justify-between border-border/50 border-b bg-muted px-2 py-1.5 sm:min-h-0 sm:px-3 sm:py-2">
 				<div className="flex items-center gap-1 sm:gap-1.5">
 					<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 					<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -204,7 +198,7 @@ export function StrategyCard({
 						className="absolute top-3 right-3"
 						data-testid="strategy-card-no-trades-badge"
 					>
-						<span className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+						<span className="rounded border border-border bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							No trades yet
 						</span>
 					</div>
@@ -212,7 +206,7 @@ export function StrategyCard({
 
 				{/* Rule count badge */}
 				<div className="absolute right-3 bottom-3">
-					<span className="rounded border border-white/10 bg-black/40 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+					<span className="rounded border border-border bg-card/80 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						{strategy._count.rules}{" "}
 						{strategy._count.rules === 1 ? "rule" : "rules"} defined
 					</span>
@@ -220,7 +214,7 @@ export function StrategyCard({
 			</div>
 
 			{/* Card content */}
-			<div className="relative bg-white/1 p-4">
+			<div className="relative bg-card p-4">
 				{/* Clickable strategy name */}
 				<Link
 					className="mb-3 block font-mono font-semibold text-lg transition-colors hover:text-primary"
@@ -283,7 +277,7 @@ export function StrategyCard({
 
 				{/* Description if available */}
 				{strategy.description && (
-					<p className="mt-3 line-clamp-2 border-white/5 border-t pt-3 font-mono text-muted-foreground text-xs">
+					<p className="mt-3 line-clamp-2 border-border/50 border-t pt-3 font-mono text-muted-foreground text-xs">
 						{strategy.description}
 					</p>
 				)}

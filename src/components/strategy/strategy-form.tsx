@@ -127,17 +127,22 @@ export function StrategyForm({
 	];
 
 	return (
-		<form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
+		<form
+			className="space-y-4 sm:space-y-6"
+			data-testid="strategy-form"
+			onSubmit={handleSubmit}
+		>
 			{/* Section Tabs - Terminal Style Navigation */}
 			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-				<div className="flex gap-1 border-white/10 border-b pb-3 sm:flex-wrap sm:gap-1.5 sm:pb-4">
+				<div className="flex gap-1 border-border border-b pb-3 sm:flex-wrap sm:gap-1.5 sm:pb-4">
 					{sections.map((section) => (
 						<button
 							className={`min-h-[36px] shrink-0 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all sm:min-h-0 sm:px-3 sm:text-xs ${
 								activeSection === section.id
 									? "border-primary/50 bg-primary/10 text-primary"
-									: "border-transparent bg-white/2 text-muted-foreground hover:border-white/10 hover:bg-white/5"
+									: "border-transparent bg-muted text-muted-foreground hover:border-border hover:bg-muted/80"
 							}`}
+							data-testid={`strategy-form-tab-${section.id}`}
 							key={section.id}
 							onClick={() => setActiveSection(section.id)}
 							type="button"
@@ -163,6 +168,7 @@ export function StrategyForm({
 						</label>
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="strategy-form-input-name"
 							id="strategy-name"
 							onChange={(e) => updateField("name", e.target.value)}
 							placeholder="e.g., Trend Continuation"
@@ -197,8 +203,8 @@ export function StrategyForm({
 								<button
 									className={`h-9 w-9 rounded border-2 transition-all sm:h-8 sm:w-8 ${
 										formData.color === color
-											? "scale-110 border-white"
-											: "border-transparent hover:border-white/30"
+											? "scale-110 border-foreground"
+											: "border-transparent hover:border-border"
 									}`}
 									key={color}
 									onClick={() => updateField("color", color)}
@@ -277,10 +283,22 @@ export function StrategyForm({
 			{/* Rules Checklist Section */}
 			{activeSection === "rules" && (
 				<div className="space-y-4">
+					{/* Info banner about auto-generated rules */}
+					<div className="rounded border border-accent/30 bg-accent/5 p-3 sm:p-4">
+						<p className="font-mono text-accent text-xs sm:text-sm">
+							<span className="font-semibold">Tip:</span> Rules with "Track as
+							rule" enabled in Risk Management, Scaling, and Trailing Stops tabs
+							are automatically added to your checklist.
+						</p>
+						<p className="mt-1 font-mono text-[10px] text-muted-foreground sm:text-xs">
+							Use this section for additional custom rules not covered by those
+							configs.
+						</p>
+					</div>
+
 					<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 						<p className="font-mono text-muted-foreground text-xs sm:text-sm">
-							→ Define rules that you&apos;ll check off when taking trades with
-							this strategy.
+							→ Add custom rules to check off when taking trades.
 						</p>
 						<Button
 							className="min-h-[36px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
@@ -295,21 +313,25 @@ export function StrategyForm({
 					</div>
 
 					{formData.rules.length === 0 ? (
-						<div className="overflow-hidden rounded border border-white/10 border-dashed">
-							<div className="flex items-center justify-between border-white/5 border-b border-dashed bg-white/2 px-3 py-1.5">
+						<div className="overflow-hidden rounded border border-border border-dashed">
+							<div className="flex items-center justify-between border-border/50 border-b border-dashed bg-muted px-3 py-1.5">
 								<div className="flex items-center gap-1">
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
 								</div>
 								<span className="font-mono text-[9px] text-muted-foreground">
-									rules.empty
+									custom-rules.empty
 								</span>
 								<div className="w-10" />
 							</div>
 							<div className="py-6 text-center sm:py-8">
-								<p className="mb-4 font-mono text-muted-foreground text-xs sm:text-sm">
-									No rules defined yet
+								<p className="mb-2 font-mono text-muted-foreground text-xs sm:text-sm">
+									No custom rules defined yet
+								</p>
+								<p className="mb-4 font-mono text-[10px] text-muted-foreground/60 sm:text-xs">
+									Auto-generated rules from config tabs will still appear in
+									your trade checklist
 								</p>
 								<Button
 									className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
@@ -318,7 +340,7 @@ export function StrategyForm({
 									variant="outline"
 								>
 									<Plus className="mr-1 h-3 w-3" />
-									Add Your First Rule
+									Add Custom Rule
 								</Button>
 							</div>
 						</div>
@@ -326,7 +348,7 @@ export function StrategyForm({
 						<div className="space-y-2">
 							{formData.rules.map((rule, idx) => (
 								<div
-									className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-center sm:gap-3"
+									className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-center sm:gap-3"
 									key={rule.id ?? `new-${rule.order}`}
 								>
 									<div className="flex items-center gap-2 sm:gap-3">
@@ -389,9 +411,10 @@ export function StrategyForm({
 			)}
 
 			{/* Submit Button */}
-			<div className="flex items-center justify-end gap-3 border-white/10 border-t pt-4 sm:pt-6">
+			<div className="flex items-center justify-end gap-3 border-border border-t pt-4 sm:pt-6">
 				<Button
 					className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
+					data-testid="strategy-form-button-submit"
 					disabled={isSubmitting || !formData.name}
 					type="submit"
 				>

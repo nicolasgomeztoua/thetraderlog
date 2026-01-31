@@ -1,11 +1,21 @@
 "use client";
 
-import { CheckCircle2, Circle } from "lucide-react";
-import { useCallback, useEffect, useMemo } from "react";
+import {
+	CheckCircle,
+	CheckCircle2,
+	Circle,
+	Info,
+	RotateCcw,
+	XCircle,
+	Zap,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOptimisticState } from "@/hooks/use-debounced-mutation";
 import { cn } from "@/lib/shared";
+import type { AutoEvaluationResult, RuleType } from "@/lib/strategy";
 import { api } from "@/trpc/react";
 
 interface Rule {
@@ -13,11 +23,15 @@ interface Rule {
 	text: string;
 	category: "entry" | "exit" | "risk" | "management";
 	order: number;
+	ruleType?: RuleType;
 }
 
 interface RuleCheck {
 	ruleId: string;
 	checked: boolean;
+	evaluationResult?: string | null;
+	wasAutoEvaluated?: boolean;
+	userOverride?: boolean | null;
 }
 
 interface RuleChecklistProps {
@@ -42,6 +56,84 @@ const CATEGORY_COLORS: Record<string, string> = {
 	management: "text-accent",
 };
 
+// Helper to parse evaluation result JSON
+function parseEvaluationResult(
+	jsonStr: string | null | undefined,
+): AutoEvaluationResult | null {
+	if (!jsonStr) return null;
+	try {
+		return JSON.parse(jsonStr) as AutoEvaluationResult;
+	} catch {
+		return null;
+	}
+}
+
+// Format actual/expected for display
+function formatEvalValue(value: number | string | null): string {
+	if (value === null) return "N/A";
+	if (typeof value === "number") {
+		// Format numbers nicely (e.g., percentages, dollar amounts)
+		if (Math.abs(value) >= 1000) {
+			return `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+		}
+		return value.toFixed(2);
+	}
+	return String(value);
+}
+
+// Rule type badge component
+function RuleTypeBadge({
+	ruleType,
+	isOverridden,
+}: {
+	ruleType: RuleType;
+	isOverridden: boolean;
+}) {
+	if (isOverridden) {
+		return (
+			<span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-orange-500/20 px-1 py-0.5 font-mono text-[8px] text-orange-400">
+				<RotateCcw className="h-2 w-2" />
+				OVERRIDDEN
+			</span>
+		);
+	}
+
+	const config: Record<
+		RuleType,
+		{ label: string; icon: React.ReactNode; className: string }
+	> = {
+		auto: {
+			label: "AUTO",
+			icon: <Zap className="h-2 w-2" />,
+			className: "bg-profit/20 text-profit",
+		},
+		semi_auto: {
+			label: "SEMI",
+			icon: <Info className="h-2 w-2" />,
+			className: "bg-accent/20 text-accent",
+		},
+		manual: {
+			label: "MANUAL",
+			icon: null,
+			className: "bg-white/10 text-muted-foreground",
+		},
+	};
+
+	const { label, icon, className } = config[ruleType];
+
+	return (
+		<span
+			className={cn(
+				"inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[8px]",
+				className,
+			)}
+		>
+			{icon}
+			{label}
+		</span>
+	);
+}
+
 export function RuleChecklist({
 	tradeId,
 	rules,
@@ -49,6 +141,9 @@ export function RuleChecklist({
 	onUpdate,
 	onComplianceChange,
 }: RuleChecklistProps) {
+	// Track which rules are in override mode (user clicked Override button)
+	const [overrideMode, setOverrideMode] = useState<Set<string>>(new Set());
+
 	// Use shared optimistic state utility
 	const {
 		applyUpdate: applyOptimisticUpdate,
@@ -74,11 +169,28 @@ export function RuleChecklist({
 	});
 
 	const handleCheck = useCallback(
-		(ruleId: string, checked: boolean) => {
-			checkRule.mutate({ tradeId, ruleId, checked });
+		(ruleId: string, checked: boolean, isOverride = false) => {
+			checkRule.mutate({
+				tradeId,
+				ruleId,
+				checked,
+				userOverride: isOverride ? true : undefined,
+			});
 		},
 		[tradeId, checkRule],
 	);
+
+	const toggleOverrideMode = useCallback((ruleId: string) => {
+		setOverrideMode((prev) => {
+			const next = new Set(prev);
+			if (next.has(ruleId)) {
+				next.delete(ruleId);
+			} else {
+				next.add(ruleId);
+			}
+			return next;
+		});
+	}, []);
 
 	// Group rules by category
 	const groupedRules = useMemo(() => {
@@ -92,6 +204,14 @@ export function RuleChecklist({
 		}
 		return groups;
 	}, [rules]);
+
+	// Get check data for a rule
+	const getCheckData = useCallback(
+		(ruleId: string): RuleCheck | undefined => {
+			return checks.find((c) => c.ruleId === ruleId);
+		},
+		[checks],
+	);
 
 	// Get check status for a rule (with optimistic updates)
 	const isChecked = useCallback(
@@ -130,9 +250,12 @@ export function RuleChecklist({
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="rule-checklist">
 			{/* Compliance indicator */}
-			<div className="flex items-center justify-between rounded border border-white/10 bg-white/3 p-4">
+			<div
+				className="flex items-center justify-between rounded border border-border bg-muted p-4"
+				data-testid="rule-checklist-compliance"
+			>
 				<div>
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Rule Compliance
@@ -146,6 +269,7 @@ export function RuleChecklist({
 									? "text-breakeven"
 									: "text-loss",
 						)}
+						data-testid="rule-checklist-compliance-value"
 					>
 						{optimisticCompliance.toFixed(0)}%
 					</div>
@@ -181,31 +305,131 @@ export function RuleChecklist({
 								.map((rule) => {
 									const checked = isChecked(rule.id);
 									const checkboxId = `rule-check-${rule.id}`;
+									const checkData = getCheckData(rule.id);
+									const evalResult = parseEvaluationResult(
+										checkData?.evaluationResult,
+									);
+									const isAutoEvaluated = checkData?.wasAutoEvaluated ?? false;
+									const hasUserOverride = checkData?.userOverride === true;
+									const isInOverrideMode = overrideMode.has(rule.id);
+									const isAutoRule =
+										rule.ruleType === "auto" || rule.ruleType === "semi_auto";
+
+									// For auto-evaluated rules: disable checkbox unless user is overriding
+									const isCheckboxDisabled =
+										isAutoRule && isAutoEvaluated && !isInOverrideMode;
+
 									return (
 										<div
 											className={cn(
-												"flex cursor-pointer items-start gap-3 rounded border border-white/5 bg-white/1 p-3 transition-all hover:border-white/10",
+												"rounded border border-border/50 bg-card p-3 transition-all hover:border-border",
 												checked && "border-profit/20 bg-profit/5",
+												!checked &&
+													isAutoEvaluated &&
+													evalResult &&
+													"border-loss/20 bg-loss/5",
 											)}
+											data-testid={`rule-checklist-item-${rule.id}`}
 											key={rule.id}
 										>
-											<Checkbox
-												checked={checked}
-												className="mt-0.5"
-												id={checkboxId}
-												onCheckedChange={(value) =>
-													handleCheck(rule.id, value === true)
-												}
-											/>
-											<label
-												className={cn(
-													"flex-1 cursor-pointer font-mono text-sm",
-													checked ? "text-foreground" : "text-muted-foreground",
+											<div className="flex items-start gap-3">
+												{/* Checkbox or Auto-evaluation indicator */}
+												{isAutoRule && isAutoEvaluated && !isInOverrideMode ? (
+													<div className="mt-0.5">
+														{checked ? (
+															<CheckCircle
+																className="h-4 w-4 text-profit"
+																data-testid={`rule-eval-passed-${rule.id}`}
+															/>
+														) : (
+															<XCircle
+																className="h-4 w-4 text-loss"
+																data-testid={`rule-eval-failed-${rule.id}`}
+															/>
+														)}
+													</div>
+												) : (
+													<Checkbox
+														checked={checked}
+														className="mt-0.5"
+														disabled={isCheckboxDisabled}
+														id={checkboxId}
+														onCheckedChange={(value) =>
+															handleCheck(
+																rule.id,
+																value === true,
+																isInOverrideMode,
+															)
+														}
+													/>
 												)}
-												htmlFor={checkboxId}
-											>
-												{rule.text}
-											</label>
+
+												{/* Rule content */}
+												<div className="flex-1">
+													<div className="flex items-center gap-2">
+														{rule.ruleType && rule.ruleType !== "manual" && (
+															<RuleTypeBadge
+																isOverridden={
+																	hasUserOverride || isInOverrideMode
+																}
+																ruleType={rule.ruleType}
+															/>
+														)}
+														<label
+															className={cn(
+																"flex-1 font-mono text-sm",
+																isCheckboxDisabled
+																	? "cursor-default"
+																	: "cursor-pointer",
+																checked
+																	? "text-foreground"
+																	: "text-muted-foreground",
+															)}
+															htmlFor={
+																isCheckboxDisabled ? undefined : checkboxId
+															}
+														>
+															{rule.text}
+														</label>
+													</div>
+
+													{/* Evaluation details for auto rules */}
+													{isAutoEvaluated && evalResult && (
+														<div
+															className="mt-1.5 flex items-center gap-2"
+															data-testid={`rule-eval-details-${rule.id}`}
+														>
+															<span className="font-mono text-[10px] text-muted-foreground">
+																Actual: {formatEvalValue(evalResult.actual)}
+															</span>
+															<span className="text-muted-foreground/50">
+																/
+															</span>
+															<span className="font-mono text-[10px] text-muted-foreground">
+																Expected: {formatEvalValue(evalResult.expected)}
+															</span>
+															{evalResult.dataQuality !== "full" && (
+																<span className="font-mono text-[8px] text-breakeven">
+																	({evalResult.dataQuality})
+																</span>
+															)}
+														</div>
+													)}
+												</div>
+
+												{/* Override button for auto-evaluated rules */}
+												{isAutoRule && isAutoEvaluated && (
+													<Button
+														className="h-6 shrink-0 font-mono text-[9px]"
+														data-testid={`rule-override-btn-${rule.id}`}
+														onClick={() => toggleOverrideMode(rule.id)}
+														size="sm"
+														variant="ghost"
+													>
+														{isInOverrideMode ? "Cancel" : "Override"}
+													</Button>
+												)}
+											</div>
 										</div>
 									);
 								})}

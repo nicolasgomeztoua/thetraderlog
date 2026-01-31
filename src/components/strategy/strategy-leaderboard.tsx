@@ -29,12 +29,12 @@ function RankBadge({ rank }: { rank: 1 | 2 | 3 }) {
 			bg: "bg-primary/20",
 			border: "border-primary/50",
 			text: "text-primary",
-			glow: "shadow-[0_0_20px_rgba(212,255,0,0.3)]",
+			glow: "shadow-[0_0_20px_hsl(var(--primary)/0.3)]",
 		},
 		2: {
-			bg: "bg-white/10",
-			border: "border-white/30",
-			text: "text-white",
+			bg: "bg-muted",
+			border: "border-border",
+			text: "text-foreground",
 			glow: "",
 		},
 		3: {
@@ -78,10 +78,10 @@ function LeaderboardRow({
 	return (
 		<Link
 			className={cn(
-				"group flex min-h-[56px] items-center gap-3 rounded border bg-white/2 p-3 transition-all hover:bg-white/5 sm:min-h-0 sm:gap-4 sm:p-4",
+				"group flex min-h-[56px] items-center gap-3 rounded border bg-card p-3 transition-all hover:bg-muted sm:min-h-0 sm:gap-4 sm:p-4",
 				isTopPerformer
-					? "border-primary/30 shadow-[0_0_15px_rgba(212,255,0,0.15)]"
-					: "border-white/5 hover:border-white/10",
+					? "border-primary/30 shadow-[0_0_15px_hsl(var(--primary)/0.15)]"
+					: "border-border hover:border-primary/20",
 			)}
 			data-testid={`leaderboard-entry-${rank}`}
 			href={`/strategies/${entry.strategyId}`}
@@ -102,7 +102,7 @@ function LeaderboardRow({
 				</div>
 				<div className="mt-0.5 flex items-center gap-2 font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:mt-1 sm:gap-3 sm:text-xs">
 					<span>{entry.totalTrades} trades</span>
-					<span className="text-white/20">|</span>
+					<span className="text-border">|</span>
 					<span
 						className={cn(entry.winRate >= 50 ? "text-profit" : "text-loss")}
 					>
@@ -133,11 +133,11 @@ function LeaderboardRow({
 function LeaderboardSkeleton() {
 	return (
 		<div
-			className="overflow-hidden rounded border border-white/10 bg-black/80"
+			className="overflow-hidden rounded border border-border bg-card"
 			data-testid="leaderboard-section"
 		>
 			{/* Terminal header */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4">
+			<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-2 sm:px-4">
 				<div className="flex items-center gap-1.5 sm:gap-2">
 					<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
 					<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
@@ -187,11 +187,11 @@ export function StrategyLeaderboard() {
 
 	return (
 		<div
-			className="overflow-hidden rounded border border-white/10 bg-black/80"
+			className="overflow-hidden rounded border border-border bg-card"
 			data-testid="leaderboard-section"
 		>
 			{/* Terminal header with traffic light dots */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4">
+			<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-2 sm:px-4">
 				<div className="flex items-center gap-1.5 sm:gap-2">
 					<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
 					<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
@@ -226,7 +226,7 @@ export function StrategyLeaderboard() {
 
 				{/* Show count of remaining strategies */}
 				{sortedStats.length > 3 && (
-					<div className="mt-3 border-white/5 border-t pt-2 sm:mt-4 sm:pt-3">
+					<div className="mt-3 border-border/50 border-t pt-2 sm:mt-4 sm:pt-3">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							+{sortedStats.length - 3} more{" "}
 							{sortedStats.length - 3 === 1 ? "strategy" : "strategies"}

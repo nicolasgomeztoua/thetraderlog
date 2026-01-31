@@ -71,6 +71,13 @@
 			"when": 1768397556079,
 			"tag": "0009_ancient_killer_shrike",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1769866137836,
+			"tag": "0010_acoustic_iron_monger",
+			"breakpoints": true
 		}
 	]
 }

@@ -7,7 +7,7 @@ export default defineConfig({
 		environment: "node",
 		globalSetup: ["./tests/setup/global-setup.ts"],
 		setupFiles: ["./tests/setup/test-env.ts"],
-		include: ["tests/integration/**/*.test.ts"],
+		include: ["tests/integration/**/*.test.ts", "tests/unit/**/*.test.ts"],
 		exclude: ["tests/e2e/**/*"],
 		testTimeout: 30000, // Container startup can be slow
 		hookTimeout: 60000,

@@ -3,15 +3,19 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { parseNumberInput } from "@/lib/utils/number-input";
 
 export interface ScalingRules {
 	scaleIn?: Array<{
 		trigger: string;
 		sizePercent: number;
+		enabled?: boolean;
 	}>;
 	scaleOut?: Array<{
 		trigger: string;
 		sizePercent: number;
+		enabled?: boolean;
 	}>;
 }
 
@@ -23,8 +27,12 @@ interface ScalingConfigProps {
 export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const scalingRules = value ?? {};
 
+	const handleChange = (newValue: ScalingRules | null) => {
+		onChange(newValue);
+	};
+
 	const addScaleIn = () => {
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleIn: [
 				...(scalingRules.scaleIn ?? []),
@@ -34,7 +42,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	};
 
 	const addScaleOut = () => {
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleOut: [
 				...(scalingRules.scaleOut ?? []),
@@ -45,30 +53,30 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 
 	const updateScaleIn = (
 		idx: number,
-		field: "trigger" | "sizePercent",
-		fieldValue: string | number,
+		field: "trigger" | "sizePercent" | "enabled",
+		fieldValue: string | number | boolean | undefined,
 	) => {
 		const newScaleIn = [...(scalingRules.scaleIn ?? [])];
 		const existing = newScaleIn[idx] ?? { trigger: "", sizePercent: 0 };
 		newScaleIn[idx] = { ...existing, [field]: fieldValue };
-		onChange({ ...scalingRules, scaleIn: newScaleIn });
+		handleChange({ ...scalingRules, scaleIn: newScaleIn });
 	};
 
 	const updateScaleOut = (
 		idx: number,
-		field: "trigger" | "sizePercent",
-		fieldValue: string | number,
+		field: "trigger" | "sizePercent" | "enabled",
+		fieldValue: string | number | boolean | undefined,
 	) => {
 		const newScaleOut = [...(scalingRules.scaleOut ?? [])];
 		const existing = newScaleOut[idx] ?? { trigger: "", sizePercent: 0 };
 		newScaleOut[idx] = { ...existing, [field]: fieldValue };
-		onChange({ ...scalingRules, scaleOut: newScaleOut });
+		handleChange({ ...scalingRules, scaleOut: newScaleOut });
 	};
 
 	const removeScaleIn = (idx: number) => {
 		const newScaleIn = [...(scalingRules.scaleIn ?? [])];
 		newScaleIn.splice(idx, 1);
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleIn: newScaleIn.length > 0 ? newScaleIn : undefined,
 		});
@@ -77,7 +85,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const removeScaleOut = (idx: number) => {
 		const newScaleOut = [...(scalingRules.scaleOut ?? [])];
 		newScaleOut.splice(idx, 1);
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleOut: newScaleOut.length > 0 ? newScaleOut : undefined,
 		});
@@ -111,7 +119,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleIn ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scalein-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
@@ -135,17 +143,27 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateScaleIn(
 													idx,
 													"sizePercent",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="5"
 											type="number"
 											value={rule.sizePercent}
+										/>
+									</div>
+									<div className="flex flex-col items-center justify-end gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground">
+											Track
+										</span>
+										<Switch
+											checked={rule.enabled ?? false}
+											onCheckedChange={(checked) =>
+												updateScaleIn(idx, "enabled", checked)
+											}
 										/>
 									</div>
 									<Button
@@ -190,7 +208,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleOut ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scaleout-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
@@ -214,17 +232,27 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateScaleOut(
 													idx,
 													"sizePercent",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="5"
 											type="number"
 											value={rule.sizePercent}
+										/>
+									</div>
+									<div className="flex flex-col items-center justify-end gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground">
+											Track
+										</span>
+										<Switch
+											checked={rule.enabled ?? false}
+											onCheckedChange={(checked) =>
+												updateScaleOut(idx, "enabled", checked)
+											}
 										/>
 									</div>
 									<Button

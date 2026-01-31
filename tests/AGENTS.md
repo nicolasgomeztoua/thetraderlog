@@ -4,6 +4,22 @@
 
 **Reference:** `.claude/skills/testing/SKILL.md` (integration), `.claude/skills/e2e-testing/SKILL.md` (E2E)
 
+## Unit Test Patterns
+
+### Running Unit Tests (No Database Required)
+**When:** Testing pure functions that don't need database access
+**How:** Use the separate vitest config:
+```bash
+bunx vitest run --config vitest.config.unit.ts
+```
+Unit tests go in `tests/unit/` directory. They don't require Docker since they don't use the global setup that starts PostgreSQL.
+
+### Unit vs Integration Tests
+**When:** Choosing test type
+**How:**
+- **Unit tests:** Pure functions, utilities, parsers, generators (no DB, no tRPC)
+- **Integration tests:** tRPC endpoints, database operations, multi-component flows
+
 ## Integration Test Patterns
 
 ### Setting User Timezone for Tests

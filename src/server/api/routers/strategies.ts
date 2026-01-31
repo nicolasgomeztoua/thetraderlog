@@ -1,14 +1,126 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
+import type { RiskParameters } from "@/components/strategy/risk-config";
+import type { ScalingRules } from "@/components/strategy/scaling-config";
+import type { TrailingRules } from "@/components/strategy/trailing-config";
 import { calculateAggregateStats } from "@/lib/analytics";
+import {
+	buildEvaluationContext,
+	evaluateAutoCondition,
+	generateRulesFromConfig,
+} from "@/lib/strategy";
+import type { AutoCondition, AutoEvaluationResult } from "@/lib/strategy/types";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import type * as schema from "@/server/db/schema";
 import {
 	strategies,
 	strategyRules,
 	tradeRuleChecks,
 	trades,
 } from "@/server/db/schema";
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Syncs auto-generated rules from strategy configuration.
+ * Called internally after create/update to ensure rules reflect config.
+ */
+async function syncGeneratedRulesInternal(
+	db: PostgresJsDatabase<typeof schema>,
+	strategyId: string,
+	riskParams: RiskParameters | null,
+	scalingRulesConfig: ScalingRules | null,
+	trailingRulesConfig: TrailingRules | null,
+): Promise<{ added: number; updated: number; deleted: number }> {
+	// Get existing rules for this strategy
+	const existingRules = await db.query.strategyRules.findMany({
+		where: eq(strategyRules.strategyId, strategyId),
+	});
+
+	// Generate desired rules from config
+	const desiredRules = generateRulesFromConfig(
+		riskParams,
+		scalingRulesConfig,
+		trailingRulesConfig,
+	);
+
+	// Get existing generated rules (isGenerated: true)
+	const existingGeneratedRules = existingRules.filter(
+		(rule) => rule.isGenerated,
+	);
+
+	// Build a map of existing rules by configSource for comparison
+	const existingBySource = new Map(
+		existingGeneratedRules.map((rule) => [rule.configSource, rule]),
+	);
+
+	// Track changes
+	let added = 0;
+	let updated = 0;
+	let deleted = 0;
+
+	// Determine max order from existing rules (both manual and generated)
+	const maxOrder = existingRules.reduce(
+		(max, rule) => Math.max(max, rule.order),
+		-1,
+	);
+	let nextOrder = maxOrder + 1;
+
+	// Process desired rules: add new or update existing
+	for (const desiredRule of desiredRules) {
+		const existing = existingBySource.get(desiredRule.configSource);
+
+		if (existing) {
+			// Check if hash changed (config was updated)
+			if (existing.sourceConfigHash !== desiredRule.sourceConfigHash) {
+				// Update the rule
+				await db
+					.update(strategyRules)
+					.set({
+						text: desiredRule.text,
+						category: desiredRule.category,
+						ruleType: desiredRule.ruleType,
+						autoCondition: desiredRule.autoCondition
+							? JSON.stringify(desiredRule.autoCondition)
+							: null,
+						sourceConfigHash: desiredRule.sourceConfigHash,
+					})
+					.where(eq(strategyRules.id, existing.id));
+				updated++;
+			}
+			// Remove from map to track what's left (orphaned)
+			existingBySource.delete(desiredRule.configSource);
+		} else {
+			// Add new rule
+			await db.insert(strategyRules).values({
+				strategyId,
+				text: desiredRule.text,
+				category: desiredRule.category,
+				order: nextOrder++,
+				ruleType: desiredRule.ruleType,
+				configSource: desiredRule.configSource,
+				autoCondition: desiredRule.autoCondition
+					? JSON.stringify(desiredRule.autoCondition)
+					: null,
+				isGenerated: true,
+				sourceConfigHash: desiredRule.sourceConfigHash,
+			});
+			added++;
+		}
+	}
+
+	// Delete orphaned generated rules (in existingBySource but not in desiredRules)
+	for (const orphanedRule of existingBySource.values()) {
+		await db.delete(strategyRules).where(eq(strategyRules.id, orphanedRule.id));
+		deleted++;
+	}
+
+	return { added, updated, deleted };
+}
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -21,22 +133,27 @@ const riskParametersSchema = z.object({
 			fixedSize: z.number().optional(),
 			riskPercent: z.number().optional(),
 			kellyFraction: z.number().optional(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	maxRiskPerTrade: z
 		.object({
 			type: z.enum(["dollars", "percent"]),
 			value: z.number(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	dailyLossLimit: z
 		.object({
 			type: z.enum(["dollars", "percent"]),
 			value: z.number(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	maxConcurrentPositions: z.number().optional(),
+	maxConcurrentPositionsEnabled: z.boolean().optional(),
 	minRRRatio: z.number().optional(),
+	minRRRatioEnabled: z.boolean().optional(),
 	targetRMultiples: z.array(z.number()).optional(),
 });
 
@@ -46,6 +163,7 @@ const scalingRulesSchema = z.object({
 			z.object({
 				trigger: z.string(),
 				sizePercent: z.number(),
+				enabled: z.boolean().optional(),
 			}),
 		)
 		.optional(),
@@ -54,6 +172,7 @@ const scalingRulesSchema = z.object({
 			z.object({
 				trigger: z.string(),
 				sizePercent: z.number(),
+				enabled: z.boolean().optional(),
 			}),
 		)
 		.optional(),
@@ -64,6 +183,7 @@ const trailingRulesSchema = z.object({
 		.object({
 			triggerR: z.number(),
 			offsetTicks: z.number().optional(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	trailStops: z
@@ -72,6 +192,7 @@ const trailingRulesSchema = z.object({
 				triggerR: z.number(),
 				method: z.enum(["fixed_ticks", "atr_multiple", "swing_low"]),
 				value: z.number(),
+				enabled: z.boolean().optional(),
 			}),
 		)
 		.optional(),
@@ -243,7 +364,7 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Failed to create strategy");
 			}
 
-			// Create rules if provided
+			// Create manual rules if provided
 			if (rules && rules.length > 0) {
 				await ctx.db.insert(strategyRules).values(
 					rules.map((rule) => ({
@@ -251,9 +372,19 @@ export const strategiesRouter = createTRPCRouter({
 						text: rule.text,
 						category: rule.category,
 						order: rule.order,
+						isGenerated: false,
 					})),
 				);
 			}
+
+			// Sync auto-generated rules from config
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				newStrategy.id,
+				riskParameters ?? null,
+				scalingRules ?? null,
+				trailingRules ?? null,
+			);
 
 			return newStrategy;
 		}),
@@ -299,31 +430,90 @@ export const strategiesRouter = createTRPCRouter({
 					: null;
 			}
 
-			const [updated] = await ctx.db
-				.update(strategies)
-				.set(updateData)
-				.where(eq(strategies.id, id))
-				.returning();
+			// Only update strategies table if there's something to update
+			let updated = existingStrategy;
+			if (Object.keys(updateData).length > 0) {
+				const [result] = await ctx.db
+					.update(strategies)
+					.set(updateData)
+					.where(eq(strategies.id, id))
+					.returning();
+				updated = result ?? existingStrategy;
+			}
 
-			// Update rules if provided
+			// Update manual rules if provided (only delete non-generated rules)
 			if (rules !== undefined) {
-				// Delete existing rules
+				// Get existing generated rules to filter out duplicates from input
+				const existingGeneratedRules =
+					await ctx.db.query.strategyRules.findMany({
+						where: and(
+							eq(strategyRules.strategyId, id),
+							eq(strategyRules.isGenerated, true),
+						),
+						columns: { text: true },
+					});
+				const generatedRuleTexts = new Set(
+					existingGeneratedRules.map((r) => r.text),
+				);
+
+				// Filter out rules that duplicate generated rules (defense-in-depth)
+				// This prevents bugs where frontend accidentally sends generated rules back
+				const manualOnlyRules = rules.filter(
+					(rule) => !generatedRuleTexts.has(rule.text),
+				);
+
+				// Delete existing MANUAL rules only (preserve generated rules)
 				await ctx.db
 					.delete(strategyRules)
-					.where(eq(strategyRules.strategyId, id));
+					.where(
+						and(
+							eq(strategyRules.strategyId, id),
+							eq(strategyRules.isGenerated, false),
+						),
+					);
 
-				// Insert new rules
-				if (rules.length > 0) {
+				// Insert new manual rules
+				if (manualOnlyRules.length > 0) {
 					await ctx.db.insert(strategyRules).values(
-						rules.map((rule) => ({
+						manualOnlyRules.map((rule) => ({
 							strategyId: id,
 							text: rule.text,
 							category: rule.category,
 							order: rule.order,
+							isGenerated: false,
 						})),
 					);
 				}
 			}
+
+			// Sync auto-generated rules from config
+			// Get the final config values (from input if provided, otherwise from existing strategy)
+			const finalRiskParams: RiskParameters | null =
+				riskParameters !== undefined
+					? riskParameters
+					: existingStrategy.riskParameters
+						? JSON.parse(existingStrategy.riskParameters)
+						: null;
+			const finalScalingRules: ScalingRules | null =
+				scalingRules !== undefined
+					? scalingRules
+					: existingStrategy.scalingRules
+						? JSON.parse(existingStrategy.scalingRules)
+						: null;
+			const finalTrailingRules: TrailingRules | null =
+				trailingRules !== undefined
+					? trailingRules
+					: existingStrategy.trailingRules
+						? JSON.parse(existingStrategy.trailingRules)
+						: null;
+
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				id,
+				finalRiskParams,
+				finalScalingRules,
+				finalTrailingRules,
+			);
 
 			return updated;
 		}),
@@ -396,7 +586,7 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Failed to duplicate strategy");
 			}
 
-			// Duplicate rules
+			// Duplicate rules (preserving all properties including generated rule metadata)
 			if (original.rules.length > 0) {
 				await ctx.db.insert(strategyRules).values(
 					original.rules.map((rule) => ({
@@ -404,6 +594,11 @@ export const strategiesRouter = createTRPCRouter({
 						text: rule.text,
 						category: rule.category,
 						order: rule.order,
+						ruleType: rule.ruleType,
+						configSource: rule.configSource,
+						autoCondition: rule.autoCondition,
+						isGenerated: rule.isGenerated,
+						sourceConfigHash: rule.sourceConfigHash,
 					})),
 				);
 			}
@@ -545,6 +740,7 @@ export const strategiesRouter = createTRPCRouter({
 				tradeId: z.string(),
 				ruleId: z.string(),
 				checked: z.boolean(),
+				userOverride: z.boolean().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -560,6 +756,21 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Trade not found");
 			}
 
+			// Build the values to set
+			const setValues: {
+				checked: boolean;
+				checkedAt: Date | null;
+				userOverride?: boolean;
+			} = {
+				checked: input.checked,
+				checkedAt: input.checked ? new Date() : null,
+			};
+
+			// Only set userOverride if explicitly provided
+			if (input.userOverride !== undefined) {
+				setValues.userOverride = input.userOverride;
+			}
+
 			// Upsert the rule check
 			await ctx.db
 				.insert(tradeRuleChecks)
@@ -568,13 +779,11 @@ export const strategiesRouter = createTRPCRouter({
 					ruleId: input.ruleId,
 					checked: input.checked,
 					checkedAt: input.checked ? new Date() : null,
+					userOverride: input.userOverride ?? null,
 				})
 				.onConflictDoUpdate({
 					target: [tradeRuleChecks.tradeId, tradeRuleChecks.ruleId],
-					set: {
-						checked: input.checked,
-						checkedAt: input.checked ? new Date() : null,
-					},
+					set: setValues,
 				});
 
 			return { success: true };
@@ -812,4 +1021,420 @@ export const strategiesRouter = createTRPCRouter({
 
 		return curves;
 	}),
+
+	// Sync generated rules from strategy config
+	syncGeneratedRules: protectedProcedure
+		.input(z.object({ strategyId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Fetch strategy with ownership validation
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+				with: {
+					rules: true,
+				},
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Parse JSON configs
+			const riskParams: RiskParameters | null = strategy.riskParameters
+				? JSON.parse(strategy.riskParameters)
+				: null;
+			const scalingRulesConfig: ScalingRules | null = strategy.scalingRules
+				? JSON.parse(strategy.scalingRules)
+				: null;
+			const trailingRulesConfig: TrailingRules | null = strategy.trailingRules
+				? JSON.parse(strategy.trailingRules)
+				: null;
+
+			// Generate desired rules from config
+			const desiredRules = generateRulesFromConfig(
+				riskParams,
+				scalingRulesConfig,
+				trailingRulesConfig,
+			);
+
+			// Get existing generated rules (isGenerated: true)
+			const existingGeneratedRules = strategy.rules.filter(
+				(rule) => rule.isGenerated,
+			);
+
+			// Build a map of existing rules by configSource for comparison
+			const existingBySource = new Map(
+				existingGeneratedRules.map((rule) => [rule.configSource, rule]),
+			);
+
+			// Track changes
+			let added = 0;
+			let updated = 0;
+			let deleted = 0;
+
+			// Determine max order from existing rules (both manual and generated)
+			const maxOrder = strategy.rules.reduce(
+				(max, rule) => Math.max(max, rule.order),
+				-1,
+			);
+			let nextOrder = maxOrder + 1;
+
+			// Process desired rules: add new or update existing
+			for (const desiredRule of desiredRules) {
+				const existing = existingBySource.get(desiredRule.configSource);
+
+				if (existing) {
+					// Check if hash changed (config was updated)
+					if (existing.sourceConfigHash !== desiredRule.sourceConfigHash) {
+						// Update the rule
+						await ctx.db
+							.update(strategyRules)
+							.set({
+								text: desiredRule.text,
+								category: desiredRule.category,
+								ruleType: desiredRule.ruleType,
+								autoCondition: desiredRule.autoCondition
+									? JSON.stringify(desiredRule.autoCondition)
+									: null,
+								sourceConfigHash: desiredRule.sourceConfigHash,
+							})
+							.where(eq(strategyRules.id, existing.id));
+						updated++;
+					}
+					// Remove from map to track what's left (orphaned)
+					existingBySource.delete(desiredRule.configSource);
+				} else {
+					// Add new rule
+					await ctx.db.insert(strategyRules).values({
+						strategyId: input.strategyId,
+						text: desiredRule.text,
+						category: desiredRule.category,
+						order: nextOrder++,
+						ruleType: desiredRule.ruleType,
+						configSource: desiredRule.configSource,
+						autoCondition: desiredRule.autoCondition
+							? JSON.stringify(desiredRule.autoCondition)
+							: null,
+						isGenerated: true,
+						sourceConfigHash: desiredRule.sourceConfigHash,
+					});
+					added++;
+				}
+			}
+
+			// Delete orphaned generated rules (in existingBySource but not in desiredRules)
+			for (const orphanedRule of existingBySource.values()) {
+				await ctx.db
+					.delete(strategyRules)
+					.where(eq(strategyRules.id, orphanedRule.id));
+				deleted++;
+			}
+
+			return { added, updated, deleted };
+		}),
+
+	// Update risk parameters with live saving (for edit mode)
+	updateRiskParameters: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				riskParameters: riskParametersSchema.nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, riskParameters } = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update only risk parameters
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					riskParameters: riskParameters
+						? JSON.stringify(riskParameters)
+						: null,
+				})
+				.where(eq(strategies.id, strategyId))
+				.returning();
+
+			// Sync auto-generated rules
+			const scalingRulesConfig: ScalingRules | null =
+				existingStrategy.scalingRules
+					? JSON.parse(existingStrategy.scalingRules)
+					: null;
+			const trailingRulesConfig: TrailingRules | null =
+				existingStrategy.trailingRules
+					? JSON.parse(existingStrategy.trailingRules)
+					: null;
+
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				strategyId,
+				riskParameters,
+				scalingRulesConfig,
+				trailingRulesConfig,
+			);
+
+			return updated;
+		}),
+
+	// Update scaling rules with live saving (for edit mode)
+	updateScalingRules: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				scalingRules: scalingRulesSchema.nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, scalingRules } = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update only scaling rules
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					scalingRules: scalingRules ? JSON.stringify(scalingRules) : null,
+				})
+				.where(eq(strategies.id, strategyId))
+				.returning();
+
+			// Sync auto-generated rules
+			const riskParams: RiskParameters | null = existingStrategy.riskParameters
+				? JSON.parse(existingStrategy.riskParameters)
+				: null;
+			const trailingRulesConfig: TrailingRules | null =
+				existingStrategy.trailingRules
+					? JSON.parse(existingStrategy.trailingRules)
+					: null;
+
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				strategyId,
+				riskParams,
+				scalingRules,
+				trailingRulesConfig,
+			);
+
+			return updated;
+		}),
+
+	// Update trailing rules with live saving (for edit mode)
+	updateTrailingRules: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				trailingRules: trailingRulesSchema.nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, trailingRules } = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update only trailing rules
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					trailingRules: trailingRules ? JSON.stringify(trailingRules) : null,
+				})
+				.where(eq(strategies.id, strategyId))
+				.returning();
+
+			// Sync auto-generated rules
+			const riskParams: RiskParameters | null = existingStrategy.riskParameters
+				? JSON.parse(existingStrategy.riskParameters)
+				: null;
+			const scalingRulesConfig: ScalingRules | null =
+				existingStrategy.scalingRules
+					? JSON.parse(existingStrategy.scalingRules)
+					: null;
+
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				strategyId,
+				riskParams,
+				scalingRulesConfig,
+				trailingRules,
+			);
+
+			return updated;
+		}),
+
+	// Auto-evaluate rules for a trade
+	evaluateTradeRules: protectedProcedure
+		.input(z.object({ tradeId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Fetch trade with strategy and rules, verify ownership
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+					isNull(trades.deletedAt),
+				),
+				with: {
+					strategy: {
+						with: {
+							rules: {
+								orderBy: [strategyRules.order],
+							},
+						},
+					},
+					account: true,
+				},
+			});
+
+			if (!trade) {
+				throw new Error("Trade not found");
+			}
+
+			if (!trade.strategy) {
+				throw new Error("Trade has no strategy assigned");
+			}
+
+			// Filter to rules that should be auto-evaluated (not manual)
+			const rulesToEvaluate = trade.strategy.rules.filter(
+				(rule) => rule.ruleType !== "manual",
+			);
+
+			if (rulesToEvaluate.length === 0) {
+				return { evaluated: 0, results: [] };
+			}
+
+			// Build evaluation context with all required data
+			const context = await buildEvaluationContext(
+				ctx.db,
+				{
+					id: trade.id,
+					userId: trade.userId,
+					accountId: trade.accountId,
+					symbol: trade.symbol,
+					instrumentType: trade.instrumentType,
+					direction: trade.direction,
+					entryPrice: trade.entryPrice,
+					exitPrice: trade.exitPrice,
+					entryTime: trade.entryTime,
+					exitTime: trade.exitTime,
+					quantity: trade.quantity,
+					stopLoss: trade.stopLoss,
+					takeProfit: trade.takeProfit,
+					trailedStopLoss: trade.trailedStopLoss,
+					wasTrailed: trade.wasTrailed,
+					netPnl: trade.netPnl,
+					mfePrice: trade.mfePrice,
+					mfeAmount: trade.mfeAmount,
+					status: trade.status,
+				},
+				ctx.user.id,
+			);
+
+			// Evaluate each rule and collect results
+			const results: Array<{
+				ruleId: string;
+				result: AutoEvaluationResult;
+			}> = [];
+
+			for (const rule of rulesToEvaluate) {
+				// Skip rules without auto condition
+				if (!rule.autoCondition) {
+					continue;
+				}
+
+				// Parse the auto condition JSON
+				let condition: AutoCondition;
+				try {
+					condition = JSON.parse(rule.autoCondition) as AutoCondition;
+				} catch {
+					// Invalid JSON, skip this rule
+					continue;
+				}
+
+				// Evaluate the condition
+				const result = evaluateAutoCondition(
+					condition,
+					{
+						id: trade.id,
+						symbol: trade.symbol,
+						instrumentType: trade.instrumentType,
+						direction: trade.direction,
+						entryPrice: trade.entryPrice,
+						exitPrice: trade.exitPrice,
+						quantity: trade.quantity,
+						stopLoss: trade.stopLoss,
+						takeProfit: trade.takeProfit,
+						trailedStopLoss: trade.trailedStopLoss,
+						wasTrailed: trade.wasTrailed,
+						netPnl: trade.netPnl,
+						mfePrice: trade.mfePrice,
+						mfeAmount: trade.mfeAmount,
+					},
+					context,
+				);
+
+				results.push({ ruleId: rule.id, result });
+
+				// Upsert the trade rule check with evaluation result
+				await ctx.db
+					.insert(tradeRuleChecks)
+					.values({
+						tradeId: input.tradeId,
+						ruleId: rule.id,
+						checked: result.passed,
+						checkedAt: new Date(),
+						evaluationResult: JSON.stringify(result),
+						wasAutoEvaluated: true,
+					})
+					.onConflictDoUpdate({
+						target: [tradeRuleChecks.tradeId, tradeRuleChecks.ruleId],
+						set: {
+							checked: result.passed,
+							checkedAt: new Date(),
+							evaluationResult: JSON.stringify(result),
+							wasAutoEvaluated: true,
+							// Don't update userOverride - preserve existing overrides
+						},
+					});
+			}
+
+			return {
+				evaluated: results.length,
+				results: results.map((r) => ({
+					ruleId: r.ruleId,
+					...r.result,
+				})),
+			};
+		}),
 });

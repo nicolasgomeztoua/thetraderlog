@@ -11,16 +11,20 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { parseIntInput, parseNumberInput } from "@/lib/utils/number-input";
 
 export interface TrailingRules {
 	moveToBreakeven?: {
 		triggerR: number;
 		offsetTicks?: number;
+		enabled?: boolean;
 	};
 	trailStops?: Array<{
 		triggerR: number;
 		method: "fixed_ticks" | "atr_multiple" | "swing_low";
 		value: number;
+		enabled?: boolean;
 	}>;
 }
 
@@ -33,24 +37,28 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 	const trailingRules = value ?? {};
 	const hasBreakeven = !!trailingRules.moveToBreakeven;
 
+	const handleChange = (newValue: TrailingRules | null) => {
+		onChange(newValue);
+	};
+
 	const toggleBreakeven = (enabled: boolean) => {
 		if (enabled) {
-			onChange({
+			handleChange({
 				...trailingRules,
 				moveToBreakeven: { triggerR: 1, offsetTicks: 0 },
 			});
 		} else {
 			const { moveToBreakeven: _removed, ...rest } = trailingRules;
-			onChange(Object.keys(rest).length > 0 ? rest : null);
+			handleChange(Object.keys(rest).length > 0 ? rest : null);
 		}
 	};
 
 	const updateBreakeven = (
-		field: "triggerR" | "offsetTicks",
-		fieldValue: number,
+		field: "triggerR" | "offsetTicks" | "enabled",
+		fieldValue: number | boolean | undefined,
 	) => {
 		const currentBreakeven = trailingRules.moveToBreakeven ?? { triggerR: 1 };
-		onChange({
+		handleChange({
 			...trailingRules,
 			moveToBreakeven: {
 				...currentBreakeven,
@@ -60,7 +68,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 	};
 
 	const addTrailStop = () => {
-		onChange({
+		handleChange({
 			...trailingRules,
 			trailStops: [
 				...(trailingRules.trailStops ?? []),
@@ -71,8 +79,8 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 
 	const updateTrailStop = (
 		idx: number,
-		field: "triggerR" | "method" | "value",
-		fieldValue: number | string,
+		field: "triggerR" | "method" | "value" | "enabled",
+		fieldValue: number | string | boolean | undefined,
 	) => {
 		const newTrailStops = [...(trailingRules.trailStops ?? [])];
 		const existing = newTrailStops[idx] ?? {
@@ -81,13 +89,13 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 			value: 10,
 		};
 		newTrailStops[idx] = { ...existing, [field]: fieldValue };
-		onChange({ ...trailingRules, trailStops: newTrailStops });
+		handleChange({ ...trailingRules, trailStops: newTrailStops });
 	};
 
 	const removeTrailStop = (idx: number) => {
 		const newTrailStops = [...(trailingRules.trailStops ?? [])];
 		newTrailStops.splice(idx, 1);
-		onChange({
+		handleChange({
 			...trailingRules,
 			trailStops: newTrailStops.length > 0 ? newTrailStops : undefined,
 		});
@@ -113,7 +121,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 				</div>
 
 				{hasBreakeven && (
-					<div className="ml-0 grid grid-cols-1 gap-3 sm:ml-6 sm:grid-cols-2 sm:gap-4">
+					<div className="ml-0 grid grid-cols-1 gap-3 sm:ml-6 sm:grid-cols-3 sm:gap-4">
 						<div className="space-y-1">
 							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Trigger at R
@@ -121,13 +129,9 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) => {
-									const parsed = parseFloat(e.target.value);
-									updateBreakeven(
-										"triggerR",
-										Number.isNaN(parsed) ? 0 : parsed,
-									);
-								}}
+								onChange={(e) =>
+									updateBreakeven("triggerR", parseNumberInput(e.target.value))
+								}
 								placeholder="1.0"
 								step="0.1"
 								type="number"
@@ -142,15 +146,23 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="numeric"
 								onChange={(e) =>
-									updateBreakeven(
-										"offsetTicks",
-										parseInt(e.target.value, 10) || 0,
-									)
+									updateBreakeven("offsetTicks", parseIntInput(e.target.value))
 								}
 								placeholder="0"
 								step="1"
 								type="number"
 								value={trailingRules.moveToBreakeven?.offsetTicks ?? ""}
+							/>
+						</div>
+						<div className="flex flex-col items-center justify-end gap-1">
+							<span className="font-mono text-[9px] text-muted-foreground">
+								Track
+							</span>
+							<Switch
+								checked={trailingRules.moveToBreakeven?.enabled ?? false}
+								onCheckedChange={(checked) =>
+									updateBreakeven("enabled", checked)
+								}
 							/>
 						</div>
 					</div>
@@ -183,7 +195,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 					<div className="space-y-2">
 						{(trailingRules.trailStops ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`trail-${rule.triggerR}-${rule.method}`}
 							>
 								<div className="grid grid-cols-2 gap-2 sm:contents">
@@ -194,14 +206,13 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateTrailStop(
 													idx,
 													"triggerR",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="0.1"
 											type="number"
 											value={rule.triggerR}
@@ -214,14 +225,13 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateTrailStop(
 													idx,
 													"value",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="1"
 											type="number"
 											value={rule.value}
@@ -261,6 +271,17 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 												</SelectItem>
 											</SelectContent>
 										</Select>
+									</div>
+									<div className="flex flex-col items-center justify-end gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground">
+											Track
+										</span>
+										<Switch
+											checked={rule.enabled ?? false}
+											onCheckedChange={(checked) =>
+												updateTrailStop(idx, "enabled", checked)
+											}
+										/>
 									</div>
 									<Button
 										className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-8 sm:w-8"
