@@ -5,7 +5,7 @@
  * Each evaluator checks a specific condition and returns a standardized result.
  */
 
-import { and, eq, gte, isNull, lt, ne } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, lte, ne } from "drizzle-orm";
 import { getPointValue } from "@/lib/market-data";
 import { getDateStringInTimezone, getDayBoundsInTimezone } from "@/lib/shared";
 import { calculatePlannedRR } from "@/lib/trades/calculations";
@@ -720,7 +720,7 @@ async function countConcurrentTrades(
 			ne(trades.id, trade.id),
 			isNull(trades.deletedAt),
 			// Entered before or at this trade's entry
-			lt(trades.entryTime, entryTime),
+			lte(trades.entryTime, entryTime),
 		),
 		columns: {
 			id: true,
