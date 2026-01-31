@@ -23,6 +23,8 @@ import {
 	instrumentTypeEnum,
 	tradeStatusEnum,
 } from "@/lib/shared";
+import { buildEvaluationContext, evaluateAutoCondition } from "@/lib/strategy";
+import type { AutoCondition } from "@/lib/strategy/types";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import { computeTradeHash } from "@/lib/trades/hash";
 import {
@@ -39,8 +41,162 @@ import {
 	buildOrderByClause,
 } from "@/server/api/helpers/sort-builder";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { tradeExecutions, trades, tradeTags } from "@/server/db/schema";
+import type { db as DbType } from "@/server/db";
+import {
+	strategyRules,
+	tradeExecutions,
+	tradeRuleChecks,
+	trades,
+	tradeTags,
+} from "@/server/db/schema";
 import { processTradeMAEMFE } from "@/trigger/process-trade-maemfe";
+
+// Database type for helper function
+type Db = typeof DbType;
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Auto-evaluate strategy rules when a trade is closed.
+ * Evaluates non-manual rules and stores results in tradeRuleChecks.
+ * Errors are caught and logged - they should not prevent trade close.
+ *
+ * @param db - Drizzle database instance
+ * @param tradeId - The ID of the trade that was closed
+ * @param userId - The user's ID
+ */
+async function autoEvaluateTradeRules(
+	db: Db,
+	tradeId: string,
+	userId: string,
+): Promise<void> {
+	try {
+		// Fetch the closed trade with strategy and rules
+		const trade = await db.query.trades.findFirst({
+			where: and(
+				eq(trades.id, tradeId),
+				eq(trades.userId, userId),
+				isNull(trades.deletedAt),
+			),
+			with: {
+				strategy: {
+					with: {
+						rules: {
+							orderBy: [strategyRules.order],
+						},
+					},
+				},
+			},
+		});
+
+		// Skip if trade not found or has no strategy
+		if (!trade || !trade.strategy) {
+			return;
+		}
+
+		// Filter to rules that should be auto-evaluated (not manual)
+		const rulesToEvaluate = trade.strategy.rules.filter(
+			(rule) => rule.ruleType !== "manual",
+		);
+
+		if (rulesToEvaluate.length === 0) {
+			return;
+		}
+
+		// Build evaluation context with all required data
+		const context = await buildEvaluationContext(
+			db,
+			{
+				id: trade.id,
+				userId: trade.userId,
+				accountId: trade.accountId,
+				symbol: trade.symbol,
+				instrumentType: trade.instrumentType,
+				direction: trade.direction,
+				entryPrice: trade.entryPrice,
+				exitPrice: trade.exitPrice,
+				entryTime: trade.entryTime,
+				exitTime: trade.exitTime,
+				quantity: trade.quantity,
+				stopLoss: trade.stopLoss,
+				takeProfit: trade.takeProfit,
+				trailedStopLoss: trade.trailedStopLoss,
+				wasTrailed: trade.wasTrailed,
+				netPnl: trade.netPnl,
+				mfePrice: trade.mfePrice,
+				mfeAmount: trade.mfeAmount,
+				status: trade.status,
+			},
+			userId,
+		);
+
+		// Evaluate each rule
+		for (const rule of rulesToEvaluate) {
+			// Skip rules without auto condition
+			if (!rule.autoCondition) {
+				continue;
+			}
+
+			// Parse the auto condition JSON
+			let condition: AutoCondition;
+			try {
+				condition = JSON.parse(rule.autoCondition) as AutoCondition;
+			} catch {
+				// Invalid JSON, skip this rule
+				continue;
+			}
+
+			// Evaluate the condition
+			const result = evaluateAutoCondition(
+				condition,
+				{
+					id: trade.id,
+					symbol: trade.symbol,
+					instrumentType: trade.instrumentType,
+					direction: trade.direction,
+					entryPrice: trade.entryPrice,
+					exitPrice: trade.exitPrice,
+					quantity: trade.quantity,
+					stopLoss: trade.stopLoss,
+					takeProfit: trade.takeProfit,
+					trailedStopLoss: trade.trailedStopLoss,
+					wasTrailed: trade.wasTrailed,
+					netPnl: trade.netPnl,
+					mfePrice: trade.mfePrice,
+					mfeAmount: trade.mfeAmount,
+				},
+				context,
+			);
+
+			// Upsert the trade rule check with evaluation result
+			await db
+				.insert(tradeRuleChecks)
+				.values({
+					tradeId,
+					ruleId: rule.id,
+					checked: result.passed,
+					checkedAt: new Date(),
+					evaluationResult: JSON.stringify(result),
+					wasAutoEvaluated: true,
+				})
+				.onConflictDoUpdate({
+					target: [tradeRuleChecks.tradeId, tradeRuleChecks.ruleId],
+					set: {
+						checked: result.passed,
+						checkedAt: new Date(),
+						evaluationResult: JSON.stringify(result),
+						wasAutoEvaluated: true,
+						// Don't update userOverride - preserve existing overrides
+					},
+				});
+		}
+	} catch (error) {
+		// Log but don't throw - trade close should not fail due to evaluation errors
+		console.error("Failed to auto-evaluate trade rules:", error);
+	}
+}
 
 // Input schemas
 const createTradeSchema = z.object({
@@ -670,6 +826,10 @@ export const tradesRouter = createTRPCRouter({
 				throw new Error("Trade not found");
 			}
 
+			// Check if trade is being closed (status changing to 'closed')
+			const isBeingClosed =
+				updateData.status === "closed" && existingTrade.status !== "closed";
+
 			const [updated] = await ctx.db
 				.update(trades)
 				.set({
@@ -680,6 +840,11 @@ export const tradesRouter = createTRPCRouter({
 				})
 				.where(eq(trades.id, id))
 				.returning();
+
+			// Auto-evaluate strategy rules when trade is closed
+			if (isBeingClosed && existingTrade.strategyId) {
+				await autoEvaluateTradeRules(ctx.db, id, ctx.user.id);
+			}
 
 			return updated;
 		}),
@@ -739,6 +904,12 @@ export const tradesRouter = createTRPCRouter({
 				})
 				.where(eq(trades.id, input.id))
 				.returning();
+
+			// Auto-evaluate strategy rules after trade is closed
+			// This runs in the background after the trade is saved with final data
+			if (existingTrade.strategyId) {
+				await autoEvaluateTradeRules(ctx.db, input.id, ctx.user.id);
+			}
 
 			return updated;
 		}),
