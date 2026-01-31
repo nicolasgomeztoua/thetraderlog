@@ -16,7 +16,7 @@ interface RiskValueProps {
 function RiskValue({ label, value, testId }: RiskValueProps) {
 	return (
 		<div
-			className="flex flex-col gap-0.5 border-white/5 border-b p-2.5 odd:border-r sm:gap-1 sm:border-r sm:border-b-0 sm:p-4 sm:last:border-r-0 [&:nth-last-child(-n+2)]:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
+			className="flex flex-col gap-0.5 border-border/50 border-b p-2.5 odd:border-r sm:gap-1 sm:border-r sm:border-b-0 sm:p-4 sm:last:border-r-0 [&:nth-last-child(-n+2)]:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
 			data-testid={testId}
 		>
 			<span className="font-mono text-[8px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
@@ -97,11 +97,11 @@ export function StrategyRiskDisplay({
 	if (!hasRiskParams) {
 		return (
 			<div
-				className="overflow-hidden rounded border border-white/10 border-dashed"
+				className="overflow-hidden rounded border border-border border-dashed"
 				data-testid="strategy-risk-display-empty"
 			>
 				{/* Terminal window chrome header */}
-				<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+				<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 					<div className="flex items-center gap-1 sm:gap-1.5">
 						<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 						<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -114,7 +114,7 @@ export function StrategyRiskDisplay({
 				</div>
 
 				{/* Section header with command prompt */}
-				<div className="flex items-center gap-1.5 border-white/5 border-b bg-white/2 px-3 py-2 sm:gap-2 sm:px-4 sm:py-3">
+				<div className="flex items-center gap-1.5 border-border/50 border-b bg-muted px-3 py-2 sm:gap-2 sm:px-4 sm:py-3">
 					<span className="font-mono text-[10px] text-breakeven sm:text-xs">
 						{">"}
 					</span>
@@ -136,11 +136,11 @@ export function StrategyRiskDisplay({
 
 	return (
 		<div
-			className="overflow-hidden rounded border border-white/10"
+			className="overflow-hidden rounded border border-border"
 			data-testid="strategy-risk-display"
 		>
 			{/* Terminal window chrome header */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+			<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 				<div className="flex items-center gap-1 sm:gap-1.5">
 					<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 					<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -153,7 +153,7 @@ export function StrategyRiskDisplay({
 			</div>
 
 			{/* Section header with command prompt */}
-			<div className="flex items-center gap-1.5 border-white/5 border-b bg-white/2 px-3 py-2 sm:gap-2 sm:px-4 sm:py-3">
+			<div className="flex items-center gap-1.5 border-border/50 border-b bg-muted px-3 py-2 sm:gap-2 sm:px-4 sm:py-3">
 				<span className="font-mono text-[10px] text-breakeven sm:text-xs">
 					{">"}
 				</span>

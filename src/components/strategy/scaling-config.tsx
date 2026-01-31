@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { parseNumberInput } from "@/lib/utils/number-input";
 
 export interface ScalingRules {
 	scaleIn?: Array<{
@@ -49,7 +50,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const updateScaleIn = (
 		idx: number,
 		field: "trigger" | "sizePercent" | "enabled",
-		fieldValue: string | number | boolean,
+		fieldValue: string | number | boolean | undefined,
 	) => {
 		const newScaleIn = [...(scalingRules.scaleIn ?? [])];
 		const existing = newScaleIn[idx] ?? { trigger: "", sizePercent: 0 };
@@ -60,7 +61,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const updateScaleOut = (
 		idx: number,
 		field: "trigger" | "sizePercent" | "enabled",
-		fieldValue: string | number | boolean,
+		fieldValue: string | number | boolean | undefined,
 	) => {
 		const newScaleOut = [...(scalingRules.scaleOut ?? [])];
 		const existing = newScaleOut[idx] ?? { trigger: "", sizePercent: 0 };
@@ -114,7 +115,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleIn ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scalein-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
@@ -138,14 +139,13 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateScaleIn(
 													idx,
 													"sizePercent",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="5"
 											type="number"
 											value={rule.sizePercent}
@@ -204,7 +204,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleOut ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scaleout-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
@@ -228,14 +228,13 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateScaleOut(
 													idx,
 													"sizePercent",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="5"
 											type="number"
 											value={rule.sizePercent}

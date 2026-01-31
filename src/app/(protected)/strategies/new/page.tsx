@@ -69,9 +69,9 @@ export default function NewStrategyPage() {
 				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
 					→ New Strategy
 				</h2>
-				<div className="overflow-hidden rounded border border-white/10">
+				<div className="overflow-hidden rounded border border-border">
 					{/* Terminal window chrome header */}
-					<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+					<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 						<div className="flex items-center gap-1 sm:gap-1.5">
 							<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 							<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />

@@ -605,6 +605,127 @@ describe("strategy-rules-sync", () => {
 		});
 	});
 
+	describe("Regression: frontend sending generated rules back", () => {
+		it("should not duplicate rules when generated rules are sent in update rules array", async () => {
+			// This regression test covers the bug where the frontend fetched all rules
+			// (including generated ones) and sent them back in the update call,
+			// causing duplicates because generated rules were re-inserted as manual rules
+			const strategy = await caller.strategies.create({
+				name: "Duplicate Bug Regression Strategy",
+				riskParameters: {
+					maxRiskPerTrade: {
+						type: "dollars",
+						value: 500,
+						enabled: true,
+					},
+					dailyLossLimit: {
+						type: "dollars",
+						value: 1000,
+						enabled: true,
+					},
+				},
+			});
+
+			// Verify initial rules exist
+			let result = await caller.strategies.getById({ id: strategy.id });
+			expect(result.rules.length).toBe(2);
+
+			// Simulate what the buggy frontend did: fetch rules and send them ALL back
+			// including the generated ones (which should not be in the rules array)
+			const allRulesFetchedByFrontend = result.rules.map((r) => ({
+				id: r.id,
+				text: r.text,
+				category: r.category as "entry" | "exit" | "risk" | "management",
+				order: r.order,
+			}));
+
+			// Update strategy sending the generated rules back as if they were manual
+			await caller.strategies.update({
+				id: strategy.id,
+				rules: allRulesFetchedByFrontend, // Bug: sending generated rules back
+				riskParameters: {
+					maxRiskPerTrade: {
+						type: "dollars",
+						value: 500,
+						enabled: true,
+					},
+					dailyLossLimit: {
+						type: "dollars",
+						value: 1000,
+						enabled: true,
+					},
+				},
+			});
+
+			// After the fix: should still have exactly 2 rules, not 4 (duplicates)
+			result = await caller.strategies.getById({ id: strategy.id });
+
+			// Count rules by text to detect duplicates
+			const ruleTexts = result.rules.map((r) => r.text);
+			const uniqueTexts = new Set(ruleTexts);
+
+			expect(ruleTexts.length).toBe(uniqueTexts.size); // No duplicate texts
+			expect(result.rules.length).toBe(2); // Should still be 2, not 4
+		});
+
+		it("should not duplicate rules on multiple saves", async () => {
+			// Simulate clicking save multiple times
+			const strategy = await caller.strategies.create({
+				name: "Multiple Saves Strategy",
+				riskParameters: {
+					maxRiskPerTrade: {
+						type: "dollars",
+						value: 500,
+						enabled: true,
+					},
+				},
+			});
+
+			// First "save" - simulating frontend behavior
+			let result = await caller.strategies.getById({ id: strategy.id });
+			const rulesFromFrontend = result.rules.map((r) => ({
+				text: r.text,
+				category: r.category as "entry" | "exit" | "risk" | "management",
+				order: r.order,
+			}));
+
+			await caller.strategies.update({
+				id: strategy.id,
+				rules: rulesFromFrontend,
+			});
+
+			// Second "save"
+			result = await caller.strategies.getById({ id: strategy.id });
+			const rulesFromFrontend2 = result.rules.map((r) => ({
+				text: r.text,
+				category: r.category as "entry" | "exit" | "risk" | "management",
+				order: r.order,
+			}));
+
+			await caller.strategies.update({
+				id: strategy.id,
+				rules: rulesFromFrontend2,
+			});
+
+			// Third "save"
+			result = await caller.strategies.getById({ id: strategy.id });
+			const rulesFromFrontend3 = result.rules.map((r) => ({
+				text: r.text,
+				category: r.category as "entry" | "exit" | "risk" | "management",
+				order: r.order,
+			}));
+
+			await caller.strategies.update({
+				id: strategy.id,
+				rules: rulesFromFrontend3,
+			});
+
+			// Should still have exactly 1 rule, not 3 or more
+			result = await caller.strategies.getById({ id: strategy.id });
+			expect(result.rules.length).toBe(1);
+		});
+	});
+
 	describe("Complex scenarios", () => {
 		it("should handle strategy with multiple config sections enabled", async () => {
 			const strategy = await caller.strategies.create({

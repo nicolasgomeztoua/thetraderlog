@@ -133,7 +133,7 @@ export default function StrategiesPage() {
 			<div className="relative mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
 				{/* Hero Header */}
 				<div
-					className="relative overflow-hidden rounded border border-white/10 bg-white/2 p-4 sm:p-8"
+					className="relative overflow-hidden rounded border border-border bg-muted p-4 sm:p-8"
 					data-testid="strategies-header"
 				>
 					{/* Header background accent */}
@@ -187,8 +187,8 @@ export default function StrategiesPage() {
 				{isLoading && (
 					<div className="space-y-6 sm:space-y-8">
 						{/* Leaderboard skeleton */}
-						<div className="overflow-hidden rounded border border-white/10">
-							<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+						<div className="overflow-hidden rounded border border-border">
+							<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 								<div className="flex items-center gap-1 sm:gap-1.5">
 									<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
 									<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
@@ -201,7 +201,7 @@ export default function StrategiesPage() {
 								<div className="space-y-2 sm:space-y-3">
 									{[1, 2, 3].map((i) => (
 										<div
-											className="flex min-h-[48px] items-center justify-between rounded border border-white/5 bg-white/2 p-2.5 sm:min-h-0 sm:p-3"
+											className="flex min-h-[48px] items-center justify-between rounded border border-border/50 bg-muted p-2.5 sm:min-h-0 sm:p-3"
 											key={i}
 										>
 											<div className="flex items-center gap-2 sm:gap-3">
@@ -221,11 +221,11 @@ export default function StrategiesPage() {
 							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
 								{[1, 2, 3].map((i) => (
 									<div
-										className="overflow-hidden rounded border border-white/10"
+										className="overflow-hidden rounded border border-border"
 										key={i}
 									>
 										{/* Terminal chrome header */}
-										<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-2 py-1.5 sm:px-3 sm:py-2">
+										<div className="flex items-center justify-between border-border/50 border-b bg-muted px-2 py-1.5 sm:px-3 sm:py-2">
 											<div className="flex items-center gap-1 sm:gap-1.5">
 												<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 												<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -245,7 +245,7 @@ export default function StrategiesPage() {
 											</div>
 										</div>
 										{/* Card content skeleton */}
-										<div className="bg-white/1 p-3 sm:p-4">
+										<div className="bg-card p-3 sm:p-4">
 											<Skeleton className="mb-2.5 h-4 w-28 sm:mb-3 sm:h-5 sm:w-32" />
 											<div className="grid grid-cols-3 gap-2 sm:gap-3">
 												{[1, 2, 3].map((j) => (
@@ -266,7 +266,7 @@ export default function StrategiesPage() {
 				{/* Empty state */}
 				{!isLoading && (!strategies || strategies.length === 0) && (
 					<div
-						className="relative overflow-hidden rounded border border-white/10 bg-white/2"
+						className="relative overflow-hidden rounded border border-border bg-muted"
 						data-testid="strategies-empty-state"
 					>
 						{/* Grid pattern background */}
@@ -280,7 +280,7 @@ export default function StrategiesPage() {
 						/>
 
 						{/* Terminal window chrome */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+						<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 							<div className="flex items-center gap-1 sm:gap-1.5">
 								<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
 								<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
@@ -295,7 +295,7 @@ export default function StrategiesPage() {
 						{/* Content area */}
 						<div className="relative flex flex-col items-center justify-center px-4 py-12 sm:px-6 sm:py-20">
 							{/* Icon with terminal styling */}
-							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded border border-white/10 bg-white/5 sm:mb-6 sm:h-20 sm:w-20">
+							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded border border-border bg-muted sm:mb-6 sm:h-20 sm:w-20">
 								<BookMarked className="h-7 w-7 text-muted-foreground/60 sm:h-10 sm:w-10" />
 							</div>
 
@@ -321,7 +321,7 @@ export default function StrategiesPage() {
 							</p>
 
 							{/* Terminal-style command hint */}
-							<div className="mt-4 rounded border border-white/5 bg-white/2 px-3 py-1.5 sm:mt-6 sm:px-4 sm:py-2">
+							<div className="mt-4 rounded border border-border/50 bg-muted px-3 py-1.5 sm:mt-6 sm:px-4 sm:py-2">
 								<div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground sm:gap-2 sm:text-xs">
 									<span className="text-primary">→</span>
 									<span>Create your first strategy to begin tracking</span>
@@ -370,11 +370,11 @@ export default function StrategiesPage() {
 							))}
 							{/* Create Strategy CTA Card */}
 							<Link
-								className="group flex min-h-[200px] flex-col items-center justify-center gap-4 rounded border-2 border-white/10 border-dashed bg-white/2 p-6 transition-all hover:border-primary/50 hover:bg-white/5"
+								className="group flex min-h-[200px] flex-col items-center justify-center gap-4 rounded border-2 border-border border-dashed bg-muted p-6 transition-all hover:border-primary/50 hover:bg-muted"
 								data-testid="strategies-create-cta"
 								href="/strategies/new"
 							>
-								<div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors group-hover:border-primary/50 group-hover:bg-primary/10">
+								<div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted transition-colors group-hover:border-primary/50 group-hover:bg-primary/10">
 									<Plus className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
 								</div>
 								<div className="text-center">

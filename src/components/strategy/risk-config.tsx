@@ -17,6 +17,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { parseIntInput, parseNumberInput } from "@/lib/utils/number-input";
 
 export interface RiskParameters {
 	positionSizing?: {
@@ -126,14 +127,13 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) => {
-									const parsed = parseFloat(e.target.value);
+								onChange={(e) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "fixed",
-										fixedSize: Number.isNaN(parsed) ? undefined : parsed,
-									});
-								}}
+										fixedSize: parseNumberInput(e.target.value),
+									})
+								}
 								placeholder="1.0"
 								step="0.01"
 								type="number"
@@ -150,14 +150,13 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) => {
-									const parsed = parseFloat(e.target.value);
+								onChange={(e) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "risk_percent",
-										riskPercent: Number.isNaN(parsed) ? undefined : parsed,
-									});
-								}}
+										riskPercent: parseNumberInput(e.target.value),
+									})
+								}
 								placeholder="1.0"
 								step="0.1"
 								type="number"
@@ -174,14 +173,13 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) => {
-									const parsed = parseFloat(e.target.value);
+								onChange={(e) =>
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "kelly",
-										kellyFraction: Number.isNaN(parsed) ? undefined : parsed,
-									});
-								}}
+										kellyFraction: parseNumberInput(e.target.value),
+									})
+								}
 								placeholder="0.25"
 								step="0.01"
 								type="number"
@@ -252,14 +250,14 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							data-testid="risk-config-max-risk-value"
 							inputMode="decimal"
 							onChange={(e) => {
-								if (e.target.value === "") {
+								const parsed = parseNumberInput(e.target.value);
+								if (parsed === undefined) {
 									updateField("maxRiskPerTrade", undefined);
 								} else {
-									const parsed = parseFloat(e.target.value);
 									updateField("maxRiskPerTrade", {
 										...riskParams.maxRiskPerTrade,
 										type: riskParams.maxRiskPerTrade?.type ?? "dollars",
-										value: Number.isNaN(parsed) ? 0 : parsed,
+										value: parsed,
 									});
 								}
 							}}
@@ -330,14 +328,14 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							className="min-h-[44px] font-mono sm:min-h-0"
 							inputMode="decimal"
 							onChange={(e) => {
-								if (e.target.value === "") {
+								const parsed = parseNumberInput(e.target.value);
+								if (parsed === undefined) {
 									updateField("dailyLossLimit", undefined);
 								} else {
-									const parsed = parseFloat(e.target.value);
 									updateField("dailyLossLimit", {
 										...riskParams.dailyLossLimit,
 										type: riskParams.dailyLossLimit?.type ?? "dollars",
-										value: Number.isNaN(parsed) ? 0 : parsed,
+										value: parsed,
 									});
 								}
 							}}
@@ -375,13 +373,12 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 					<Input
 						className="min-h-[44px] font-mono sm:min-h-0"
 						inputMode="numeric"
-						onChange={(e) => {
-							const parsed = parseInt(e.target.value, 10);
+						onChange={(e) =>
 							updateField(
 								"maxConcurrentPositions",
-								Number.isNaN(parsed) ? undefined : parsed,
-							);
-						}}
+								parseIntInput(e.target.value),
+							)
+						}
 						placeholder="3"
 						step="1"
 						type="number"
@@ -415,13 +412,9 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 					<Input
 						className="min-h-[44px] font-mono sm:min-h-0"
 						inputMode="decimal"
-						onChange={(e) => {
-							const parsed = parseFloat(e.target.value);
-							updateField(
-								"minRRRatio",
-								Number.isNaN(parsed) ? undefined : parsed,
-							);
-						}}
+						onChange={(e) =>
+							updateField("minRRRatio", parseNumberInput(e.target.value))
+						}
 						placeholder="2.0"
 						step="0.1"
 						type="number"

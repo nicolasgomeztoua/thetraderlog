@@ -12,6 +12,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { parseIntInput, parseNumberInput } from "@/lib/utils/number-input";
 
 export interface TrailingRules {
 	moveToBreakeven?: {
@@ -50,7 +51,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 
 	const updateBreakeven = (
 		field: "triggerR" | "offsetTicks" | "enabled",
-		fieldValue: number | boolean,
+		fieldValue: number | boolean | undefined,
 	) => {
 		const currentBreakeven = trailingRules.moveToBreakeven ?? { triggerR: 1 };
 		onChange({
@@ -75,7 +76,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 	const updateTrailStop = (
 		idx: number,
 		field: "triggerR" | "method" | "value" | "enabled",
-		fieldValue: number | string | boolean,
+		fieldValue: number | string | boolean | undefined,
 	) => {
 		const newTrailStops = [...(trailingRules.trailStops ?? [])];
 		const existing = newTrailStops[idx] ?? {
@@ -124,13 +125,9 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) => {
-									const parsed = parseFloat(e.target.value);
-									updateBreakeven(
-										"triggerR",
-										Number.isNaN(parsed) ? 0 : parsed,
-									);
-								}}
+								onChange={(e) =>
+									updateBreakeven("triggerR", parseNumberInput(e.target.value))
+								}
 								placeholder="1.0"
 								step="0.1"
 								type="number"
@@ -145,10 +142,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="numeric"
 								onChange={(e) =>
-									updateBreakeven(
-										"offsetTicks",
-										parseInt(e.target.value, 10) || 0,
-									)
+									updateBreakeven("offsetTicks", parseIntInput(e.target.value))
 								}
 								placeholder="0"
 								step="1"
@@ -208,14 +202,13 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateTrailStop(
 													idx,
 													"triggerR",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="0.1"
 											type="number"
 											value={rule.triggerR}
@@ -228,14 +221,13 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) => {
-												const parsed = parseFloat(e.target.value);
+											onChange={(e) =>
 												updateTrailStop(
 													idx,
 													"value",
-													Number.isNaN(parsed) ? 0 : parsed,
-												);
-											}}
+													parseNumberInput(e.target.value),
+												)
+											}
 											step="1"
 											type="number"
 											value={rule.value}

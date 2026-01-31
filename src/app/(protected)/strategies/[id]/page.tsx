@@ -222,14 +222,16 @@ export default function StrategyDetailPage() {
 		);
 	}
 
-	// Transform rules for the form
-	const formRules = strategy.rules.map((rule) => ({
-		id: rule.id,
-		text: rule.text,
-		category: rule.category,
-		order: rule.order,
-		ruleType: rule.ruleType,
-	}));
+	// Transform rules for the form - only include manual rules
+	// Generated rules are managed via syncGeneratedRulesInternal and should not be edited in the form
+	const formRules = strategy.rules
+		.filter((rule) => !rule.isGenerated)
+		.map((rule) => ({
+			id: rule.id,
+			text: rule.text,
+			category: rule.category,
+			order: rule.order,
+		}));
 
 	const color = strategy.color ?? "#d4ff00";
 	const isActive = strategy.isActive !== false;

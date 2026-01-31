@@ -443,6 +443,25 @@ export const strategiesRouter = createTRPCRouter({
 
 			// Update manual rules if provided (only delete non-generated rules)
 			if (rules !== undefined) {
+				// Get existing generated rules to filter out duplicates from input
+				const existingGeneratedRules =
+					await ctx.db.query.strategyRules.findMany({
+						where: and(
+							eq(strategyRules.strategyId, id),
+							eq(strategyRules.isGenerated, true),
+						),
+						columns: { text: true },
+					});
+				const generatedRuleTexts = new Set(
+					existingGeneratedRules.map((r) => r.text),
+				);
+
+				// Filter out rules that duplicate generated rules (defense-in-depth)
+				// This prevents bugs where frontend accidentally sends generated rules back
+				const manualOnlyRules = rules.filter(
+					(rule) => !generatedRuleTexts.has(rule.text),
+				);
+
 				// Delete existing MANUAL rules only (preserve generated rules)
 				await ctx.db
 					.delete(strategyRules)
@@ -454,9 +473,9 @@ export const strategiesRouter = createTRPCRouter({
 					);
 
 				// Insert new manual rules
-				if (rules.length > 0) {
+				if (manualOnlyRules.length > 0) {
 					await ctx.db.insert(strategyRules).values(
-						rules.map((rule) => ({
+						manualOnlyRules.map((rule) => ({
 							strategyId: id,
 							text: rule.text,
 							category: rule.category,
