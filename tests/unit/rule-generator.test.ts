@@ -74,12 +74,14 @@ describe("hashConfig", () => {
 });
 
 describe("generateRulesFromConfig - Risk Parameters", () => {
-	it("should generate all rules when all risk fields are set", () => {
+	it("should generate all rules when all risk fields are set and enabled", () => {
 		const riskParams: RiskParameters = {
-			maxRiskPerTrade: { type: "dollars", value: 100 },
+			maxRiskPerTrade: { type: "dollars", value: 100, enabled: true },
 			minRRRatio: 2,
-			dailyLossLimit: { type: "dollars", value: 500 },
+			minRRRatioEnabled: true,
+			dailyLossLimit: { type: "dollars", value: 500, enabled: true },
 			maxConcurrentPositions: 3,
+			maxConcurrentPositionsEnabled: true,
 		};
 
 		const rules = generateRulesFromConfig(riskParams, null, null);
@@ -140,7 +142,7 @@ describe("generateRulesFromConfig - Risk Parameters", () => {
 
 	it("should handle percent type for max risk", () => {
 		const riskParams: RiskParameters = {
-			maxRiskPerTrade: { type: "percent", value: 2 },
+			maxRiskPerTrade: { type: "percent", value: 2, enabled: true },
 		};
 
 		const rules = generateRulesFromConfig(riskParams, null, null);
@@ -153,21 +155,55 @@ describe("generateRulesFromConfig - Risk Parameters", () => {
 
 	it("should handle percent type for daily loss limit", () => {
 		const riskParams: RiskParameters = {
-			dailyLossLimit: { type: "percent", value: 5 },
+			dailyLossLimit: { type: "percent", value: 5, enabled: true },
 		};
 
 		const rules = generateRulesFromConfig(riskParams, null, null);
 		expect(rules).toHaveLength(1);
 		expect(rules[0]?.text).toBe("Daily loss limit: 5%");
 	});
+
+	it("should not generate rules when fields are set but not enabled", () => {
+		const riskParams: RiskParameters = {
+			maxRiskPerTrade: { type: "dollars", value: 100, enabled: false },
+			minRRRatio: 2,
+			minRRRatioEnabled: false,
+			dailyLossLimit: { type: "dollars", value: 500, enabled: false },
+			maxConcurrentPositions: 3,
+			maxConcurrentPositionsEnabled: false,
+		};
+
+		const rules = generateRulesFromConfig(riskParams, null, null);
+		expect(rules).toHaveLength(0);
+	});
+
+	it("should only generate rules for enabled fields", () => {
+		const riskParams: RiskParameters = {
+			maxRiskPerTrade: { type: "dollars", value: 100, enabled: true },
+			minRRRatio: 2,
+			minRRRatioEnabled: false, // disabled
+			dailyLossLimit: { type: "dollars", value: 500, enabled: true },
+			maxConcurrentPositions: 3,
+			maxConcurrentPositionsEnabled: false, // disabled
+		};
+
+		const rules = generateRulesFromConfig(riskParams, null, null);
+		expect(rules).toHaveLength(2); // Only maxRisk and dailyLoss
+		expect(rules[0]?.configSource).toBe("riskParameters.maxRiskPerTrade");
+		expect(rules[1]?.configSource).toBe("riskParameters.dailyLossLimit");
+	});
 });
 
 describe("generateRulesFromConfig - Scaling Rules", () => {
-	it("should generate manual rules for scale-in", () => {
+	it("should generate manual rules for scale-in when enabled", () => {
 		const scalingRules: ScalingRules = {
 			scaleIn: [
-				{ trigger: "Price pulls back to support", sizePercent: 25 },
-				{ trigger: "On confirmation candle", sizePercent: 25 },
+				{
+					trigger: "Price pulls back to support",
+					sizePercent: 25,
+					enabled: true,
+				},
+				{ trigger: "On confirmation candle", sizePercent: 25, enabled: true },
 			],
 		};
 
@@ -184,9 +220,11 @@ describe("generateRulesFromConfig - Scaling Rules", () => {
 		expect(rules[0]?.configSource).toBe("scalingRules.scaleIn[0]");
 	});
 
-	it("should generate auto rules for scale-out with R-level", () => {
+	it("should generate auto rules for scale-out with R-level when enabled", () => {
 		const scalingRules: ScalingRules = {
-			scaleOut: [{ trigger: "At +1R take 50%", sizePercent: 50 }],
+			scaleOut: [
+				{ trigger: "At +1R take 50%", sizePercent: 50, enabled: true },
+			],
 		};
 
 		const rules = generateRulesFromConfig(null, scalingRules, null);
@@ -204,9 +242,11 @@ describe("generateRulesFromConfig - Scaling Rules", () => {
 		}
 	});
 
-	it("should generate manual rules for scale-out without R-level", () => {
+	it("should generate manual rules for scale-out without R-level when enabled", () => {
 		const scalingRules: ScalingRules = {
-			scaleOut: [{ trigger: "At resistance level", sizePercent: 50 }],
+			scaleOut: [
+				{ trigger: "At resistance level", sizePercent: 50, enabled: true },
+			],
 		};
 
 		const rules = generateRulesFromConfig(null, scalingRules, null);
@@ -216,12 +256,16 @@ describe("generateRulesFromConfig - Scaling Rules", () => {
 		expect(rules[0]?.autoCondition).toBeNull();
 	});
 
-	it("should parse various R-level formats in scale-out triggers", () => {
+	it("should parse various R-level formats in scale-out triggers when enabled", () => {
 		const scalingRules: ScalingRules = {
 			scaleOut: [
-				{ trigger: "At +1.5R take first partial", sizePercent: 30 },
-				{ trigger: "Take profit at 2R", sizePercent: 40 },
-				{ trigger: "+3R final exit", sizePercent: 30 },
+				{
+					trigger: "At +1.5R take first partial",
+					sizePercent: 30,
+					enabled: true,
+				},
+				{ trigger: "Take profit at 2R", sizePercent: 40, enabled: true },
+				{ trigger: "+3R final exit", sizePercent: 30, enabled: true },
 			],
 		};
 
@@ -243,11 +287,12 @@ describe("generateRulesFromConfig - Scaling Rules", () => {
 		}
 	});
 
-	it("should skip scale-in entries without trigger", () => {
+	it("should skip scale-in entries without trigger or not enabled", () => {
 		const scalingRules: ScalingRules = {
 			scaleIn: [
-				{ trigger: "", sizePercent: 25 },
-				{ trigger: "Valid trigger", sizePercent: 50 },
+				{ trigger: "", sizePercent: 25, enabled: true }, // no trigger
+				{ trigger: "Valid trigger", sizePercent: 50, enabled: true },
+				{ trigger: "Another trigger", sizePercent: 25, enabled: false }, // not enabled
 			],
 		};
 
@@ -261,12 +306,30 @@ describe("generateRulesFromConfig - Scaling Rules", () => {
 		const rules = generateRulesFromConfig(null, scalingRules, null);
 		expect(rules).toHaveLength(0);
 	});
+
+	it("should not generate rules when scaling items are not enabled", () => {
+		const scalingRules: ScalingRules = {
+			scaleIn: [
+				{
+					trigger: "Price pulls back to support",
+					sizePercent: 25,
+					enabled: false,
+				},
+			],
+			scaleOut: [
+				{ trigger: "At +1R take 50%", sizePercent: 50, enabled: false },
+			],
+		};
+
+		const rules = generateRulesFromConfig(null, scalingRules, null);
+		expect(rules).toHaveLength(0);
+	});
 });
 
 describe("generateRulesFromConfig - Trailing Rules", () => {
-	it("should generate auto rule for move to breakeven", () => {
+	it("should generate auto rule for move to breakeven when enabled", () => {
 		const trailingRules: TrailingRules = {
-			moveToBreakeven: { triggerR: 1, offsetTicks: 2 },
+			moveToBreakeven: { triggerR: 1, offsetTicks: 2, enabled: true },
 		};
 
 		const rules = generateRulesFromConfig(null, null, trailingRules);
@@ -285,16 +348,18 @@ describe("generateRulesFromConfig - Trailing Rules", () => {
 
 	it("should omit offset text when offsetTicks is 0", () => {
 		const trailingRules: TrailingRules = {
-			moveToBreakeven: { triggerR: 1, offsetTicks: 0 },
+			moveToBreakeven: { triggerR: 1, offsetTicks: 0, enabled: true },
 		};
 
 		const rules = generateRulesFromConfig(null, null, trailingRules);
 		expect(rules[0]?.text).toBe("Move to breakeven at +1R");
 	});
 
-	it("should generate semi_auto rule for fixed_ticks trailing stop", () => {
+	it("should generate semi_auto rule for fixed_ticks trailing stop when enabled", () => {
 		const trailingRules: TrailingRules = {
-			trailStops: [{ triggerR: 1.5, method: "fixed_ticks", value: 10 }],
+			trailStops: [
+				{ triggerR: 1.5, method: "fixed_ticks", value: 10, enabled: true },
+			],
 		};
 
 		const rules = generateRulesFromConfig(null, null, trailingRules);
@@ -310,9 +375,11 @@ describe("generateRulesFromConfig - Trailing Rules", () => {
 		}
 	});
 
-	it("should generate manual rule for atr_multiple trailing stop", () => {
+	it("should generate manual rule for atr_multiple trailing stop when enabled", () => {
 		const trailingRules: TrailingRules = {
-			trailStops: [{ triggerR: 2, method: "atr_multiple", value: 1.5 }],
+			trailStops: [
+				{ triggerR: 2, method: "atr_multiple", value: 1.5, enabled: true },
+			],
 		};
 
 		const rules = generateRulesFromConfig(null, null, trailingRules);
@@ -323,9 +390,11 @@ describe("generateRulesFromConfig - Trailing Rules", () => {
 		expect(rules[0]?.autoCondition).toBeNull();
 	});
 
-	it("should generate manual rule for swing_low trailing stop", () => {
+	it("should generate manual rule for swing_low trailing stop when enabled", () => {
 		const trailingRules: TrailingRules = {
-			trailStops: [{ triggerR: 2.5, method: "swing_low", value: 0 }],
+			trailStops: [
+				{ triggerR: 2.5, method: "swing_low", value: 0, enabled: true },
+			],
 		};
 
 		const rules = generateRulesFromConfig(null, null, trailingRules);
@@ -336,12 +405,12 @@ describe("generateRulesFromConfig - Trailing Rules", () => {
 		expect(rules[0]?.autoCondition).toBeNull();
 	});
 
-	it("should handle multiple trailing stops with different methods", () => {
+	it("should handle multiple trailing stops with different methods when enabled", () => {
 		const trailingRules: TrailingRules = {
 			trailStops: [
-				{ triggerR: 1, method: "fixed_ticks", value: 8 },
-				{ triggerR: 2, method: "atr_multiple", value: 2 },
-				{ triggerR: 3, method: "swing_low", value: 0 },
+				{ triggerR: 1, method: "fixed_ticks", value: 8, enabled: true },
+				{ triggerR: 2, method: "atr_multiple", value: 2, enabled: true },
+				{ triggerR: 3, method: "swing_low", value: 0, enabled: true },
 			],
 		};
 
@@ -352,23 +421,38 @@ describe("generateRulesFromConfig - Trailing Rules", () => {
 		expect(rules[1]?.ruleType).toBe("manual");
 		expect(rules[2]?.ruleType).toBe("manual");
 	});
+
+	it("should not generate rules when trailing items are not enabled", () => {
+		const trailingRules: TrailingRules = {
+			moveToBreakeven: { triggerR: 1, offsetTicks: 2, enabled: false },
+			trailStops: [
+				{ triggerR: 1.5, method: "fixed_ticks", value: 10, enabled: false },
+			],
+		};
+
+		const rules = generateRulesFromConfig(null, null, trailingRules);
+		expect(rules).toHaveLength(0);
+	});
 });
 
 describe("generateRulesFromConfig - Combined Configurations", () => {
-	it("should generate rules from all config sections", () => {
+	it("should generate rules from all config sections when enabled", () => {
 		const riskParams: RiskParameters = {
-			maxRiskPerTrade: { type: "dollars", value: 100 },
+			maxRiskPerTrade: { type: "dollars", value: 100, enabled: true },
 			minRRRatio: 2,
+			minRRRatioEnabled: true,
 		};
 
 		const scalingRules: ScalingRules = {
-			scaleIn: [{ trigger: "On pullback", sizePercent: 25 }],
-			scaleOut: [{ trigger: "At +1R", sizePercent: 50 }],
+			scaleIn: [{ trigger: "On pullback", sizePercent: 25, enabled: true }],
+			scaleOut: [{ trigger: "At +1R", sizePercent: 50, enabled: true }],
 		};
 
 		const trailingRules: TrailingRules = {
-			moveToBreakeven: { triggerR: 1 },
-			trailStops: [{ triggerR: 2, method: "fixed_ticks", value: 10 }],
+			moveToBreakeven: { triggerR: 1, enabled: true },
+			trailStops: [
+				{ triggerR: 2, method: "fixed_ticks", value: 10, enabled: true },
+			],
 		};
 
 		const rules = generateRulesFromConfig(
@@ -389,15 +473,16 @@ describe("generateRulesFromConfig - Combined Configurations", () => {
 		expect(rules[5]?.configSource).toContain("trailingRules");
 	});
 
-	it("should assign correct categories to all rule types", () => {
+	it("should assign correct categories to all rule types when enabled", () => {
 		const riskParams: RiskParameters = {
-			maxRiskPerTrade: { type: "dollars", value: 100 },
+			maxRiskPerTrade: { type: "dollars", value: 100, enabled: true },
 			minRRRatio: 2,
+			minRRRatioEnabled: true,
 		};
 
 		const scalingRules: ScalingRules = {
-			scaleIn: [{ trigger: "On pullback", sizePercent: 25 }],
-			scaleOut: [{ trigger: "At +1R", sizePercent: 50 }],
+			scaleIn: [{ trigger: "On pullback", sizePercent: 25, enabled: true }],
+			scaleOut: [{ trigger: "At +1R", sizePercent: 50, enabled: true }],
 		};
 
 		const rules = generateRulesFromConfig(riskParams, scalingRules, null);
@@ -417,15 +502,15 @@ describe("generateRulesFromConfig - Combined Configurations", () => {
 
 	it("should include sourceConfigHash for all generated rules", () => {
 		const riskParams: RiskParameters = {
-			maxRiskPerTrade: { type: "dollars", value: 100 },
+			maxRiskPerTrade: { type: "dollars", value: 100, enabled: true },
 		};
 
 		const scalingRules: ScalingRules = {
-			scaleOut: [{ trigger: "At +1R", sizePercent: 50 }],
+			scaleOut: [{ trigger: "At +1R", sizePercent: 50, enabled: true }],
 		};
 
 		const trailingRules: TrailingRules = {
-			moveToBreakeven: { triggerR: 1 },
+			moveToBreakeven: { triggerR: 1, enabled: true },
 		};
 
 		const rules = generateRulesFromConfig(

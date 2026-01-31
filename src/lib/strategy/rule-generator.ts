@@ -54,6 +54,7 @@ export function parseRLevelFromTrigger(trigger: string): number | null {
 
 /**
  * Generates rules from risk parameters
+ * Only generates rules for fields that have enabled: true
  */
 function generateRiskRules(
 	riskParams: RiskParameters | null | undefined,
@@ -62,8 +63,11 @@ function generateRiskRules(
 
 	const rules: GeneratedRule[] = [];
 
-	// Max Risk Per Trade
-	if (riskParams.maxRiskPerTrade?.value !== undefined) {
+	// Max Risk Per Trade - only if enabled
+	if (
+		riskParams.maxRiskPerTrade?.value !== undefined &&
+		riskParams.maxRiskPerTrade.enabled
+	) {
 		const { type, value } = riskParams.maxRiskPerTrade;
 		const displayValue = type === "dollars" ? `$${value}` : `${value}%`;
 		const condition: AutoCondition = {
@@ -82,8 +86,8 @@ function generateRiskRules(
 		});
 	}
 
-	// Min R:R Ratio
-	if (riskParams.minRRRatio !== undefined) {
+	// Min R:R Ratio - only if enabled
+	if (riskParams.minRRRatio !== undefined && riskParams.minRRRatioEnabled) {
 		const condition: AutoCondition = {
 			type: "minRRRatio",
 			minRatio: riskParams.minRRRatio,
@@ -99,8 +103,11 @@ function generateRiskRules(
 		});
 	}
 
-	// Daily Loss Limit
-	if (riskParams.dailyLossLimit?.value !== undefined) {
+	// Daily Loss Limit - only if enabled
+	if (
+		riskParams.dailyLossLimit?.value !== undefined &&
+		riskParams.dailyLossLimit.enabled
+	) {
 		const { type, value } = riskParams.dailyLossLimit;
 		const displayValue = type === "dollars" ? `$${value}` : `${value}%`;
 		const condition: AutoCondition = {
@@ -119,8 +126,11 @@ function generateRiskRules(
 		});
 	}
 
-	// Max Concurrent Positions
-	if (riskParams.maxConcurrentPositions !== undefined) {
+	// Max Concurrent Positions - only if enabled
+	if (
+		riskParams.maxConcurrentPositions !== undefined &&
+		riskParams.maxConcurrentPositionsEnabled
+	) {
 		const condition: AutoCondition = {
 			type: "maxConcurrentPositions",
 			maxPositions: riskParams.maxConcurrentPositions,
@@ -143,6 +153,7 @@ function generateRiskRules(
 
 /**
  * Generates rules from scaling configuration
+ * Only generates rules for items that have enabled: true
  */
 function generateScalingRules(
 	scalingRules: ScalingRules | null | undefined,
@@ -152,10 +163,11 @@ function generateScalingRules(
 	const rules: GeneratedRule[] = [];
 
 	// Scale In Rules - always manual (can't auto-evaluate adding to position)
+	// Only generate if enabled
 	if (scalingRules.scaleIn) {
 		for (let i = 0; i < scalingRules.scaleIn.length; i++) {
 			const scaleIn = scalingRules.scaleIn[i];
-			if (!scaleIn?.trigger) continue;
+			if (!scaleIn?.trigger || !scaleIn.enabled) continue;
 
 			rules.push({
 				text: `Scale in: ${scaleIn.trigger} (${scaleIn.sizePercent}%)`,
@@ -169,10 +181,11 @@ function generateScalingRules(
 	}
 
 	// Scale Out Rules - auto if R-level parseable
+	// Only generate if enabled
 	if (scalingRules.scaleOut) {
 		for (let i = 0; i < scalingRules.scaleOut.length; i++) {
 			const scaleOut = scalingRules.scaleOut[i];
-			if (!scaleOut?.trigger) continue;
+			if (!scaleOut?.trigger || !scaleOut.enabled) continue;
 
 			const rLevel = parseRLevelFromTrigger(scaleOut.trigger);
 			let ruleType: RuleType = "manual";
@@ -203,6 +216,7 @@ function generateScalingRules(
 
 /**
  * Generates rules from trailing stop configuration
+ * Only generates rules for items that have enabled: true
  */
 function generateTrailingRules(
 	trailingRules: TrailingRules | null | undefined,
@@ -211,8 +225,8 @@ function generateTrailingRules(
 
 	const rules: GeneratedRule[] = [];
 
-	// Move to Breakeven
-	if (trailingRules.moveToBreakeven) {
+	// Move to Breakeven - only if enabled
+	if (trailingRules.moveToBreakeven?.enabled) {
 		const { triggerR, offsetTicks = 0 } = trailingRules.moveToBreakeven;
 		const condition: AutoCondition = {
 			type: "breakevenTrigger",
@@ -231,11 +245,11 @@ function generateTrailingRules(
 		});
 	}
 
-	// Trailing Stops
+	// Trailing Stops - only generate if enabled
 	if (trailingRules.trailStops) {
 		for (let i = 0; i < trailingRules.trailStops.length; i++) {
 			const trailStop = trailingRules.trailStops[i];
-			if (!trailStop) continue;
+			if (!trailStop?.enabled) continue;
 
 			const { triggerR, method, value } = trailStop;
 

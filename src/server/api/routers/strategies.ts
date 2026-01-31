@@ -1,6 +1,10 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import type { RiskParameters } from "@/components/strategy/risk-config";
+import type { ScalingRules } from "@/components/strategy/scaling-config";
+import type { TrailingRules } from "@/components/strategy/trailing-config";
 import { calculateAggregateStats } from "@/lib/analytics";
+import { generateRulesFromConfig } from "@/lib/strategy";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
@@ -821,4 +825,117 @@ export const strategiesRouter = createTRPCRouter({
 
 		return curves;
 	}),
+
+	// Sync generated rules from strategy config
+	syncGeneratedRules: protectedProcedure
+		.input(z.object({ strategyId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Fetch strategy with ownership validation
+			const strategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, input.strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+				with: {
+					rules: true,
+				},
+			});
+
+			if (!strategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Parse JSON configs
+			const riskParams: RiskParameters | null = strategy.riskParameters
+				? JSON.parse(strategy.riskParameters)
+				: null;
+			const scalingRulesConfig: ScalingRules | null = strategy.scalingRules
+				? JSON.parse(strategy.scalingRules)
+				: null;
+			const trailingRulesConfig: TrailingRules | null = strategy.trailingRules
+				? JSON.parse(strategy.trailingRules)
+				: null;
+
+			// Generate desired rules from config
+			const desiredRules = generateRulesFromConfig(
+				riskParams,
+				scalingRulesConfig,
+				trailingRulesConfig,
+			);
+
+			// Get existing generated rules (isGenerated: true)
+			const existingGeneratedRules = strategy.rules.filter(
+				(rule) => rule.isGenerated,
+			);
+
+			// Build a map of existing rules by configSource for comparison
+			const existingBySource = new Map(
+				existingGeneratedRules.map((rule) => [rule.configSource, rule]),
+			);
+
+			// Track changes
+			let added = 0;
+			let updated = 0;
+			let deleted = 0;
+
+			// Determine max order from existing rules (both manual and generated)
+			const maxOrder = strategy.rules.reduce(
+				(max, rule) => Math.max(max, rule.order),
+				-1,
+			);
+			let nextOrder = maxOrder + 1;
+
+			// Process desired rules: add new or update existing
+			for (const desiredRule of desiredRules) {
+				const existing = existingBySource.get(desiredRule.configSource);
+
+				if (existing) {
+					// Check if hash changed (config was updated)
+					if (existing.sourceConfigHash !== desiredRule.sourceConfigHash) {
+						// Update the rule
+						await ctx.db
+							.update(strategyRules)
+							.set({
+								text: desiredRule.text,
+								category: desiredRule.category,
+								ruleType: desiredRule.ruleType,
+								autoCondition: desiredRule.autoCondition
+									? JSON.stringify(desiredRule.autoCondition)
+									: null,
+								sourceConfigHash: desiredRule.sourceConfigHash,
+							})
+							.where(eq(strategyRules.id, existing.id));
+						updated++;
+					}
+					// Remove from map to track what's left (orphaned)
+					existingBySource.delete(desiredRule.configSource);
+				} else {
+					// Add new rule
+					await ctx.db.insert(strategyRules).values({
+						strategyId: input.strategyId,
+						text: desiredRule.text,
+						category: desiredRule.category,
+						order: nextOrder++,
+						ruleType: desiredRule.ruleType,
+						configSource: desiredRule.configSource,
+						autoCondition: desiredRule.autoCondition
+							? JSON.stringify(desiredRule.autoCondition)
+							: null,
+						isGenerated: true,
+						sourceConfigHash: desiredRule.sourceConfigHash,
+					});
+					added++;
+				}
+			}
+
+			// Delete orphaned generated rules (in existingBySource but not in desiredRules)
+			for (const orphanedRule of existingBySource.values()) {
+				await ctx.db
+					.delete(strategyRules)
+					.where(eq(strategyRules.id, orphanedRule.id));
+				deleted++;
+			}
+
+			return { added, updated, deleted };
+		}),
 });
