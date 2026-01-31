@@ -716,6 +716,7 @@ export const strategiesRouter = createTRPCRouter({
 				tradeId: z.string(),
 				ruleId: z.string(),
 				checked: z.boolean(),
+				userOverride: z.boolean().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -731,6 +732,21 @@ export const strategiesRouter = createTRPCRouter({
 				throw new Error("Trade not found");
 			}
 
+			// Build the values to set
+			const setValues: {
+				checked: boolean;
+				checkedAt: Date | null;
+				userOverride?: boolean;
+			} = {
+				checked: input.checked,
+				checkedAt: input.checked ? new Date() : null,
+			};
+
+			// Only set userOverride if explicitly provided
+			if (input.userOverride !== undefined) {
+				setValues.userOverride = input.userOverride;
+			}
+
 			// Upsert the rule check
 			await ctx.db
 				.insert(tradeRuleChecks)
@@ -739,13 +755,11 @@ export const strategiesRouter = createTRPCRouter({
 					ruleId: input.ruleId,
 					checked: input.checked,
 					checkedAt: input.checked ? new Date() : null,
+					userOverride: input.userOverride ?? null,
 				})
 				.onConflictDoUpdate({
 					target: [tradeRuleChecks.tradeId, tradeRuleChecks.ruleId],
-					set: {
-						checked: input.checked,
-						checkedAt: input.checked ? new Date() : null,
-					},
+					set: setValues,
 				});
 
 			return { success: true };
