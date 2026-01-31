@@ -16,11 +16,13 @@ export interface TrailingRules {
 	moveToBreakeven?: {
 		triggerR: number;
 		offsetTicks?: number;
+		enabled?: boolean;
 	};
 	trailStops?: Array<{
 		triggerR: number;
 		method: "fixed_ticks" | "atr_multiple" | "swing_low";
 		value: number;
+		enabled?: boolean;
 	}>;
 }
 
@@ -183,7 +185,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 					<div className="space-y-2">
 						{(trailingRules.trailStops ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`trail-${rule.triggerR}-${rule.method}`}
 							>
 								<div className="grid grid-cols-2 gap-2 sm:contents">

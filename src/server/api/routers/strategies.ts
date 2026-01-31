@@ -71,6 +71,7 @@ const trailingRulesSchema = z.object({
 		.object({
 			triggerR: z.number(),
 			offsetTicks: z.number().optional(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	trailStops: z
@@ -79,6 +80,7 @@ const trailingRulesSchema = z.object({
 				triggerR: z.number(),
 				method: z.enum(["fixed_ticks", "atr_multiple", "swing_low"]),
 				value: z.number(),
+				enabled: z.boolean().optional(),
 			}),
 		)
 		.optional(),
