@@ -204,6 +204,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						</span>
 						<Switch
 							checked={riskParams.maxRiskPerTrade?.enabled ?? false}
+							data-testid="risk-config-max-risk-toggle"
 							onCheckedChange={(checked) =>
 								updateField("maxRiskPerTrade", {
 									type: riskParams.maxRiskPerTrade?.type ?? "dollars",
@@ -248,6 +249,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						</span>
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="risk-config-max-risk-value"
 							inputMode="decimal"
 							onChange={(e) => {
 								if (e.target.value === "") {

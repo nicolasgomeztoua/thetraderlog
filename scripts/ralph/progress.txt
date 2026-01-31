@@ -159,3 +159,133 @@ Started: Sat Jan 31 13:26:41 WET 2026
   - Test that hash prevents updates by creating strategy, getting hash, updating with same values, verifying hash unchanged
   - Test config sections: riskParameters (nested .enabled), scalingRules (array item .enabled), trailingRules (mixed)
 ---
+
+## 2026-01-31 - US-014
+- What was implemented: Auto-Evaluation Engine with 6 core evaluators for strategy rules
+- Files changed:
+  - src/lib/strategy/evaluation.ts (created) - 548 lines with all evaluators and context interface
+  - src/lib/strategy/index.ts (updated) - added evaluation export
+- **Learnings for future iterations:**
+  - Evaluation pattern: each evaluator returns AutoEvaluationResult with passed, actual, expected, details, dataQuality
+  - Three result helpers: passedResult(), failedResult(), unavailableResult() for consistent response format
+  - EvaluationContext provides: executions, dayTrades, concurrentTradesAtEntry, mfeR, accountBalance
+  - TradeForEvaluation is a minimal interface with only fields needed for evaluation
+  - calculatePlannedRR from src/lib/trades/calculations.ts is reusable for R:R calculation
+  - getPointValue from src/lib/market-data handles both futures and forex point values
+  - For breakeven trigger: if MFE doesn't reach trigger, rule passes as "not applicable"
+  - For scale out: allow 10% price tolerance and 20% quantity tolerance for matching executions
+  - trailingStopTrigger returns unavailable - it's semi_auto requiring manual verification
+  - Exhaustive switch statement requires block scope: `default: { const _exhaustive: never = ... }`
+---
+
+## 2026-01-31 - US-015
+- What was implemented: buildEvaluationContext helper to fetch all data required for auto-evaluation
+- Files changed:
+  - src/lib/strategy/evaluation.ts (updated) - added buildEvaluationContext and 4 helper functions
+- **Learnings for future iterations:**
+  - Use `typeof db from "@/server/db"` pattern for db type (same as helpers.ts uses)
+  - Promise.all for parallel queries minimizes DB round trips
+  - TradeWithAccount interface includes all fields needed for evaluation context building
+  - Same-day trades query uses getDayBoundsInTimezone with user's timezone setting
+  - Concurrent trades counted as: trades entered before this trade's entry AND (still open OR exited after entry)
+  - Account balance comes from account.initialBalance - may want current balance in future
+  - MFE in R already implemented as calculateMfeInR - just reused it
+---
+
+## 2026-01-31 - US-016
+- What was implemented: evaluateTradeRules tRPC endpoint for auto-evaluating strategy rules against trade data
+- Files changed:
+  - src/server/api/routers/strategies.ts (updated) - added evaluateTradeRules mutation
+- **Learnings for future iterations:**
+  - Import buildEvaluationContext and evaluateAutoCondition from "@/lib/strategy" barrel
+  - When upserting tradeRuleChecks, use onConflictDoUpdate on composite key [tradeId, ruleId]
+  - Don't overwrite userOverride field when auto-evaluating - preserve user's manual override
+  - Filter rules by `ruleType !== "manual"` to get auto/semi_auto rules
+  - Parse autoCondition as JSON from rule record before passing to evaluateAutoCondition
+  - Pass trade data as TradeForEvaluation interface (minimal subset) to evaluator
+---
+
+## 2026-01-31 - US-017
+- What was implemented: Integration tests for strategy auto-evaluation engine
+- Files changed:
+  - tests/integration/strategy-evaluation.test.ts (created) - 23 test cases
+- **Learnings for future iterations:**
+  - Test pattern for evaluators: create strategy with enabled config, create trade with DB insert, call evaluateTradeRules, assert on results
+  - For testing scale out evaluator, must create TradeExecution records via db.insert(schema.tradeExecutions)
+  - For testing daily loss limit, create multiple trades on same day before the test trade
+  - For testing concurrent positions, create trades with overlapping entry/exit times
+  - Missing data tests: omit stopLoss/takeProfit/mfePrice fields to trigger dataQuality: 'unavailable'
+  - Trade needs strategyId set to link to strategy, otherwise evaluateTradeRules throws "Trade has no strategy assigned"
+  - Use getTestDb() and schema.trades for direct trade insertion when testing specific field combinations
+  - Docker is REQUIRED for integration tests - testcontainers needs a running container runtime
+---
+
+## 2026-01-31 - US-018
+- What was implemented: Rule type badges (AUTO, SEMI, MANUAL) for strategy rules display
+- Files changed:
+  - src/components/strategy/strategy-rules-display.tsx (updated) - added RuleTypeBadge component with RULE_TYPE_CONFIG
+  - src/app/(protected)/strategies/[id]/page.tsx (updated) - formRules now includes ruleType
+- **Learnings for future iterations:**
+  - Use RULE_TYPE_CONFIG pattern for badge styling (label, icon, bgClass, textClass)
+  - Rule interface must include ruleType as optional for backwards compatibility
+  - When passing rules to display components, remember to include new fields from schema
+  - Badge styling: inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[8px]
+  - Test badges: data-testid={`rule-type-badge-${ruleType}`} for E2E testing
+---
+
+## 2026-01-31 - US-019
+- What was implemented: Enhanced trade checklist with auto-evaluation display
+- Files changed:
+  - src/components/strategy/rule-checklist.tsx (updated) - Added auto-evaluation display, override functionality
+  - src/server/api/routers/strategies.ts (updated) - checkRule mutation now supports userOverride field
+- **Learnings for future iterations:**
+  - Use parseEvaluationResult helper to safely parse JSON evaluation results from string
+  - AutoEvaluationResult type from lib/strategy provides proper typing for evaluation results
+  - For auto-evaluated rules: show CheckCircle (green) or XCircle (red) instead of checkbox
+  - Override mode uses local useState to track which rules user wants to override
+  - When overriding, pass userOverride: true to checkRule mutation
+  - Disabled checkboxes need cursor-default on label, and htmlFor should be undefined
+  - Pattern for conditional indicator: isAutoRule && isAutoEvaluated && !isInOverrideMode
+  - data-testid convention for rule items: rule-checklist-item-{id}, rule-eval-passed-{id}, rule-eval-failed-{id}
+  - RuleTypeBadge component can be reused - show OVERRIDDEN badge in orange when userOverride is true
+---
+
+## 2026-01-31 - US-020
+- What was implemented: User override for auto-evaluated rules (badge update)
+- Files changed:
+  - src/components/strategy/rule-checklist.tsx (updated) - Fixed isOverridden badge to show when in override mode
+- **Learnings for future iterations:**
+  - Most override functionality was already implemented in US-019 (Override button, handleCheck with userOverride, checkRule mutation)
+  - The missing piece was showing OVERRIDDEN badge when user enters override mode (not just when saved)
+  - Badge condition should be: hasUserOverride (from server) OR isInOverrideMode (local state)
+  - This provides immediate visual feedback when user clicks Override button
+---
+
+## 2026-01-31 - US-021
+- What was implemented: Auto-evaluation triggered when trade closes
+- Files changed:
+  - src/server/api/routers/trades.ts (updated) - Added autoEvaluateTradeRules helper and integrated into close/update mutations
+- **Learnings for future iterations:**
+  - Use same pattern as strategies router's evaluateTradeRules - reuse buildEvaluationContext and evaluateAutoCondition
+  - Helper function catches errors and logs them - trade close should NEVER fail due to evaluation errors
+  - Check for strategyId before calling evaluation (skip trades without strategies)
+  - For update mutation, check if isBeingClosed (status changing from non-closed to closed)
+  - Import type `db as DbType` for Db type definition (same pattern as evaluation.ts)
+  - Preserve userOverride field when upserting tradeRuleChecks - don't overwrite existing overrides
+---
+
+## 2026-01-31 - US-022
+- What was implemented: E2E tests for strategy checklist flow
+- Files changed:
+  - tests/e2e/strategy-checklist.spec.ts (created) - 10 E2E tests covering full checklist flow
+  - src/components/strategy/strategy-form.tsx (updated) - Added data-testid attributes
+  - src/components/strategy/risk-config.tsx (updated) - Added data-testid to toggle and input
+  - src/components/strategy/rule-checklist.tsx (updated) - Added data-testid to compliance section
+- **Learnings for future iterations:**
+  - data-testid naming: [component]-[element]-[qualifier] e.g., strategy-form-tab-risk
+  - E2E tests should gracefully handle cases where data doesn't exist (use .isVisible() checks)
+  - For tests that depend on existing data, use conditional logic to skip if no data exists
+  - Playwright strict mode: always use data-testid for reliable selectors, never CSS classes
+  - Use .first() when a testid might match multiple elements (e.g., autoBadge.first())
+  - waitForURL with regex pattern is useful for dynamic route navigation checks
+---

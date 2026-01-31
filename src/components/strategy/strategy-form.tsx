@@ -127,17 +127,22 @@ export function StrategyForm({
 	];
 
 	return (
-		<form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
+		<form
+			className="space-y-4 sm:space-y-6"
+			data-testid="strategy-form"
+			onSubmit={handleSubmit}
+		>
 			{/* Section Tabs - Terminal Style Navigation */}
 			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-				<div className="flex gap-1 border-white/10 border-b pb-3 sm:flex-wrap sm:gap-1.5 sm:pb-4">
+				<div className="flex gap-1 border-border border-b pb-3 sm:flex-wrap sm:gap-1.5 sm:pb-4">
 					{sections.map((section) => (
 						<button
 							className={`min-h-[36px] shrink-0 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all sm:min-h-0 sm:px-3 sm:text-xs ${
 								activeSection === section.id
 									? "border-primary/50 bg-primary/10 text-primary"
-									: "border-transparent bg-white/2 text-muted-foreground hover:border-white/10 hover:bg-white/5"
+									: "border-transparent bg-muted text-muted-foreground hover:border-border hover:bg-muted/80"
 							}`}
+							data-testid={`strategy-form-tab-${section.id}`}
 							key={section.id}
 							onClick={() => setActiveSection(section.id)}
 							type="button"
@@ -163,6 +168,7 @@ export function StrategyForm({
 						</label>
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
+							data-testid="strategy-form-input-name"
 							id="strategy-name"
 							onChange={(e) => updateField("name", e.target.value)}
 							placeholder="e.g., Trend Continuation"
@@ -197,8 +203,8 @@ export function StrategyForm({
 								<button
 									className={`h-9 w-9 rounded border-2 transition-all sm:h-8 sm:w-8 ${
 										formData.color === color
-											? "scale-110 border-white"
-											: "border-transparent hover:border-white/30"
+											? "scale-110 border-foreground"
+											: "border-transparent hover:border-border"
 									}`}
 									key={color}
 									onClick={() => updateField("color", color)}
@@ -295,8 +301,8 @@ export function StrategyForm({
 					</div>
 
 					{formData.rules.length === 0 ? (
-						<div className="overflow-hidden rounded border border-white/10 border-dashed">
-							<div className="flex items-center justify-between border-white/5 border-b border-dashed bg-white/2 px-3 py-1.5">
+						<div className="overflow-hidden rounded border border-border border-dashed">
+							<div className="flex items-center justify-between border-border/50 border-b border-dashed bg-muted px-3 py-1.5">
 								<div className="flex items-center gap-1">
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
@@ -326,7 +332,7 @@ export function StrategyForm({
 						<div className="space-y-2">
 							{formData.rules.map((rule, idx) => (
 								<div
-									className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-center sm:gap-3"
+									className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-center sm:gap-3"
 									key={rule.id ?? `new-${rule.order}`}
 								>
 									<div className="flex items-center gap-2 sm:gap-3">
@@ -389,9 +395,10 @@ export function StrategyForm({
 			)}
 
 			{/* Submit Button */}
-			<div className="flex items-center justify-end gap-3 border-white/10 border-t pt-4 sm:pt-6">
+			<div className="flex items-center justify-end gap-3 border-border border-t pt-4 sm:pt-6">
 				<Button
 					className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
+					data-testid="strategy-form-button-submit"
 					disabled={isSubmitting || !formData.name}
 					type="submit"
 				>

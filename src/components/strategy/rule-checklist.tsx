@@ -250,9 +250,12 @@ export function RuleChecklist({
 	}
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" data-testid="rule-checklist">
 			{/* Compliance indicator */}
-			<div className="flex items-center justify-between rounded border border-border bg-muted p-4">
+			<div
+				className="flex items-center justify-between rounded border border-border bg-muted p-4"
+				data-testid="rule-checklist-compliance"
+			>
 				<div>
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Rule Compliance
@@ -266,6 +269,7 @@ export function RuleChecklist({
 									? "text-breakeven"
 									: "text-loss",
 						)}
+						data-testid="rule-checklist-compliance-value"
 					>
 						{optimisticCompliance.toFixed(0)}%
 					</div>

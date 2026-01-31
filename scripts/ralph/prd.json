@@ -255,8 +255,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created evaluation.ts with all 6 core evaluators (maxRisk, minRR, breakeven, scaleOut, dailyLoss, maxConcurrent) plus EvaluationContext interface and calculateMfeInR helper. TrailingStopTrigger returns unavailable as it's semi_auto requiring manual verification."
     },
     {
       "id": "US-015",
@@ -273,8 +273,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added buildEvaluationContext async helper with 4 parallel queries: fetchTradeExecutions, fetchSameDayTrades, countConcurrentTrades, fetchAccountBalance. Uses getUserTimezone for date boundaries. TradeWithAccount interface for type-safe trade input."
     },
     {
       "id": "US-016",
@@ -293,8 +293,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added evaluateTradeRules mutation to strategies router. Takes tradeId, validates ownership and strategy, builds evaluation context via buildEvaluationContext, loops through non-manual rules with autoCondition, calls evaluateAutoCondition, and upserts tradeRuleChecks with passed, evaluationResult JSON, wasAutoEvaluated=true."
     },
     {
       "id": "US-017",
@@ -315,8 +315,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/strategy-evaluation.test.ts with 23 test cases covering all evaluators (maxRisk, minRR, breakeven, scaleOut, dailyLoss, maxConcurrent), missing data handling, manual rule skipping, percent-based risk, and short trades. Biome check and build pass. Note: Docker required for integration tests to run."
     },
     {
       "id": "US-018",
@@ -334,8 +334,8 @@
         "Verify in browser: badges appear correctly"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added RuleTypeBadge component with AUTO (Zap icon, profit colors), SEMI (Info icon, accent colors), MANUAL (ArrowRight icon, muted colors). Updated Rule interface with optional ruleType. Updated strategy detail page to pass ruleType to StrategyRulesDisplay."
     },
     {
       "id": "US-019",
@@ -353,8 +353,8 @@
         "Verify in browser"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Enhanced rule-checklist.tsx with auto-evaluation display: CheckCircle/XCircle indicators, actual/expected values, disabled checkboxes for auto-evaluated rules, Override button. Updated checkRule mutation to support userOverride field."
     },
     {
       "id": "US-020",
@@ -371,8 +371,8 @@
         "Verify in browser"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Fixed OVERRIDDEN badge to show when user enters override mode. Override functionality was already implemented in US-019."
     },
     {
       "id": "US-021",
@@ -389,8 +389,8 @@
         "Verify: Close trade, check rule evaluations appear"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added autoEvaluateTradeRules helper to trades router. Integrated into close mutation and update mutation (when status changes to closed). Errors are caught and logged - trade close won't fail. Preserves existing user overrides."
     },
     {
       "id": "US-022",
@@ -411,8 +411,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/e2e/strategy-checklist.spec.ts with 10 tests covering: risk toggle visibility, toggle state changes, strategy detail rules section, AUTO badge detection, form navigation, submit button state, trade checklist visibility, rules display categories, and full create strategy flow. Added data-testid attributes to: strategy-form, strategy-form-tab-*, strategy-form-input-name, strategy-form-button-submit, risk-config-max-risk-toggle, risk-config-max-risk-value, rule-checklist, rule-checklist-compliance, rule-checklist-compliance-value."
     }
   ]
 }
