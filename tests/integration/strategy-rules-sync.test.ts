@@ -658,9 +658,12 @@ describe("strategy-rules-sync", () => {
 			);
 			const exitRules = generatedRules.filter((r) => r.category === "exit");
 
-			expect(riskRules.length).toBe(3); // maxRisk, minRR, dailyLoss
-			expect(managementRules.length).toBe(2); // 2 scale out rules
-			expect(exitRules.length).toBe(1); // moveToBreakeven
+			const entryRules = generatedRules.filter((r) => r.category === "entry");
+
+			expect(riskRules.length).toBe(2); // maxRisk, dailyLoss
+			expect(entryRules.length).toBe(1); // minRR (entry criteria)
+			expect(managementRules.length).toBe(1); // moveToBreakeven
+			expect(exitRules.length).toBe(2); // 2 scale out rules
 		});
 
 		it("should preserve rule ordering when updating", async () => {

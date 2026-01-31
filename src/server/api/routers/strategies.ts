@@ -430,11 +430,16 @@ export const strategiesRouter = createTRPCRouter({
 					: null;
 			}
 
-			const [updated] = await ctx.db
-				.update(strategies)
-				.set(updateData)
-				.where(eq(strategies.id, id))
-				.returning();
+			// Only update strategies table if there's something to update
+			let updated = existingStrategy;
+			if (Object.keys(updateData).length > 0) {
+				const [result] = await ctx.db
+					.update(strategies)
+					.set(updateData)
+					.where(eq(strategies.id, id))
+					.returning();
+				updated = result ?? existingStrategy;
+			}
 
 			// Update manual rules if provided (only delete non-generated rules)
 			if (rules !== undefined) {
