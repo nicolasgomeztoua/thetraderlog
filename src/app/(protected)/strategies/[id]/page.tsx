@@ -222,9 +222,17 @@ export default function StrategyDetailPage() {
 		);
 	}
 
-	// Transform rules for the form - only include manual rules
-	// Generated rules are managed via syncGeneratedRulesInternal and should not be edited in the form
-	const formRules = strategy.rules
+	// All rules for display (includes generated rules from config toggles)
+	const allRules = strategy.rules.map((rule) => ({
+		id: rule.id,
+		text: rule.text,
+		category: rule.category,
+		order: rule.order,
+		ruleType: rule.ruleType,
+	}));
+
+	// Manual rules only for the form (generated rules can't be edited manually)
+	const manualRules = strategy.rules
 		.filter((rule) => !rule.isGenerated)
 		.map((rule) => ({
 			id: rule.id,
@@ -493,7 +501,7 @@ export default function StrategyDetailPage() {
 				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
 					→ Strategy Rules
 				</h2>
-				<StrategyRulesDisplay rules={formRules} />
+				<StrategyRulesDisplay rules={allRules} />
 			</section>
 
 			{/* Entry/Exit Criteria Section */}
@@ -547,7 +555,7 @@ export default function StrategyDetailPage() {
 								scalingRules: strategy.scalingRules,
 								trailingRules: strategy.trailingRules,
 								isActive: strategy.isActive ?? true,
-								rules: formRules,
+								rules: manualRules,
 							}}
 							isSubmitting={updateMutation.isPending}
 							onSubmit={handleSubmit}

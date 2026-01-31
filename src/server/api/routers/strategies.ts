@@ -1135,6 +1135,165 @@ export const strategiesRouter = createTRPCRouter({
 			return { added, updated, deleted };
 		}),
 
+	// Update risk parameters with live saving (for edit mode)
+	updateRiskParameters: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				riskParameters: riskParametersSchema.nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, riskParameters } = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update only risk parameters
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					riskParameters: riskParameters
+						? JSON.stringify(riskParameters)
+						: null,
+				})
+				.where(eq(strategies.id, strategyId))
+				.returning();
+
+			// Sync auto-generated rules
+			const scalingRulesConfig: ScalingRules | null =
+				existingStrategy.scalingRules
+					? JSON.parse(existingStrategy.scalingRules)
+					: null;
+			const trailingRulesConfig: TrailingRules | null =
+				existingStrategy.trailingRules
+					? JSON.parse(existingStrategy.trailingRules)
+					: null;
+
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				strategyId,
+				riskParameters,
+				scalingRulesConfig,
+				trailingRulesConfig,
+			);
+
+			return updated;
+		}),
+
+	// Update scaling rules with live saving (for edit mode)
+	updateScalingRules: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				scalingRules: scalingRulesSchema.nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, scalingRules } = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update only scaling rules
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					scalingRules: scalingRules ? JSON.stringify(scalingRules) : null,
+				})
+				.where(eq(strategies.id, strategyId))
+				.returning();
+
+			// Sync auto-generated rules
+			const riskParams: RiskParameters | null = existingStrategy.riskParameters
+				? JSON.parse(existingStrategy.riskParameters)
+				: null;
+			const trailingRulesConfig: TrailingRules | null =
+				existingStrategy.trailingRules
+					? JSON.parse(existingStrategy.trailingRules)
+					: null;
+
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				strategyId,
+				riskParams,
+				scalingRules,
+				trailingRulesConfig,
+			);
+
+			return updated;
+		}),
+
+	// Update trailing rules with live saving (for edit mode)
+	updateTrailingRules: protectedProcedure
+		.input(
+			z.object({
+				strategyId: z.string(),
+				trailingRules: trailingRulesSchema.nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { strategyId, trailingRules } = input;
+
+			// Verify ownership
+			const existingStrategy = await ctx.db.query.strategies.findFirst({
+				where: and(
+					eq(strategies.id, strategyId),
+					eq(strategies.userId, ctx.user.id),
+				),
+			});
+
+			if (!existingStrategy) {
+				throw new Error("Strategy not found");
+			}
+
+			// Update only trailing rules
+			const [updated] = await ctx.db
+				.update(strategies)
+				.set({
+					trailingRules: trailingRules ? JSON.stringify(trailingRules) : null,
+				})
+				.where(eq(strategies.id, strategyId))
+				.returning();
+
+			// Sync auto-generated rules
+			const riskParams: RiskParameters | null = existingStrategy.riskParameters
+				? JSON.parse(existingStrategy.riskParameters)
+				: null;
+			const scalingRulesConfig: ScalingRules | null =
+				existingStrategy.scalingRules
+					? JSON.parse(existingStrategy.scalingRules)
+					: null;
+
+			await syncGeneratedRulesInternal(
+				ctx.db,
+				strategyId,
+				riskParams,
+				scalingRulesConfig,
+				trailingRules,
+			);
+
+			return updated;
+		}),
+
 	// Auto-evaluate rules for a trade
 	evaluateTradeRules: protectedProcedure
 		.input(z.object({ tradeId: z.string() }))

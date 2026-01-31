@@ -27,8 +27,12 @@ interface ScalingConfigProps {
 export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const scalingRules = value ?? {};
 
+	const handleChange = (newValue: ScalingRules | null) => {
+		onChange(newValue);
+	};
+
 	const addScaleIn = () => {
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleIn: [
 				...(scalingRules.scaleIn ?? []),
@@ -38,7 +42,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	};
 
 	const addScaleOut = () => {
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleOut: [
 				...(scalingRules.scaleOut ?? []),
@@ -55,7 +59,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 		const newScaleIn = [...(scalingRules.scaleIn ?? [])];
 		const existing = newScaleIn[idx] ?? { trigger: "", sizePercent: 0 };
 		newScaleIn[idx] = { ...existing, [field]: fieldValue };
-		onChange({ ...scalingRules, scaleIn: newScaleIn });
+		handleChange({ ...scalingRules, scaleIn: newScaleIn });
 	};
 
 	const updateScaleOut = (
@@ -66,13 +70,13 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 		const newScaleOut = [...(scalingRules.scaleOut ?? [])];
 		const existing = newScaleOut[idx] ?? { trigger: "", sizePercent: 0 };
 		newScaleOut[idx] = { ...existing, [field]: fieldValue };
-		onChange({ ...scalingRules, scaleOut: newScaleOut });
+		handleChange({ ...scalingRules, scaleOut: newScaleOut });
 	};
 
 	const removeScaleIn = (idx: number) => {
 		const newScaleIn = [...(scalingRules.scaleIn ?? [])];
 		newScaleIn.splice(idx, 1);
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleIn: newScaleIn.length > 0 ? newScaleIn : undefined,
 		});
@@ -81,7 +85,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 	const removeScaleOut = (idx: number) => {
 		const newScaleOut = [...(scalingRules.scaleOut ?? [])];
 		newScaleOut.splice(idx, 1);
-		onChange({
+		handleChange({
 			...scalingRules,
 			scaleOut: newScaleOut.length > 0 ? newScaleOut : undefined,
 		});

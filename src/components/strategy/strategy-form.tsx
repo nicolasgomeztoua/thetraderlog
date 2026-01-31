@@ -283,10 +283,22 @@ export function StrategyForm({
 			{/* Rules Checklist Section */}
 			{activeSection === "rules" && (
 				<div className="space-y-4">
+					{/* Info banner about auto-generated rules */}
+					<div className="rounded border border-accent/30 bg-accent/5 p-3 sm:p-4">
+						<p className="font-mono text-accent text-xs sm:text-sm">
+							<span className="font-semibold">Tip:</span> Rules with "Track as
+							rule" enabled in Risk Management, Scaling, and Trailing Stops tabs
+							are automatically added to your checklist.
+						</p>
+						<p className="mt-1 font-mono text-[10px] text-muted-foreground sm:text-xs">
+							Use this section for additional custom rules not covered by those
+							configs.
+						</p>
+					</div>
+
 					<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 						<p className="font-mono text-muted-foreground text-xs sm:text-sm">
-							→ Define rules that you&apos;ll check off when taking trades with
-							this strategy.
+							→ Add custom rules to check off when taking trades.
 						</p>
 						<Button
 							className="min-h-[36px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
@@ -309,13 +321,17 @@ export function StrategyForm({
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
 								</div>
 								<span className="font-mono text-[9px] text-muted-foreground">
-									rules.empty
+									custom-rules.empty
 								</span>
 								<div className="w-10" />
 							</div>
 							<div className="py-6 text-center sm:py-8">
-								<p className="mb-4 font-mono text-muted-foreground text-xs sm:text-sm">
-									No rules defined yet
+								<p className="mb-2 font-mono text-muted-foreground text-xs sm:text-sm">
+									No custom rules defined yet
+								</p>
+								<p className="mb-4 font-mono text-[10px] text-muted-foreground/60 sm:text-xs">
+									Auto-generated rules from config tabs will still appear in
+									your trade checklist
 								</p>
 								<Button
 									className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
@@ -324,7 +340,7 @@ export function StrategyForm({
 									variant="outline"
 								>
 									<Plus className="mr-1 h-3 w-3" />
-									Add Your First Rule
+									Add Custom Rule
 								</Button>
 							</div>
 						</div>

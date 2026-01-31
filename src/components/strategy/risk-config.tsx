@@ -50,15 +50,20 @@ interface RiskConfigProps {
 }
 
 export function RiskConfig({ value, onChange }: RiskConfigProps) {
-	const riskParams = value ?? {};
 	const [rMultipleOpen, setRMultipleOpen] = useState(false);
 	const [rMultipleInput, setRMultipleInput] = useState("");
+
+	const riskParams = value ?? {};
+
+	const handleChange = (newValue: RiskParameters | null) => {
+		onChange(newValue);
+	};
 
 	const updateField = <K extends keyof RiskParameters>(
 		field: K,
 		fieldValue: RiskParameters[K],
 	) => {
-		onChange({ ...riskParams, [field]: fieldValue });
+		handleChange({ ...riskParams, [field]: fieldValue });
 	};
 
 	return (

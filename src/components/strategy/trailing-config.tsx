@@ -37,15 +37,19 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 	const trailingRules = value ?? {};
 	const hasBreakeven = !!trailingRules.moveToBreakeven;
 
+	const handleChange = (newValue: TrailingRules | null) => {
+		onChange(newValue);
+	};
+
 	const toggleBreakeven = (enabled: boolean) => {
 		if (enabled) {
-			onChange({
+			handleChange({
 				...trailingRules,
 				moveToBreakeven: { triggerR: 1, offsetTicks: 0 },
 			});
 		} else {
 			const { moveToBreakeven: _removed, ...rest } = trailingRules;
-			onChange(Object.keys(rest).length > 0 ? rest : null);
+			handleChange(Object.keys(rest).length > 0 ? rest : null);
 		}
 	};
 
@@ -54,7 +58,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 		fieldValue: number | boolean | undefined,
 	) => {
 		const currentBreakeven = trailingRules.moveToBreakeven ?? { triggerR: 1 };
-		onChange({
+		handleChange({
 			...trailingRules,
 			moveToBreakeven: {
 				...currentBreakeven,
@@ -64,7 +68,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 	};
 
 	const addTrailStop = () => {
-		onChange({
+		handleChange({
 			...trailingRules,
 			trailStops: [
 				...(trailingRules.trailStops ?? []),
@@ -85,13 +89,13 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 			value: 10,
 		};
 		newTrailStops[idx] = { ...existing, [field]: fieldValue };
-		onChange({ ...trailingRules, trailStops: newTrailStops });
+		handleChange({ ...trailingRules, trailStops: newTrailStops });
 	};
 
 	const removeTrailStop = (idx: number) => {
 		const newTrailStops = [...(trailingRules.trailStops ?? [])];
 		newTrailStops.splice(idx, 1);
-		onChange({
+		handleChange({
 			...trailingRules,
 			trailStops: newTrailStops.length > 0 ? newTrailStops : undefined,
 		});
