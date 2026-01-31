@@ -23,17 +23,22 @@ export interface RiskParameters {
 		fixedSize?: number;
 		riskPercent?: number;
 		kellyFraction?: number;
+		enabled?: boolean;
 	};
 	maxRiskPerTrade?: {
 		type: "dollars" | "percent";
 		value: number;
+		enabled?: boolean;
 	};
 	dailyLossLimit?: {
 		type: "dollars" | "percent";
 		value: number;
+		enabled?: boolean;
 	};
 	maxConcurrentPositions?: number;
+	maxConcurrentPositionsEnabled?: boolean;
 	minRRRatio?: number;
+	minRRRatioEnabled?: boolean;
 	targetRMultiples?: number[];
 }
 

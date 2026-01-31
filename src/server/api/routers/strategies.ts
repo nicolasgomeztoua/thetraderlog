@@ -21,22 +21,27 @@ const riskParametersSchema = z.object({
 			fixedSize: z.number().optional(),
 			riskPercent: z.number().optional(),
 			kellyFraction: z.number().optional(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	maxRiskPerTrade: z
 		.object({
 			type: z.enum(["dollars", "percent"]),
 			value: z.number(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	dailyLossLimit: z
 		.object({
 			type: z.enum(["dollars", "percent"]),
 			value: z.number(),
+			enabled: z.boolean().optional(),
 		})
 		.optional(),
 	maxConcurrentPositions: z.number().optional(),
+	maxConcurrentPositionsEnabled: z.boolean().optional(),
 	minRRRatio: z.number().optional(),
+	minRRRatioEnabled: z.boolean().optional(),
 	targetRMultiples: z.array(z.number()).optional(),
 });
 
