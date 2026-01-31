@@ -84,6 +84,11 @@ export const strategyRuleCategoryEnum = pgEnum("strategy_rule_category", [
 	"risk",
 	"management",
 ]);
+export const ruleTypeEnum = pgEnum("rule_type", [
+	"manual",
+	"auto",
+	"semi_auto",
+]);
 export const dataQualityEnum = pgEnum("data_quality", [
 	"full", // Complete OHLC data for trade duration
 	"partial", // Some bars missing (gaps in data)
@@ -627,6 +632,13 @@ export const strategyRules = createTable(
 		category: strategyRuleCategoryEnum("category").notNull().default("entry"),
 		order: integer("order").notNull().default(0), // For sorting
 
+		// Auto-evaluation fields
+		ruleType: ruleTypeEnum("rule_type").notNull().default("manual"), // manual, auto, or semi_auto
+		configSource: text("config_source"), // Source config path (e.g., 'riskParameters.maxRiskPerTrade')
+		autoCondition: text("auto_condition"), // JSON evaluation parameters
+		isGenerated: boolean("is_generated").notNull().default(false), // Whether rule was auto-generated from config
+		sourceConfigHash: text("source_config_hash"), // Hash for change detection
+
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -634,6 +646,7 @@ export const strategyRules = createTable(
 	(t) => [
 		index("strategy_rule_strategy_id_idx").on(t.strategyId),
 		index("strategy_rule_category_idx").on(t.category),
+		index("strategy_rule_is_generated_idx").on(t.isGenerated),
 	],
 );
 
@@ -653,6 +666,11 @@ export const tradeRuleChecks = createTable(
 
 		checked: boolean("checked").notNull().default(false),
 		checkedAt: timestamp("checked_at", { withTimezone: true }),
+
+		// Auto-evaluation fields
+		evaluationResult: text("evaluation_result"), // JSON with evaluation details (actual, expected, dataQuality, etc.)
+		wasAutoEvaluated: boolean("was_auto_evaluated").notNull().default(false), // Whether this check was auto-evaluated
+		userOverride: boolean("user_override"), // Nullable - if set, user overrode the auto-evaluation result
 	},
 	(t) => [
 		primaryKey({ columns: [t.tradeId, t.ruleId] }),
