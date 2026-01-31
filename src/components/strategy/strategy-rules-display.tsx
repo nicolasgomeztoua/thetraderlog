@@ -3,18 +3,23 @@
 import {
 	ArrowRight,
 	DoorOpen,
+	Info,
 	LayoutGrid,
 	ShieldAlert,
 	Target,
+	Zap,
 } from "lucide-react";
 import { useMemo } from "react";
 import { cn } from "@/lib/shared";
+
+type RuleType = "manual" | "auto" | "semi_auto";
 
 interface Rule {
 	id: string;
 	text: string;
 	category: "entry" | "exit" | "risk" | "management";
 	order: number;
+	ruleType?: RuleType;
 }
 
 interface StrategyRulesDisplayProps {
@@ -46,6 +51,49 @@ const CATEGORY_ORDER: Rule["category"][] = [
 	"management",
 ];
 
+const RULE_TYPE_CONFIG: Record<
+	RuleType,
+	{ label: string; icon: typeof Zap; bgClass: string; textClass: string }
+> = {
+	auto: {
+		label: "AUTO",
+		icon: Zap,
+		bgClass: "bg-profit/20",
+		textClass: "text-profit",
+	},
+	semi_auto: {
+		label: "SEMI",
+		icon: Info,
+		bgClass: "bg-accent/20",
+		textClass: "text-accent",
+	},
+	manual: {
+		label: "MANUAL",
+		icon: ArrowRight,
+		bgClass: "bg-white/10",
+		textClass: "text-muted-foreground",
+	},
+};
+
+function RuleTypeBadge({ ruleType }: { ruleType: RuleType }) {
+	const config = RULE_TYPE_CONFIG[ruleType];
+	const Icon = config.icon;
+
+	return (
+		<span
+			className={cn(
+				"inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[8px]",
+				config.bgClass,
+				config.textClass,
+			)}
+			data-testid={`rule-type-badge-${ruleType}`}
+		>
+			<Icon className="h-2 w-2" />
+			{config.label}
+		</span>
+	);
+}
+
 export function StrategyRulesDisplay({ rules }: StrategyRulesDisplayProps) {
 	// Group rules by category
 	const groupedRules = useMemo(() => {
@@ -69,11 +117,11 @@ export function StrategyRulesDisplay({ rules }: StrategyRulesDisplayProps) {
 	if (rules.length === 0) {
 		return (
 			<div
-				className="overflow-hidden rounded border border-white/10 border-dashed"
+				className="overflow-hidden rounded border border-border border-dashed"
 				data-testid="strategy-rules-display-empty"
 			>
 				{/* Terminal window chrome */}
-				<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+				<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 					<div className="flex items-center gap-1 sm:gap-1.5">
 						<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 						<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -108,12 +156,12 @@ export function StrategyRulesDisplay({ rules }: StrategyRulesDisplayProps) {
 
 				return (
 					<div
-						className="overflow-hidden rounded border border-white/10"
+						className="overflow-hidden rounded border border-border"
 						data-testid={`strategy-rules-display-${category}`}
 						key={category}
 					>
 						{/* Terminal window chrome header */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+						<div className="flex items-center justify-between border-border/50 border-b bg-muted px-3 py-1.5 sm:px-4 sm:py-2">
 							<div className="flex items-center gap-1 sm:gap-1.5">
 								<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 								<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
@@ -128,7 +176,7 @@ export function StrategyRulesDisplay({ rules }: StrategyRulesDisplayProps) {
 						{/* Category header with icon */}
 						<div
 							className={cn(
-								"flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4 sm:py-3",
+								"flex items-center justify-between border-border/50 border-b bg-muted px-3 py-2 sm:px-4 sm:py-3",
 							)}
 						>
 							<div className="flex items-center gap-1.5 sm:gap-2">
@@ -165,9 +213,11 @@ export function StrategyRulesDisplay({ rules }: StrategyRulesDisplayProps) {
 											key={rule.id}
 										>
 											{/* Checkbox visual indicator (non-interactive) */}
-											<div className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border border-white/20 sm:h-4 sm:w-4">
+											<div className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border border-border sm:h-4 sm:w-4">
 												<ArrowRight className="h-2 w-2 text-muted-foreground sm:h-2.5 sm:w-2.5" />
 											</div>
+											{/* Rule type badge */}
+											<RuleTypeBadge ruleType={rule.ruleType ?? "manual"} />
 											<span className="font-mono text-foreground/80">
 												{rule.text}
 											</span>
