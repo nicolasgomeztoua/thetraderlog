@@ -8,10 +8,12 @@ export interface ScalingRules {
 	scaleIn?: Array<{
 		trigger: string;
 		sizePercent: number;
+		enabled?: boolean;
 	}>;
 	scaleOut?: Array<{
 		trigger: string;
 		sizePercent: number;
+		enabled?: boolean;
 	}>;
 }
 

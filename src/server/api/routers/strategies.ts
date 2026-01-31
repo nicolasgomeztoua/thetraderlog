@@ -51,6 +51,7 @@ const scalingRulesSchema = z.object({
 			z.object({
 				trigger: z.string(),
 				sizePercent: z.number(),
+				enabled: z.boolean().optional(),
 			}),
 		)
 		.optional(),
@@ -59,6 +60,7 @@ const scalingRulesSchema = z.object({
 			z.object({
 				trigger: z.string(),
 				sizePercent: z.number(),
+				enabled: z.boolean().optional(),
 			}),
 		)
 		.optional(),
