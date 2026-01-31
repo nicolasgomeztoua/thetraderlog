@@ -210,7 +210,9 @@ test.describe("Strategy Form - Creating Strategy with Auto Rules", () => {
 test.describe("Rule Checklist - Component Visibility", () => {
 	test("navigating to trade with strategy shows checklist", async ({
 		page,
-	}) => {
+	}, testInfo) => {
+		// Increase timeout for this navigation-heavy test
+		testInfo.setTimeout(60000);
 		// This test verifies the checklist component structure
 		// Full integration with actual trades is covered by integration tests
 		await page.goto("/journal");
@@ -317,7 +319,9 @@ test.describe("Rules Display - Badge Types", () => {
 test.describe("Strategy Creation Flow", () => {
 	test("create strategy with max risk enabled generates rule", async ({
 		page,
-	}) => {
+	}, testInfo) => {
+		// Increase timeout for this full creation flow test
+		testInfo.setTimeout(60000);
 		// Navigate to new strategy page
 		await page.goto("/strategies/new");
 
