@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 
 export interface ScalingRules {
 	scaleIn?: Array<{
@@ -47,8 +48,8 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 
 	const updateScaleIn = (
 		idx: number,
-		field: "trigger" | "sizePercent",
-		fieldValue: string | number,
+		field: "trigger" | "sizePercent" | "enabled",
+		fieldValue: string | number | boolean,
 	) => {
 		const newScaleIn = [...(scalingRules.scaleIn ?? [])];
 		const existing = newScaleIn[idx] ?? { trigger: "", sizePercent: 0 };
@@ -58,8 +59,8 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 
 	const updateScaleOut = (
 		idx: number,
-		field: "trigger" | "sizePercent",
-		fieldValue: string | number,
+		field: "trigger" | "sizePercent" | "enabled",
+		fieldValue: string | number | boolean,
 	) => {
 		const newScaleOut = [...(scalingRules.scaleOut ?? [])];
 		const existing = newScaleOut[idx] ?? { trigger: "", sizePercent: 0 };
@@ -150,6 +151,17 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 											value={rule.sizePercent}
 										/>
 									</div>
+									<div className="flex flex-col items-center justify-end gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground">
+											Track
+										</span>
+										<Switch
+											checked={rule.enabled ?? false}
+											onCheckedChange={(checked) =>
+												updateScaleIn(idx, "enabled", checked)
+											}
+										/>
+									</div>
 									<Button
 										className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-8 sm:w-8"
 										onClick={() => removeScaleIn(idx)}
@@ -227,6 +239,17 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 											step="5"
 											type="number"
 											value={rule.sizePercent}
+										/>
+									</div>
+									<div className="flex flex-col items-center justify-end gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground">
+											Track
+										</span>
+										<Switch
+											checked={rule.enabled ?? false}
+											onCheckedChange={(checked) =>
+												updateScaleOut(idx, "enabled", checked)
+											}
 										/>
 									</div>
 									<Button
