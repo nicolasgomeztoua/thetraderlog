@@ -365,7 +365,9 @@ export function RuleChecklist({
 													<div className="flex items-center gap-2">
 														{rule.ruleType && rule.ruleType !== "manual" && (
 															<RuleTypeBadge
-																isOverridden={hasUserOverride}
+																isOverridden={
+																	hasUserOverride || isInOverrideMode
+																}
 																ruleType={rule.ruleType}
 															/>
 														)}
