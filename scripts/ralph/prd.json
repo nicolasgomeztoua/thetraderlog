@@ -97,8 +97,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added enabled flags to RiskParameters interface and updated Zod schema in strategies router"
     },
     {
       "id": "US-006",
@@ -115,8 +115,8 @@
         "Verify in browser: toggles render and persist on save"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created Switch component using radix-ui/react-switch. Added toggle switches to Position Sizing, Max Risk Per Trade, Daily Loss Limit, Max Concurrent Positions, and Min R:R Ratio sections."
     },
     {
       "id": "US-007",
@@ -129,8 +129,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added enabled?: boolean to both scaleIn and scaleOut array item types in ScalingRules interface and Zod schema"
     },
     {
       "id": "US-008",
@@ -146,8 +146,8 @@
         "Verify in browser"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Switch component to each scale-in and scale-out rule row. Compact 'Track' label with toggle. Updated updateScaleIn/updateScaleOut functions to support enabled field."
     },
     {
       "id": "US-009",
@@ -160,8 +160,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added enabled?: boolean to moveToBreakeven and trailStops[] in TrailingRules interface and Zod schema"
     },
     {
       "id": "US-010",
@@ -177,8 +177,8 @@
         "Verify in browser"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Switch component import, toggle to breakeven section, toggle to each trailing stop rule row. Updated updateBreakeven and updateTrailStop functions to support enabled field."
     },
     {
       "id": "US-011",
@@ -197,8 +197,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added syncGeneratedRules mutation to strategies router. Updated rule generator to respect enabled flags. Updated unit tests."
     },
     {
       "id": "US-012",
@@ -214,8 +214,8 @@
         "Verify: Create strategy with enabled config, rules appear"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Extracted syncGeneratedRulesInternal helper. Create and update mutations auto-sync generated rules. Update preserves manual rules. Duplicate preserves generated rule metadata."
     },
     {
       "id": "US-013",
@@ -232,8 +232,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/strategy-rules-sync.test.ts with 17 test cases. Tests cover: creating strategies with enabled configs (7 tests), updating config values (2 tests), disabling config deletes rules (2 tests), manual rules preserved (2 tests), hash change detection (2 tests), syncGeneratedRules endpoint (2 tests). Biome check and build pass. Note: Docker required for integration tests to run."
     },
     {
       "id": "US-014",
