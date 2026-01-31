@@ -16,6 +16,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export interface RiskParameters {
 	positionSizing?: {
@@ -63,9 +64,26 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 		<div className="space-y-4 sm:space-y-6">
 			{/* Position Sizing */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-					→ Position Sizing
-				</h4>
+				<div className="flex items-center justify-between">
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Position Sizing
+					</h4>
+					<div className="flex items-center gap-2">
+						<span className="font-mono text-[9px] text-muted-foreground">
+							Track as rule
+						</span>
+						<Switch
+							checked={riskParams.positionSizing?.enabled ?? false}
+							onCheckedChange={(checked) =>
+								updateField("positionSizing", {
+									...riskParams.positionSizing,
+									method: riskParams.positionSizing?.method ?? "fixed",
+									enabled: checked,
+								})
+							}
+						/>
+					</div>
+				</div>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
@@ -176,9 +194,26 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Max Risk Per Trade */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-					→ Max Risk Per Trade
-				</h4>
+				<div className="flex items-center justify-between">
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Max Risk Per Trade
+					</h4>
+					<div className="flex items-center gap-2">
+						<span className="font-mono text-[9px] text-muted-foreground">
+							Track as rule
+						</span>
+						<Switch
+							checked={riskParams.maxRiskPerTrade?.enabled ?? false}
+							onCheckedChange={(checked) =>
+								updateField("maxRiskPerTrade", {
+									type: riskParams.maxRiskPerTrade?.type ?? "dollars",
+									value: riskParams.maxRiskPerTrade?.value ?? 0,
+									enabled: checked,
+								})
+							}
+						/>
+					</div>
+				</div>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
@@ -187,6 +222,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<Select
 							onValueChange={(v) =>
 								updateField("maxRiskPerTrade", {
+									...riskParams.maxRiskPerTrade,
 									type: v as "dollars" | "percent",
 									value: riskParams.maxRiskPerTrade?.value ?? 0,
 								})
@@ -219,6 +255,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 								} else {
 									const parsed = parseFloat(e.target.value);
 									updateField("maxRiskPerTrade", {
+										...riskParams.maxRiskPerTrade,
 										type: riskParams.maxRiskPerTrade?.type ?? "dollars",
 										value: Number.isNaN(parsed) ? 0 : parsed,
 									});
@@ -235,9 +272,26 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 
 			{/* Daily Loss Limit */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-					→ Daily Loss Limit
-				</h4>
+				<div className="flex items-center justify-between">
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Daily Loss Limit
+					</h4>
+					<div className="flex items-center gap-2">
+						<span className="font-mono text-[9px] text-muted-foreground">
+							Track as rule
+						</span>
+						<Switch
+							checked={riskParams.dailyLossLimit?.enabled ?? false}
+							onCheckedChange={(checked) =>
+								updateField("dailyLossLimit", {
+									type: riskParams.dailyLossLimit?.type ?? "dollars",
+									value: riskParams.dailyLossLimit?.value ?? 0,
+									enabled: checked,
+								})
+							}
+						/>
+					</div>
+				</div>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 					<div className="space-y-1">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
@@ -246,6 +300,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<Select
 							onValueChange={(v) =>
 								updateField("dailyLossLimit", {
+									...riskParams.dailyLossLimit,
 									type: v as "dollars" | "percent",
 									value: riskParams.dailyLossLimit?.value ?? 0,
 								})
@@ -278,6 +333,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 								} else {
 									const parsed = parseFloat(e.target.value);
 									updateField("dailyLossLimit", {
+										...riskParams.dailyLossLimit,
 										type: riskParams.dailyLossLimit?.type ?? "dollars",
 										value: Number.isNaN(parsed) ? 0 : parsed,
 									});
@@ -292,52 +348,83 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 				</div>
 			</div>
 
-			{/* Other Settings */}
+			{/* Max Concurrent Positions */}
 			<div className="space-y-3">
-				<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
-					→ Other Settings
-				</h4>
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-					<div className="space-y-1">
-						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
-							Max Concurrent Positions
+				<div className="flex items-center justify-between">
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Max Concurrent Positions
+					</h4>
+					<div className="flex items-center gap-2">
+						<span className="font-mono text-[9px] text-muted-foreground">
+							Track as rule
 						</span>
-						<Input
-							className="min-h-[44px] font-mono sm:min-h-0"
-							inputMode="numeric"
-							onChange={(e) => {
-								const parsed = parseInt(e.target.value, 10);
-								updateField(
-									"maxConcurrentPositions",
-									Number.isNaN(parsed) ? undefined : parsed,
-								);
-							}}
-							placeholder="3"
-							step="1"
-							type="number"
-							value={riskParams.maxConcurrentPositions ?? ""}
+						<Switch
+							checked={riskParams.maxConcurrentPositionsEnabled ?? false}
+							onCheckedChange={(checked) =>
+								updateField("maxConcurrentPositionsEnabled", checked)
+							}
 						/>
 					</div>
-					<div className="space-y-1">
-						<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
-							Min R:R Ratio
+				</div>
+				<div className="space-y-1">
+					<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+						Value
+					</span>
+					<Input
+						className="min-h-[44px] font-mono sm:min-h-0"
+						inputMode="numeric"
+						onChange={(e) => {
+							const parsed = parseInt(e.target.value, 10);
+							updateField(
+								"maxConcurrentPositions",
+								Number.isNaN(parsed) ? undefined : parsed,
+							);
+						}}
+						placeholder="3"
+						step="1"
+						type="number"
+						value={riskParams.maxConcurrentPositions ?? ""}
+					/>
+				</div>
+			</div>
+
+			{/* Min R:R Ratio */}
+			<div className="space-y-3">
+				<div className="flex items-center justify-between">
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Min R:R Ratio
+					</h4>
+					<div className="flex items-center gap-2">
+						<span className="font-mono text-[9px] text-muted-foreground">
+							Track as rule
 						</span>
-						<Input
-							className="min-h-[44px] font-mono sm:min-h-0"
-							inputMode="decimal"
-							onChange={(e) => {
-								const parsed = parseFloat(e.target.value);
-								updateField(
-									"minRRRatio",
-									Number.isNaN(parsed) ? undefined : parsed,
-								);
-							}}
-							placeholder="2.0"
-							step="0.1"
-							type="number"
-							value={riskParams.minRRRatio ?? ""}
+						<Switch
+							checked={riskParams.minRRRatioEnabled ?? false}
+							onCheckedChange={(checked) =>
+								updateField("minRRRatioEnabled", checked)
+							}
 						/>
 					</div>
+				</div>
+				<div className="space-y-1">
+					<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+						Value
+					</span>
+					<Input
+						className="min-h-[44px] font-mono sm:min-h-0"
+						inputMode="decimal"
+						onChange={(e) => {
+							const parsed = parseFloat(e.target.value);
+							updateField(
+								"minRRRatio",
+								Number.isNaN(parsed) ? undefined : parsed,
+							);
+						}}
+						placeholder="2.0"
+						step="0.1"
+						type="number"
+						value={riskParams.minRRRatio ?? ""}
+					/>
 				</div>
 			</div>
 
