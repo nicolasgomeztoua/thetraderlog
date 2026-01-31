@@ -5,7 +5,12 @@ import type { RiskParameters } from "@/components/strategy/risk-config";
 import type { ScalingRules } from "@/components/strategy/scaling-config";
 import type { TrailingRules } from "@/components/strategy/trailing-config";
 import { calculateAggregateStats } from "@/lib/analytics";
-import { generateRulesFromConfig } from "@/lib/strategy";
+import {
+	buildEvaluationContext,
+	evaluateAutoCondition,
+	generateRulesFromConfig,
+} from "@/lib/strategy";
+import type { AutoCondition, AutoEvaluationResult } from "@/lib/strategy/types";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import type * as schema from "@/server/db/schema";
@@ -1090,5 +1095,149 @@ export const strategiesRouter = createTRPCRouter({
 			}
 
 			return { added, updated, deleted };
+		}),
+
+	// Auto-evaluate rules for a trade
+	evaluateTradeRules: protectedProcedure
+		.input(z.object({ tradeId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Fetch trade with strategy and rules, verify ownership
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+					isNull(trades.deletedAt),
+				),
+				with: {
+					strategy: {
+						with: {
+							rules: {
+								orderBy: [strategyRules.order],
+							},
+						},
+					},
+					account: true,
+				},
+			});
+
+			if (!trade) {
+				throw new Error("Trade not found");
+			}
+
+			if (!trade.strategy) {
+				throw new Error("Trade has no strategy assigned");
+			}
+
+			// Filter to rules that should be auto-evaluated (not manual)
+			const rulesToEvaluate = trade.strategy.rules.filter(
+				(rule) => rule.ruleType !== "manual",
+			);
+
+			if (rulesToEvaluate.length === 0) {
+				return { evaluated: 0, results: [] };
+			}
+
+			// Build evaluation context with all required data
+			const context = await buildEvaluationContext(
+				ctx.db,
+				{
+					id: trade.id,
+					userId: trade.userId,
+					accountId: trade.accountId,
+					symbol: trade.symbol,
+					instrumentType: trade.instrumentType,
+					direction: trade.direction,
+					entryPrice: trade.entryPrice,
+					exitPrice: trade.exitPrice,
+					entryTime: trade.entryTime,
+					exitTime: trade.exitTime,
+					quantity: trade.quantity,
+					stopLoss: trade.stopLoss,
+					takeProfit: trade.takeProfit,
+					trailedStopLoss: trade.trailedStopLoss,
+					wasTrailed: trade.wasTrailed,
+					netPnl: trade.netPnl,
+					mfePrice: trade.mfePrice,
+					mfeAmount: trade.mfeAmount,
+					status: trade.status,
+				},
+				ctx.user.id,
+			);
+
+			// Evaluate each rule and collect results
+			const results: Array<{
+				ruleId: string;
+				result: AutoEvaluationResult;
+			}> = [];
+
+			for (const rule of rulesToEvaluate) {
+				// Skip rules without auto condition
+				if (!rule.autoCondition) {
+					continue;
+				}
+
+				// Parse the auto condition JSON
+				let condition: AutoCondition;
+				try {
+					condition = JSON.parse(rule.autoCondition) as AutoCondition;
+				} catch {
+					// Invalid JSON, skip this rule
+					continue;
+				}
+
+				// Evaluate the condition
+				const result = evaluateAutoCondition(
+					condition,
+					{
+						id: trade.id,
+						symbol: trade.symbol,
+						instrumentType: trade.instrumentType,
+						direction: trade.direction,
+						entryPrice: trade.entryPrice,
+						exitPrice: trade.exitPrice,
+						quantity: trade.quantity,
+						stopLoss: trade.stopLoss,
+						takeProfit: trade.takeProfit,
+						trailedStopLoss: trade.trailedStopLoss,
+						wasTrailed: trade.wasTrailed,
+						netPnl: trade.netPnl,
+						mfePrice: trade.mfePrice,
+						mfeAmount: trade.mfeAmount,
+					},
+					context,
+				);
+
+				results.push({ ruleId: rule.id, result });
+
+				// Upsert the trade rule check with evaluation result
+				await ctx.db
+					.insert(tradeRuleChecks)
+					.values({
+						tradeId: input.tradeId,
+						ruleId: rule.id,
+						checked: result.passed,
+						checkedAt: new Date(),
+						evaluationResult: JSON.stringify(result),
+						wasAutoEvaluated: true,
+					})
+					.onConflictDoUpdate({
+						target: [tradeRuleChecks.tradeId, tradeRuleChecks.ruleId],
+						set: {
+							checked: result.passed,
+							checkedAt: new Date(),
+							evaluationResult: JSON.stringify(result),
+							wasAutoEvaluated: true,
+							// Don't update userOverride - preserve existing overrides
+						},
+					});
+			}
+
+			return {
+				evaluated: results.length,
+				results: results.map((r) => ({
+					ruleId: r.ruleId,
+					...r.result,
+				})),
+			};
 		}),
 });
