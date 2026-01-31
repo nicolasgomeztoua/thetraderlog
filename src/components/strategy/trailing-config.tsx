@@ -11,6 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export interface TrailingRules {
 	moveToBreakeven?: {
@@ -48,8 +49,8 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 	};
 
 	const updateBreakeven = (
-		field: "triggerR" | "offsetTicks",
-		fieldValue: number,
+		field: "triggerR" | "offsetTicks" | "enabled",
+		fieldValue: number | boolean,
 	) => {
 		const currentBreakeven = trailingRules.moveToBreakeven ?? { triggerR: 1 };
 		onChange({
@@ -73,8 +74,8 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 
 	const updateTrailStop = (
 		idx: number,
-		field: "triggerR" | "method" | "value",
-		fieldValue: number | string,
+		field: "triggerR" | "method" | "value" | "enabled",
+		fieldValue: number | string | boolean,
 	) => {
 		const newTrailStops = [...(trailingRules.trailStops ?? [])];
 		const existing = newTrailStops[idx] ?? {
@@ -115,7 +116,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 				</div>
 
 				{hasBreakeven && (
-					<div className="ml-0 grid grid-cols-1 gap-3 sm:ml-6 sm:grid-cols-2 sm:gap-4">
+					<div className="ml-0 grid grid-cols-1 gap-3 sm:ml-6 sm:grid-cols-3 sm:gap-4">
 						<div className="space-y-1">
 							<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 								Trigger at R
@@ -153,6 +154,17 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 								step="1"
 								type="number"
 								value={trailingRules.moveToBreakeven?.offsetTicks ?? ""}
+							/>
+						</div>
+						<div className="flex flex-col items-center justify-end gap-1">
+							<span className="font-mono text-[9px] text-muted-foreground">
+								Track
+							</span>
+							<Switch
+								checked={trailingRules.moveToBreakeven?.enabled ?? false}
+								onCheckedChange={(checked) =>
+									updateBreakeven("enabled", checked)
+								}
 							/>
 						</div>
 					</div>
@@ -263,6 +275,17 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 												</SelectItem>
 											</SelectContent>
 										</Select>
+									</div>
+									<div className="flex flex-col items-center justify-end gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground">
+											Track
+										</span>
+										<Switch
+											checked={rule.enabled ?? false}
+											onCheckedChange={(checked) =>
+												updateTrailStop(idx, "enabled", checked)
+											}
+										/>
 									</div>
 									<Button
 										className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-8 sm:w-8"
