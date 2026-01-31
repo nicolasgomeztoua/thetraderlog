@@ -1,14 +1,6 @@
 "use client";
 
-import {
-	CheckCircle,
-	CheckCircle2,
-	Circle,
-	Info,
-	RotateCcw,
-	XCircle,
-	Zap,
-} from "lucide-react";
+import { CheckCircle, CheckCircle2, Circle, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -79,59 +71,6 @@ function formatEvalValue(value: number | string | null): string {
 		return value.toFixed(2);
 	}
 	return String(value);
-}
-
-// Rule type badge component
-function RuleTypeBadge({
-	ruleType,
-	isOverridden,
-}: {
-	ruleType: RuleType;
-	isOverridden: boolean;
-}) {
-	if (isOverridden) {
-		return (
-			<span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-orange-500/20 px-1 py-0.5 font-mono text-[8px] text-orange-400">
-				<RotateCcw className="h-2 w-2" />
-				OVERRIDDEN
-			</span>
-		);
-	}
-
-	const config: Record<
-		RuleType,
-		{ label: string; icon: React.ReactNode; className: string }
-	> = {
-		auto: {
-			label: "AUTO",
-			icon: <Zap className="h-2 w-2" />,
-			className: "bg-profit/20 text-profit",
-		},
-		semi_auto: {
-			label: "SEMI",
-			icon: <Info className="h-2 w-2" />,
-			className: "bg-accent/20 text-accent",
-		},
-		manual: {
-			label: "MANUAL",
-			icon: null,
-			className: "bg-white/10 text-muted-foreground",
-		},
-	};
-
-	const { label, icon, className } = config[ruleType];
-
-	return (
-		<span
-			className={cn(
-				"inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[8px]",
-				className,
-			)}
-		>
-			{icon}
-			{label}
-		</span>
-	);
 }
 
 export function RuleChecklist({
@@ -310,7 +249,6 @@ export function RuleChecklist({
 										checkData?.evaluationResult,
 									);
 									const isAutoEvaluated = checkData?.wasAutoEvaluated ?? false;
-									const hasUserOverride = checkData?.userOverride === true;
 									const isInOverrideMode = overrideMode.has(rule.id);
 									const isAutoRule =
 										rule.ruleType === "auto" || rule.ruleType === "semi_auto";
@@ -366,32 +304,22 @@ export function RuleChecklist({
 
 												{/* Rule content */}
 												<div className="flex-1">
-													<div className="flex items-center gap-2">
-														{rule.ruleType && rule.ruleType !== "manual" && (
-															<RuleTypeBadge
-																isOverridden={
-																	hasUserOverride || isInOverrideMode
-																}
-																ruleType={rule.ruleType}
-															/>
+													<label
+														className={cn(
+															"font-mono text-sm",
+															isCheckboxDisabled
+																? "cursor-default"
+																: "cursor-pointer",
+															checked
+																? "text-foreground"
+																: "text-muted-foreground",
 														)}
-														<label
-															className={cn(
-																"flex-1 font-mono text-sm",
-																isCheckboxDisabled
-																	? "cursor-default"
-																	: "cursor-pointer",
-																checked
-																	? "text-foreground"
-																	: "text-muted-foreground",
-															)}
-															htmlFor={
-																isCheckboxDisabled ? undefined : checkboxId
-															}
-														>
-															{rule.text}
-														</label>
-													</div>
+														htmlFor={
+															isCheckboxDisabled ? undefined : checkboxId
+														}
+													>
+														{rule.text}
+													</label>
 
 													{/* Evaluation details for auto rules */}
 													{isAutoEvaluated && evalResult && (
