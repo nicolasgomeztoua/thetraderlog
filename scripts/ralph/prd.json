@@ -62,8 +62,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created rule-generator.ts with generateRulesFromConfig, hashConfig, and parseRLevelFromTrigger"
     },
     {
       "id": "US-004",
@@ -81,8 +81,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/unit/rule-generator.test.ts with 32 tests covering parseRLevelFromTrigger, hashConfig, and generateRulesFromConfig"
     },
     {
       "id": "US-005",

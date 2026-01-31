@@ -6,6 +6,8 @@ Started: Sat Jan 31 13:26:41 WET 2026
 - Strategy types go in src/lib/strategy/ module
 - Use discriminated unions with `type` field for condition types
 - Export from index.ts barrel files
+- Unit tests (no DB needed): `bunx vitest run --config vitest.config.unit.ts`
+- Integration tests (needs Docker): `bun run test`
 
 ---
 
@@ -18,4 +20,30 @@ Started: Sat Jan 31 13:26:41 WET 2026
   - Created discriminated union pattern for AutoCondition types
   - DataQuality enum matches schema's dataQualityEnum concept
   - All condition interfaces have a `type` discriminator field
+---
+
+## 2026-01-31 - US-003
+- What was implemented: Rule generation service that transforms strategy config into checklist rules
+- Files changed:
+  - src/lib/strategy/rule-generator.ts (created)
+  - src/lib/strategy/index.ts (updated barrel export)
+- **Learnings for future iterations:**
+  - Use `node:crypto` protocol for Node.js imports (Biome enforces this)
+  - parseRLevelFromTrigger regex: `/\+?(\d+(?:\.\d+)?)\s*R\b/i` handles +1R, +1.5R, 2R patterns
+  - Config interfaces (RiskParameters, ScalingRules, TrailingRules) are in component files, not lib
+  - hashConfig uses MD5 first 16 chars - consistent format for change detection
+  - Rule types: risk params → auto, scale-in → manual, scale-out → auto if R-level parseable, trailing fixed_ticks → semi_auto, ATR/swing → manual
+---
+
+## 2026-01-31 - US-004
+- What was implemented: Unit tests for the rule generator service
+- Files changed:
+  - tests/unit/rule-generator.test.ts (created) - 32 tests covering all generator functionality
+  - vitest.config.unit.ts (created) - separate config for unit tests without database
+  - vitest.config.ts (updated) - added unit test path to includes
+- **Learnings for future iterations:**
+  - Unit tests don't need database - use separate vitest.config.unit.ts without globalSetup
+  - Run unit tests with: `bunx vitest run --config vitest.config.unit.ts`
+  - Integration tests still use: `bun run test` (requires Docker for PostgreSQL container)
+  - Biome auto-organizes imports when running `bunx biome check --write`
 ---
