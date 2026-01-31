@@ -5,9 +5,14 @@
  * Each evaluator checks a specific condition and returns a standardized result.
  */
 
+import { and, eq, gte, isNull, lt, ne } from "drizzle-orm";
 import { getPointValue } from "@/lib/market-data";
+import { getDateStringInTimezone, getDayBoundsInTimezone } from "@/lib/shared";
 import { calculatePlannedRR } from "@/lib/trades/calculations";
+import { getUserTimezone } from "@/server/api/helpers";
+import type { db as DbType } from "@/server/db";
 import type { TradeExecution } from "@/server/db/schema";
+import { accounts, tradeExecutions, trades } from "@/server/db/schema";
 import type {
 	AutoCondition,
 	AutoEvaluationResult,
@@ -18,6 +23,9 @@ import type {
 	MinRRRatioCondition,
 	ScaleOutAtRCondition,
 } from "./types";
+
+// Database type - same pattern as helpers.ts
+type Db = typeof DbType;
 
 // ============================================================================
 // EVALUATION CONTEXT
@@ -544,4 +552,212 @@ export function calculateMfeInR(trade: TradeForEvaluation): number | null {
 		trade.direction === "long" ? mfePrice - entry : entry - mfePrice;
 
 	return mfePoints / riskPerUnit;
+}
+
+// ============================================================================
+// BUILD EVALUATION CONTEXT HELPER
+// ============================================================================
+
+/**
+ * Full trade record with account info needed for building context
+ */
+export interface TradeWithAccount {
+	id: string;
+	userId: string;
+	accountId: string | null;
+	symbol: string;
+	instrumentType: "futures" | "forex";
+	direction: "long" | "short";
+	entryPrice: string;
+	exitPrice: string | null;
+	entryTime: Date;
+	exitTime: Date | null;
+	quantity: string;
+	stopLoss: string | null;
+	takeProfit: string | null;
+	trailedStopLoss: string | null;
+	wasTrailed: boolean | null;
+	netPnl: string | null;
+	mfePrice: string | null;
+	mfeAmount: string | null;
+	status: "open" | "closed";
+}
+
+/**
+ * Build evaluation context for a trade
+ * Fetches all data required to evaluate auto-conditions
+ *
+ * @param db - Drizzle database instance
+ * @param trade - The trade to build context for
+ * @param userId - The user's ID (for fetching related data)
+ */
+export async function buildEvaluationContext(
+	db: Db,
+	trade: TradeWithAccount,
+	userId: string,
+): Promise<EvaluationContext> {
+	// Get user timezone for date comparisons
+	const userTimezone = await getUserTimezone(db, userId);
+
+	// Run queries in parallel for efficiency
+	const [executionsResult, dayTradesResult, concurrentCount, accountBalance] =
+		await Promise.all([
+			// 1. Fetch trade executions for this trade
+			fetchTradeExecutions(db, trade.id),
+
+			// 2. Fetch same-day trades for daily loss limit
+			fetchSameDayTrades(db, trade, userId, userTimezone),
+
+			// 3. Count concurrent trades at entry time
+			countConcurrentTrades(db, trade, userId),
+
+			// 4. Get account balance if trade has an account
+			fetchAccountBalance(db, trade.accountId),
+		]);
+
+	// Calculate MFE in R-multiples
+	const mfeR = calculateMfeInR({
+		id: trade.id,
+		symbol: trade.symbol,
+		instrumentType: trade.instrumentType,
+		direction: trade.direction,
+		entryPrice: trade.entryPrice,
+		exitPrice: trade.exitPrice,
+		quantity: trade.quantity,
+		stopLoss: trade.stopLoss,
+		takeProfit: trade.takeProfit,
+		trailedStopLoss: trade.trailedStopLoss,
+		wasTrailed: trade.wasTrailed,
+		netPnl: trade.netPnl,
+		mfePrice: trade.mfePrice,
+		mfeAmount: trade.mfeAmount,
+	});
+
+	return {
+		executions: executionsResult,
+		dayTrades: dayTradesResult,
+		concurrentTradesAtEntry: concurrentCount,
+		mfeR,
+		accountBalance,
+	};
+}
+
+/**
+ * Fetch trade executions for a trade
+ */
+async function fetchTradeExecutions(
+	db: Db,
+	tradeId: string,
+): Promise<TradeExecution[]> {
+	const results = await db.query.tradeExecutions.findMany({
+		where: eq(tradeExecutions.tradeId, tradeId),
+	});
+	return results;
+}
+
+/**
+ * Fetch trades closed on the same calendar day as the given trade
+ * Uses the trade's exit time (or entry time if still open) to determine the day
+ */
+async function fetchSameDayTrades(
+	db: Db,
+	trade: TradeWithAccount,
+	userId: string,
+	userTimezone: string,
+): Promise<EvaluationContext["dayTrades"]> {
+	// Use exit time for closed trades, entry time for open trades
+	const referenceTime = trade.exitTime ?? trade.entryTime;
+
+	// Get date string in user's timezone
+	const dateString = getDateStringInTimezone(referenceTime, userTimezone);
+
+	// Get day bounds in UTC for querying
+	const { start, end } = getDayBoundsInTimezone(dateString, userTimezone);
+
+	// Query closed trades on the same day (excluding this trade)
+	const results = await db.query.trades.findMany({
+		where: and(
+			eq(trades.userId, userId),
+			eq(trades.status, "closed"),
+			ne(trades.id, trade.id),
+			isNull(trades.deletedAt),
+			// Exit time within the day bounds
+			gte(trades.exitTime, start),
+			lt(trades.exitTime, end),
+		),
+		columns: {
+			id: true,
+			netPnl: true,
+			status: true,
+			exitTime: true,
+		},
+	});
+
+	return results;
+}
+
+/**
+ * Count trades that were open at this trade's entry time
+ * A trade is considered "concurrent" if:
+ * - It was opened before or at this trade's entry time
+ * - It was still open (not closed) at this trade's entry time
+ */
+async function countConcurrentTrades(
+	db: Db,
+	trade: TradeWithAccount,
+	userId: string,
+): Promise<number> {
+	const entryTime = trade.entryTime;
+
+	// Find trades that:
+	// 1. Were entered before or at this trade's entry time
+	// 2. Were either still open OR exited after this trade's entry time
+	// 3. Are not this trade itself
+	// 4. Are not soft-deleted
+	const concurrentTrades = await db.query.trades.findMany({
+		where: and(
+			eq(trades.userId, userId),
+			ne(trades.id, trade.id),
+			isNull(trades.deletedAt),
+			// Entered before or at this trade's entry
+			lt(trades.entryTime, entryTime),
+		),
+		columns: {
+			id: true,
+			exitTime: true,
+			status: true,
+		},
+	});
+
+	// Filter to trades that were still open at entry time
+	// A trade was open if: status is 'open' OR exitTime is after entry time
+	const openAtEntry = concurrentTrades.filter((t) => {
+		if (t.status === "open") return true;
+		if (t.exitTime && t.exitTime > entryTime) return true;
+		return false;
+	});
+
+	// Return count + 1 to include this trade itself
+	return openAtEntry.length + 1;
+}
+
+/**
+ * Fetch account balance for percent-based risk calculations
+ */
+async function fetchAccountBalance(
+	db: Db,
+	accountId: string | null,
+): Promise<number | null> {
+	if (!accountId) return null;
+
+	const account = await db.query.accounts.findFirst({
+		where: eq(accounts.id, accountId),
+		columns: {
+			initialBalance: true,
+		},
+	});
+
+	if (!account?.initialBalance) return null;
+
+	return parseFloat(account.initialBalance);
 }
