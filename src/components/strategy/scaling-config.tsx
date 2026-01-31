@@ -88,11 +88,11 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 			{/* Scale In Rules */}
 			<div className="space-y-3">
 				<div className="flex items-center justify-between">
-					<h4 className="font-mono text-[10px] text-profit uppercase tracking-wider sm:text-[11px]">
-						Scale In Rules
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Scale In Rules <span className="text-profit">↑</span>
 					</h4>
 					<Button
-						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
+						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 						onClick={addScaleIn}
 						size="sm"
 						type="button"
@@ -111,7 +111,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleIn ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scalein-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
@@ -135,13 +135,14 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) =>
+											onChange={(e) => {
+												const parsed = parseFloat(e.target.value);
 												updateScaleIn(
 													idx,
 													"sizePercent",
-													parseFloat(e.target.value) || 0,
-												)
-											}
+													Number.isNaN(parsed) ? 0 : parsed,
+												);
+											}}
 											step="5"
 											type="number"
 											value={rule.sizePercent}
@@ -166,11 +167,11 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 			{/* Scale Out Rules */}
 			<div className="space-y-3">
 				<div className="flex items-center justify-between">
-					<h4 className="font-mono text-[10px] text-loss uppercase tracking-wider sm:text-[11px]">
-						Scale Out Rules
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Scale Out Rules <span className="text-loss">↓</span>
 					</h4>
 					<Button
-						className="min-h-[36px] font-mono text-xs sm:h-7 sm:min-h-0"
+						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 						onClick={addScaleOut}
 						size="sm"
 						type="button"
@@ -189,7 +190,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 					<div className="space-y-2">
 						{(scalingRules.scaleOut ?? []).map((rule, idx) => (
 							<div
-								className="flex flex-col gap-2 rounded border border-white/5 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
+								className="flex flex-col gap-2 rounded border border-white/10 bg-white/2 p-3 sm:flex-row sm:items-end sm:gap-3"
 								key={`scaleout-${rule.trigger || idx}`}
 							>
 								<div className="flex-1 space-y-1">
@@ -213,13 +214,14 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) =>
+											onChange={(e) => {
+												const parsed = parseFloat(e.target.value);
 												updateScaleOut(
 													idx,
 													"sizePercent",
-													parseFloat(e.target.value) || 0,
-												)
-											}
+													Number.isNaN(parsed) ? 0 : parsed,
+												);
+											}}
 											step="5"
 											type="number"
 											value={rule.sizePercent}

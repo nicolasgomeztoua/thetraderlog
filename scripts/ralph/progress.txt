@@ -1,122 +1,367 @@
-# Ralph Progress Log
-Started: Sat Jan 17 22:31:13 +01 2026
+# Ralph Progress Log - Strategies Redesign
+Started: Sun Jan 26 2026
+Branch: ralph/strategies-redesign
 ---
 
-## Codebase Patterns
+## Feature Overview
+Redesign the strategies page and strategy detail page with distinctive Terminal-inspired UI.
+Transform generic strategy cards into visually memorable "Strategy" cards with terminal chrome,
+performance-based styling, and clear visual hierarchy.
+
+## Codebase Patterns (from previous work)
 - Playwright config uses projects for browser separation with auth state dependency
 - E2E tests live in tests/e2e/ directory
 - Auth state stored in playwright/.clerk/user.json
+- data-testid convention: [component]-[element]-[qualifier]
+- Terminal design: traffic light dots, command prompts ($, →), monospace fonts
+
+## Design System Reference
+- Primary: #d4ff00 (Electric Chartreuse)
+- Accent: #00d4ff (Ice Blue)
+- Profit: #00ff88
+- Loss: #ff3b3b
+- Background: #050505
+- Terminal chrome pattern in DESIGN_REFERENCE.md
+
 ---
 
-## 2026-01-18 - US-001
-- What was implemented:
-  - Installed @playwright/test@1.57.0 and @clerk/testing@1.13.29
-  - Created playwright.config.ts with webServer, baseURL, and auth projects
-  - Added test:e2e and test:e2e:ui scripts to package.json
-  - Added playwright/.clerk/, /playwright-report/, /blob-report/, /test-results/ to .gitignore
-- Files changed:
-  - package.json (added scripts)
-  - bun.lock (deps installed)
-  - playwright.config.ts (new)
-  - .gitignore (added playwright paths)
+## Sun Jan 26 2026 - US-001
+- Implemented redesigned strategy list page header
+- Files changed: src/app/(protected)/strategies/page.tsx
+- **What was implemented:**
+  - Added atmospheric background effects (grid pattern with 60px cells, primary/accent gradient orbs)
+  - New hero header card with subtle gradient background
+  - Command prompt section label ("$ STRATEGIES")
+  - Bold headline with "Strategies" in accent color
+  - Monospace subheadline describing purpose
+  - Terminal-style "New Strategy" button with arrow and hover animation
+  - Added data-testid attributes for E2E testing
 - **Learnings for future iterations:**
-  - Playwright config uses `projects` array for setup dependencies
-  - Auth state is stored via `storageState` in project config
-  - Use `dependencies: ["setup"]` to ensure global setup runs first
+  - Use inline styles for grid background pattern rather than CSS class (more flexible)
+  - Hero headers should use relative overflow-hidden for contained background effects
+  - Biome formatter requires single-line span elements, don't use {"  "} for space
 ---
 
-## 2026-01-18 - US-002
-- What was implemented:
-  - Created tests/e2e/global.setup.ts with Clerk authentication
-  - Uses clerkSetup() from @clerk/testing/playwright to initialize
-  - Signs in with clerk.signIn() using password strategy from env vars
-  - Validates auth by navigating to /dashboard and waiting for "Trading Overview" heading
-  - Saves auth state to playwright/.clerk/user.json for test reuse
+## Sun Jan 26 2026 - US-002
+- Implemented Performance Leaderboard component
 - Files changed:
-  - tests/e2e/global.setup.ts (new)
-  - tests/e2e/.gitkeep (deleted - no longer needed)
-  - scripts/ralph/prd.json (updated US-002 to passes: true)
+  - src/components/strategy/strategy-leaderboard.tsx (new)
+  - src/components/strategy/index.ts (added export)
+  - src/app/(protected)/strategies/page.tsx (replaced PerformanceComparisonTable)
+- **What was implemented:**
+  - Terminal window chrome with traffic light dots (red/yellow/green) and "leaderboard.tsx" title
+  - RankBadge component with distinct styling per rank (1st: primary glow, 2nd: white, 3rd: accent)
+  - Top 3 strategies as clickable entries with rank, color dot, name, trades, win rate, P&L
+  - #1 strategy gets highlighted border with primary color glow
+  - Falls back gracefully when fewer than 3 strategies have trades
+  - Loading skeleton matching terminal chrome design
+  - "+X more strategies" indicator when more than 3 exist
 - **Learnings for future iterations:**
-  - Clerk global setup requires serial mode: `setup.describe.configure({ mode: "serial" })`
-  - Must navigate to `/` first to load Clerk before calling clerk.signIn()
-  - clerk.signIn() uses `identifier` (not `email`) for the user identifier param
-  - Auth validation: navigate to protected route and wait for expected element
+  - Biome CSS class ordering: border color classes must come before border style (border-white/5 before border-b)
+  - Use font-bold before font-mono for proper class ordering
+  - api.strategies.getAllStats.useQuery() returns strategyId, strategyName, strategyColor, totalPnl, winRate, totalTrades
 ---
 
-## 2026-01-18 - US-003
-- What was implemented:
-  - Created tests/e2e/README.md with comprehensive setup instructions
-  - Documents: Clerk test user creation, email/password auth setup, env vars
-  - Created .env.test.example with E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD
-  - Includes troubleshooting section for common issues
-- Files changed:
-  - tests/e2e/README.md (new)
-  - .env.test.example (new)
-  - scripts/ralph/prd.json (updated US-003 to passes: true)
+## Sun Jan 26 2026 - US-003
+- Redesigned Strategy Card component with Terminal-inspired UI
+- Files changed: src/components/strategy/strategy-card.tsx
+- **What was implemented:**
+  - Terminal window chrome header with traffic light dots (red/yellow/green)
+  - Title bar shows strategy name in monospace with strategy's color
+  - Color gradient header area using strategy color (linear gradient from 20% to transparent)
+  - Pulsing green dot status indicator for active strategies, muted text for inactive
+  - Stats grid with 3 columns: Trades, Win Rate, Total P&L (all with micro-labels)
+  - "X RULES DEFINED" badge in header area
+  - Hover glow effect using strategy's color (inset box-shadow)
+  - Dropdown menu positioned in terminal chrome header area (doesn't obstruct card)
+  - Added data-testid attributes: strategy-card, strategy-card-title, strategy-card-menu-trigger, strategy-card-link, strategy-card-stats
 - **Learnings for future iterations:**
-  - E2E env vars pattern: use .env.test.example for test-specific variables
-  - README should reference the skill file for writing tests: .claude/skills/e2e-testing/SKILL.md
+  - Use CSS custom properties (--strategy-color) for dynamic colors in hover effects
+  - animate-ping with relative positioned sibling creates nice pulsing status indicators
+  - Biome requires {" "} for intentional spaces in JSX (don't combine text/expressions on one line)
+  - Inactive strategies use opacity-60 on container, not individual element styling
 ---
 
-## 2026-01-18 - US-004
-- What was implemented:
-  - Created tests/e2e/dashboard.spec.ts with 3 E2E tests
-  - Test 1: Verifies dashboard loads with "Trading Overview" heading visible
-  - Test 2: Verifies stats grid displays all expected stat cards (Net P&L, Win Rate, etc.)
-  - Test 3: Verifies start journal hero section is visible (Start button or Journal Started)
+## Sun Jan 26 2026 - US-004
+- Added Strategy Card Visual Variants for performance differentiation
 - Files changed:
-  - tests/e2e/dashboard.spec.ts (new)
-  - scripts/ralph/prd.json (updated US-004 to passes: true)
+  - src/components/strategy/strategy-card.tsx (added isTopPerformer prop, visual variants)
+  - src/app/(protected)/strategies/page.tsx (calculates topPerformerId, passes prop)
+- **What was implemented:**
+  - P&L-based border accents: border-profit/30 for positive, border-loss/30 for negative
+  - Top performer highlighting: border-primary/50 with persistent glow effect
+  - "★ Top Performer" badge in primary color for the #1 strategy
+  - "No trades yet" badge for strategies without any trades
+  - Inactive strategies maintain opacity-60 muting with no glow effects
+  - topPerformerId calculation in page: finds highest positive P&L among active strategies with trades
+  - Added data-testid attributes: strategy-card-top-performer-badge, strategy-card-no-trades-badge
 - **Learnings for future iterations:**
-  - Use `expect(locator).toBeVisible()` for checking element visibility
-  - Dashboard stat card labels: "Net P&L", "Win Rate", "Profit Factor", "Avg Win", "Avg Loss"
-  - For state-dependent UI (like journal status), test for OR conditions using multiple locators
+  - Use IIFE pattern `(() => { ... })()` for derived values that need loop logic in components
+  - Conditional glow effects: render different div elements rather than conditional className
+  - Badge positioning in absolute containers: use top-3 right-3 for consistent spacing
 ---
 
-## 2026-01-18 - US-005
-- What was implemented:
-  - Created tests/e2e/auth.spec.ts with 3 tests for auth redirect behavior
-  - Test 1: Unauthenticated user visiting /dashboard redirects to /sign-in
-  - Test 2: Unauthenticated user visiting /journal redirects to /sign-in
-  - Test 3: Unauthenticated user visiting /analytics redirects to /sign-in
+## Sun Jan 26 2026 - US-005
+- Implemented improved strategy list grid layout with animations
 - Files changed:
-  - tests/e2e/auth.spec.ts (new)
-  - scripts/ralph/prd.json (updated US-005 to passes: true)
+  - src/app/(protected)/strategies/page.tsx (added stagger-children, CTA card)
+  - src/styles/globals.css (extended stagger-children to 12 items, added prefers-reduced-motion)
+- **What was implemented:**
+  - Added `stagger-children` class to the strategies grid for staggered fade-in animation
+  - Extended CSS with child delays for nth-child 9-12 (animation-delay: 0.9s-1.2s)
+  - Added @media (prefers-reduced-motion) query to disable animations when user prefers reduced motion
+  - Created "Create New Strategy" CTA card with dashed border at end of grid
+  - CTA card has circular Plus icon, monospace text, and hover state with primary color transition
+  - Added data-testid attributes: strategies-grid, strategies-create-cta
 - **Learnings for future iterations:**
-  - To test as unauthenticated, use `test.use({ storageState: { cookies: [], origins: [] } })` to clear auth state
-  - Use `page.waitForURL(/pattern/, { timeout: 15000 })` to wait for redirect completion
-  - Clerk sign-in elements can be located with `[class*="cl-signIn"]` selector
+  - Use existing stagger-children class from globals.css for grid fade-in animations
+  - Always add prefers-reduced-motion support when adding animations
+  - CTA cards in grids should use min-h to match other cards visually
 ---
 
-## 2026-01-18 - US-006
-- What was implemented:
-  - Created .claude/skills/e2e-testing/SKILL.md with comprehensive E2E testing documentation
-  - Documented: test commands (bun run test:e2e, test:e2e:ui)
-  - Documented: Playwright + @clerk/testing setup architecture with global setup flow
-  - Documented: data-testid naming convention ([component]-[element]-[qualifier])
-  - Documented: How to add data-testid during feature development
-  - Documented: Test patterns for authenticated, unauthenticated, form submission, and state-dependent UI
-  - Updated tests/e2e/README.md to reference the skill file
-- Files changed:
-  - .claude/skills/e2e-testing/SKILL.md (new)
-  - tests/e2e/README.md (updated)
-  - scripts/ralph/prd.json (updated US-006 to passes: true)
+## Sun Jan 26 2026 - US-006
+- Redesigned empty state with Terminal-style command prompt aesthetic
+- Files changed: src/app/(protected)/strategies/page.tsx
+- **What was implemented:**
+  - Terminal window chrome with traffic light dots (red/yellow/green) and "strategies — empty" title bar
+  - Grid pattern background at 40px cells with opacity-40
+  - BookMarked icon in terminal-style container (border, bg-white/5)
+  - "$ NO STRATEGIES DEFINED" command prompt label in primary color
+  - "Start building your edge" motivating headline
+  - Descriptive text about strategies' purpose
+  - Terminal-style command hint with → prefix: "Create your first strategy to begin tracking"
+  - "$ CREATE FIRST STRATEGY" CTA button with ArrowRight hover animation
+  - Added data-testid attributes: strategies-empty-state, strategies-empty-state-cta
 - **Learnings for future iterations:**
-  - Skill files follow consistent structure: Tech Stack table, Commands table, Project Structure, Patterns, Best Practices, Troubleshooting
-  - data-testid convention is [component]-[element]-[qualifier] e.g., "trade-form-button-submit"
-  - Cross-reference between README and skill files for discoverability
+  - Empty states benefit from terminal chrome wrapper to match other components
+  - Command prompt styling ($, →) adds Terminal personality to messages
+  - Grid pattern at 40px is denser than page background (60px), creating visual hierarchy
+  - Use px-8 for wider CTA buttons in empty states for more prominence
 ---
 
-## 2026-01-18 - US-007
-- What was implemented:
-  - Updated scripts/ralph/prompt.md with new "E2E Testing Requirements (UI Stories)" section
-  - Added reference to E2E testing skill (.claude/skills/e2e-testing/SKILL.md)
-  - Added data-testid guidance with examples for forms, data displays, and navigation
-  - Added optional bun run test:e2e command for UI stories (after backend tests)
-- Files changed:
-  - scripts/ralph/prompt.md (updated)
-  - scripts/ralph/prd.json (updated US-007 to passes: true)
+## Sun Jan 26 2026 - US-007
+- Implemented Strategy Detail Page Layout with view-first experience
+- Files changed: src/app/(protected)/strategies/[id]/page.tsx
+- **What was implemented:**
+  - Restructured page for view-first experience (hero section first, form at bottom)
+  - Terminal window chrome wrapping hero with traffic light dots and dynamic title bar (strategy name as slug)
+  - Hero section with strategy color gradient background (135deg from color/15 to transparent)
+  - Large strategy name (text-3xl sm:text-4xl) prominently displayed
+  - Status badge with pulsing indicator for active, muted for inactive
+  - Strategy description displayed below status if available
+  - "Edit Strategy" button that scrolls to form section using ref
+  - Quick stats row with 4 metrics: Trades, Win Rate, Total P&L, Profit Factor
+  - Stats show "—" placeholder when no trades exist, profit/loss coloring when they do
+  - Action bar with back button (Back to Strategys), duplicate, and delete buttons
+  - Updated loading skeleton to match new hero/terminal chrome structure
+  - Added data-testid attributes: strategy-detail-page, strategy-detail-loading, strategy-detail-not-found, strategy-detail-action-bar, strategy-detail-hero, strategy-detail-name, strategy-detail-status, strategy-detail-stats, strategy-detail-form
 - **Learnings for future iterations:**
-  - Ralph prompt.md has sections for different story types: Testing Requirements (backend), E2E Testing Requirements (UI)
-  - E2E tests are optional for UI stories since they require Clerk test user setup
+  - Use useRef + scrollIntoView for "scroll to section" buttons instead of modals for simpler UX
+  - Biome CSS class ordering: text-profit/text-loss must come before text-xs (color before size)
+  - Biome formatting: long template literals need Math.abs on separate line for readability
+  - For strategy name in title bar, use .toLowerCase().replace(/\s+/g, "-") for slug format
+---
+
+## Sun Jan 26 2026 - US-008
+- Implemented Strategy Detail - Rules Display Section
+- Files changed:
+  - src/components/strategy/strategy-rules-display.tsx (new)
+  - src/components/strategy/index.ts (added export)
+  - src/app/(protected)/strategies/[id]/page.tsx (added rules section)
+- **What was implemented:**
+  - New StrategyRulesDisplay component with 2x2 grid layout (sm:grid-cols-2)
+  - Each category has terminal window chrome header with traffic light dots
+  - Title bar shows "{category}.rules" in terminal style
+  - Category header with icon (Target for entry, DoorOpen for exit, ShieldAlert for risk, LayoutGrid for management)
+  - Category colors: entry=profit, exit=loss, risk=breakeven, management=accent
+  - Rule count shown per category ("X rules" or "1 rule")
+  - Rules displayed as non-interactive checklist items with arrow indicator
+  - Empty categories show "No rules defined" placeholder
+  - Global empty state with terminal chrome and dashed border when no rules exist
+  - Section integrated into strategy detail page between stats and form
+  - Added data-testid attributes: strategy-rules-display, strategy-rules-display-empty, strategy-rules-display-{category}, strategy-rule-{id}
+- **Learnings for future iterations:**
+  - Biome CSS class ordering: border-white/10 must come before border-dashed
+  - Biome formatting requires multiline object literals when line exceeds length
+  - Use Record<Category, Type> for type-safe category configs
+  - Category icons: Target (entry), DoorOpen (exit), ShieldAlert (risk), LayoutGrid (management)
+---
+
+## Sun Jan 26 2026 - US-009
+- Implemented Strategy Detail - Entry/Exit Criteria Display
+- Files changed:
+  - src/components/strategy/strategy-criteria-display.tsx (new)
+  - src/components/strategy/index.ts (added export)
+  - src/app/(protected)/strategies/[id]/page.tsx (added criteria section)
+- **What was implemented:**
+  - New StrategyCriteriaDisplay component with two-column grid layout (sm:grid-cols-2)
+  - CriteriaCard internal component for reusable card styling
+  - Terminal window chrome header with traffic light dots
+  - Title bar shows file name (entry.criteria, exit.rules)
+  - Command prompt prefix (>) with category icon and uppercase title
+  - Entry criteria: text-profit color, Target icon
+  - Exit rules: text-loss color, DoorOpen icon
+  - Text displayed in monospace with whitespace-pre-wrap for line breaks
+  - Empty state shows "Not defined" placeholder with centered text
+  - Dashed border when no content exists
+  - Section integrated into strategy detail page between rules and form sections
+  - Added data-testid attributes: strategy-criteria-display, strategy-criteria-entry, strategy-criteria-exit
+- **Learnings for future iterations:**
+  - Re-use existing icon patterns from strategy-rules-display (Target for entry, DoorOpen for exit)
+  - whitespace-pre-wrap preserves line breaks in user-entered text
+  - Conditional border style (solid vs dashed) based on content availability
+---
+
+## Sun Jan 26 2026 - US-010
+- Implemented Strategy Detail - Risk Parameters Display
+- Files changed:
+  - src/components/strategy/strategy-risk-display.tsx (new)
+  - src/components/strategy/index.ts (added export)
+  - src/app/(protected)/strategies/[id]/page.tsx (added risk section)
+- **What was implemented:**
+  - New StrategyRiskDisplay component with terminal window chrome
+  - Traffic light dots header with "risk.config" filename
+  - Command prompt header (>) with ShieldAlert icon in breakeven color
+  - 5-column responsive grid for risk values (stacks to single column on mobile)
+  - Position Sizing: Formats based on method (Fixed "X lots", Risk "X%", Kelly "X% Kelly")
+  - Max Risk/Trade: Formats as $ or % based on type
+  - Daily Loss Limit: Formats as $ or % based on type
+  - Max Positions: Simple number display
+  - Min R:R Ratio: Formats as "X.X:1" ratio
+  - Each value has micro-label above and large value below
+  - Empty values show "—" placeholder
+  - Empty state with dashed border and "Risk parameters not configured" message
+  - Section added to strategy detail page between criteria and form sections
+  - Added data-testid attributes: strategy-risk-display, strategy-risk-display-empty, strategy-risk-position-sizing, strategy-risk-max-risk, strategy-risk-daily-loss, strategy-risk-max-positions, strategy-risk-min-rr
+- **Learnings for future iterations:**
+  - Import RiskParameters type from risk-config.tsx for type safety
+  - Use grid-cols-1 sm:grid-cols-5 for responsive risk value grids
+  - Format functions should return null (not undefined) for conditional rendering
+  - ShieldAlert icon fits well for risk-related sections
+---
+
+## Sun Jan 26 2026 - US-011
+- Implemented Strategy Detail - Placeholder Sections
+- Files changed:
+  - src/components/strategy/strategy-placeholder.tsx (new)
+  - src/components/strategy/index.ts (added export)
+  - src/app/(protected)/strategies/[id]/page.tsx (added placeholder section)
+- **What was implemented:**
+  - New StrategyPlaceholder component with two-column grid layout (sm:grid-cols-2)
+  - PlaceholderSection internal component for reusable card styling
+  - Terminal window chrome with muted traffic light dots (opacity /40)
+  - Overall card opacity-60 for clear "coming soon" visual treatment
+  - Dashed borders throughout for placeholder aesthetic
+  - Equity Curve placeholder with LineChart icon and descriptive text
+  - Recent Trades placeholder with List icon and descriptive text
+  - COMING SOON badge in primary color for each section
+  - Descriptive filenames in title bar (equity-curve.chart, recent-trades.list)
+  - Icon containers with border + bg-white/2 styling
+  - Section added to strategy detail page under "→ Performance Analytics" heading
+  - Added data-testid attributes: strategy-placeholder-section, strategy-placeholder-equity-curve, strategy-placeholder-recent-trades
+- **Learnings for future iterations:**
+  - Use opacity-60 on entire container for clear placeholder treatment
+  - Muted traffic light dots (/40 instead of /60) distinguish placeholder chrome from active chrome
+  - Descriptive filenames with .chart/.list extensions add terminal authenticity
+  - Dashed borders throughout (border + border-b) maintain visual consistency
+---
+
+
+## Sun Jan 26 2026 - US-012
+- Implemented Strategy Detail - Action Bar completion
+- Files changed: src/app/(protected)/strategies/[id]/page.tsx
+- **What was implemented:**
+  - Added Edit button to action bar (alongside existing Duplicate and Delete)
+  - Edit button scrolls to form section (reuses existing scrollToForm function)
+  - Added comprehensive data-testid attributes for E2E testing:
+    - strategy-detail-action-back (back button)
+    - strategy-detail-action-edit (edit button)
+    - strategy-detail-action-duplicate (duplicate button)
+    - strategy-detail-action-delete (delete button)
+  - All buttons follow Terminal design pattern (monospace, uppercase, tracking-wider)
+  - Mobile-friendly with 44px touch targets (min-h-[44px] or min-h-[36px] min-w-[36px] for icon buttons)
+  - Icon-only buttons on mobile, full labels on desktop (sm:inline)
+- **Learnings for future iterations:**
+  - Action bar buttons pattern: variant="outline" for primary actions, variant="ghost" for secondary (delete)
+  - Mobile icon buttons use size={isMobile ? "icon" : "sm"} pattern with useIsMobile() hook
+  - All interactive elements in action bar should have data-testid following [component]-[element]-[action] convention
+---
+
+## Sun Jan 26 2026 - US-013
+- Implemented Page Transitions and Animations
+- Files changed:
+  - src/styles/globals.css (new keyframes, stagger-sections class, updated timing)
+  - src/app/(protected)/strategies/page.tsx (loading skeletons updated)
+  - src/app/(protected)/strategies/[id]/page.tsx (stagger-sections class, loading skeletons, stat hover effects)
+- **What was implemented:**
+  - New `stagger-sections` CSS class for page-level sequential fade-in animations
+  - New `fade-in-up-subtle` keyframe with 10px translateY (vs 20px for regular fade-in-up)
+  - Strategy detail page uses stagger-sections for smooth section-by-section reveal
+  - Loading skeletons updated to match terminal-chrome card design:
+    - Action bar skeleton with proper sizing
+    - Hero section with terminal chrome header, color dot, title, status badge
+    - Stats grid with individual card skeletons
+    - Rules section with 2x2 grid of terminal-chrome cards
+  - Stat cards now have hover effects (transition-all duration-200, hover:border-white/10, hover:bg-white/3)
+  - Animation durations reduced: stagger-sections uses 250ms, stagger-children uses 300ms
+  - stagger-children delays tightened to 50ms intervals (was 100ms)
+  - prefers-reduced-motion properly disables all stagger and fade animations
+- **Learnings for future iterations:**
+  - For page-level animations, use smaller translateY (10px) for subtlety vs grid items (20px)
+  - Keep animation durations in 200-300ms range for "quick but noticeable" feel
+  - Loading skeletons should mirror the actual component structure for smooth visual transition
+  - Always extend prefers-reduced-motion rules when adding new animation classes
+---
+
+## Sun Jan 26 2026 - US-014
+- Implemented Mobile Optimization Pass for all strategy components
+- Files changed:
+  - src/components/strategy/strategy-leaderboard.tsx
+  - src/components/strategy/strategy-card.tsx
+  - src/components/strategy/strategy-rules-display.tsx
+  - src/components/strategy/strategy-criteria-display.tsx
+  - src/components/strategy/strategy-risk-display.tsx
+  - src/components/strategy/strategy-placeholder.tsx
+  - src/app/(protected)/strategies/page.tsx
+  - src/app/(protected)/strategies/[id]/page.tsx
+- **What was implemented:**
+  - Terminal chrome scaled down on mobile: traffic light dots 1.5px (sm:2px), padding reduced
+  - Responsive typography: text-[9px] on mobile vs text-[10px] desktop for micro-labels
+  - Leaderboard uses compact layout: gap-3 (sm:gap-4), space-y-2, rank badges 7px (sm:8px)
+  - Risk display uses 2-column grid on mobile (sm:grid-cols-5)
+  - All interactive elements maintain min-h-[44px] or min-h-[48px] for touch targets
+  - Title bar text truncated with max-w-[180px] on mobile to prevent overflow
+  - Loading skeletons updated to match mobile terminal chrome sizes
+  - Strategy card dropdown menu trigger 8px (sm:6px) for easier tapping
+  - Placeholder sections use smaller icons (6px vs 8px) and tighter padding
+- **Learnings for future iterations:**
+  - Use consistent responsive pattern: h-1.5 w-1.5 sm:h-2 sm:w-2 for traffic light dots
+  - Font sizes: text-[8px]/text-[9px] for mobile micro-labels, text-[10px]/text-[11px] for desktop
+  - Terminal chrome padding: px-3 py-1.5 sm:px-4 sm:py-2
+  - Right-side spacer widths: w-10 sm:w-14 to balance asymmetry
+  - For 2-col mobile grids with border separators, use odd:border-r to handle right borders
+  - Touch target minimums: 44x44px for standard buttons, 48px for important CTAs
+---
+
+## Sun Jan 26 2026 - US-015
+- Implemented E2E Tests for Strategies Redesign
+- Files changed:
+  - tests/e2e/strategies-redesign.spec.ts (new file, 266 lines)
+- **What was implemented:**
+  - 7 comprehensive E2E tests covering strategies list and detail pages
+  - Test: loads successfully with header and new button
+  - Test: page loads without errors
+  - Test: displays strategy cards or empty state
+  - Test: strategy card shows terminal chrome and stats
+  - Test: navigates from list to detail and displays all sections
+  - Test: back button navigates to strategies list
+  - Test: empty state has CTA button when no strategies
+  - Uses data-testid selectors for reliability across browsers
+  - Tests pass on Chromium; Firefox/WebKit have occasional timeout flakiness
+- **Learnings for future iterations:**
+  - E2E tests should use explicit waits rather than polling loops
+  - Use `.or()` for alternative elements: `expect(grid.or(emptyState)).toBeVisible()`
+  - Conditional tests with `if (!(await element.isVisible())) return;` handle optional data gracefully
+  - Firefox and WebKit are slower than Chromium - increase timeouts when needed
+  - Keep E2E tests simple and focused on core user flows to reduce flakiness
 ---

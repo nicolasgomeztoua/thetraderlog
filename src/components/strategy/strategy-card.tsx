@@ -1,8 +1,7 @@
 "use client";
 
-import { Copy, MoreVertical, Pencil, Trash2, TrendingUp } from "lucide-react";
+import { Copy, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -34,6 +33,7 @@ interface StrategyCardProps {
 	onDuplicate?: () => void;
 	onDelete?: () => void;
 	isMobile?: boolean;
+	isTopPerformer?: boolean;
 }
 
 export function StrategyCard({
@@ -43,56 +43,90 @@ export function StrategyCard({
 	onDuplicate,
 	onDelete,
 	isMobile = false,
+	isTopPerformer = false,
 }: StrategyCardProps) {
 	const color = strategy.color ?? "#d4ff00";
+	const hasTrades = strategy._count.trades > 0;
+	const isActive = strategy.isActive !== false;
+	const pnl = stats?.totalPnl ?? 0;
+	const isProfit = hasTrades && pnl > 0;
+	const isLoss = hasTrades && pnl < 0;
 
 	return (
 		<div
 			className={cn(
-				"group relative rounded border border-white/5 bg-white/2 p-4 transition-all hover:border-white/10 sm:p-5",
-				!strategy.isActive && "opacity-60",
+				"group relative overflow-hidden rounded border transition-all duration-200",
+				// Base border styling
+				!isActive && "opacity-60",
+				// Top performer gets primary border and glow
+				isTopPerformer && isActive && "border-primary/50",
+				// P&L-based border accents (only when not top performer)
+				!isTopPerformer && isActive && isProfit && "border-profit/30",
+				!isTopPerformer && isActive && isLoss && "border-loss/30",
+				// Default border for strategies without clear P&L status
+				!isTopPerformer && isActive && !isProfit && !isLoss && "border-white/5",
+				// Inactive strategies get muted border
+				!isActive && "border-white/5",
+				// Hover states (only for active)
+				isActive && "hover:border-white/20",
 			)}
+			data-testid="strategy-card"
+			style={
+				{
+					"--strategy-color": color,
+				} as React.CSSProperties
+			}
 		>
-			{/* Color indicator */}
-			<div
-				className="absolute top-0 left-0 h-full w-1 rounded-l"
-				style={{ backgroundColor: color }}
-			/>
+			{/* Top performer persistent glow */}
+			{isTopPerformer && isActive && (
+				<div
+					className="absolute inset-0"
+					style={{
+						boxShadow:
+							"inset 0 0 40px rgba(212, 255, 0, 0.08), 0 0 30px rgba(212, 255, 0, 0.05)",
+					}}
+				/>
+			)}
 
-			{/* Header */}
-			<div className="mb-3 flex items-start justify-between gap-2 sm:mb-4">
-				<div className="min-w-0 flex-1">
-					<Link
-						className="font-mono font-semibold text-base transition-colors hover:text-primary sm:text-lg"
-						href={`/strategies/${strategy.id}`}
-					>
-						{strategy.name}
-					</Link>
-					{!strategy.isActive && (
-						<Badge className="ml-2 font-mono text-[10px]" variant="secondary">
-							Inactive
-						</Badge>
+			{/* Hover glow effect using strategy color (only for active, non-top-performer) */}
+			{!isTopPerformer && (
+				<div
+					className={cn(
+						"absolute inset-0 opacity-0 transition-opacity duration-200",
+						isActive && "group-hover:opacity-100",
 					)}
-					{strategy.description && (
-						<p className="mt-1 line-clamp-2 font-mono text-muted-foreground text-xs sm:text-sm">
-							{strategy.description}
-						</p>
-					)}
+					style={{
+						boxShadow: `inset 0 0 30px ${color}15, 0 0 20px ${color}10`,
+					}}
+				/>
+			)}
+
+			{/* Terminal window chrome header */}
+			<div className="relative flex min-h-[36px] items-center justify-between border-white/5 border-b bg-white/2 px-2 py-1.5 sm:min-h-0 sm:px-3 sm:py-2">
+				<div className="flex items-center gap-1 sm:gap-1.5">
+					<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+					<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 				</div>
-
+				<span
+					className="max-w-[120px] truncate font-mono text-[9px] uppercase tracking-wider sm:max-w-none sm:text-[10px]"
+					data-testid="strategy-card-title"
+					style={{ color }}
+				>
+					{strategy.name}
+				</span>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"h-8 w-8 shrink-0 transition-opacity",
-								isMobile
-									? "min-h-[36px] min-w-[36px] opacity-100"
-									: "opacity-0 group-hover:opacity-100",
+								"h-8 w-8 shrink-0 transition-opacity sm:h-6 sm:w-6",
+								isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100",
 							)}
+							data-testid="strategy-card-menu-trigger"
 							size="icon"
 							variant="ghost"
 						>
-							<MoreVertical className="h-4 w-4" />
+							<MoreVertical className="h-4 w-4 sm:h-3 sm:w-3" />
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
@@ -122,71 +156,138 @@ export function StrategyCard({
 				</DropdownMenu>
 			</div>
 
-			{/* Stats */}
-			<div className="grid grid-cols-3 gap-2 sm:gap-4">
-				<div>
-					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
-						Trades
-					</div>
-					<div className="mt-0.5 font-bold font-mono text-base sm:mt-1 sm:text-lg">
-						{strategy._count.trades}
-					</div>
+			{/* Color gradient header area */}
+			<div
+				className="relative h-16 sm:h-20"
+				style={{
+					background: `linear-gradient(135deg, ${color}20 0%, ${color}05 50%, transparent 100%)`,
+				}}
+			>
+				{/* Strategy color dot and status */}
+				<div className="absolute top-3 left-3 flex items-center gap-2">
+					<div
+						className="h-3 w-3 rounded-full"
+						style={{ backgroundColor: color }}
+					/>
+					{isActive ? (
+						<div className="flex items-center gap-1.5">
+							<span className="relative flex h-2 w-2">
+								<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-profit opacity-75" />
+								<span className="relative inline-flex h-2 w-2 rounded-full bg-profit" />
+							</span>
+							<span className="font-mono text-[10px] text-profit uppercase tracking-wider">
+								Active
+							</span>
+						</div>
+					) : (
+						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+							Inactive
+						</span>
+					)}
 				</div>
 
-				<div>
-					<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
-						Rules
+				{/* Top performer badge */}
+				{isTopPerformer && isActive && (
+					<div
+						className="absolute top-3 right-3"
+						data-testid="strategy-card-top-performer-badge"
+					>
+						<span className="rounded border border-primary/40 bg-primary/10 px-2 py-1 font-mono text-[10px] text-primary uppercase tracking-wider">
+							★ Top Performer
+						</span>
 					</div>
-					<div className="mt-0.5 font-bold font-mono text-base sm:mt-1 sm:text-lg">
-						{strategy._count.rules}
-					</div>
-				</div>
+				)}
 
-				{stats && strategy._count.trades > 0 ? (
+				{/* No trades badge */}
+				{!hasTrades && isActive && !isTopPerformer && (
+					<div
+						className="absolute top-3 right-3"
+						data-testid="strategy-card-no-trades-badge"
+					>
+						<span className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+							No trades yet
+						</span>
+					</div>
+				)}
+
+				{/* Rule count badge */}
+				<div className="absolute right-3 bottom-3">
+					<span className="rounded border border-white/10 bg-black/40 px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+						{strategy._count.rules}{" "}
+						{strategy._count.rules === 1 ? "rule" : "rules"} defined
+					</span>
+				</div>
+			</div>
+
+			{/* Card content */}
+			<div className="relative bg-white/1 p-4">
+				{/* Clickable strategy name */}
+				<Link
+					className="mb-3 block font-mono font-semibold text-lg transition-colors hover:text-primary"
+					data-testid="strategy-card-link"
+					href={`/strategies/${strategy.id}`}
+				>
+					{strategy.name}
+				</Link>
+
+				{/* Stats grid */}
+				<div
+					className="grid grid-cols-3 gap-3"
+					data-testid="strategy-card-stats"
+				>
+					<div>
+						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
+							Trades
+						</div>
+						<div className="mt-1 font-bold font-mono text-base sm:text-lg">
+							{strategy._count.trades}
+						</div>
+					</div>
+
 					<div>
 						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Win Rate
 						</div>
 						<div
 							className={cn(
-								"mt-0.5 flex items-center gap-1 font-bold font-mono text-base sm:mt-1 sm:text-lg",
-								stats.winRate >= 50 ? "text-profit" : "text-loss",
+								"mt-1 font-bold font-mono text-base sm:text-lg",
+								hasTrades && stats
+									? stats.winRate >= 50
+										? "text-profit"
+										: "text-loss"
+									: "text-muted-foreground",
 							)}
 						>
-							<TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-							{stats.winRate.toFixed(0)}%
+							{hasTrades && stats ? `${stats.winRate.toFixed(0)}%` : "—"}
 						</div>
 					</div>
-				) : (
+
 					<div>
 						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
-							Win Rate
-						</div>
-						<div className="mt-0.5 font-mono text-base text-muted-foreground sm:mt-1 sm:text-lg">
-							—
-						</div>
-					</div>
-				)}
-			</div>
-
-			{/* P&L if available */}
-			{stats && strategy._count.trades > 0 && (
-				<div className="mt-3 border-border border-t pt-3 sm:mt-4 sm:pt-4">
-					<div className="flex items-center justify-between">
-						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Total P&L
-						</span>
-						<span
+						</div>
+						<div
 							className={cn(
-								"font-bold font-mono text-sm sm:text-base",
-								stats.totalPnl >= 0 ? "text-profit" : "text-loss",
+								"mt-1 font-bold font-mono text-base sm:text-lg",
+								hasTrades && stats
+									? stats.totalPnl >= 0
+										? "text-profit"
+										: "text-loss"
+									: "text-muted-foreground",
 							)}
 						>
-							{formatCurrency(stats.totalPnl)}
-						</span>
+							{hasTrades && stats ? formatCurrency(stats.totalPnl) : "—"}
+						</div>
 					</div>
 				</div>
-			)}
+
+				{/* Description if available */}
+				{strategy.description && (
+					<p className="mt-3 line-clamp-2 border-white/5 border-t pt-3 font-mono text-muted-foreground text-xs">
+						{strategy.description}
+					</p>
+				)}
+			</div>
 		</div>
 	);
 }

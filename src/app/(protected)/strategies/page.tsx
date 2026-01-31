@@ -1,11 +1,11 @@
 "use client";
 
-import { BookMarked, Plus } from "lucide-react";
+import { ArrowRight, BookMarked, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { StrategyCard } from "@/components/strategy";
+import { StrategyCard, StrategyLeaderboard } from "@/components/strategy";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -16,159 +16,8 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
-
-// =============================================================================
-// PERFORMANCE COMPARISON TABLE
-// =============================================================================
-
-function PerformanceComparisonTable() {
-	const { data: stats, isLoading } = api.strategies.getAllStats.useQuery();
-
-	if (isLoading) {
-		return (
-			<div className="space-y-2">
-				{[...Array(3)].map((_, i) => (
-					<Skeleton className="h-10 w-full" key={`skeleton-${i.toString()}`} />
-				))}
-			</div>
-		);
-	}
-
-	if (!stats || stats.length === 0) {
-		return null;
-	}
-
-	// Only show strategies with trades
-	const strategiesWithTrades = stats.filter((s) => s.totalTrades > 0);
-	if (strategiesWithTrades.length === 0) {
-		return null;
-	}
-
-	// Sort by total P&L descending
-	const sortedStats = [...strategiesWithTrades].sort(
-		(a, b) => b.totalPnl - a.totalPnl,
-	);
-
-	return (
-		<div className="space-y-4">
-			<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-				Performance Comparison
-			</h2>
-			<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-				<div className="min-w-[600px] overflow-hidden rounded border border-border sm:min-w-0">
-					<Table>
-						<TableHeader>
-							<TableRow className="border-border hover:bg-transparent">
-								<TableHead className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Strategy
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Trades
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Win Rate
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Profit Factor
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Total P&L
-								</TableHead>
-								<TableHead className="text-right font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									Avg R
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{sortedStats.map((s) => (
-								<TableRow className="border-border" key={s.strategyId}>
-									<TableCell>
-										<Link
-											className="flex items-center gap-2 transition-colors hover:text-primary"
-											href={`/strategies/${s.strategyId}`}
-										>
-											<div
-												className="h-2 w-2 shrink-0 rounded-full"
-												style={{
-													backgroundColor: s.strategyColor ?? "#d4ff00",
-												}}
-											/>
-											<span className="font-medium font-mono text-sm">
-												{s.strategyName}
-											</span>
-										</Link>
-									</TableCell>
-									<TableCell className="text-right font-mono text-sm">
-										{s.totalTrades}
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.winRate >= 50 ? "text-profit" : "text-loss",
-											)}
-										>
-											{s.winRate.toFixed(1)}%
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.profitFactor >= 1 ? "text-profit" : "text-loss",
-											)}
-										>
-											{s.profitFactor === Infinity
-												? "∞"
-												: s.profitFactor.toFixed(2)}
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-bold font-mono text-sm",
-												s.totalPnl >= 0 ? "text-profit" : "text-loss",
-											)}
-										>
-											{formatCurrency(s.totalPnl)}
-										</span>
-									</TableCell>
-									<TableCell className="text-right">
-										<span
-											className={cn(
-												"font-mono text-sm",
-												s.avgRMultiple !== null
-													? s.avgRMultiple >= 0
-														? "text-profit"
-														: "text-loss"
-													: "text-muted-foreground",
-											)}
-										>
-											{s.avgRMultiple !== null
-												? `${s.avgRMultiple.toFixed(2)}R`
-												: "—"}
-										</span>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
-			</div>
-		</div>
-	);
-}
 
 // =============================================================================
 // MAIN PAGE
@@ -240,124 +89,336 @@ export default function StrategiesPage() {
 		}
 	});
 
+	// Find the top performer (highest positive P&L among strategies with trades)
+	const topPerformerId = (() => {
+		let topId: string | null = null;
+		let topPnl = 0;
+		for (const [id, stats] of statsMap) {
+			const strategy = strategies?.find((s) => s.id === id);
+			// Only consider active strategies with trades
+			if (
+				strategy &&
+				strategy.isActive !== false &&
+				strategy._count.trades > 0 &&
+				stats.totalPnl > topPnl
+			) {
+				topId = id;
+				topPnl = stats.totalPnl;
+			}
+		}
+		return topId;
+	})();
+
 	const isMobile = useIsMobile();
 
 	return (
-		<div className="mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
-			{/* Header */}
-			<div className="flex items-center justify-between gap-3">
-				<div className="min-w-0 flex-1">
-					<h1 className="font-bold text-xl tracking-tight sm:text-2xl">
-						Strategies
-					</h1>
-					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
-						Document your trading strategies with entry rules, risk management,
-						and checklists.
-					</p>
-				</div>
-				<Button
-					asChild
-					className="min-h-[44px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
-				>
-					<Link href="/strategies/new">
-						<Plus className="h-4 w-4 sm:mr-2" />
-						<span className="hidden sm:inline">New Strategy</span>
-					</Link>
-				</Button>
+		<div className="relative min-h-screen">
+			{/* Background Effects */}
+			<div className="pointer-events-none absolute inset-0 overflow-hidden">
+				{/* Grid pattern */}
+				<div
+					className="absolute inset-0 opacity-30"
+					style={{
+						backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+						backgroundSize: "60px 60px",
+					}}
+				/>
+				{/* Primary gradient orb */}
+				<div className="-left-32 absolute top-0 h-[600px] w-[600px] rounded-full bg-primary/5 blur-[150px]" />
+				{/* Accent gradient orb */}
+				<div className="-right-32 absolute top-1/3 h-[400px] w-[400px] rounded-full bg-accent/5 blur-[120px]" />
 			</div>
 
-			{/* Performance Comparison Table */}
-			{!isLoading && strategies && strategies.length > 0 && (
-				<PerformanceComparisonTable />
-			)}
+			<div className="relative mx-auto w-[95%] max-w-none space-y-6 py-4 sm:space-y-8 sm:py-6">
+				{/* Hero Header */}
+				<div
+					className="relative overflow-hidden rounded border border-white/10 bg-white/2 p-4 sm:p-8"
+					data-testid="strategies-header"
+				>
+					{/* Header background accent */}
+					<div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
 
-			{/* Loading state */}
-			{isLoading && (
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-					{[1, 2, 3].map((i) => (
-						<Skeleton className="h-40 sm:h-48" key={i} />
-					))}
-				</div>
-			)}
+					<div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+						<div className="space-y-2 sm:space-y-3">
+							{/* Section label with command prompt */}
+							<div className="flex items-center gap-1.5 sm:gap-2">
+								<span className="font-mono text-primary text-xs sm:text-sm">
+									$
+								</span>
+								<span className="font-mono text-[10px] text-primary uppercase tracking-widest sm:text-[11px]">
+									STRATEGIES
+								</span>
+							</div>
 
-			{/* Empty state */}
-			{!isLoading && (!strategies || strategies.length === 0) && (
-				<div className="flex flex-col items-center justify-center rounded border border-white/5 bg-white/2 px-4 py-12 sm:py-16">
-					<BookMarked className="mb-4 h-10 w-10 text-muted-foreground/50 sm:h-12 sm:w-12" />
-					<h2 className="font-semibold text-base sm:text-lg">
-						No strategies yet
-					</h2>
-					<p className="mt-1 max-w-sm text-center font-mono text-muted-foreground text-xs sm:text-sm">
-						Create your first strategy to document your trading approach and
-						track rule compliance.
-					</p>
-					<Button
-						asChild
-						className="mt-6 min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
-					>
-						<Link href="/strategies/new">
-							<Plus className="mr-2 h-4 w-4" />
-							Create Strategy
-						</Link>
-					</Button>
-				</div>
-			)}
+							{/* Main headline */}
+							<h1 className="font-bold text-2xl tracking-tight sm:text-4xl lg:text-5xl">
+								Your Trading <span className="text-primary">Strategies</span>
+							</h1>
 
-			{/* Strategies grid */}
-			{!isLoading && strategies && strategies.length > 0 && (
-				<div className="space-y-3 sm:space-y-4">
-					<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
-						Your Strategies
-					</h2>
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-						{strategies.map((strategy) => (
-							<StrategyCard
-								isMobile={isMobile}
-								key={strategy.id}
-								onDelete={() => handleDelete(strategy.id)}
-								onDuplicate={() =>
-									duplicateMutation.mutate({ id: strategy.id })
-								}
-								onEdit={() => router.push(`/strategies/${strategy.id}`)}
-								stats={statsMap.get(strategy.id) ?? null}
-								strategy={strategy}
-							/>
-						))}
+							{/* Subheadline */}
+							<p className="max-w-xl font-mono text-muted-foreground text-xs leading-relaxed sm:text-sm">
+								Document your edge with entry rules, risk parameters, and
+								pre-trade checklists. Track which strategies generate alpha.
+							</p>
+						</div>
+
+						{/* CTA Button */}
+						<Button
+							asChild
+							className="group min-h-[48px] shrink-0 px-4 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:px-6"
+							data-testid="strategies-header-new-button"
+						>
+							<Link href="/strategies/new">
+								<Plus className="mr-2 h-4 w-4" />
+								New Strategy
+								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+							</Link>
+						</Button>
 					</div>
 				</div>
-			)}
 
-			{/* Delete confirmation dialog */}
-			<Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
-				<DialogContent className="border-border bg-background">
-					<DialogHeader>
-						<DialogTitle className="font-mono uppercase tracking-wider">
-							Delete Strategy
-						</DialogTitle>
-						<DialogDescription className="font-mono text-xs">
-							Are you sure you want to delete this strategy? This will remove it
-							from all associated trades.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
-						<Button
-							className="min-h-[44px] sm:min-h-0"
-							onClick={() => setDeleteDialogOpen(false)}
-							variant="ghost"
+				{/* Strategy Leaderboard */}
+				{!isLoading && strategies && strategies.length > 0 && (
+					<StrategyLeaderboard />
+				)}
+
+				{/* Loading state */}
+				{isLoading && (
+					<div className="space-y-6 sm:space-y-8">
+						{/* Leaderboard skeleton */}
+						<div className="overflow-hidden rounded border border-white/10">
+							<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+								<div className="flex items-center gap-1 sm:gap-1.5">
+									<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+									<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+									<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
+								</div>
+								<Skeleton className="h-2.5 w-20 sm:h-3 sm:w-28" />
+								<div className="w-10 sm:w-14" />
+							</div>
+							<div className="p-3 sm:p-6">
+								<div className="space-y-2 sm:space-y-3">
+									{[1, 2, 3].map((i) => (
+										<div
+											className="flex min-h-[48px] items-center justify-between rounded border border-white/5 bg-white/2 p-2.5 sm:min-h-0 sm:p-3"
+											key={i}
+										>
+											<div className="flex items-center gap-2 sm:gap-3">
+												<Skeleton className="h-5 w-5 rounded-full sm:h-6 sm:w-6" />
+												<Skeleton className="h-3 w-24 sm:h-4 sm:w-32" />
+											</div>
+											<Skeleton className="h-3 w-16 sm:h-4 sm:w-20" />
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+
+						{/* Cards grid skeleton */}
+						<div className="space-y-3 sm:space-y-4">
+							<Skeleton className="h-2.5 w-24 sm:h-3 sm:w-28" />
+							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+								{[1, 2, 3].map((i) => (
+									<div
+										className="overflow-hidden rounded border border-white/10"
+										key={i}
+									>
+										{/* Terminal chrome header */}
+										<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-2 py-1.5 sm:px-3 sm:py-2">
+											<div className="flex items-center gap-1 sm:gap-1.5">
+												<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
+												<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
+												<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
+											</div>
+											<Skeleton className="h-2 w-20 sm:h-2.5 sm:w-24" />
+											<Skeleton className="h-6 w-6 rounded sm:h-5 sm:w-5" />
+										</div>
+										{/* Color gradient header skeleton */}
+										<div className="relative h-16 bg-gradient-to-br from-white/5 via-white/2 to-transparent sm:h-20">
+											<div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 sm:top-3 sm:left-3 sm:gap-2">
+												<Skeleton className="h-2.5 w-2.5 rounded-full sm:h-3 sm:w-3" />
+												<Skeleton className="h-2 w-10 sm:h-2.5 sm:w-12" />
+											</div>
+											<div className="absolute right-2.5 bottom-2.5 sm:right-3 sm:bottom-3">
+												<Skeleton className="h-4 w-16 sm:h-5 sm:w-20" />
+											</div>
+										</div>
+										{/* Card content skeleton */}
+										<div className="bg-white/1 p-3 sm:p-4">
+											<Skeleton className="mb-2.5 h-4 w-28 sm:mb-3 sm:h-5 sm:w-32" />
+											<div className="grid grid-cols-3 gap-2 sm:gap-3">
+												{[1, 2, 3].map((j) => (
+													<div key={j}>
+														<Skeleton className="mb-1 h-2 w-8 sm:h-2.5 sm:w-10" />
+														<Skeleton className="h-4 w-10 sm:h-5 sm:w-12" />
+													</div>
+												))}
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
+				)}
+
+				{/* Empty state */}
+				{!isLoading && (!strategies || strategies.length === 0) && (
+					<div
+						className="relative overflow-hidden rounded border border-white/10 bg-white/2"
+						data-testid="strategies-empty-state"
+					>
+						{/* Grid pattern background */}
+						<div
+							className="pointer-events-none absolute inset-0 opacity-40"
+							style={{
+								backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+								backgroundSize: "40px 40px",
+							}}
+						/>
+
+						{/* Terminal window chrome */}
+						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-1.5 sm:px-4 sm:py-2">
+							<div className="flex items-center gap-1 sm:gap-1.5">
+								<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
+								<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
+								<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
+							</div>
+							<span className="font-mono text-[9px] text-muted-foreground sm:text-[10px]">
+								strategies — empty
+							</span>
+							<div className="w-10 sm:w-14" />
+						</div>
+
+						{/* Content area */}
+						<div className="relative flex flex-col items-center justify-center px-4 py-12 sm:px-6 sm:py-20">
+							{/* Icon with terminal styling */}
+							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded border border-white/10 bg-white/5 sm:mb-6 sm:h-20 sm:w-20">
+								<BookMarked className="h-7 w-7 text-muted-foreground/60 sm:h-10 sm:w-10" />
+							</div>
+
+							{/* Command prompt indicator */}
+							<div className="mb-2 flex items-center gap-1.5 sm:mb-3 sm:gap-2">
+								<span className="font-mono text-primary text-xs sm:text-sm">
+									$
+								</span>
+								<span className="font-mono text-[10px] text-primary uppercase tracking-widest sm:text-[11px]">
+									NO STRATEGIES DEFINED
+								</span>
+							</div>
+
+							{/* Main message */}
+							<h2 className="font-semibold text-base sm:text-xl">
+								Start building your edge
+							</h2>
+
+							{/* Description */}
+							<p className="mt-2 max-w-md text-center font-mono text-[10px] text-muted-foreground leading-relaxed sm:mt-3 sm:text-sm">
+								Strategies document your trading approach with entry rules, risk
+								parameters, and pre-trade checklists. Track what works.
+							</p>
+
+							{/* Terminal-style command hint */}
+							<div className="mt-4 rounded border border-white/5 bg-white/2 px-3 py-1.5 sm:mt-6 sm:px-4 sm:py-2">
+								<div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground sm:gap-2 sm:text-xs">
+									<span className="text-primary">→</span>
+									<span>Create your first strategy to begin tracking</span>
+								</div>
+							</div>
+
+							{/* CTA Button */}
+							<Button
+								asChild
+								className="group mt-6 min-h-[48px] px-6 font-mono text-xs uppercase tracking-wider sm:mt-8 sm:min-h-0 sm:px-8"
+								data-testid="strategies-empty-state-cta"
+							>
+								<Link href="/strategies/new">
+									<span className="mr-2 text-primary-foreground/70">$</span>
+									CREATE FIRST STRATEGY
+									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+								</Link>
+							</Button>
+						</div>
+					</div>
+				)}
+
+				{/* Strategies grid */}
+				{!isLoading && strategies && strategies.length > 0 && (
+					<div className="space-y-3 sm:space-y-4">
+						<h2 className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
+							Your Strategies
+						</h2>
+						<div
+							className="stagger-children grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
+							data-testid="strategies-grid"
 						>
-							Cancel
-						</Button>
-						<Button
-							className="min-h-[44px] sm:min-h-0"
-							disabled={deleteMutation.isPending}
-							onClick={confirmDelete}
-							variant="destructive"
-						>
-							{deleteMutation.isPending ? "Deleting..." : "Delete"}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+							{strategies.map((strategy) => (
+								<StrategyCard
+									isMobile={isMobile}
+									isTopPerformer={strategy.id === topPerformerId}
+									key={strategy.id}
+									onDelete={() => handleDelete(strategy.id)}
+									onDuplicate={() =>
+										duplicateMutation.mutate({ id: strategy.id })
+									}
+									onEdit={() => router.push(`/strategies/${strategy.id}`)}
+									stats={statsMap.get(strategy.id) ?? null}
+									strategy={strategy}
+								/>
+							))}
+							{/* Create Strategy CTA Card */}
+							<Link
+								className="group flex min-h-[200px] flex-col items-center justify-center gap-4 rounded border-2 border-white/10 border-dashed bg-white/2 p-6 transition-all hover:border-primary/50 hover:bg-white/5"
+								data-testid="strategies-create-cta"
+								href="/strategies/new"
+							>
+								<div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors group-hover:border-primary/50 group-hover:bg-primary/10">
+									<Plus className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
+								</div>
+								<div className="text-center">
+									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors group-hover:text-primary">
+										Create New Strategy
+									</span>
+								</div>
+							</Link>
+						</div>
+					</div>
+				)}
+
+				{/* Delete confirmation dialog */}
+				<Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
+					<DialogContent className="border-border bg-background">
+						<DialogHeader>
+							<DialogTitle className="font-mono uppercase tracking-wider">
+								Delete Strategy
+							</DialogTitle>
+							<DialogDescription className="font-mono text-xs">
+								Are you sure you want to delete this strategy? This will remove
+								it from all associated trades.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+							<Button
+								className="min-h-[44px] sm:min-h-0"
+								onClick={() => setDeleteDialogOpen(false)}
+								variant="ghost"
+							>
+								Cancel
+							</Button>
+							<Button
+								className="min-h-[44px] sm:min-h-0"
+								disabled={deleteMutation.isPending}
+								onClick={confirmDelete}
+								variant="destructive"
+							>
+								{deleteMutation.isPending ? "Deleting..." : "Delete"}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			</div>
 		</div>
 	);
 }
