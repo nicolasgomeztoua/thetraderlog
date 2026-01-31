@@ -30,6 +30,7 @@ interface RuleChecklistProps {
 	tradeId: string;
 	rules: Rule[];
 	checks: RuleCheck[];
+	relevantRuleIds?: string[];
 	onUpdate?: () => void;
 	onComplianceChange?: (compliance: number) => void;
 }
@@ -77,6 +78,7 @@ export function RuleChecklist({
 	tradeId,
 	rules,
 	checks,
+	relevantRuleIds,
 	onUpdate,
 	onComplianceChange,
 }: RuleChecklistProps) {
@@ -131,10 +133,20 @@ export function RuleChecklist({
 		});
 	}, []);
 
+	// Filter rules to only include relevant ones
+	const filteredRules = useMemo(() => {
+		// If no relevantRuleIds provided, show all rules (backwards compatibility)
+		if (!relevantRuleIds) {
+			return rules;
+		}
+		const relevantSet = new Set(relevantRuleIds);
+		return rules.filter((rule) => relevantSet.has(rule.id));
+	}, [rules, relevantRuleIds]);
+
 	// Group rules by category
 	const groupedRules = useMemo(() => {
 		const groups: Record<string, Rule[]> = {};
-		for (const rule of rules) {
+		for (const rule of filteredRules) {
 			const category = rule.category;
 			if (!groups[category]) {
 				groups[category] = [];
@@ -142,7 +154,7 @@ export function RuleChecklist({
 			groups[category].push(rule);
 		}
 		return groups;
-	}, [rules]);
+	}, [filteredRules]);
 
 	// Get check data for a rule
 	const getCheckData = useCallback(
@@ -166,23 +178,23 @@ export function RuleChecklist({
 		[optimisticUpdates, checks],
 	);
 
-	// Calculate optimistic compliance
+	// Calculate optimistic compliance based on filtered (relevant) rules
 	const optimisticCompliance = useMemo(() => {
-		if (rules.length === 0) return 100;
-		const checkedCount = rules.filter((r) => isChecked(r.id)).length;
-		return (checkedCount / rules.length) * 100;
-	}, [rules, isChecked]);
+		if (filteredRules.length === 0) return 100;
+		const checkedCount = filteredRules.filter((r) => isChecked(r.id)).length;
+		return (checkedCount / filteredRules.length) * 100;
+	}, [filteredRules, isChecked]);
 
 	// Notify parent of compliance changes
 	useEffect(() => {
 		onComplianceChange?.(optimisticCompliance);
 	}, [optimisticCompliance, onComplianceChange]);
 
-	if (rules.length === 0) {
+	if (filteredRules.length === 0) {
 		return (
 			<div className="py-8 text-center">
 				<p className="font-mono text-muted-foreground text-sm">
-					No rules defined for this strategy
+					No relevant rules for this trade
 				</p>
 			</div>
 		);
