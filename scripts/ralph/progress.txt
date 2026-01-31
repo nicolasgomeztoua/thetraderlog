@@ -58,3 +58,33 @@ Started: Sat Jan 31 18:12:39 WET 2026
   - When removing a component, also check for variables that were only used by that component
   - Biome will catch unused imports, but check explicitly when removing component code
 ---
+
+## Sat Jan 31 2026 - US-005
+- Implemented rule filtering in RuleChecklist component
+- Files changed: src/components/strategy/rule-checklist.tsx, src/components/trade-detail/stats-panel.tsx
+- **What was implemented:**
+  - Added relevantRuleIds prop to RuleChecklist component interface
+  - Created filteredRules useMemo that filters rules by relevantRuleIds Set
+  - Updated groupedRules to use filteredRules instead of raw rules
+  - Updated compliance calculation to use filtered rules
+  - Updated empty state message for when no relevant rules exist
+  - Passed relevantRuleIds from stats-panel to RuleChecklist
+- **Learnings for future iterations:**
+  - Backend already includes manual rules in relevantRuleIds, so frontend filtering is simple
+  - Use Set for efficient O(1) lookup when filtering by ID list
+  - Keep backwards compatibility by checking if prop is provided (show all if undefined)
+---
+
+## Sat Jan 31 2026 - US-006
+- Removed RuleTypeBadge component from strategy-rules-display.tsx
+- Files changed: src/components/strategy/strategy-rules-display.tsx
+- **What was implemented:**
+  - Removed RULE_TYPE_CONFIG constant (AUTO/SEMI/MANUAL badge configs)
+  - Removed RuleTypeBadge component definition
+  - Removed RuleTypeBadge usage from rule rendering
+  - Removed unused imports: Zap, Info from lucide-react
+  - Removed ruleType field from local Rule interface (no longer needed)
+- **Learnings for future iterations:**
+  - When removing badge components, also clean up interface definitions if the field is no longer displayed
+  - Check if other components need the same cleanup for consistency (rule-checklist already done in US-004)
+---

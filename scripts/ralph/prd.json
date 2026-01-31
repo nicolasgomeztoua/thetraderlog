@@ -83,8 +83,8 @@
         "Verify in browser: Rules that weren't triggered don't appear"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added relevantRuleIds prop to RuleChecklist, filtering rules via useMemo. Compliance calculation updated to use filtered rules. Backend already includes manual rules in relevantRuleIds."
     },
     {
       "id": "US-006",
@@ -100,8 +100,8 @@
         "Verify in browser: Strategy display no longer shows badges"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed RULE_TYPE_CONFIG, RuleTypeBadge component, and unused imports (Zap, Info). Also cleaned up Rule interface by removing ruleType field."
     }
   ]
 }
