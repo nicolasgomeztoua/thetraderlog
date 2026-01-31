@@ -67,7 +67,7 @@ export default function NewStrategyPage() {
 			{/* Form */}
 			<section>
 				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
-					→ New Playbook
+					→ New Strategy
 				</h2>
 				<div className="overflow-hidden rounded border border-white/10">
 					{/* Terminal window chrome header */}

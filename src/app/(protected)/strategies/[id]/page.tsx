@@ -252,7 +252,7 @@ export default function StrategyDetailPage() {
 				>
 					<Link href="/strategies">
 						<ArrowLeft className="h-4 w-4" />
-						<span className="hidden sm:inline">Back to Playbooks</span>
+						<span className="hidden sm:inline">Back to Strategies</span>
 					</Link>
 				</Button>
 
@@ -294,11 +294,11 @@ export default function StrategyDetailPage() {
 						<AlertDialogContent className="mx-4 border-border bg-background sm:mx-0">
 							<AlertDialogHeader>
 								<AlertDialogTitle className="font-mono text-sm uppercase tracking-wider sm:text-base">
-									Delete Playbook
+									Delete Strategy
 								</AlertDialogTitle>
 								<AlertDialogDescription className="font-mono text-xs">
 									Are you sure you want to delete &quot;{strategy.name}&quot;?
-									This action cannot be undone. The playbook will be removed
+									This action cannot be undone. The strategy will be removed
 									from all associated trades.
 								</AlertDialogDescription>
 							</AlertDialogHeader>
@@ -338,7 +338,7 @@ export default function StrategyDetailPage() {
 						<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 					</div>
 					<span className="max-w-[180px] truncate font-mono text-[9px] text-muted-foreground sm:max-w-none sm:text-[10px]">
-						playbook — {strategy.name.toLowerCase().replace(/\s+/g, "-")}
+						strategy — {strategy.name.toLowerCase().replace(/\s+/g, "-")}
 					</span>
 					<div className="w-10 sm:w-14" />
 				</div>
@@ -357,7 +357,7 @@ export default function StrategyDetailPage() {
 							style={{ backgroundColor: color }}
 						/>
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
-							$ PLAYBOOK
+							$ STRATEGY
 						</span>
 					</div>
 
@@ -401,13 +401,13 @@ export default function StrategyDetailPage() {
 						</p>
 					)}
 
-					{/* Edit Playbook button */}
+					{/* Edit Strategy button */}
 					<Button
 						className="min-h-[44px] gap-2 bg-primary font-mono text-primary-foreground text-xs uppercase tracking-wider hover:bg-primary/90"
 						onClick={scrollToForm}
 					>
 						<Pencil className="h-4 w-4" />
-						Edit Playbook
+						Edit Strategy
 					</Button>
 				</div>
 			</div>
@@ -488,7 +488,7 @@ export default function StrategyDetailPage() {
 			{/* Rules Display Section */}
 			<section data-testid="strategy-detail-rules">
 				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
-					→ Playbook Rules
+					→ Strategy Rules
 				</h2>
 				<StrategyRulesDisplay rules={formRules} />
 			</section>
@@ -517,7 +517,7 @@ export default function StrategyDetailPage() {
 			{/* Form Section */}
 			<section data-testid="strategy-detail-form" ref={formRef}>
 				<h2 className="mb-4 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
-					→ Edit Playbook
+					→ Edit Strategy
 				</h2>
 				<div className="overflow-hidden rounded border border-white/10">
 					{/* Terminal window chrome header */}

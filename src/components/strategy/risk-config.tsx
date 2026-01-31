@@ -1,8 +1,14 @@
 "use client";
 
 import { Plus, X } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -38,6 +44,8 @@ interface RiskConfigProps {
 
 export function RiskConfig({ value, onChange }: RiskConfigProps) {
 	const riskParams = value ?? {};
+	const [rMultipleOpen, setRMultipleOpen] = useState(false);
+	const [rMultipleInput, setRMultipleInput] = useState("");
 
 	const updateField = <K extends keyof RiskParameters>(
 		field: K,
@@ -95,13 +103,14 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) =>
+								onChange={(e) => {
+									const parsed = parseFloat(e.target.value);
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "fixed",
-										fixedSize: parseFloat(e.target.value) || undefined,
-									})
-								}
+										fixedSize: Number.isNaN(parsed) ? undefined : parsed,
+									});
+								}}
 								placeholder="1.0"
 								step="0.01"
 								type="number"
@@ -118,13 +127,14 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) =>
+								onChange={(e) => {
+									const parsed = parseFloat(e.target.value);
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "risk_percent",
-										riskPercent: parseFloat(e.target.value) || undefined,
-									})
-								}
+										riskPercent: Number.isNaN(parsed) ? undefined : parsed,
+									});
+								}}
 								placeholder="1.0"
 								step="0.1"
 								type="number"
@@ -141,13 +151,14 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) =>
+								onChange={(e) => {
+									const parsed = parseFloat(e.target.value);
 									updateField("positionSizing", {
 										...riskParams.positionSizing,
 										method: "kelly",
-										kellyFraction: parseFloat(e.target.value) || undefined,
-									})
-								}
+										kellyFraction: Number.isNaN(parsed) ? undefined : parsed,
+									});
+								}}
 								placeholder="0.25"
 								step="0.01"
 								type="number"
@@ -197,12 +208,17 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
 							inputMode="decimal"
-							onChange={(e) =>
-								updateField("maxRiskPerTrade", {
-									type: riskParams.maxRiskPerTrade?.type ?? "dollars",
-									value: parseFloat(e.target.value) || 0,
-								})
-							}
+							onChange={(e) => {
+								if (e.target.value === "") {
+									updateField("maxRiskPerTrade", undefined);
+								} else {
+									const parsed = parseFloat(e.target.value);
+									updateField("maxRiskPerTrade", {
+										type: riskParams.maxRiskPerTrade?.type ?? "dollars",
+										value: Number.isNaN(parsed) ? 0 : parsed,
+									});
+								}
+							}}
 							placeholder="100"
 							step="1"
 							type="number"
@@ -251,12 +267,17 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
 							inputMode="decimal"
-							onChange={(e) =>
-								updateField("dailyLossLimit", {
-									type: riskParams.dailyLossLimit?.type ?? "dollars",
-									value: parseFloat(e.target.value) || 0,
-								})
-							}
+							onChange={(e) => {
+								if (e.target.value === "") {
+									updateField("dailyLossLimit", undefined);
+								} else {
+									const parsed = parseFloat(e.target.value);
+									updateField("dailyLossLimit", {
+										type: riskParams.dailyLossLimit?.type ?? "dollars",
+										value: Number.isNaN(parsed) ? 0 : parsed,
+									});
+								}
+							}}
 							placeholder="500"
 							step="1"
 							type="number"
@@ -279,12 +300,13 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
 							inputMode="numeric"
-							onChange={(e) =>
+							onChange={(e) => {
+								const parsed = parseInt(e.target.value, 10);
 								updateField(
 									"maxConcurrentPositions",
-									parseInt(e.target.value, 10) || undefined,
-								)
-							}
+									Number.isNaN(parsed) ? undefined : parsed,
+								);
+							}}
 							placeholder="3"
 							step="1"
 							type="number"
@@ -298,12 +320,13 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
 							inputMode="decimal"
-							onChange={(e) =>
+							onChange={(e) => {
+								const parsed = parseFloat(e.target.value);
 								updateField(
 									"minRRRatio",
-									parseFloat(e.target.value) || undefined,
-								)
-							}
+									Number.isNaN(parsed) ? undefined : parsed,
+								);
+							}}
 							placeholder="2.0"
 							step="0.1"
 							type="number"
@@ -342,27 +365,67 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							</button>
 						</div>
 					))}
-					<Button
-						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
-						onClick={() => {
-							const newValue = prompt("Enter R multiple (e.g., 2):");
-							if (newValue) {
-								const num = parseFloat(newValue);
-								if (!Number.isNaN(num)) {
-									updateField("targetRMultiples", [
-										...(riskParams.targetRMultiples ?? []),
-										num,
-									]);
-								}
-							}
-						}}
-						size="sm"
-						type="button"
-						variant="outline"
-					>
-						<Plus className="mr-1 h-3 w-3" />
-						Add Target
-					</Button>
+					<Popover onOpenChange={setRMultipleOpen} open={rMultipleOpen}>
+						<PopoverTrigger asChild>
+							<Button
+								className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
+								size="sm"
+								type="button"
+								variant="outline"
+							>
+								<Plus className="mr-1 h-3 w-3" />
+								Add Target
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent align="start" className="w-56 p-3">
+							<div className="space-y-3">
+								<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+									R Multiple
+								</span>
+								<Input
+									autoFocus
+									className="min-h-[44px] font-mono sm:min-h-0"
+									inputMode="decimal"
+									onChange={(e) => setRMultipleInput(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											const num = parseFloat(rMultipleInput);
+											if (!Number.isNaN(num) && num > 0) {
+												updateField("targetRMultiples", [
+													...(riskParams.targetRMultiples ?? []),
+													num,
+												]);
+												setRMultipleInput("");
+												setRMultipleOpen(false);
+											}
+										}
+									}}
+									placeholder="e.g., 2"
+									step="0.1"
+									type="number"
+									value={rMultipleInput}
+								/>
+								<Button
+									className="w-full font-mono text-xs uppercase tracking-wider"
+									onClick={() => {
+										const num = parseFloat(rMultipleInput);
+										if (!Number.isNaN(num) && num > 0) {
+											updateField("targetRMultiples", [
+												...(riskParams.targetRMultiples ?? []),
+												num,
+											]);
+											setRMultipleInput("");
+											setRMultipleOpen(false);
+										}
+									}}
+									size="sm"
+									type="button"
+								>
+									Add
+								</Button>
+							</div>
+						</PopoverContent>
+					</Popover>
 				</div>
 			</div>
 		</div>

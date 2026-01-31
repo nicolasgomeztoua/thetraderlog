@@ -19,10 +19,10 @@ test.describe("Strategies List Page", () => {
 		await expect(header).toBeVisible({ timeout: 15000 });
 
 		// Check for page title
-		const title = page.locator("h1:has-text('Playbooks')");
+		const title = page.locator("h1:has-text('Strategies')");
 		await expect(title).toBeVisible();
 
-		// Check for New Playbook button
+		// Check for New Strategy button
 		const newButton = page.getByTestId("strategies-header-new-button");
 		await expect(newButton).toBeVisible();
 	});
@@ -36,7 +36,7 @@ test.describe("Strategies List Page", () => {
 		});
 
 		// The header should always be present, indicating the page loaded
-		const headerText = page.locator("h1:has-text('Playbooks')");
+		const headerText = page.locator("h1:has-text('Strategies')");
 		await expect(headerText).toBeVisible();
 	});
 

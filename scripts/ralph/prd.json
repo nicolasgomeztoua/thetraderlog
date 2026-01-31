@@ -1,7 +1,7 @@
 {
   "project": "EdgeJournal",
   "branchName": "ralph/strategies-redesign",
-  "description": "Redesign the strategies page and strategy detail page with distinctive Terminal-inspired UI. Transform generic strategy cards into visually memorable 'Playbook' cards with terminal chrome, performance-based styling, and clear visual hierarchy. Create a proper strategy detail/view page that presents playbooks as professional documents. Purely frontend work - no backend changes.",
+  "description": "Redesign the strategies page and strategy detail page with distinctive Terminal-inspired UI. Transform generic strategy cards into visually memorable 'Strategy' cards with terminal chrome, performance-based styling, and clear visual hierarchy. Create a proper strategy detail/view page that presents strategys as professional documents. Purely frontend work - no backend changes.",
   "userStories": [
     {
       "id": "US-001",
@@ -19,7 +19,7 @@
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Implemented hero header with background effects (grid, gradient orbs), command prompt label, accent headline, and terminal-style New Playbook button"
+      "notes": "Implemented hero header with background effects (grid, gradient orbs), command prompt label, accent headline, and terminal-style New Strategy button"
     },
     {
       "id": "US-002",
@@ -46,7 +46,7 @@
     {
       "id": "US-003",
       "title": "Redesign Strategy Card Component",
-      "description": "As a trader, I want strategy cards that are visually distinctive and show their identity clearly so that I can quickly scan my playbooks.",
+      "description": "As a trader, I want strategy cards that are visually distinctive and show their identity clearly so that I can quickly scan my strategys.",
       "acceptanceCriteria": [
         "Terminal window chrome at top of each card (3 dots: red, yellow, green)",
         "Title bar shows strategy name in monospace",
@@ -98,7 +98,7 @@
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Added stagger-children animation class to grid, extended CSS with more child delays (9-12) and prefers-reduced-motion support. Added 'Create New Playbook' CTA card at end of grid with dashed border, Plus icon in circle, hover effects transitioning to primary color. Grid already had responsive classes. Added data-testid for E2E testing."
+      "notes": "Added stagger-children animation class to grid, extended CSS with more child delays (9-12) and prefers-reduced-motion support. Added 'Create New Strategy' CTA card at end of grid with dashed border, Plus icon in circle, hover effects transitioning to primary color. Grid already had responsive classes. Added data-testid for E2E testing."
     },
     {
       "id": "US-006",
@@ -106,8 +106,8 @@
       "description": "As a new trader, I want an inspiring empty state so that I'm motivated to create my first strategy.",
       "acceptanceCriteria": [
         "Terminal-style empty state with command prompt aesthetic",
-        "Icon representing a playbook/strategy (BookMarked or custom)",
-        "Message: 'No playbooks defined' with subtext about creating your first",
+        "Icon representing a strategy/strategy (BookMarked or custom)",
+        "Message: 'No strategys defined' with subtext about creating your first",
         "Prominent CTA button: '$ CREATE FIRST PLAYBOOK'",
         "Subtle background effect (grid pattern visible)",
         "Typecheck passes (bun run check)",
@@ -121,7 +121,7 @@
     {
       "id": "US-007",
       "title": "Create Strategy Detail Page Layout",
-      "description": "As a trader, I want a dedicated strategy detail page that presents my playbook as a professional document so that I can review and refine my approach.",
+      "description": "As a trader, I want a dedicated strategy detail page that presents my strategy as a professional document so that I can review and refine my approach.",
       "acceptanceCriteria": [
         "Restructure /strategies/[id]/page.tsx layout for view-first experience",
         "Hero section with strategy color as gradient background at top",
@@ -129,14 +129,14 @@
         "Large strategy name prominently displayed",
         "Status badge (ACTIVE/INACTIVE) with pulsing indicator for active",
         "Quick stats row: Trades, Win Rate, Total P&L, Profit Factor displayed prominently",
-        "'Edit Playbook' button that shows the form in a modal or scrolls to form section",
+        "'Edit Strategy' button that shows the form in a modal or scrolls to form section",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)",
-        "Verify in browser: page feels like viewing a playbook document"
+        "Verify in browser: page feels like viewing a strategy document"
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Redesigned strategy detail page with view-first layout. Hero section has terminal window chrome (traffic light dots), strategy color gradient background, large strategy name, pulsing active/inactive status badge, and description display. Quick stats row shows Trades, Win Rate, Total P&L, and Profit Factor with proper profit/loss coloring. Edit Playbook button scrolls to form section. Action bar at top with back button, duplicate, and delete actions. Added data-testid attributes throughout for E2E testing."
+      "notes": "Redesigned strategy detail page with view-first layout. Hero section has terminal window chrome (traffic light dots), strategy color gradient background, large strategy name, pulsing active/inactive status badge, and description display. Quick stats row shows Trades, Win Rate, Total P&L, and Profit Factor with proper profit/loss coloring. Edit Strategy button scrolls to form section. Action bar at top with back button, duplicate, and delete actions. Added data-testid attributes throughout for E2E testing."
     },
     {
       "id": "US-008",
@@ -220,7 +220,7 @@
     {
       "id": "US-012",
       "title": "Strategy Detail - Action Bar",
-      "description": "As a trader, I want quick access to actions from the strategy detail page so that I can manage my playbook efficiently.",
+      "description": "As a trader, I want quick access to actions from the strategy detail page so that I can manage my strategy efficiently.",
       "acceptanceCriteria": [
         "Action bar at top of page with back button and action buttons",
         "Actions: Edit (opens form), Duplicate, Delete",

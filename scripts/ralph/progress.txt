@@ -5,7 +5,7 @@ Branch: ralph/strategies-redesign
 
 ## Feature Overview
 Redesign the strategies page and strategy detail page with distinctive Terminal-inspired UI.
-Transform generic strategy cards into visually memorable "Playbook" cards with terminal chrome,
+Transform generic strategy cards into visually memorable "Strategy" cards with terminal chrome,
 performance-based styling, and clear visual hierarchy.
 
 ## Codebase Patterns (from previous work)
@@ -31,10 +31,10 @@ performance-based styling, and clear visual hierarchy.
 - **What was implemented:**
   - Added atmospheric background effects (grid pattern with 60px cells, primary/accent gradient orbs)
   - New hero header card with subtle gradient background
-  - Command prompt section label ("$ PLAYBOOKS")
-  - Bold headline with "Playbooks" in accent color
+  - Command prompt section label ("$ STRATEGIES")
+  - Bold headline with "Strategies" in accent color
   - Monospace subheadline describing purpose
-  - Terminal-style "New Playbook" button with arrow and hover animation
+  - Terminal-style "New Strategy" button with arrow and hover animation
   - Added data-testid attributes for E2E testing
 - **Learnings for future iterations:**
   - Use inline styles for grid background pattern rather than CSS class (more flexible)
@@ -110,7 +110,7 @@ performance-based styling, and clear visual hierarchy.
   - Added `stagger-children` class to the strategies grid for staggered fade-in animation
   - Extended CSS with child delays for nth-child 9-12 (animation-delay: 0.9s-1.2s)
   - Added @media (prefers-reduced-motion) query to disable animations when user prefers reduced motion
-  - Created "Create New Playbook" CTA card with dashed border at end of grid
+  - Created "Create New Strategy" CTA card with dashed border at end of grid
   - CTA card has circular Plus icon, monospace text, and hover state with primary color transition
   - Added data-testid attributes: strategies-grid, strategies-create-cta
 - **Learnings for future iterations:**
@@ -123,14 +123,14 @@ performance-based styling, and clear visual hierarchy.
 - Redesigned empty state with Terminal-style command prompt aesthetic
 - Files changed: src/app/(protected)/strategies/page.tsx
 - **What was implemented:**
-  - Terminal window chrome with traffic light dots (red/yellow/green) and "playbooks — empty" title bar
+  - Terminal window chrome with traffic light dots (red/yellow/green) and "strategies — empty" title bar
   - Grid pattern background at 40px cells with opacity-40
   - BookMarked icon in terminal-style container (border, bg-white/5)
-  - "$ NO PLAYBOOKS DEFINED" command prompt label in primary color
+  - "$ NO STRATEGIES DEFINED" command prompt label in primary color
   - "Start building your edge" motivating headline
-  - Descriptive text about playbooks' purpose
-  - Terminal-style command hint with → prefix: "Create your first playbook to begin tracking"
-  - "$ CREATE FIRST PLAYBOOK" CTA button with ArrowRight hover animation
+  - Descriptive text about strategies' purpose
+  - Terminal-style command hint with → prefix: "Create your first strategy to begin tracking"
+  - "$ CREATE FIRST STRATEGY" CTA button with ArrowRight hover animation
   - Added data-testid attributes: strategies-empty-state, strategies-empty-state-cta
 - **Learnings for future iterations:**
   - Empty states benefit from terminal chrome wrapper to match other components
@@ -149,10 +149,10 @@ performance-based styling, and clear visual hierarchy.
   - Large strategy name (text-3xl sm:text-4xl) prominently displayed
   - Status badge with pulsing indicator for active, muted for inactive
   - Strategy description displayed below status if available
-  - "Edit Playbook" button that scrolls to form section using ref
+  - "Edit Strategy" button that scrolls to form section using ref
   - Quick stats row with 4 metrics: Trades, Win Rate, Total P&L, Profit Factor
   - Stats show "—" placeholder when no trades exist, profit/loss coloring when they do
-  - Action bar with back button (Back to Playbooks), duplicate, and delete buttons
+  - Action bar with back button (Back to Strategys), duplicate, and delete buttons
   - Updated loading skeleton to match new hero/terminal chrome structure
   - Added data-testid attributes: strategy-detail-page, strategy-detail-loading, strategy-detail-not-found, strategy-detail-action-bar, strategy-detail-hero, strategy-detail-name, strategy-detail-status, strategy-detail-stats, strategy-detail-form
 - **Learnings for future iterations:**

@@ -142,7 +142,9 @@ export function StrategyForm({
 							onClick={() => setActiveSection(section.id)}
 							type="button"
 						>
-							<span className="mr-1 opacity-60">{activeSection === section.id ? "→" : "$"}</span>
+							<span className="mr-1 opacity-60">
+								{activeSection === section.id ? "→" : "$"}
+							</span>
 							{section.label}
 						</button>
 					))}
@@ -153,11 +155,15 @@ export function StrategyForm({
 			{activeSection === "basic" && (
 				<div className="space-y-4 sm:space-y-6">
 					<div className="space-y-2">
-						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						<label
+							className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]"
+							htmlFor="strategy-name"
+						>
 							→ Strategy Name <span className="text-loss">*</span>
 						</label>
 						<Input
 							className="min-h-[44px] font-mono sm:min-h-0"
+							id="strategy-name"
 							onChange={(e) => updateField("name", e.target.value)}
 							placeholder="e.g., Trend Continuation"
 							required
@@ -166,11 +172,15 @@ export function StrategyForm({
 					</div>
 
 					<div className="space-y-2">
-						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						<label
+							className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]"
+							htmlFor="strategy-description"
+						>
 							→ Description
 						</label>
 						<Textarea
 							className="font-mono"
+							id="strategy-description"
 							onChange={(e) => updateField("description", e.target.value)}
 							placeholder="Brief description of this strategy..."
 							rows={3}
@@ -179,9 +189,9 @@ export function StrategyForm({
 					</div>
 
 					<div className="space-y-2">
-						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
 							→ Color
-						</label>
+						</span>
 						<div className="flex flex-wrap gap-2">
 							{PRESET_COLORS.map((color) => (
 								<button
@@ -205,11 +215,15 @@ export function StrategyForm({
 			{activeSection === "strategy" && (
 				<div className="space-y-4 sm:space-y-6">
 					<div className="space-y-2">
-						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						<label
+							className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]"
+							htmlFor="strategy-entry-criteria"
+						>
 							→ Entry Criteria
 						</label>
 						<Textarea
 							className="font-mono text-sm"
+							id="strategy-entry-criteria"
 							onChange={(e) => updateField("entryCriteria", e.target.value)}
 							placeholder="Describe your entry criteria in detail..."
 							rows={6}
@@ -218,11 +232,15 @@ export function StrategyForm({
 					</div>
 
 					<div className="space-y-2">
-						<label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						<label
+							className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]"
+							htmlFor="strategy-exit-rules"
+						>
 							→ Exit Rules
 						</label>
 						<Textarea
 							className="font-mono text-sm"
+							id="strategy-exit-rules"
 							onChange={(e) => updateField("exitRules", e.target.value)}
 							placeholder="Describe your exit rules in detail..."
 							rows={6}
@@ -284,7 +302,9 @@ export function StrategyForm({
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
 									<div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
 								</div>
-								<span className="font-mono text-[9px] text-muted-foreground">rules.empty</span>
+								<span className="font-mono text-[9px] text-muted-foreground">
+									rules.empty
+								</span>
 								<div className="w-10" />
 							</div>
 							<div className="py-6 text-center sm:py-8">

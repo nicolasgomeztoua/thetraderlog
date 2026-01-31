@@ -121,9 +121,13 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 							<Input
 								className="min-h-[44px] font-mono sm:min-h-0"
 								inputMode="decimal"
-								onChange={(e) =>
-									updateBreakeven("triggerR", parseFloat(e.target.value) || 0)
-								}
+								onChange={(e) => {
+									const parsed = parseFloat(e.target.value);
+									updateBreakeven(
+										"triggerR",
+										Number.isNaN(parsed) ? 0 : parsed,
+									);
+								}}
 								placeholder="1.0"
 								step="0.1"
 								type="number"
@@ -190,13 +194,14 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) =>
+											onChange={(e) => {
+												const parsed = parseFloat(e.target.value);
 												updateTrailStop(
 													idx,
 													"triggerR",
-													parseFloat(e.target.value) || 0,
-												)
-											}
+													Number.isNaN(parsed) ? 0 : parsed,
+												);
+											}}
 											step="0.1"
 											type="number"
 											value={rule.triggerR}
@@ -209,13 +214,14 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) =>
+											onChange={(e) => {
+												const parsed = parseFloat(e.target.value);
 												updateTrailStop(
 													idx,
 													"value",
-													parseFloat(e.target.value) || 0,
-												)
-											}
+													Number.isNaN(parsed) ? 0 : parsed,
+												);
+											}}
 											step="1"
 											type="number"
 											value={rule.value}

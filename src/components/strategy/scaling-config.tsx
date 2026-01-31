@@ -135,13 +135,14 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) =>
+											onChange={(e) => {
+												const parsed = parseFloat(e.target.value);
 												updateScaleIn(
 													idx,
 													"sizePercent",
-													parseFloat(e.target.value) || 0,
-												)
-											}
+													Number.isNaN(parsed) ? 0 : parsed,
+												);
+											}}
 											step="5"
 											type="number"
 											value={rule.sizePercent}
@@ -213,13 +214,14 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										<Input
 											className="min-h-[44px] font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
-											onChange={(e) =>
+											onChange={(e) => {
+												const parsed = parseFloat(e.target.value);
 												updateScaleOut(
 													idx,
 													"sizePercent",
-													parseFloat(e.target.value) || 0,
-												)
-											}
+													Number.isNaN(parsed) ? 0 : parsed,
+												);
+											}}
 											step="5"
 											type="number"
 											value={rule.sizePercent}

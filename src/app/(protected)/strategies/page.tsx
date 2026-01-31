@@ -147,13 +147,13 @@ export default function StrategiesPage() {
 									$
 								</span>
 								<span className="font-mono text-[10px] text-primary uppercase tracking-widest sm:text-[11px]">
-									PLAYBOOKS
+									STRATEGIES
 								</span>
 							</div>
 
 							{/* Main headline */}
 							<h1 className="font-bold text-2xl tracking-tight sm:text-4xl lg:text-5xl">
-								Your Trading <span className="text-primary">Playbooks</span>
+								Your Trading <span className="text-primary">Strategies</span>
 							</h1>
 
 							{/* Subheadline */}
@@ -171,7 +171,7 @@ export default function StrategiesPage() {
 						>
 							<Link href="/strategies/new">
 								<Plus className="mr-2 h-4 w-4" />
-								New Playbook
+								New Strategy
 								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 							</Link>
 						</Button>
@@ -287,7 +287,7 @@ export default function StrategiesPage() {
 								<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 							</div>
 							<span className="font-mono text-[9px] text-muted-foreground sm:text-[10px]">
-								playbooks — empty
+								strategies — empty
 							</span>
 							<div className="w-10 sm:w-14" />
 						</div>
@@ -305,7 +305,7 @@ export default function StrategiesPage() {
 									$
 								</span>
 								<span className="font-mono text-[10px] text-primary uppercase tracking-widest sm:text-[11px]">
-									NO PLAYBOOKS DEFINED
+									NO STRATEGIES DEFINED
 								</span>
 							</div>
 
@@ -316,15 +316,15 @@ export default function StrategiesPage() {
 
 							{/* Description */}
 							<p className="mt-2 max-w-md text-center font-mono text-[10px] text-muted-foreground leading-relaxed sm:mt-3 sm:text-sm">
-								Playbooks document your trading strategies with entry rules,
-								risk parameters, and pre-trade checklists. Track what works.
+								Strategies document your trading approach with entry rules, risk
+								parameters, and pre-trade checklists. Track what works.
 							</p>
 
 							{/* Terminal-style command hint */}
 							<div className="mt-4 rounded border border-white/5 bg-white/2 px-3 py-1.5 sm:mt-6 sm:px-4 sm:py-2">
 								<div className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground sm:gap-2 sm:text-xs">
 									<span className="text-primary">→</span>
-									<span>Create your first playbook to begin tracking</span>
+									<span>Create your first strategy to begin tracking</span>
 								</div>
 							</div>
 
@@ -336,7 +336,7 @@ export default function StrategiesPage() {
 							>
 								<Link href="/strategies/new">
 									<span className="mr-2 text-primary-foreground/70">$</span>
-									CREATE FIRST PLAYBOOK
+									CREATE FIRST STRATEGY
 									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 								</Link>
 							</Button>
@@ -379,7 +379,7 @@ export default function StrategiesPage() {
 								</div>
 								<div className="text-center">
 									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors group-hover:text-primary">
-										Create New Playbook
+										Create New Strategy
 									</span>
 								</div>
 							</Link>

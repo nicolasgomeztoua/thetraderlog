@@ -86,7 +86,7 @@ export function StrategyRulesDisplay({ rules }: StrategyRulesDisplayProps) {
 				</div>
 				<div className="px-4 py-6 text-center sm:px-6 sm:py-8">
 					<p className="font-mono text-muted-foreground text-xs sm:text-sm">
-						No rules defined for this playbook
+						No rules defined for this strategy
 					</p>
 					<p className="mt-1 font-mono text-[10px] text-muted-foreground/60 sm:text-xs">
 						Add rules in the edit form below
