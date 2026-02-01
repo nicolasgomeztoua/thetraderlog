@@ -1,6 +1,5 @@
 import { accountsRouter } from "@/server/api/routers/accounts";
 import { analyticsRouter } from "@/server/api/routers/analytics";
-import { attachmentsRouter } from "@/server/api/routers/attachments";
 import { dailyJournalRouter } from "@/server/api/routers/dailyJournal";
 import { filterPresetsRouter } from "@/server/api/routers/filterPresets";
 import { marketDataRouter } from "@/server/api/routers/marketData";
@@ -27,7 +26,6 @@ export const appRouter = createTRPCRouter({
 	analytics: analyticsRouter,
 	dailyJournal: dailyJournalRouter,
 	storage: storageRouter,
-	attachments: attachmentsRouter,
 });
 
 // export type definition of API

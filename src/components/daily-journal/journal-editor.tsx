@@ -15,6 +15,7 @@ import { EditorBubbleMenu } from "@/components/daily-journal/editor-bubble-menu"
 import { EditorToolbar } from "@/components/daily-journal/editor-toolbar";
 import { SlashCommand } from "@/components/daily-journal/slash-command-menu";
 import { toDateString } from "@/lib/shared";
+import { transformHtmlToS3Keys } from "@/lib/storage/s3";
 import { api } from "@/trpc/react";
 
 interface JournalEditorProps {
@@ -113,14 +114,24 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				clearTimeout(debounceTimerRef.current);
 			}
 
-			const content = editor.getHTML();
-
-			// Don't save if content hasn't changed
-			if (content === lastSavedContentRef.current) {
-				return;
-			}
-
 			debounceTimerRef.current = setTimeout(() => {
+				// Get content at save time (not capture time) to ensure we have latest
+				const rawContent = editor.getHTML();
+
+				// Don't save while blob URLs are present (upload in progress)
+				if (rawContent.includes("blob:")) {
+					return;
+				}
+
+				// Transform presigned URLs to S3 keys before saving
+				// This handles images dragged from gallery (presigned URLs) and pasted images (S3 keys)
+				const content = transformHtmlToS3Keys(rawContent) ?? rawContent;
+
+				// Don't save if content hasn't changed
+				if (content === lastSavedContentRef.current) {
+					return;
+				}
+
 				setSaveStatus("saving");
 				lastSavedContentRef.current = content;
 				updateContent.mutate({
@@ -215,7 +226,8 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				utils.dailyJournal.getByDate.invalidate({ date: dateString });
 
 				toast.success("Image uploaded", { id: toastId });
-				return attachment.key;
+				// Return presigned URL for display (will be converted to S3 key on save)
+				return attachment.url;
 			} catch (error) {
 				console.error("Image upload failed:", error);
 				toast.error("Upload failed", { id: toastId });
@@ -329,7 +341,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 					const { url, isAttachment } = JSON.parse(attachmentData);
 					if (isAttachment && url) {
 						event.preventDefault();
-						// Insert directly without re-uploading
+						// Insert presigned URL for display (will be converted to S3 key on save)
 						editor.chain().focus().setImage({ src: url }).run();
 						return;
 					}

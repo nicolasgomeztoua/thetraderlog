@@ -11,7 +11,6 @@ import type {
 	tags,
 	tradeExecutions,
 	tradeRuleChecks,
-	tradeScreenshots,
 	trades,
 	tradeTags,
 } from "@/server/db/schema";
@@ -22,7 +21,6 @@ import type {
 
 export type Trade = InferSelectModel<typeof trades>;
 export type TradeExecution = InferSelectModel<typeof tradeExecutions>;
-export type TradeScreenshot = InferSelectModel<typeof tradeScreenshots>;
 export type TradeTag = InferSelectModel<typeof tradeTags>;
 export type Tag = InferSelectModel<typeof tags>;
 export type Account = InferSelectModel<typeof accounts>;
@@ -47,7 +45,6 @@ export type TradeTagWithTag = TradeTag & {
 export type TradeWithRelations = Trade & {
 	executions?: TradeExecution[];
 	tradeTags?: TradeTagWithTag[];
-	screenshots?: TradeScreenshot[];
 	strategy?: Strategy | null;
 	account?: Account | null;
 	ruleChecks?: TradeRuleCheck[];

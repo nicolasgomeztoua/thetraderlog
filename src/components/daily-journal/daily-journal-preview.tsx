@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
 import { cn } from "@/lib/shared";
+import { transformHtmlToS3Keys } from "@/lib/storage/s3";
 import { api } from "@/trpc/react";
 
 // =============================================================================
@@ -168,14 +169,23 @@ export function DailyJournalPreview({
 				clearTimeout(debounceTimerRef.current);
 			}
 
-			const content = editor.getHTML();
-
-			// Don't save if content hasn't changed
-			if (content === lastSavedContentRef.current) {
-				return;
-			}
-
 			debounceTimerRef.current = setTimeout(() => {
+				// Get content at save time to ensure we have latest
+				const rawContent = editor.getHTML();
+
+				// Don't save while blob URLs are present (upload in progress)
+				if (rawContent.includes("blob:")) {
+					return;
+				}
+
+				// Transform presigned URLs to S3 keys before saving
+				const content = transformHtmlToS3Keys(rawContent) ?? rawContent;
+
+				// Don't save if content hasn't changed
+				if (content === lastSavedContentRef.current) {
+					return;
+				}
+
 				setSaveStatus("saving");
 				lastSavedContentRef.current = content;
 				updateContent.mutate({

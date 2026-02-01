@@ -127,7 +127,7 @@ export function AttachmentGallery({
 		(event: React.DragEvent, attachment: JournalAttachment) => {
 			// Set URL for native drag behavior
 			event.dataTransfer.setData("text/uri-list", attachment.url);
-			// Set custom data to indicate this is an existing attachment (no re-upload needed)
+			// Set custom data - use presigned URL for display (will be converted to S3 key on save)
 			event.dataTransfer.setData(
 				"application/x-attachment",
 				JSON.stringify({ url: attachment.url, isAttachment: true }),

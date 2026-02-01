@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useImageUpload } from "@/hooks/use-image-upload";
 import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
 import { cn } from "@/lib/shared";
+import { transformHtmlToS3Keys } from "@/lib/storage/s3";
 
 // =============================================================================
 // TYPES
@@ -84,14 +85,23 @@ export function TradeNoteEditor({
 				clearTimeout(debounceTimerRef.current);
 			}
 
-			const content = editor.getHTML();
-
-			// Don't save if content hasn't changed from last save
-			if (content === lastSavedContentRef.current) {
-				return;
-			}
-
 			debounceTimerRef.current = setTimeout(() => {
+				// Get content at save time to ensure we have latest
+				const rawContent = editor.getHTML();
+
+				// Don't save while blob URLs are present (upload in progress)
+				if (rawContent.includes("blob:")) {
+					return;
+				}
+
+				// Transform presigned URLs to S3 keys before saving
+				const content = transformHtmlToS3Keys(rawContent) ?? rawContent;
+
+				// Don't save if content hasn't changed from last save
+				if (content === lastSavedContentRef.current) {
+					return;
+				}
+
 				lastSavedContentRef.current = content;
 				// Convert empty editor to null
 				const normalizedContent = content === "<p></p>" ? null : content;
@@ -105,7 +115,15 @@ export function TradeNoteEditor({
 				debounceTimerRef.current = null;
 			}
 
-			const content = editor.getHTML();
+			const rawContent = editor.getHTML();
+
+			// Don't save while blob URLs are present (upload in progress)
+			if (rawContent.includes("blob:")) {
+				return;
+			}
+
+			// Transform presigned URLs to S3 keys before saving
+			const content = transformHtmlToS3Keys(rawContent) ?? rawContent;
 
 			// Don't save if content hasn't changed from last save
 			if (content === lastSavedContentRef.current) {

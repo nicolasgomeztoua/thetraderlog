@@ -390,6 +390,44 @@ debounceTimerRef.current = setTimeout(() => {
 }, 500);
 ```
 
+### Image Upload in Tiptap Editors
+**When:** Adding paste/drop image support to any Tiptap editor
+**Critical Pattern:** Display presigned URLs, store S3 keys
+```tsx
+import { useImageUpload } from "@/hooks/use-image-upload";
+import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
+import { transformHtmlToS3Keys } from "@/lib/storage/s3";
+
+// 1. Setup upload hook
+const { uploadImage } = useImageUpload({ context: "my-context" });
+
+// 2. Attach paste/drop handlers
+useTiptapImageHandlers({ editor, uploadImage });
+
+// 3. In onUpdate/onBlur, transform before saving
+debounceTimerRef.current = setTimeout(() => {
+  const rawContent = editor.getHTML();
+
+  // CRITICAL: Don't save while blob URLs are present (upload in progress)
+  if (rawContent.includes("blob:")) {
+    return;
+  }
+
+  // CRITICAL: Transform presigned URLs to S3 keys before saving
+  const content = transformHtmlToS3Keys(rawContent) ?? rawContent;
+
+  if (content === lastSavedContentRef.current) return;
+
+  lastSavedContentRef.current = content;
+  saveMutation.mutate({ content });
+}, 500);
+```
+**Why this matters:**
+- Blob URLs (`blob:...`) are temporary and break on page refresh
+- Presigned URLs expire after ~1 hour
+- S3 keys (`images/user_xxx/...`) never expire
+- Backend transforms S3 keys to fresh presigned URLs on read
+
 ### Timezone-Safe Calendar Grid Generation
 **When:** Building calendar grids that need to work when browser TZ differs from user's preferred TZ
 **Problem:** Using Date objects for calendar generation uses browser's timezone, not user's preference

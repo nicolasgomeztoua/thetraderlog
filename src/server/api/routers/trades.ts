@@ -565,7 +565,6 @@ export const tradesRouter = createTRPCRouter({
 							tag: true,
 						},
 					},
-					screenshots: true,
 					account: true,
 					strategy: true,
 					ruleChecks: true,
