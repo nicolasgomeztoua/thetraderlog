@@ -19,6 +19,8 @@ interface DashboardWidgetProps {
 	href?: string;
 	/** Whether the widget is in a loading state */
 	loading?: boolean;
+	/** Skeleton variant to use when loading */
+	skeletonVariant?: SkeletonVariant;
 	/** Widget content */
 	children: ReactNode;
 	/** Additional CSS classes for the widget container */
@@ -41,6 +43,7 @@ export function DashboardWidget({
 	icon: Icon,
 	href,
 	loading = false,
+	skeletonVariant = "default",
 	children,
 	className,
 	"data-testid": testId,
@@ -89,17 +92,53 @@ export function DashboardWidget({
 
 			{/* Content area */}
 			<div className="flex-1 p-4">
-				{loading ? <WidgetSkeleton /> : children}
+				{loading ? <WidgetSkeleton variant={skeletonVariant} /> : children}
 			</div>
 		</div>
 	);
 }
 
 /**
- * Loading skeleton for widget content.
- * Displays a generic skeleton pattern while data is loading.
+ * Skeleton variant types for different widget layouts
  */
-function WidgetSkeleton() {
+export type SkeletonVariant =
+	| "default"
+	| "performance"
+	| "calendar"
+	| "list"
+	| "status"
+	| "metrics"
+	| "actions";
+
+/**
+ * Loading skeleton for widget content.
+ * Supports different variants for different widget types.
+ */
+export function WidgetSkeleton({
+	variant = "default",
+}: {
+	variant?: SkeletonVariant;
+}) {
+	switch (variant) {
+		case "performance":
+			return <PerformanceSkeleton />;
+		case "calendar":
+			return <CalendarSkeleton />;
+		case "list":
+			return <ListSkeleton />;
+		case "status":
+			return <StatusSkeleton />;
+		case "metrics":
+			return <MetricsSkeleton />;
+		case "actions":
+			return <ActionsSkeleton />;
+		default:
+			return <DefaultSkeleton />;
+	}
+}
+
+/** Default skeleton pattern */
+function DefaultSkeleton() {
 	return (
 		<div className="space-y-3" data-testid="widget-skeleton">
 			<Skeleton className="h-8 w-24" />
@@ -109,6 +148,191 @@ function WidgetSkeleton() {
 				<Skeleton className="h-10 w-20" />
 				<Skeleton className="h-10 w-20" />
 			</div>
+		</div>
+	);
+}
+
+/** Performance widget skeleton (large P&L + stats row) */
+function PerformanceSkeleton() {
+	return (
+		<div
+			className="flex h-full flex-col"
+			data-testid="widget-skeleton-performance"
+		>
+			{/* Large P&L display */}
+			<div className="flex items-start justify-between">
+				<div>
+					<Skeleton className="h-9 w-32" />
+					<Skeleton className="mt-2 h-4 w-24" />
+				</div>
+				{/* Win rate gauge placeholder */}
+				<Skeleton className="h-12 w-12 rounded-full" />
+			</div>
+			{/* Stats row */}
+			<div className="mt-4 flex items-center gap-4">
+				<div>
+					<Skeleton className="h-6 w-8" />
+					<Skeleton className="mt-1 h-3 w-12" />
+				</div>
+				<div className="h-8 w-px bg-white/10" />
+				<div>
+					<Skeleton className="h-6 w-12" />
+					<Skeleton className="mt-1 h-3 w-8" />
+				</div>
+				<div className="h-8 w-px bg-white/10" />
+				<div>
+					<Skeleton className="h-6 w-10" />
+					<Skeleton className="mt-1 h-3 w-8" />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+/** Calendar widget skeleton (7x5 grid) */
+function CalendarSkeleton() {
+	return (
+		<div
+			className="flex h-full flex-col"
+			data-testid="widget-skeleton-calendar"
+		>
+			{/* Month navigation */}
+			<div className="mb-3 flex items-center justify-between">
+				<Skeleton className="h-7 w-7" />
+				<Skeleton className="h-5 w-32" />
+				<Skeleton className="h-7 w-7" />
+			</div>
+			{/* Day labels */}
+			<div className="mb-1 grid grid-cols-7 gap-1">
+				{[...Array(7)].map((_, i) => (
+					<Skeleton className="h-3 w-full" key={`day-label-${i.toString()}`} />
+				))}
+			</div>
+			{/* Calendar grid (5 weeks) */}
+			<div className="grid grid-cols-7 gap-1">
+				{[...Array(35)].map((_, i) => (
+					<Skeleton
+						className="aspect-square rounded"
+						key={`cal-day-${i.toString()}`}
+					/>
+				))}
+			</div>
+			{/* Summary row */}
+			<div className="mt-3 flex items-center justify-between border-white/5 border-t pt-3">
+				<Skeleton className="h-8 w-16" />
+				<Skeleton className="h-8 w-12" />
+				<Skeleton className="h-8 w-14" />
+			</div>
+		</div>
+	);
+}
+
+/** List widget skeleton (5 items) */
+function ListSkeleton() {
+	return (
+		<div className="flex h-full flex-col" data-testid="widget-skeleton-list">
+			<div className="flex-1 space-y-2">
+				{[...Array(5)].map((_, i) => (
+					<div
+						className="flex items-center gap-2 rounded bg-white/2 p-1.5"
+						key={`list-item-${i.toString()}`}
+					>
+						<Skeleton className="h-5 w-5 shrink-0 rounded" />
+						<Skeleton className="h-4 flex-1" />
+						<Skeleton className="h-4 w-14 shrink-0" />
+						<Skeleton className="h-3 w-10 shrink-0" />
+					</div>
+				))}
+			</div>
+			{/* Footer stats */}
+			<div className="mt-2 flex items-center justify-between border-white/5 border-t pt-2">
+				<Skeleton className="h-3 w-12" />
+				<div className="flex items-center gap-3">
+					<Skeleton className="h-4 w-16" />
+					<Skeleton className="h-4 w-14" />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+/** Status widget skeleton (status indicator + action button) */
+function StatusSkeleton() {
+	return (
+		<div
+			className="flex h-full flex-col justify-between"
+			data-testid="widget-skeleton-status"
+		>
+			{/* Status indicator */}
+			<div className="flex items-center gap-3">
+				<Skeleton className="h-10 w-10 rounded-lg" />
+				<div>
+					<Skeleton className="h-4 w-24" />
+					<Skeleton className="mt-1 h-3 w-16" />
+				</div>
+			</div>
+			{/* Stats row */}
+			<div className="mt-4 flex items-center gap-4">
+				<div>
+					<Skeleton className="h-5 w-8" />
+					<Skeleton className="mt-1 h-3 w-14" />
+				</div>
+				<div className="h-6 w-px bg-white/10" />
+				<div>
+					<Skeleton className="h-5 w-12" />
+					<Skeleton className="mt-1 h-3 w-16" />
+				</div>
+			</div>
+			{/* Action button */}
+			<Skeleton className="mt-4 h-9 w-full rounded" />
+		</div>
+	);
+}
+
+/** Metrics widget skeleton (gauges + sparkline) */
+function MetricsSkeleton() {
+	return (
+		<div className="flex h-full flex-col" data-testid="widget-skeleton-metrics">
+			{/* Metric cards row */}
+			<div className="flex items-center justify-between">
+				<div>
+					<Skeleton className="h-6 w-16" />
+					<Skeleton className="mt-1 h-3 w-20" />
+				</div>
+				<Skeleton className="h-12 w-12 rounded-full" />
+			</div>
+			{/* Sparkline */}
+			<div className="mt-4 flex-1">
+				<Skeleton className="h-16 w-full rounded" />
+			</div>
+			{/* Bottom stats */}
+			<div className="mt-3 grid grid-cols-2 gap-3">
+				<div>
+					<Skeleton className="h-5 w-10" />
+					<Skeleton className="mt-1 h-3 w-14" />
+				</div>
+				<div>
+					<Skeleton className="h-5 w-12" />
+					<Skeleton className="mt-1 h-3 w-10" />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+/** Actions widget skeleton (grid of buttons) */
+function ActionsSkeleton() {
+	return (
+		<div
+			className="grid grid-cols-3 gap-2"
+			data-testid="widget-skeleton-actions"
+		>
+			{[...Array(6)].map((_, i) => (
+				<Skeleton
+					className="flex h-16 flex-col items-center justify-center rounded"
+					key={`action-${i.toString()}`}
+				/>
+			))}
 		</div>
 	);
 }

@@ -168,6 +168,7 @@ export function TodayPerformanceWidget() {
 			data-testid="widget-today-performance"
 			icon={ZapIcon}
 			loading={isLoading}
+			skeletonVariant="performance"
 			title="today"
 		>
 			{!hasTrades ? (

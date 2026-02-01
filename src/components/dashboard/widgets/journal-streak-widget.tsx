@@ -233,6 +233,7 @@ export function JournalStreakWidget() {
 			href="/daily-journal"
 			icon={CalendarDaysIcon}
 			loading={isLoading}
+			skeletonVariant="calendar"
 			title="journal-streak"
 		>
 			<div className="flex h-full flex-col">

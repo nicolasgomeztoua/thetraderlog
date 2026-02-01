@@ -138,6 +138,7 @@ export function JournalExcerptsWidget() {
 			href="/daily-journal"
 			icon={FileTextIcon}
 			loading={isLoading}
+			skeletonVariant="list"
 			title="recent-journals"
 		>
 			{excerpts.length === 0 ? (

@@ -40,6 +40,7 @@ export function StrategiesSnapshotWidget() {
 			href="/strategies"
 			icon={TargetIcon}
 			loading={isLoading}
+			skeletonVariant="list"
 			title="strategies"
 		>
 			{!hasStrategies ? (

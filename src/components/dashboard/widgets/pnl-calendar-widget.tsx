@@ -170,6 +170,7 @@ export function PnLCalendarWidget() {
 			href="/analytics?tab=time"
 			icon={CalendarIcon}
 			loading={isLoading}
+			skeletonVariant="calendar"
 			title="pnl-calendar"
 		>
 			<div className="flex h-full flex-col">

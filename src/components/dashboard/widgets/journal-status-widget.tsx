@@ -162,6 +162,7 @@ export function JournalStatusWidget() {
 			href="/daily-journal"
 			icon={BookOpenIcon}
 			loading={isLoading}
+			skeletonVariant="status"
 			title="journal-status"
 		>
 			<div className="flex h-full flex-col">

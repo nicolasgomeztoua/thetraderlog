@@ -202,6 +202,7 @@ export function AnalyticsSnapshotWidget() {
 			href="/analytics"
 			icon={BarChart3Icon}
 			loading={isLoading}
+			skeletonVariant="metrics"
 			title="analytics-snapshot"
 		>
 			{/* Period toggle */}

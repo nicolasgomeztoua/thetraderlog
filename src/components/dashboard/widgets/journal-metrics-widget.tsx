@@ -238,6 +238,7 @@ export function JournalMetricsWidget() {
 			href="/daily-journal"
 			icon={FileTextIcon}
 			loading={isLoading}
+			skeletonVariant="metrics"
 			title="journal-metrics"
 		>
 			<div className="flex h-full flex-col gap-3">

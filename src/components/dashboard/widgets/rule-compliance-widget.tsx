@@ -142,6 +142,7 @@ export function RuleComplianceWidget() {
 			href="/strategies"
 			icon={ShieldCheckIcon}
 			loading={isLoading}
+			skeletonVariant="metrics"
 			title="rule-compliance"
 		>
 			{!hasData ? (

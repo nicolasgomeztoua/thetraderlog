@@ -69,6 +69,7 @@ export function TradesSnapshotWidget() {
 			href="/journal"
 			icon={ListIcon}
 			loading={isLoading}
+			skeletonVariant="list"
 			title="recent-trades"
 		>
 			{!hasTrades ? (
