@@ -776,6 +776,32 @@ export const journalAttachments = createTable(
 );
 
 // ============================================================================
+// TRADE ATTACHMENTS TABLE
+// ============================================================================
+
+export const tradeAttachments = createTable(
+	"trade_attachment",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.tradeAttachment()),
+		tradeId: text("trade_id")
+			.notNull()
+			.references(() => trades.id, { onDelete: "cascade" }),
+		url: text("url").notNull(), // S3/CDN URL (stores S3 key for presigned URL generation)
+		key: text("key").notNull(), // S3 object key
+		filename: text("filename").notNull(), // Original filename
+		mimeType: text("mime_type").notNull(), // e.g., "image/png"
+		size: integer("size").notNull(), // File size in bytes
+		caption: text("caption"), // Optional caption
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [index("trade_attachment_trade_id_idx").on(t.tradeId)],
+);
+
+// ============================================================================
 // CANDLE CACHE TABLE (for market data caching)
 // ============================================================================
 
@@ -875,6 +901,7 @@ export const tradesRelations = relations(trades, ({ one, many }) => ({
 	executions: many(tradeExecutions),
 	tradeTags: many(tradeTags),
 	ruleChecks: many(tradeRuleChecks),
+	attachments: many(tradeAttachments),
 }));
 
 export const tradeExecutionsRelations = relations(
@@ -1012,6 +1039,16 @@ export const journalAttachmentsRelations = relations(
 	}),
 );
 
+export const tradeAttachmentsRelations = relations(
+	tradeAttachments,
+	({ one }) => ({
+		trade: one(trades, {
+			fields: [tradeAttachments.tradeId],
+			references: [trades.id],
+		}),
+	}),
+);
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1051,3 +1088,5 @@ export type DailyChecklistCheck = typeof dailyChecklistChecks.$inferSelect;
 export type NewDailyChecklistCheck = typeof dailyChecklistChecks.$inferInsert;
 export type JournalAttachment = typeof journalAttachments.$inferSelect;
 export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
+export type TradeAttachment = typeof tradeAttachments.$inferSelect;
+export type NewTradeAttachment = typeof tradeAttachments.$inferInsert;

@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { EditorBubbleMenu } from "@/components/daily-journal/editor-bubble-menu";
 import { EditorToolbar } from "@/components/daily-journal/editor-toolbar";
 import { SlashCommand } from "@/components/daily-journal/slash-command-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useImagePreloader } from "@/hooks/use-image-preloader";
 import { toDateString } from "@/lib/shared";
 import { transformHtmlToS3Keys } from "@/lib/storage/s3";
 import { api } from "@/trpc/react";
@@ -73,6 +75,14 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				staleTime: 0,
 			},
 		);
+
+	// Preload images from journal content
+	const { isLoading: isLoadingImages } = useImagePreloader(
+		journal?.content ?? null,
+	);
+
+	// Combined loading state - journal data and images
+	const isLoading = isLoadingJournal || isLoadingImages;
 
 	// Update content mutation
 	const updateContent = api.dailyJournal.updateContent.useMutation({
@@ -147,7 +157,8 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 	useEffect(() => {
 		if (!editor || !journal) return;
 		const content = journal.content ?? "";
-		editor.commands.setContent(content);
+		// Use emitUpdate: false to prevent triggering onUpdate (and auto-save) during load
+		editor.commands.setContent(content, { emitUpdate: false });
 		lastSavedContentRef.current = content || "<p></p>";
 	}, [editor, journal]);
 
@@ -411,11 +422,30 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		[handleImageInsert],
 	);
 
-	// Show loading until journal data arrives (key prop causes remount, so we wait for fresh data)
-	if (isLoadingJournal || !journal) {
+	// Show loading skeleton until journal data AND images are loaded
+	if (isLoading || !journal) {
 		return (
-			<div className="flex min-h-0 flex-1 items-center justify-center">
-				<Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+			<div className="flex min-h-0 flex-1 flex-col">
+				{/* Toolbar skeleton */}
+				<Skeleton className="h-10 w-full rounded-b-none" />
+
+				{/* Editor skeleton */}
+				<div className="flex min-h-0 flex-1 flex-col rounded-b border border-white/10 border-t-0 bg-white/1 p-4">
+					<div className="space-y-3">
+						<Skeleton className="h-4 w-3/4" />
+						<Skeleton className="h-4 w-1/2" />
+						<Skeleton className="h-4 w-5/6" />
+						{/* Image placeholder skeleton */}
+						{isLoadingImages && (
+							<Skeleton className="mt-4 aspect-video w-full max-w-md" />
+						)}
+						<Skeleton className="h-4 w-2/3" />
+						<Skeleton className="h-4 w-4/5" />
+					</div>
+				</div>
+
+				{/* Status indicator placeholder */}
+				<div className="mt-2 h-5 shrink-0" />
 			</div>
 		);
 	}

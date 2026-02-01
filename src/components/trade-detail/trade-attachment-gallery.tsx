@@ -11,17 +11,17 @@ import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, toDateString } from "@/lib/shared";
-import type { JournalAttachment } from "@/server/db/schema";
+import { cn } from "@/lib/shared";
+import type { TradeAttachment } from "@/server/db/schema";
 import { api } from "@/trpc/react";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-interface AttachmentGalleryProps {
-	attachments: JournalAttachment[];
-	selectedDate: Date;
+interface TradeAttachmentGalleryProps {
+	attachments: TradeAttachment[];
+	tradeId: string;
 	className?: string;
 	/** Called when an attachment is deleted, with the URL of the deleted attachment */
 	onAttachmentDeleted?: (url: string) => void;
@@ -53,7 +53,7 @@ function formatFileSize(bytes: number): string {
 // =============================================================================
 
 interface LightboxProps {
-	attachment: JournalAttachment;
+	attachment: TradeAttachment;
 	onClose: () => void;
 }
 
@@ -119,16 +119,16 @@ function LightboxWithSkeleton({ attachment, onClose }: LightboxProps) {
 // =============================================================================
 
 /**
- * Gallery component for displaying and managing journal attachments.
+ * Gallery component for displaying and managing trade attachments.
  * Shows images in a grid with lightbox, and non-images with file icons.
  */
-export function AttachmentGallery({
+export function TradeAttachmentGallery({
 	attachments,
-	selectedDate,
+	tradeId,
 	className,
 	onAttachmentDeleted,
-}: AttachmentGalleryProps) {
-	const [lightboxImage, setLightboxImage] = useState<JournalAttachment | null>(
+}: TradeAttachmentGalleryProps) {
+	const [lightboxImage, setLightboxImage] = useState<TradeAttachment | null>(
 		null,
 	);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -141,15 +141,12 @@ export function AttachmentGallery({
 
 	const utils = api.useUtils();
 
-	// Date string for API calls - preserves the calendar date as clicked
-	const dateString = toDateString(selectedDate);
-
 	// Delete attachment mutation
-	const deleteAttachment = api.dailyJournal.deleteAttachment.useMutation({
+	const deleteAttachment = api.trades.deleteAttachment.useMutation({
 		onSuccess: () => {
 			setDeletingId(null);
-			// Invalidate journal data to refresh attachments
-			utils.dailyJournal.getByDate.invalidate({ date: dateString });
+			// Invalidate trade data to refresh attachments
+			utils.trades.getById.invalidate({ id: tradeId });
 		},
 		onError: () => {
 			setDeletingId(null);
@@ -157,7 +154,7 @@ export function AttachmentGallery({
 	});
 
 	const handleDelete = useCallback(
-		(attachment: JournalAttachment) => {
+		(attachment: TradeAttachment) => {
 			deleteAttachment.mutate(
 				{ id: attachment.id },
 				{
@@ -175,7 +172,7 @@ export function AttachmentGallery({
 		setDeletingId(null);
 	}, []);
 
-	const handleOpenLightbox = useCallback((attachment: JournalAttachment) => {
+	const handleOpenLightbox = useCallback((attachment: TradeAttachment) => {
 		if (isImageType(attachment.mimeType)) {
 			setLightboxImage(attachment);
 		}
@@ -187,7 +184,7 @@ export function AttachmentGallery({
 
 	// Handle drag start for dragging images to editor
 	const handleDragStart = useCallback(
-		(event: React.DragEvent, attachment: JournalAttachment) => {
+		(event: React.DragEvent, attachment: TradeAttachment) => {
 			// Set URL for native drag behavior
 			event.dataTransfer.setData("text/uri-list", attachment.url);
 			// Set custom data - use presigned URL for display (will be converted to S3 key on save)

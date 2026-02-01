@@ -9,6 +9,7 @@ import type {
 	strategies,
 	strategyRules,
 	tags,
+	tradeAttachments,
 	tradeExecutions,
 	tradeRuleChecks,
 	trades,
@@ -27,6 +28,7 @@ export type Account = InferSelectModel<typeof accounts>;
 export type Strategy = InferSelectModel<typeof strategies>;
 export type StrategyRule = InferSelectModel<typeof strategyRules>;
 export type TradeRuleCheck = InferSelectModel<typeof tradeRuleChecks>;
+export type TradeAttachment = InferSelectModel<typeof tradeAttachments>;
 
 // =============================================================================
 // RELATION TYPES
@@ -125,6 +127,7 @@ export type TradeForContentPanel = Pick<
 > & {
 	tradeTags?: TradeTagWithTag[];
 	executions?: TradeExecution[];
+	attachments?: TradeAttachment[];
 };
 
 /**

@@ -1,6 +1,5 @@
 import {
 	BookMarked,
-	Camera,
 	ExternalLink,
 	Info,
 	TrendingDown,
@@ -263,12 +262,6 @@ export function StatsPanel({
 						value="executions"
 					>
 						Executions
-					</TabsTrigger>
-					<TabsTrigger
-						className="rounded-none border-transparent border-b-2 font-mono text-[10px] uppercase tracking-wider data-[state=active]:border-primary data-[state=active]:bg-transparent"
-						value="attachments"
-					>
-						Attachments
 					</TabsTrigger>
 				</TabsList>
 
@@ -693,18 +686,6 @@ export function StatsPanel({
 							// TODO: Implement add execution
 						}}
 					/>
-				</TabsContent>
-
-				{/* ATTACHMENTS TAB */}
-				<TabsContent
-					className="m-0 flex-1 overflow-hidden p-4"
-					value="attachments"
-				>
-					<div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-						<Camera className="mb-3 h-10 w-10 opacity-50" />
-						<p className="font-mono text-xs">Drop images or click to upload</p>
-						<p className="mt-1 font-mono text-[10px] opacity-50">Coming soon</p>
-					</div>
 				</TabsContent>
 			</Tabs>
 		</div>

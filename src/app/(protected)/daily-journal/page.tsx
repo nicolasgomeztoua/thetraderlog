@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircleIcon, Loader2Icon, MenuIcon, PlayIcon } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
@@ -55,8 +56,20 @@ function saveSizes(sizes: number[]) {
 // =============================================================================
 
 export default function DailyJournalPage() {
-	// Selected date state
-	const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+	// Read date from URL query parameter
+	const searchParams = useSearchParams();
+	const dateParam = searchParams.get("date");
+
+	// Selected date state - initialize from URL param if present
+	const [selectedDate, setSelectedDate] = useState<Date>(() => {
+		if (dateParam) {
+			const parsed = new Date(dateParam);
+			if (!Number.isNaN(parsed.getTime())) {
+				return parsed;
+			}
+		}
+		return new Date();
+	});
 
 	// Panel sizes from localStorage [left, right]
 	const [panelSizes, setPanelSizes] = useState<number[]>([30, 70]);
@@ -92,6 +105,16 @@ export default function DailyJournalPage() {
 
 	const isStarted = journal?.dayStartedAt !== null;
 	const isStarting = startDay.isPending;
+
+	// Sync selected date when URL param changes
+	useEffect(() => {
+		if (dateParam) {
+			const parsed = new Date(dateParam);
+			if (!Number.isNaN(parsed.getTime())) {
+				setSelectedDate(parsed);
+			}
+		}
+	}, [dateParam]);
 
 	useEffect(() => {
 		setPanelSizes(getStoredSizes());

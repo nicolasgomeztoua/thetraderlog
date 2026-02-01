@@ -193,11 +193,11 @@ export function TradeNoteEditor({
 	return (
 		<div
 			className={cn(
-				"rounded border border-white/10 bg-white/1 transition-colors focus-within:border-primary/50",
+				"flex min-h-0 flex-col rounded border border-white/10 bg-white/1 transition-colors focus-within:border-primary/50",
 				className,
 			)}
 		>
-			<EditorContent editor={editor} />
+			<EditorContent className="min-h-0 flex-1 overflow-y-auto" editor={editor} />
 		</div>
 	);
 }

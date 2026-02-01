@@ -5,11 +5,13 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { CheckCircle2Icon, ExternalLinkIcon, Loader2Icon } from "lucide-react";
+import { CheckCircle2Icon, ExternalLinkIcon } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Skeleton } from "@/components/ui/skeleton";
+import { useImagePreloader } from "@/hooks/use-image-preloader";
 import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
 import { cn } from "@/lib/shared";
 import { transformHtmlToS3Keys } from "@/lib/storage/s3";
@@ -70,10 +72,19 @@ export function DailyJournalPreview({
 	}, [date]);
 
 	// Fetch journal data
-	const { data: journal, isLoading } = api.dailyJournal.getByDate.useQuery(
-		{ date: dateString },
-		{ enabled: !!dateString },
+	const { data: journal, isLoading: isLoadingJournal } =
+		api.dailyJournal.getByDate.useQuery(
+			{ date: dateString },
+			{ enabled: !!dateString },
+		);
+
+	// Preload images from journal content
+	const { isLoading: isLoadingImages } = useImagePreloader(
+		journal?.content ?? null,
 	);
+
+	// Combined loading state
+	const isLoading = isLoadingJournal || isLoadingImages;
 
 	// Fetch templates for compliance calculation
 	const { data: templates } = api.dailyJournal.getTemplates.useQuery();
@@ -290,7 +301,8 @@ export function DailyJournalPreview({
 			const currentContent = editor.getHTML();
 
 			if (newContent !== currentContent) {
-				editor.commands.setContent(newContent);
+				// Use emitUpdate: false to prevent triggering onUpdate (and auto-save) during load
+				editor.commands.setContent(newContent, { emitUpdate: false });
 				lastSavedContentRef.current = newContent;
 			}
 		}
@@ -310,21 +322,36 @@ export function DailyJournalPreview({
 
 	if (isLoading) {
 		return (
-			<div
-				className={cn(
-					"flex min-h-[120px] items-center justify-center",
-					className,
-				)}
-			>
-				<Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+			<div className={cn("flex min-h-0 flex-col", className)}>
+				{/* Header skeleton */}
+				<div className="flex shrink-0 items-center justify-between">
+					<div className="flex items-center gap-2">
+						<Skeleton className="h-3 w-20" />
+						<Skeleton className="h-5 w-12 rounded" />
+					</div>
+					<Skeleton className="h-3 w-24" />
+				</div>
+
+				{/* Editor skeleton */}
+				<div className="mt-3 min-h-0 flex-1 rounded border border-white/10 bg-white/1 p-3">
+					<div className="space-y-2">
+						<Skeleton className="h-3 w-3/4" />
+						<Skeleton className="h-3 w-1/2" />
+						{/* Image placeholder when loading images */}
+						{isLoadingImages && (
+							<Skeleton className="mt-2 aspect-video w-full max-w-xs" />
+						)}
+						<Skeleton className="h-3 w-2/3" />
+					</div>
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className={cn("space-y-3", className)}>
+		<div className={cn("flex min-h-0 flex-col", className)}>
 			{/* Header with compliance badge and link */}
-			<div className="flex items-center justify-between">
+			<div className="flex shrink-0 items-center justify-between">
 				<div className="flex items-center gap-2">
 					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Daily Journal
@@ -360,7 +387,7 @@ export function DailyJournalPreview({
 			{/* Editor */}
 			<div
 				className={cn(
-					"rounded border border-white/10 bg-white/1",
+					"mt-3 min-h-0 flex-1 overflow-y-auto rounded border border-white/10 bg-white/1",
 					editable && "focus-within:border-primary/50",
 				)}
 			>
@@ -369,7 +396,7 @@ export function DailyJournalPreview({
 
 			{/* Save status (only when editable) */}
 			{editable && saveStatus !== "idle" && (
-				<div className="flex h-4 items-center justify-end">
+				<div className="mt-3 flex h-4 shrink-0 items-center justify-end">
 					{saveStatus === "saving" && (
 						<span className="font-mono text-[10px] text-muted-foreground">
 							Saving...

@@ -157,6 +157,11 @@ export default function TradeDetailPage() {
 			optimisticUpdate(newData as Partial<NonNullable<TradeData>>);
 			return { previousTrade };
 		},
+		onSuccess: () => {
+			// Invalidate to refetch with presigned URLs (notes are saved with S3 keys,
+			// server transforms them to presigned URLs on read)
+			utils.trades.getById.invalidate({ id: tradeId });
+		},
 		onError: (error, _newData, context) => {
 			if (context?.previousTrade) {
 				utils.trades.getById.setData({ id: tradeId }, context.previousTrade);
@@ -507,6 +512,7 @@ export default function TradeDetailPage() {
 								maePrice: trade.maePrice,
 								mfePrice: trade.mfePrice,
 								quantity: trade.quantity,
+								attachments: trade.attachments,
 							}}
 						/>
 					</div>
@@ -693,6 +699,7 @@ export default function TradeDetailPage() {
 								maePrice: trade.maePrice,
 								mfePrice: trade.mfePrice,
 								quantity: trade.quantity,
+								attachments: trade.attachments,
 							}}
 						/>
 					</ResizablePanel>
