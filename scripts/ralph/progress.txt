@@ -731,3 +731,45 @@ month: Start of this month (1st)
 - trades.getAll returns `{ items, nextCursor }` structure
 
 ---
+
+## 2026-02-01 - US-015 (Create Strategies Snapshot Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/strategies-snapshot-widget.tsx`
+
+### Widget Features
+1. **Strategy Leaderboard**
+   - Top 3 strategies sorted by P&L
+   - Only shows strategies with trades (filters empty ones)
+
+2. **Strategy Row Display**
+   - Rank number (or trophy icon for #1)
+   - Color dot (strategy.strategyColor)
+   - Strategy name (truncated if long)
+   - P&L amount (colored)
+   - Trade count
+
+3. **Top Performer Highlight**
+   - #1 strategy has trophy icon
+   - #1 row has primary color border and background
+
+4. **Empty States**
+   - "No strategies configured" - when allStats is empty
+   - "No strategies with trades yet" - when no strategies have trades
+
+5. **Summary Footer**
+   - Shows "+N more strategies" when more than 3 exist
+
+### Data Source
+- `strategies.getAllStats` - Returns array of strategy stats with:
+  - strategyId, strategyName, strategyColor
+  - totalPnl, totalTrades, winRate, etc. (from calculateAggregateStats)
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/strategies-snapshot-widget.tsx`
+
+### Learnings for future iterations
+- getAllStats returns all active strategies, filter by totalTrades > 0 for meaningful display
+- Use inline style for dynamic color: `style={{ backgroundColor: strategy.strategyColor }}`
+
+---

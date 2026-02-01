@@ -295,8 +295,8 @@
         "Verify in browser"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses strategies.getAllStats for batch strategy stats. Shows top 3 sorted by P&L with trophy icon for #1."
     },
     {
       "id": "US-016",
