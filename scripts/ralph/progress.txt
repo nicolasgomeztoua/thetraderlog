@@ -959,3 +959,57 @@ Row 5: [Journal Excerpts (wide - spans full width)              ]
 - Build output shows dashboard page is ~12.2kB with all widgets
 
 ---
+
+## 2026-02-01 - US-020 (Add Dashboard Widget Loading Skeletons)
+
+### What was implemented
+- Added specialized skeleton variants to `src/components/dashboard/dashboard-widget.tsx`
+- Updated all widgets to use appropriate skeletonVariant
+
+### Skeleton Variants
+1. **default** - Generic skeleton (large value + lines + buttons)
+2. **performance** - Large P&L display + stats row + win rate gauge
+3. **calendar** - Month nav + day labels + 7x5 grid + summary row
+4. **list** - 5 list items with icon/text/value/time + footer stats
+5. **status** - Status indicator + stats row + action button
+6. **metrics** - Metric values + circular gauge + sparkline + stats grid
+7. **actions** - 3x2 grid of action buttons
+
+### Widget Skeleton Assignments
+| Widget | Skeleton Variant |
+|--------|-----------------|
+| TodayPerformanceWidget | performance |
+| PnLCalendarWidget | calendar |
+| JournalStreakWidget | calendar |
+| TradesSnapshotWidget | list |
+| JournalExcerptsWidget | list |
+| StrategiesSnapshotWidget | list |
+| JournalStatusWidget | status |
+| AnalyticsSnapshotWidget | metrics |
+| JournalMetricsWidget | metrics |
+| RuleComplianceWidget | metrics |
+| QuickActionsWidget | actions |
+
+### DashboardWidget API Change
+```typescript
+// New prop
+skeletonVariant?: SkeletonVariant; // defaults to "default"
+
+// Usage
+<DashboardWidget
+  loading={isLoading}
+  skeletonVariant="performance"
+  ...
+>
+```
+
+### Files Changed
+- Modified: `src/components/dashboard/dashboard-widget.tsx`
+- Modified: All 11 widget files in `src/components/dashboard/widgets/`
+
+### Learnings for future iterations
+- Export WidgetSkeleton for possible standalone use
+- Skeleton dimensions should exactly match widget content to prevent layout shift
+- Use Tailwind animate-pulse inherited from Skeleton component
+
+---
