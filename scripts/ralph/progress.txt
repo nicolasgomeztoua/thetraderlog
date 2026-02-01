@@ -132,3 +132,38 @@ Started: Sun Feb  1 15:39:39 WET 2026
 - No need to query trades.getStats separately for context determination
 
 ---
+
+## 2026-02-01 - US-002 (Create Dashboard Layout Grid Component)
+
+### What was implemented
+- Created `src/components/dashboard/command-center-grid.tsx` with responsive CSS Grid layout
+
+### Components
+1. **CommandCenterGrid** - Main grid container
+   - Responsive: 1 col (mobile) → 2 cols (tablet) → 3 cols (desktop)
+   - Uses `auto-rows-fr` for flexible row heights
+   - Terminal design: gap-4
+
+2. **GridItem** - Widget wrapper with size variants
+   - `sm`: 1x1 (default)
+   - `md`: 2x1 (spans 2 columns)
+   - `lg`: 2x2 (spans 2 columns, 2 rows)
+   - `wide`: 3x1 (full width)
+
+### Usage
+```tsx
+<CommandCenterGrid>
+  <GridItem size="wide"><TodayPerformance /></GridItem>
+  <GridItem size="sm"><JournalStatus /></GridItem>
+  <GridItem size="lg"><PLCalendar /></GridItem>
+</CommandCenterGrid>
+```
+
+### Files Changed
+- Created: `src/components/dashboard/command-center-grid.tsx`
+
+### Learnings for future iterations
+- Use `auto-rows-fr` for flexible grid rows that adapt to content
+- Widget sizes collapse gracefully on smaller screens (lg→md→sm breakpoints)
+
+---

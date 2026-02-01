@@ -49,8 +49,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Grid uses auto-rows-fr for flexible heights. GridItem wrapper applies col/row spans."
     },
     {
       "id": "US-003",
