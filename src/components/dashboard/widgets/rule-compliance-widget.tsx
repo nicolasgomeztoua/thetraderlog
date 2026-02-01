@@ -3,20 +3,9 @@
 import { ShieldCheckIcon } from "lucide-react";
 import { useMemo } from "react";
 import { useAccount } from "@/contexts/account-context";
-import { cn, toDateString } from "@/lib/shared";
+import { cn, getLastNDaysRange } from "@/lib/shared";
 import { api } from "@/trpc/react";
 import { DashboardWidget, WidgetEmptyState } from "../dashboard-widget";
-
-// Get date range for current month (or last 30 days for more data)
-function getLast30DaysRange() {
-	const end = new Date();
-	const start = new Date();
-	start.setDate(start.getDate() - 30);
-	return {
-		startDate: toDateString(start),
-		endDate: toDateString(end),
-	};
-}
 
 // Circular gauge component
 function ComplianceGauge({
@@ -121,7 +110,7 @@ function CategoryBar({ label, value }: { label: string; value: number }) {
  */
 export function RuleComplianceWidget() {
 	const { selectedAccountId } = useAccount();
-	const dateRange = useMemo(() => getLast30DaysRange(), []);
+	const dateRange = useMemo(() => getLastNDaysRange(30), []);
 
 	const { data, isLoading } =
 		api.strategies.getDashboardRuleCompliance.useQuery(

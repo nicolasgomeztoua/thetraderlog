@@ -3,20 +3,9 @@
 import { FileTextIcon } from "lucide-react";
 import { useMemo } from "react";
 import { useAccount } from "@/contexts/account-context";
-import { cn, toDateString } from "@/lib/shared";
+import { cn, getLastNDaysRange, toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
 import { DashboardWidget } from "../dashboard-widget";
-
-// Get date range for last 30 days
-function getLast30DaysRange() {
-	const end = new Date();
-	const start = new Date();
-	start.setDate(start.getDate() - 30);
-	return {
-		startDate: toDateString(start),
-		endDate: toDateString(end),
-	};
-}
 
 // Simple sparkline component
 function Sparkline({
@@ -142,7 +131,7 @@ const EMOTIONAL_STATE_COLORS: Record<
  */
 export function JournalMetricsWidget() {
 	const { selectedAccountId } = useAccount();
-	const dateRange = useMemo(() => getLast30DaysRange(), []);
+	const dateRange = useMemo(() => getLastNDaysRange(30), []);
 
 	// Get journal adjacency data for completion and word counts
 	const { data: journalData, isLoading: journalLoading } =

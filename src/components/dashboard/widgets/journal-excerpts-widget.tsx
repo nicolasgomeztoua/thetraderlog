@@ -4,20 +4,14 @@ import { FileTextIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { useAccount } from "@/contexts/account-context";
-import { cn, formatCurrency, toDateString } from "@/lib/shared";
+import {
+	cn,
+	formatCurrency,
+	getLastNDaysRange,
+	toDateString,
+} from "@/lib/shared";
 import { api } from "@/trpc/react";
 import { DashboardWidget, WidgetEmptyState } from "../dashboard-widget";
-
-// Get date range for last 30 days
-function getLast30DaysRange() {
-	const end = new Date();
-	const start = new Date();
-	start.setDate(start.getDate() - 30);
-	return {
-		startDate: toDateString(start),
-		endDate: toDateString(end),
-	};
-}
 
 // Strip HTML tags and get first N characters
 function getExcerpt(html: string | null, maxLength = 100): string {
@@ -57,7 +51,7 @@ interface JournalExcerpt {
  */
 export function JournalExcerptsWidget() {
 	const { selectedAccountId } = useAccount();
-	const dateRange = useMemo(() => getLast30DaysRange(), []);
+	const dateRange = useMemo(() => getLastNDaysRange(30), []);
 
 	// Get journal adjacency data for P&L and dates with journals
 	const { data: adjacencyData, isLoading: adjacencyLoading } =
