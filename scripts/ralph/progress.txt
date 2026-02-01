@@ -235,3 +235,198 @@ output: Array<{
 - Day is "eligible" for checklist if dayStarted OR hasTrades
 
 ---
+
+## 2026-02-01 - US-007 (Integration Tests for Journal Adjacency Endpoint)
+
+### What was implemented
+- Created comprehensive integration tests for `getJournalAdjacency` endpoint
+
+### Test Coverage (17 tests)
+1. **Basic functionality**
+   - Date ranges with no data return correct structure
+   - Date strings are correct for each day in range
+   - Single-day range works
+
+2. **Dates with trades + journal**
+   - Trade count correct
+   - P&L calculation correct (using netPnl)
+   - Journal presence detected
+   - Word count calculated from stripped HTML
+
+3. **Dates with trades + no journal**
+   - Trade data returned correctly
+   - hasJournal is false when no journal created
+
+4. **Dates with no trades**
+   - Journal data without trades
+   - hasJournal detected from content even without dayStarted
+
+5. **Account filtering**
+   - Returns all trades when no filter
+   - Filters to specific account correctly
+
+6. **Multi-day range**
+   - Mixed days (trades+journal, empty, trades-only, journal-only)
+
+7. **User isolation**
+   - Users cannot see each other's data
+
+### Bug Fixed
+- Fixed `hasJournal` returning true when no journal exists
+- Root cause: `undefined !== null` is `true` in JavaScript
+- Fix: Check journal exists before comparing `dayStartedAt`
+
+### Files Changed
+- Created: `tests/integration/journal-adjacency.test.ts`
+- Modified: `src/server/api/routers/dailyJournal.ts` (bug fix)
+
+### Learnings for future iterations
+- Always check for undefined before comparing to null in JS
+- Test files share state within describe blocks - use unique dates or separate users
+- Pre-existing TypeScript errors in unrelated test files (attachments.test.ts) don't affect new code
+
+---
+
+## 2026-02-01 - US-011 (Create tRPC Endpoint for Rule Compliance Summary)
+
+### What was implemented
+- Added `getDashboardRuleCompliance` query to strategies router
+
+### Endpoint Signature
+```typescript
+input: { accountId?: string, startDate: string, endDate: string }
+output: {
+  overall: number,              // Overall compliance % (0-100)
+  byCategory: {
+    entry: number,
+    exit: number,
+    risk: number,
+    management: number
+  },
+  violations: Array<{
+    ruleId: string,
+    ruleName: string,
+    ruleCategory: string,
+    count: number
+  }>,
+  totalTrades: number,          // All trades in date range
+  tradesWithStrategies: number  // Trades with strategies that have rules
+}
+```
+
+### Implementation Details
+- Uses user's timezone for trade date filtering
+- Only counts trades with assigned strategies that have rules
+- Calculates compliance per rule (was check recorded and marked as followed)
+- Returns 100% for empty date ranges or no trades with strategies
+- Violations sorted by count (most frequent first)
+
+### Files Changed
+- Modified: `src/server/api/routers/strategies.ts`
+
+### Learnings for future iterations
+- Use explicit `CategoryKey` type instead of `Record<string, ...>` to satisfy TypeScript strict checks
+- Existing `getRuleCompliance` operates per-strategy, new endpoint operates dashboard-level
+
+---
+
+## 2026-02-01 - US-012 (Integration Tests for Rule Compliance Endpoint)
+
+### What was implemented
+- Created comprehensive integration tests for `getDashboardRuleCompliance` endpoint
+
+### Test Coverage (14 tests)
+1. **Basic functionality**
+   - Returns 100% for empty date range
+   - Returns 100% for trades without strategies
+
+2. **100% compliance**
+   - Returns 100% overall when all rules followed
+   - Returns 100% for each category
+
+3. **Partial compliance**
+   - Returns correct overall percentage (50%)
+   - Returns correct category percentages
+
+4. **Violation counting**
+   - Counts violations correctly (same rule violated multiple times)
+   - Returns 0% for consistently violated rules
+
+5. **Category breakdown**
+   - Correct breakdown by entry/exit/risk/management
+   - Correct overall for mixed category compliance
+
+6. **Account filtering**
+   - Combined compliance without filter
+   - Filter to compliant account returns 100%
+   - Filter to non-compliant account returns 0%
+
+7. **User isolation**
+   - Users cannot see each other's compliance data
+
+### Bug Fix
+- Changed from raw SQL `sql\`${trades.entryTime} >= ${rangeStart}\`` to proper Drizzle operators `gte(trades.entryTime, rangeStart)`
+- This ensures proper type checking and parameter binding
+
+### Files Changed
+- Created: `tests/integration/rule-compliance.test.ts`
+- Modified: `src/server/api/routers/strategies.ts` (added gte/lt imports, fixed query)
+
+### Learnings for future iterations
+- Use Drizzle's `gte` and `lt` operators instead of raw SQL for date comparisons
+- Users table doesn't have timezone column - it's in userSettings
+- Need explicit type annotations for arrays built in loops to avoid implicit any
+- Platform enum values: mt4, mt5, projectx, ninjatrader, other (not "manual")
+
+---
+
+## 2026-02-01 - US-004 (Create Journal Status Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/journal-status-widget.tsx`
+
+### Widget Features
+1. **Status Display** - Three states:
+   - `not-started`: No dayStartedAt, no content (gray, clock icon)
+   - `in-progress`: dayStartedAt set OR has content, but checklist incomplete (chartreuse, book icon)
+   - `completed`: dayStartedAt set AND checklist 100% complete (green, checkmark icon)
+
+2. **Metrics** (shown when started):
+   - Word count - strips HTML tags and counts words
+   - Checklist completion percentage - combines user template checks + forced items
+
+3. **Actions**:
+   - Start Journal button (when not started) - calls dailyJournal.startDay mutation
+   - Continue/View Journal button (when started) - navigates to /daily-journal
+
+### Data Source
+- Uses `dailyJournal.getWithTrades` query which returns:
+  - `journal.content` - for word count
+  - `journal.dayStartedAt` - for status determination
+  - `journal.checklistChecks` - user template checks
+  - `forcedItems` - pre-market and SL check items
+
+### Checklist Completion Calculation
+```typescript
+// User template checks (must have templateId)
+const userCheckedCount = journal.checklistChecks.filter(c => c.checked && c.templateId !== null).length;
+const userTotalCount = journal.checklistChecks.filter(c => c.templateId !== null).length;
+
+// Forced items (pre-market check, SL check)
+const forcedCheckedCount = forcedItems.filter(item => item.checked).length;
+const forcedTotalCount = forcedItems.length;
+
+// Total completion
+const totalItems = userTotalCount + forcedTotalCount;
+const totalChecked = userCheckedCount + forcedCheckedCount;
+```
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/journal-status-widget.tsx`
+
+### Learnings for future iterations
+- getWithTrades returns `checklistChecks` (user templates) and `forcedItems` (system items) separately
+- forcedItems include pre-market check and SL check when applicable
+- Word count should strip HTML tags before counting: `content.replace(/<[^>]*>/g, " ")`
+
+---

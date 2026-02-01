@@ -102,8 +102,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "17 tests covering basic functionality, trades+journal, trades+no journal, no trades, account filtering, multi-day range, and user isolation. Also fixed bug where hasJournal was true when journal undefined."
     },
     {
       "id": "US-011",
@@ -119,8 +119,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added getDashboardRuleCompliance endpoint. Returns overall %, category breakdown, violations list, and trade counts."
     },
     {
       "id": "US-012",
@@ -137,8 +137,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "14 tests covering basic functionality, full compliance, partial compliance, violation counting, category breakdown, account filtering, and user isolation."
     },
     {
       "id": "US-004",
@@ -157,8 +157,8 @@
         "Verify in browser"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses DashboardWidget wrapper. Calculates completion from journal.checklistChecks + forcedItems. Status determined by dayStartedAt + content + completion."
     },
     {
       "id": "US-005",
