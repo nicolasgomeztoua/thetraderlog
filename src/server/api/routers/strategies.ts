@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import type { RiskParameters } from "@/components/strategy/risk-config";
@@ -1521,8 +1521,8 @@ export const strategiesRouter = createTRPCRouter({
 				eq(trades.userId, ctx.user.id),
 				eq(trades.status, "closed"),
 				isNull(trades.deletedAt),
-				sql`${trades.entryTime} >= ${rangeStart}`,
-				sql`${trades.entryTime} < ${rangeEnd}`,
+				gte(trades.entryTime, rangeStart),
+				lt(trades.entryTime, rangeEnd),
 			];
 
 			// Filter by account if specified
@@ -1573,13 +1573,15 @@ export const strategiesRouter = createTRPCRouter({
 
 			// Track by category with explicit type
 			type CategoryKey = "entry" | "exit" | "risk" | "management";
-			const categoryStats: Record<CategoryKey, { total: number; passed: number }> =
-				{
-					entry: { total: 0, passed: 0 },
-					exit: { total: 0, passed: 0 },
-					risk: { total: 0, passed: 0 },
-					management: { total: 0, passed: 0 },
-				};
+			const categoryStats: Record<
+				CategoryKey,
+				{ total: number; passed: number }
+			> = {
+				entry: { total: 0, passed: 0 },
+				exit: { total: 0, passed: 0 },
+				risk: { total: 0, passed: 0 },
+				management: { total: 0, passed: 0 },
+			};
 
 			// Track violations per rule
 			const ruleViolations: Map<
