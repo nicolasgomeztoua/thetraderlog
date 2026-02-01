@@ -174,10 +174,10 @@ export function PnLCalendarWidget() {
 			title="pnl-calendar"
 		>
 			<div className="flex h-full flex-col">
-				{/* Month navigation */}
+				{/* Month navigation - touch-friendly buttons */}
 				<div className="mb-3 flex items-center justify-between">
 					<Button
-						className="h-7 w-7"
+						className="h-11 w-11 sm:h-7 sm:w-7"
 						onClick={handlePrevMonth}
 						size="icon"
 						variant="ghost"
@@ -186,7 +186,7 @@ export function PnLCalendarWidget() {
 					</Button>
 					<span className="font-mono text-sm">{monthLabel}</span>
 					<Button
-						className="h-7 w-7"
+						className="h-11 w-11 sm:h-7 sm:w-7"
 						disabled={isCurrentMonth}
 						onClick={handleNextMonth}
 						size="icon"
@@ -196,8 +196,8 @@ export function PnLCalendarWidget() {
 					</Button>
 				</div>
 
-				{/* Calendar grid */}
-				<div className="flex-1">
+				{/* Calendar grid - hidden on mobile, shown on sm+ */}
+				<div className="hidden flex-1 sm:block">
 					{/* Day labels */}
 					<div className="mb-1 grid grid-cols-7 gap-1">
 						{DAY_LABELS.map((day) => (
@@ -287,8 +287,54 @@ export function PnLCalendarWidget() {
 					</div>
 				</div>
 
-				{/* Summary row */}
-				<div className="mt-3 flex items-center justify-between border-white/5 border-t pt-3">
+				{/* Mobile: Compact summary view (replaces calendar grid) */}
+				<div className="flex-1 sm:hidden">
+					<div className="grid grid-cols-3 gap-4 text-center">
+						<div>
+							<div
+								className={cn(
+									"font-bold font-mono text-2xl",
+									monthStats.totalPnl >= 0 ? "text-profit" : "text-loss",
+								)}
+							>
+								{formatCurrency(monthStats.totalPnl)}
+							</div>
+							<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+								Month P&L
+							</div>
+						</div>
+						<div>
+							<div className="font-bold font-mono text-2xl">
+								{monthStats.tradingDays}
+							</div>
+							<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+								Trading Days
+							</div>
+						</div>
+						<div>
+							<div className="font-bold font-mono text-2xl">
+								{monthStats.totalTrades}
+							</div>
+							<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+								Total Trades
+							</div>
+						</div>
+					</div>
+					{/* Mobile legend */}
+					<div className="mt-4 flex items-center justify-center gap-1">
+						<div className="h-3 w-3 rounded bg-loss/80" />
+						<div className="h-3 w-3 rounded bg-loss/40" />
+						<div className="h-3 w-3 rounded bg-white/10" />
+						<div className="h-3 w-3 rounded bg-profit/40" />
+						<div className="h-3 w-3 rounded bg-profit/80" />
+						<span className="ml-2 font-mono text-muted-foreground text-xs">
+							Loss → Profit
+						</span>
+					</div>
+				</div>
+
+				{/* Summary row - desktop only */}
+				<div className="mt-3 hidden items-center justify-between border-white/5 border-t pt-3 sm:flex">
 					<div className="text-center">
 						<div
 							className={cn(
@@ -320,8 +366,8 @@ export function PnLCalendarWidget() {
 					</div>
 				</div>
 
-				{/* Legend */}
-				<div className="mt-2 flex items-center justify-center gap-1">
+				{/* Legend - desktop only */}
+				<div className="mt-2 hidden items-center justify-center gap-1 sm:flex">
 					<div className="h-2 w-2 rounded bg-loss/80" />
 					<div className="h-2 w-2 rounded bg-loss/40" />
 					<div className="h-2 w-2 rounded bg-white/10" />

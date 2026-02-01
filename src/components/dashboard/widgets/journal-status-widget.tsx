@@ -223,14 +223,13 @@ export function JournalStatusWidget() {
 					</div>
 				)}
 
-				{/* Action button */}
+				{/* Action button - touch-friendly height (min 44px) */}
 				<div className="mt-auto pt-4">
 					{status === "not-started" ? (
 						<Button
-							className="w-full font-mono"
+							className="h-11 w-full font-mono"
 							disabled={isStarting}
 							onClick={handleStartJournal}
-							size="sm"
 						>
 							{isStarting ? (
 								<Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
@@ -241,9 +240,8 @@ export function JournalStatusWidget() {
 						</Button>
 					) : (
 						<Button
-							className="w-full font-mono"
+							className="h-11 w-full font-mono"
 							onClick={handleContinueJournal}
-							size="sm"
 							variant="outline"
 						>
 							<BookOpenIcon className="mr-2 h-4 w-4" />

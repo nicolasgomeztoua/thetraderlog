@@ -89,7 +89,10 @@ function ActionButton({
 		<Button
 			asChild
 			className={cn(
-				"h-auto flex-col gap-1 py-3",
+				// Base styles with touch-friendly min height (44px)
+				"h-auto min-h-[44px] min-w-[44px] flex-col gap-1 py-3",
+				// Mobile: horizontal pill style
+				"sm:flex-col",
 				isPrimary && "bg-primary/20 ring-1 ring-primary/30 hover:bg-primary/30",
 			)}
 			variant={isPrimary ? "default" : "ghost"}
@@ -151,14 +154,18 @@ export function QuickActionsWidget() {
 			skeletonVariant="actions"
 			title="quick-actions"
 		>
-			<div className="grid grid-cols-3 gap-2">
-				{sortedActions.slice(0, 6).map((action) => (
-					<ActionButton
-						action={action}
-						isPrimary={action.id === primaryActionId}
-						key={action.id}
-					/>
-				))}
+			{/* Mobile: horizontal scroll, Desktop: 3-column grid */}
+			<div className="-mx-4 px-4 sm:mx-0 sm:px-0">
+				<div className="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
+					{sortedActions.slice(0, 6).map((action) => (
+						<div className="shrink-0 sm:shrink" key={action.id}>
+							<ActionButton
+								action={action}
+								isPrimary={action.id === primaryActionId}
+							/>
+						</div>
+					))}
+				</div>
 			</div>
 		</DashboardWidget>
 	);
