@@ -773,3 +773,45 @@ month: Start of this month (1st)
 - Use inline style for dynamic color: `style={{ backgroundColor: strategy.strategyColor }}`
 
 ---
+
+## 2026-02-01 - US-016 (Create Recent Trades Snapshot Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/trades-snapshot-widget.tsx`
+
+### Widget Features
+1. **Trade List (Last 5)**
+   - Direction icon (up arrow for long, down for short)
+   - Symbol name (truncated)
+   - P&L amount (colored)
+   - Time ago (relative: "2h ago", "3d ago")
+
+2. **Today's Quick Stats**
+   - Trade count for today
+   - Total P&L for today
+
+3. **Empty State**
+   - "No trades yet" when no trades exist
+
+### Time Ago Formatting
+```typescript
+if (diffMins < 1) return "now";
+if (diffMins < 60) return `${diffMins}m ago`;
+if (diffHours < 24) return `${diffHours}h ago`;
+if (diffDays < 7) return `${diffDays}d ago`;
+return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+```
+
+### Data Sources
+- `trades.getAll` - Recent 5 trades (sortField: "entry", sortDirection: "desc")
+- `trades.getStats` - Today's stats (with startDate filter)
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/trades-snapshot-widget.tsx`
+
+### Learnings for future iterations
+- Trade direction is stored as "long" or "short" string
+- Use arrow icons (ArrowUpIcon/ArrowDownIcon) to indicate direction visually
+- formatTimeAgo helper for relative time display
+
+---

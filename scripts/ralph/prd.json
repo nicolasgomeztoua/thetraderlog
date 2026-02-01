@@ -313,8 +313,8 @@
         "Verify in browser"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses trades.getAll for recent trades, trades.getStats for today's summary. Direction shown as up/down arrows."
     },
     {
       "id": "US-017",
