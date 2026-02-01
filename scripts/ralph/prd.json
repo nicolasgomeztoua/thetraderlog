@@ -84,8 +84,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses user timezone for trade grouping. Word count strips HTML tags."
     },
     {
       "id": "US-007",

@@ -199,3 +199,39 @@ Started: Sun Feb  1 15:39:39 WET 2026
 - WidgetSkeleton provides generic loading pattern for all widgets
 
 ---
+
+## 2026-02-01 - US-006 (Create tRPC Endpoint for Journal Adjacency Data)
+
+### What was implemented
+- Added `getJournalAdjacency` query to `dailyJournal` router
+
+### Endpoint Signature
+```typescript
+input: { accountId?: string, startDate: string, endDate: string }
+output: Array<{
+  date: string,
+  hasTrades: boolean,
+  tradeCount: number,
+  pnl: number,
+  hasJournal: boolean,
+  journalWordCount: number,
+  checklistCompletion: number
+}>
+```
+
+### Implementation Details
+- Uses user's timezone for trade date grouping (getDayBoundsInTimezone)
+- Calculates word count by stripping HTML tags from journal content
+- Includes forced checklist items (Pre Market Check, SL Check) in completion calculation
+- Returns 0% completion if day was not eligible (no trades AND not started)
+- Supports optional accountId filter for account-specific data
+
+### Files Changed
+- Modified: `src/server/api/routers/dailyJournal.ts`
+
+### Learnings for future iterations
+- Reused existing checklist completion logic from getComplianceStats
+- Word count strips HTML tags before counting: `content.replace(/<[^>]*>/g, " ")`
+- Day is "eligible" for checklist if dayStarted OR hasTrades
+
+---
