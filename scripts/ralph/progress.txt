@@ -860,3 +860,102 @@ return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 - Use ~20 trading days when estimating daily average from 30 calendar days
 
 ---
+
+## 2026-02-01 - US-018 (Create Quick Actions Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/quick-actions-widget.tsx`
+
+### Widget Features
+1. **Contextual Actions**
+   - Adapts based on useTradingContext hook
+   - Primary action highlighted based on suggestedAction
+
+2. **Action Types**
+   - Start Journal (when suggested + no journal today)
+   - Review Trades (when suggested + has open positions)
+   - Log Trade (always visible)
+   - Analytics (always visible)
+   - Strategies (always visible)
+
+3. **Visual Styling**
+   - Primary action: bg-primary/20 + ring-1 ring-primary/30
+   - 3-column grid layout
+   - Flex-col buttons with icon + label
+
+### Data Source
+- `useTradingContext` hook - Returns suggestedAction, hasOpenPositions, etc.
+
+### Action Filtering Logic
+```typescript
+// Actions with showCondition are only shown when condition is true
+// Default actions (no showCondition) always shown
+const actionsToShow = ACTIONS.filter(action => {
+  if (action.showCondition) return action.showCondition(context);
+  return true;
+});
+```
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/quick-actions-widget.tsx`
+
+### Learnings for future iterations
+- useTradingContext provides suggestedAction enum for determining primary action
+- SUGGESTED_ACTION_MAP maps suggestedAction to corresponding action ID
+- Actions sorted: primary first, then by variant (primary > secondary > default)
+
+---
+
+## 2026-02-01 - US-019 (Assemble Command Center Dashboard Page)
+
+### What was implemented
+- Updated `src/app/(protected)/dashboard/page.tsx` to use Command Center layout
+
+### Dashboard Layout
+```
+Row 1: [Today's Performance (md)] [Quick Actions (sm)]
+Row 2: [Journal Status (sm)] [P&L Calendar (lg)    ] [Analytics Snapshot (sm)]
+Row 3: [Journal Streak (sm)] [     spans 2x2       ] [Strategies Snapshot (sm)]
+Row 4: [Rule Compliance (sm)]                       [Recent Trades (sm)]
+Row 5: [Journal Excerpts (wide - spans full width)              ]
+```
+
+### Widget Arrangement
+1. **Top Row** - Performance focus
+   - TodayPerformanceWidget (md - 2 cols)
+   - QuickActionsWidget (sm - 1 col)
+
+2. **Left Column** - Journaling focus
+   - JournalStatusWidget
+   - JournalStreakWidget
+   - RuleComplianceWidget
+
+3. **Center** - Calendar visualization
+   - PnLCalendarWidget (lg - 2x2)
+
+4. **Right Column** - Analytics/Trades focus
+   - AnalyticsSnapshotWidget
+   - StrategiesSnapshotWidget
+   - TradesSnapshotWidget
+
+5. **Bottom** - Recent content
+   - JournalExcerptsWidget (wide - full width)
+
+### Removed Components
+- Old CircularProgress (extracted per-widget as needed)
+- Old WinLossBar (no longer needed)
+- Old StatCard (replaced by widgets)
+- Old StatsGrid (replaced by TodayPerformanceWidget + AnalyticsSnapshotWidget)
+- Old StartJournalHero (replaced by JournalStatusWidget)
+- Old PerformanceSummary (replaced by AnalyticsSnapshotWidget)
+
+### Files Changed
+- Modified: `src/app/(protected)/dashboard/page.tsx`
+
+### Learnings for future iterations
+- CSS Grid auto-placement handles responsive layout well
+- Each widget manages its own loading/error states
+- No need to pass trading context down - widgets use hooks directly
+- Build output shows dashboard page is ~12.2kB with all widgets
+
+---
