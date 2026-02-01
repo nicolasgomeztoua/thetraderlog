@@ -4,6 +4,59 @@
 
 This document establishes the testing philosophy and conventions for EdgeJournal. It serves as a reference for both developers and AI assistants when writing or maintaining tests.
 
+---
+
+## Testing Pyramid
+
+```
+        /\
+       /  \     E2E (Smoke tests only)
+      /----\    - Critical user flows
+     /      \   - Login → create → verify
+    /--------\
+   /          \ Unit Tests
+  /            \ - Pure functions
+ /              \ - Parsers, generators
+/----------------\ - Utilities
+|                |
+| Integration    | PRIMARY LAYER
+| Tests          | - tRPC endpoints
+|                | - Business logic
+|                | - Database operations
+|________________| - Fast, reliable
+```
+
+| Layer | Purpose | Speed | Tools | Location |
+|-------|---------|-------|-------|----------|
+| **Integration** | Business logic, tRPC, DB | Fast (ms) | Vitest + Testcontainers | `tests/integration/` |
+| **Unit** | Pure functions, parsers, utilities | Fast (ms) | Vitest (no DB) | `tests/unit/` |
+| **E2E** | Critical user flows (smoke tests) | Slow (s) | Playwright | `tests/e2e/` |
+
+### When to Use Each Test Type
+
+**Integration tests (primary):**
+- Can I test this with a tRPC call? → Integration test
+- Testing database operations, business logic, auth
+
+**Unit tests:**
+- Is this a pure function with no DB? → Unit test
+- Parsers, generators, formatters, utilities
+
+**E2E tests (smoke tests only):**
+- Is this a critical user journey? → E2E smoke test
+- Login flow, create resource flow, critical paths
+- **NOT** for form validation, toggle states, or UI details
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `bun run test` | Run integration tests |
+| `bunx vitest run --config vitest.config.unit.ts` | Run unit tests |
+| `bun run test:e2e` | Run E2E smoke tests |
+
+---
+
 ## Testing Philosophy
 
 ### 1. Test the Trading Domain, Not Implementation
@@ -310,10 +363,38 @@ describe("statistics", () => {
 
 | Command | Description |
 |---------|-------------|
-| `bun run test` | Run all tests once |
+| `bun run test` | Run integration tests |
+| `bunx vitest run --config vitest.config.unit.ts` | Run unit tests |
 | `bun run test:watch` | Run tests in watch mode |
-| `bun run test:integration` | Run only integration tests |
+| `bun run test:e2e` | Run E2E smoke tests |
 | `bun run test:coverage` | Run tests with coverage report |
+
+---
+
+## Unit Tests
+
+For pure functions that don't need database access.
+
+**Location:** `tests/unit/`
+**Config:** `vitest.config.unit.ts`
+
+### Good Candidates for Unit Tests
+
+- Parsers (CSV, rule triggers)
+- Generators (rule generator, hash functions)
+- Utilities (formatters, calculators)
+- Pure business logic with no DB dependencies
+
+### Example
+
+```typescript
+// tests/unit/rule-generator.test.ts
+describe("parseRLevelFromTrigger", () => {
+  it("should parse +1R pattern", () => {
+    expect(parseRLevelFromTrigger("At +1R take 50%")).toBe(1);
+  });
+});
+```
 
 ---
 
@@ -340,6 +421,8 @@ First run downloads the PostgreSQL Docker image (~150MB). Subsequent runs reuse 
 ---
 
 ## Adding New Tests
+
+### Integration Tests
 
 1. Create a file in `tests/integration/` named `{domain}.test.ts`
 2. Import utilities from `../utils`
@@ -374,4 +457,34 @@ describe("my-feature router", () => {
   });
 });
 ```
+
+### Unit Tests
+
+1. Create a file in `tests/unit/` named `{module}.test.ts`
+2. No database setup needed
+3. Import directly from `@/lib/...`
+
+```typescript
+import { describe, expect, it } from "vitest";
+import { myPureFunction } from "@/lib/my-module";
+
+describe("myPureFunction", () => {
+  it("should return expected result", () => {
+    expect(myPureFunction(input)).toBe(expected);
+  });
+});
+```
+
+### E2E Tests (Smoke Tests Only)
+
+E2E tests are expensive. Only add them for critical user journeys:
+- User can log in and see dashboard
+- User can create a resource and see it
+- User can complete a critical flow end-to-end
+
+**Do NOT write E2E tests for:**
+- Form validation details
+- Toggle/switch state changes
+- Button disabled states
+- Specific styling or layout
 
