@@ -1,32 +1,7 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { env } from "@/env";
-import {
-	getPresignedUploadUrl,
-	getS3Bucket,
-	isS3Configured,
-} from "@/lib/storage/s3";
+import { getPresignedUploadUrl, isS3Configured } from "@/lib/storage/s3";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-
-/**
- * Construct the public URL for an S3 object.
- * Uses the custom domain if configured, otherwise falls back to the S3 endpoint.
- */
-function getPublicUrl(key: string): string {
-	// Use custom domain if configured (e.g., for CDN)
-	if (env.S3_PUBLIC_URL) {
-		return `${env.S3_PUBLIC_URL}/${key}`;
-	}
-
-	// Fall back to S3 endpoint + bucket
-	const bucket = getS3Bucket();
-	const endpoint = env.S3_ENDPOINT ?? "";
-
-	// Remove trailing slash from endpoint if present
-	const cleanEndpoint = endpoint.replace(/\/$/, "");
-
-	return `${cleanEndpoint}/${bucket}/${key}`;
-}
 
 export const storageRouter = createTRPCRouter({
 	/**
@@ -58,12 +33,9 @@ export const storageRouter = createTRPCRouter({
 			// Generate presigned PUT URL (valid for 1 hour)
 			const presignedUrl = getPresignedUploadUrl(key, 3600);
 
-			// Generate public URL for embedding in HTML
-			const publicUrl = getPublicUrl(key);
-
 			return {
 				presignedUrl,
-				publicUrl,
+				key,
 			};
 		}),
 });

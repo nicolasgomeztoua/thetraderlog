@@ -23,6 +23,7 @@ import {
 	instrumentTypeEnum,
 	tradeStatusEnum,
 } from "@/lib/shared";
+import { transformHtmlWithPresignedUrls } from "@/lib/storage/s3";
 import { buildEvaluationContext, evaluateAutoCondition } from "@/lib/strategy";
 import type { AutoCondition } from "@/lib/strategy/types";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
@@ -539,8 +540,14 @@ export const tradesRouter = createTRPCRouter({
 				}
 			}
 
+			// Transform S3 keys in notes to presigned URLs for each item
+			const transformedItems = items.map((item) => ({
+				...item,
+				notes: transformHtmlWithPresignedUrls(item.notes),
+			}));
+
 			return {
-				items,
+				items: transformedItems,
 				nextCursor,
 			};
 		}),
@@ -569,7 +576,11 @@ export const tradesRouter = createTRPCRouter({
 				throw new Error("Trade not found");
 			}
 
-			return trade;
+			// Transform S3 keys in notes to presigned URLs
+			return {
+				...trade,
+				notes: transformHtmlWithPresignedUrls(trade.notes),
+			};
 		}),
 
 	// Create a new trade
