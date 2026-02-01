@@ -100,3 +100,35 @@ Started: Sun Feb  1 15:39:39 WET 2026
 - Existing CircularProgress component is well-written and should be extracted
 
 ---
+
+## 2026-02-01 - US-001 (Create Trading Context Hook)
+
+### What was implemented
+- Created `src/hooks/use-trading-context.ts` hook for dashboard context awareness
+
+### Hook Returns
+- `hasOpenPositions: boolean` - True if user has open trades (status='open' or no exitTime)
+- `tradedToday: boolean` - True if user has any trades today
+- `journaledToday: boolean` - True if dayStartedAt is set OR journal has content
+- `lastTradeTime: Date | null` - Most recent trade entry time
+- `suggestedAction: SuggestedAction` - One of: 'start-journal', 'review-trades', 'log-trade', 'idle'
+- `isLoading: boolean` - True while data is fetching
+
+### suggestedAction Logic
+1. Has open positions → 'review-trades'
+2. Traded today + no journal → 'start-journal'
+3. No trades today → 'log-trade'
+4. Otherwise → 'idle'
+
+### Data Source
+- Uses `dailyJournal.getWithTrades` which returns journal + trades for a date
+- No need for separate trades query - getWithTrades has everything
+
+### Files Changed
+- Created: `src/hooks/use-trading-context.ts`
+
+### Learnings for future iterations
+- getWithTrades already returns trades array with full trade data including status/exitTime
+- No need to query trades.getStats separately for context determination
+
+---
