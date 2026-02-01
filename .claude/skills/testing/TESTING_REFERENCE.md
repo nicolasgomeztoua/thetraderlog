@@ -2,6 +2,44 @@
 
 Complete reference guide for the EdgeJournal testing infrastructure. This document provides in-depth coverage of the testing architecture, fixtures, patterns, and troubleshooting.
 
+---
+
+## Testing Pyramid
+
+```
+        /\
+       /  \     E2E (Smoke tests only)
+      /----\    - Critical user flows
+     /      \   - Login → create → verify
+    /--------\
+   /          \ Unit Tests
+  /            \ - Pure functions
+ /              \ - Parsers, generators
+/----------------\ - Utilities
+|                |
+| Integration    | PRIMARY LAYER
+| Tests          | - tRPC endpoints
+|                | - Business logic
+|                | - Database operations
+|________________| - Fast, reliable
+```
+
+| Layer | Purpose | Speed | Location |
+|-------|---------|-------|----------|
+| **Integration** | Business logic, tRPC, DB | Fast (ms) | `tests/integration/` |
+| **Unit** | Pure functions, parsers, utilities | Fast (ms) | `tests/unit/` |
+| **E2E** | Critical user flows (smoke tests) | Slow (s) | `tests/e2e/` |
+
+### When to Use Each Test Type
+
+| Question | Test Type |
+|----------|-----------|
+| Can I test this with a tRPC call? | Integration test |
+| Is this a pure function with no DB? | Unit test |
+| Is this a critical user journey? | E2E smoke test |
+
+---
+
 ## Architecture Overview
 
 ```
@@ -45,6 +83,13 @@ tests/
 │   └── test-env.ts          # Environment configuration
 ├── integration/
 │   └── accounts.test.ts     # Integration tests for accounts router
+├── unit/
+│   └── rule-generator.test.ts  # Unit tests for pure functions
+├── e2e/
+│   ├── global.setup.ts      # Clerk auth setup
+│   ├── auth.spec.ts         # Auth redirect smoke tests
+│   ├── dashboard.spec.ts    # Dashboard smoke tests
+│   └── strategies.spec.ts   # Strategies smoke tests
 ├── utils/
 │   ├── index.ts             # Re-exports all utilities
 │   ├── caller.ts            # createTestCaller, createUnauthenticatedCaller
@@ -616,10 +661,106 @@ bun run test:watch
 
 | Command | Description |
 |---------|-------------|
-| `bun run test` | Run all tests once |
+| `bun run test` | Run integration tests |
+| `bunx vitest run --config vitest.config.unit.ts` | Run unit tests |
 | `bun run test:watch` | Run tests in watch mode |
-| `bun run test:integration` | Run only integration tests |
+| `bun run test:e2e` | Run E2E smoke tests |
 | `bun run test:coverage` | Run tests with coverage report |
+
+---
+
+## Unit Tests
+
+For pure functions that don't need database access.
+
+### Location & Config
+
+- **Location:** `tests/unit/`
+- **Config:** `vitest.config.unit.ts`
+- **Run:** `bunx vitest run --config vitest.config.unit.ts`
+
+### Good Candidates for Unit Tests
+
+- Parsers (CSV, rule triggers)
+- Generators (rule generator, hash functions)
+- Utilities (formatters, calculators)
+- Pure business logic with no DB dependencies
+
+### Example Unit Test
+
+```typescript
+// tests/unit/rule-generator.test.ts
+import { describe, expect, it } from "vitest";
+import { parseRLevelFromTrigger } from "@/lib/strategy/rule-generator";
+
+describe("parseRLevelFromTrigger", () => {
+  it("should parse +1R pattern", () => {
+    expect(parseRLevelFromTrigger("At +1R take 50%")).toBe(1);
+  });
+
+  it("should return null for text without R-level", () => {
+    expect(parseRLevelFromTrigger("On pullback to EMA")).toBeNull();
+  });
+});
+```
+
+### Unit Test Structure
+
+```typescript
+import { describe, expect, it } from "vitest";
+import { myPureFunction } from "@/lib/my-module";
+
+describe("myPureFunction", () => {
+  it("should handle normal input", () => {
+    expect(myPureFunction(input)).toBe(expected);
+  });
+
+  it("should handle edge cases", () => {
+    expect(myPureFunction(null)).toBe(defaultValue);
+  });
+});
+```
+
+---
+
+## E2E Tests (Smoke Tests Only)
+
+E2E tests are expensive (slow, flaky, hard to maintain). They exist to verify **critical user journeys work end-to-end**, not to test UI details.
+
+### Good E2E Tests
+
+- User can log in and see dashboard
+- User can create a strategy and see it in the list
+- User can import trades and see them in journal
+
+### Bad E2E Tests (Don't Write These)
+
+- Form shows validation error when name is empty
+- Toggle switch changes state when clicked
+- Button is disabled until form is valid
+- Specific UI element has correct styling
+
+These belong in **integration tests** (if they involve backend logic) or simply aren't worth testing.
+
+### Example E2E Smoke Test
+
+```typescript
+test("can create a strategy and see it in the list", async ({ page }, testInfo) => {
+  testInfo.setTimeout(60000);
+
+  await page.goto("/strategies/new");
+  await expect(page.getByTestId("strategy-form")).toBeVisible({ timeout: 15000 });
+
+  const strategyName = `E2E Test ${Date.now()}`;
+  await page.getByTestId("strategy-form-input-name").fill(strategyName);
+  await page.getByTestId("strategy-form-button-submit").click();
+
+  await page.waitForURL(/\/strategies\/[^/]+$/, { timeout: 15000 });
+  await expect(page.getByTestId("strategy-detail-name")).toContainText(strategyName);
+});
+```
+
+---
 
 ## Adding New Tests
 

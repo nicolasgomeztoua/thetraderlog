@@ -127,6 +127,55 @@ function unavailableResult(details: string): AutoEvaluationResult {
 }
 
 // ============================================================================
+// RULE RELEVANCE CHECK
+// ============================================================================
+
+/**
+ * Determines if a rule was relevant to a specific trade based on MFE.
+ *
+ * Some rules are always relevant (risk parameters, position sizing).
+ * MFE-triggered rules (breakeven, scale out, trailing) are only relevant
+ * if the trade's MFE reached the trigger threshold.
+ *
+ * @param condition - The auto condition to check
+ * @param mfeR - Maximum favorable excursion in R-multiples (null if unavailable)
+ * @returns true if the rule should be shown for this trade
+ */
+export function isRuleRelevant(
+	condition: AutoCondition,
+	mfeR: number | null,
+): boolean {
+	switch (condition.type) {
+		// Always-relevant rules: these apply regardless of how the trade moved
+		case "maxRiskPerTrade":
+		case "minRRRatio":
+		case "dailyLossLimit":
+		case "maxConcurrentPositions":
+			return true;
+
+		// MFE-triggered rules: only relevant if MFE reached the trigger
+		case "breakevenTrigger":
+			// If no MFE data, consider irrelevant (can't have triggered)
+			if (mfeR === null) return false;
+			return mfeR >= condition.triggerR;
+
+		case "scaleOutAtR":
+			// If no MFE data, consider irrelevant (can't have reached target)
+			if (mfeR === null) return false;
+			return mfeR >= condition.targetR;
+
+		case "trailingStopTrigger":
+			// If no MFE data, consider irrelevant (can't have triggered)
+			if (mfeR === null) return false;
+			return mfeR >= condition.triggerR;
+
+		default:
+			// Safe default: show unknown rules
+			return true;
+	}
+}
+
+// ============================================================================
 // CORE EVALUATORS
 // ============================================================================
 

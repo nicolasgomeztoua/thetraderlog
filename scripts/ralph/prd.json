@@ -1,418 +1,107 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/strategy-checklist",
-  "description": "Transform strategy form fields into toggleable checklist items with auto-evaluation based on trade data. Integrates with existing compliance scoring.",
+  "branchName": "ralph/clean-rule-checklist",
+  "description": "Remove AUTO/SEMI/MANUAL badges from checklist and hide rules where trigger conditions weren't met (MFE-based relevance filtering)",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Schema Changes for Auto-Trackable Rules",
-      "description": "As a developer, I want to extend the database schema to support auto-trackable rules so that we can store evaluation metadata and rule generation info.",
+      "title": "Add isRuleRelevant Function",
+      "description": "As a developer, I want a utility function that determines if a rule was relevant to a specific trade based on MFE, so that irrelevant rules can be filtered out.",
       "acceptanceCriteria": [
-        "Add to strategyRules table: ruleType enum (manual/auto/semi_auto) with default 'manual'",
-        "Add to strategyRules table: configSource text (e.g., 'riskParameters.maxRiskPerTrade')",
-        "Add to strategyRules table: autoCondition text for JSON evaluation parameters",
-        "Add to strategyRules table: isGenerated boolean (default false)",
-        "Add to strategyRules table: sourceConfigHash text for change detection",
-        "Add to tradeRuleChecks table: evaluationResult text for JSON evaluation details",
-        "Add to tradeRuleChecks table: wasAutoEvaluated boolean (default false)",
-        "Add to tradeRuleChecks table: userOverride boolean (nullable)",
-        "Create ruleTypeEnum pgEnum in schema",
-        "Run bun run db:push successfully",
+        "Add isRuleRelevant(condition: AutoCondition, mfeR: number | null): boolean to src/lib/strategy/evaluation.ts",
+        "Returns true for always-relevant rules: maxRiskPerTrade, minRRRatio, dailyLossLimit, maxConcurrentPositions",
+        "Returns mfeR >= triggerR for breakevenTrigger",
+        "Returns mfeR >= targetR for scaleOutAtR",
+        "Returns mfeR >= triggerR for trailingStopTrigger",
+        "Returns true for unknown condition types (safe default)",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Completed - schema has all required fields"
+      "notes": "Added isRuleRelevant function with exhaustive switch statement covering all AutoCondition types"
     },
     {
       "id": "US-002",
-      "title": "Auto-Evaluation Types",
-      "description": "As a developer, I want TypeScript types for the rule evaluation system so that the codebase is type-safe and self-documenting.",
+      "title": "Update getTradeRuleChecks to Return Relevance Data",
+      "description": "As a frontend, I want the getTradeRuleChecks endpoint to include relevance information so that I can filter which rules to display.",
       "acceptanceCriteria": [
-        "Create /src/lib/strategy/types.ts with RuleType, AutoConditionType, and condition interfaces",
-        "Implement MaxRiskPerTradeCondition, MinRRRatioCondition, BreakevenTriggerCondition interfaces",
-        "Implement ScaleOutAtRCondition, DailyLossLimitCondition, MaxConcurrentPositionsCondition interfaces",
-        "Implement TrailingStopTriggerCondition interface",
-        "Create AutoCondition discriminated union",
-        "Create AutoEvaluationResult interface (passed, actual, expected, details, evaluatedAt, dataQuality)",
-        "Create GeneratedRule interface (text, category, ruleType, configSource, autoCondition, sourceConfigHash)",
-        "Export all types from src/lib/strategy/index.ts",
+        "Modify getTradeRuleChecks in src/server/api/routers/strategies.ts",
+        "Calculate MFE in R for the trade using existing calculateMfeInR()",
+        "For each rule with autoCondition, call isRuleRelevant()",
+        "Add relevantRuleIds: string[] to the response object",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Created types.ts with all condition interfaces and discriminated union"
+      "notes": "Added relevantRuleIds to getTradeRuleChecks response. Calculates MFE in R and uses isRuleRelevant() to determine which rules should be shown."
     },
     {
       "id": "US-003",
-      "title": "Rule Generation Service",
-      "description": "As a developer, I want a service that generates rules from strategy configuration so that config fields automatically become checklist items.",
+      "title": "Integration Tests for Relevance Logic",
+      "description": "As a developer, I want integration tests for the rule relevance logic to verify correct filtering behavior.",
       "acceptanceCriteria": [
-        "Create /src/lib/strategy/rule-generator.ts",
-        "Implement generateRulesFromConfig(riskParams, scalingRules, trailingRules): GeneratedRule[]",
-        "Generate auto rules for: max risk per trade, min R:R ratio, daily loss limit, max concurrent positions, move to breakeven",
-        "Generate auto rules for scale out at XR if R-level parseable from trigger text",
-        "Generate manual rules for scale in rules",
-        "Generate semi_auto rules for trailing stops (fixed ticks), manual for ATR/swing",
-        "Implement hashConfig(config): string for change detection (MD5 first 16 chars)",
-        "Parse R-level from trigger text with regex (e.g., '+1R' → 1.0)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Add tests to tests/integration/strategies.test.ts or create tests/integration/rule-relevance.test.ts",
+        "Test: Rule with breakevenTrigger at 1R is relevant when MFE >= 1R",
+        "Test: Rule with breakevenTrigger at 1R is NOT relevant when MFE < 1R",
+        "Test: Risk rules (maxRiskPerTrade, etc.) are always relevant",
+        "Test: Trade with no MFE data still returns risk rules as relevant",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Created rule-generator.ts with generateRulesFromConfig, hashConfig, and parseRLevelFromTrigger"
+      "notes": "Created tests/integration/rule-relevance.test.ts with 13 tests covering: breakeven trigger relevance above/below/at threshold, risk rules always relevant (maxRiskPerTrade, minRRRatio, dailyLossLimit, maxConcurrentPositions), mixed rules with no MFE data, scaleOutAtR relevance, manual rules always relevant, and trailingStopTrigger relevance."
     },
     {
       "id": "US-004",
-      "title": "Unit Tests for Rule Generator",
-      "description": "As a developer, I want unit tests for the rule generator so that we verify correct rule generation from config.",
+      "title": "Remove Badges from RuleChecklist Component",
+      "description": "As a user, I want the trade checklist to not show AUTO/SEMI/MANUAL badges so that I see a cleaner interface.",
       "acceptanceCriteria": [
-        "Create tests/unit/rule-generator.test.ts",
-        "Test: Risk config with all fields enabled generates correct rules",
-        "Test: Disabled fields do not generate rules",
-        "Test: Scale out rule with 'At +1R take 50%' parses R-level correctly",
-        "Test: Scale in rules generate as manual type",
-        "Test: Trailing stop ATR generates as manual, fixed ticks as semi_auto",
-        "Test: Hash changes when config changes",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
+        "Remove RuleTypeBadge component definition from src/components/strategy/rule-checklist.tsx",
+        "Remove RuleTypeBadge usage from rule rendering",
+        "Remove unused imports: Zap, Info, RotateCcw from lucide-react if no longer needed",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: Trade checklist no longer shows badges"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Created tests/unit/rule-generator.test.ts with 32 tests covering parseRLevelFromTrigger, hashConfig, and generateRulesFromConfig"
+      "notes": "Removed RuleTypeBadge component definition, usage, and unused imports (Zap, Info, RotateCcw). Also removed hasUserOverride variable that was only used for the badge."
     },
     {
       "id": "US-005",
-      "title": "Update RiskParameters Interface with Enabled Toggles",
-      "description": "As a developer, I want to add enabled flags to risk parameter fields so that users can toggle which fields become rules.",
+      "title": "Filter Irrelevant Rules in RuleChecklist",
+      "description": "As a user, I want the trade checklist to only show rules that were relevant to my trade so that I focus on what matters.",
       "acceptanceCriteria": [
-        "Update RiskParameters interface in risk-config.tsx with enabled flags for each field group",
-        "Add positionSizing.enabled, maxRiskPerTrade.enabled, dailyLossLimit.enabled optional booleans",
-        "Add maxConcurrentPositionsEnabled and minRRRatioEnabled optional booleans",
-        "Update Zod schema in strategies router to accept new fields",
+        "RuleChecklist component receives relevantRuleIds from query response",
+        "Filter rules before rendering to only include those in relevantRuleIds",
+        "Rules without autoCondition (pure manual) are always shown",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Build passes (bun run build)",
+        "Verify in browser: Rules that weren't triggered don't appear"
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Added enabled flags to RiskParameters interface and updated Zod schema in strategies router"
+      "notes": "Added relevantRuleIds prop to RuleChecklist, filtering rules via useMemo. Compliance calculation updated to use filtered rules. Backend already includes manual rules in relevantRuleIds."
     },
     {
       "id": "US-006",
-      "title": "Add Toggle Switches to Risk Config UI",
-      "description": "As a user, I want toggle switches next to each risk config field so that I can choose which become checklist rules.",
+      "title": "Remove Badges from StrategyRulesDisplay Component",
+      "description": "As a user, I want the strategy rules display to not show AUTO/SEMI/MANUAL badges.",
       "acceptanceCriteria": [
-        "Add Switch component next to each field group header",
-        "Toggle label: 'Track as rule' in font-mono text-[9px] text-muted-foreground",
-        "Switch follows Terminal design (use existing Switch from shadcn)",
-        "Toggle state binds to enabled field in form data",
-        "Fields: Position sizing, Max risk per trade, Daily loss limit, Max positions, Min R:R",
+        "Remove RULE_TYPE_CONFIG constant from src/components/strategy/strategy-rules-display.tsx",
+        "Remove RuleTypeBadge component",
+        "Remove badge rendering from rules display",
+        "Remove unused imports: Zap, Info from lucide-react if no longer needed",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)",
-        "Verify in browser: toggles render and persist on save"
+        "Verify in browser: Strategy display no longer shows badges"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Created Switch component using radix-ui/react-switch. Added toggle switches to Position Sizing, Max Risk Per Trade, Daily Loss Limit, Max Concurrent Positions, and Min R:R Ratio sections."
-    },
-    {
-      "id": "US-007",
-      "title": "Update ScalingRules Interface with Enabled Toggles",
-      "description": "As a developer, I want enabled flags on scaling rules so that each scale-in/out rule can be toggled.",
-      "acceptanceCriteria": [
-        "Update ScalingRules interface with scaleIn[].enabled and scaleOut[].enabled optional booleans",
-        "Update Zod schema in strategies router to accept new fields",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Added enabled?: boolean to both scaleIn and scaleOut array item types in ScalingRules interface and Zod schema"
-    },
-    {
-      "id": "US-008",
-      "title": "Add Toggle Switches to Scaling Config UI",
-      "description": "As a user, I want toggles on each scaling rule so that I can choose which become checklist items.",
-      "acceptanceCriteria": [
-        "Each scale-in rule row gets a toggle switch",
-        "Each scale-out rule row gets a toggle switch",
-        "Compact toggle design to fit in rule row",
-        "Toggle state binds to rule's enabled field",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Added Switch component to each scale-in and scale-out rule row. Compact 'Track' label with toggle. Updated updateScaleIn/updateScaleOut functions to support enabled field."
-    },
-    {
-      "id": "US-009",
-      "title": "Update TrailingRules Interface with Enabled Toggles",
-      "description": "As a developer, I want enabled flags on trailing rules so that each can be toggled for tracking.",
-      "acceptanceCriteria": [
-        "Update TrailingRules interface with moveToBreakeven.enabled and trailStops[].enabled optional booleans",
-        "Update Zod schema in strategies router to accept new fields",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Added enabled?: boolean to moveToBreakeven and trailStops[] in TrailingRules interface and Zod schema"
-    },
-    {
-      "id": "US-010",
-      "title": "Add Toggle Switches to Trailing Config UI",
-      "description": "As a user, I want toggles on trailing stop rules so that I can choose which become checklist items.",
-      "acceptanceCriteria": [
-        "Move to breakeven section gets toggle switch",
-        "Each trailing stop rule row gets toggle switch",
-        "Compact toggle design consistent with scaling config",
-        "Toggle state binds to enabled field",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Added Switch component import, toggle to breakeven section, toggle to each trailing stop rule row. Updated updateBreakeven and updateTrailStop functions to support enabled field."
-    },
-    {
-      "id": "US-011",
-      "title": "Sync Generated Rules Endpoint",
-      "description": "As a developer, I want a tRPC endpoint to sync auto-generated rules with strategy config so that rules stay in sync with configuration.",
-      "acceptanceCriteria": [
-        "Add syncGeneratedRules mutation to strategies router",
-        "Input: { strategyId: z.string() }",
-        "Fetch strategy with parsed JSON configs",
-        "Call generateRulesFromConfig() to get desired rules",
-        "Compare with existing isGenerated: true rules by configSource",
-        "Add new rules, update changed rules (by hash mismatch), delete orphaned rules",
-        "Preserve manual rules (isGenerated: false)",
-        "Return { added: number, updated: number, deleted: number }",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": "Added syncGeneratedRules mutation to strategies router. Updated rule generator to respect enabled flags. Updated unit tests."
-    },
-    {
-      "id": "US-012",
-      "title": "Integrate Rule Sync into Strategy Save",
-      "description": "As a developer, I want rules to sync automatically when a strategy is saved so that config changes immediately reflect in rules.",
-      "acceptanceCriteria": [
-        "After strategies.create inserts strategy, call rule sync logic",
-        "After strategies.update updates strategy, call rule sync logic",
-        "Sync happens in same transaction where possible",
-        "Generated rules appear immediately in strategy detail",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify: Create strategy with enabled config, rules appear"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": "Extracted syncGeneratedRulesInternal helper. Create and update mutations auto-sync generated rules. Update preserves manual rules. Duplicate preserves generated rule metadata."
-    },
-    {
-      "id": "US-013",
-      "title": "Integration Tests for Rule Sync",
-      "description": "As a developer, I want integration tests for rule syncing so that we verify the sync logic works correctly.",
-      "acceptanceCriteria": [
-        "Create tests/integration/strategy-rules-sync.test.ts",
-        "Test: Creating strategy with enabled config generates rules",
-        "Test: Updating config value updates rule text",
-        "Test: Disabling config deletes generated rule",
-        "Test: Manual rules are not affected by sync",
-        "Test: Hash prevents unnecessary updates",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": "Created tests/integration/strategy-rules-sync.test.ts with 17 test cases. Tests cover: creating strategies with enabled configs (7 tests), updating config values (2 tests), disabling config deletes rules (2 tests), manual rules preserved (2 tests), hash change detection (2 tests), syncGeneratedRules endpoint (2 tests). Biome check and build pass. Note: Docker required for integration tests to run."
-    },
-    {
-      "id": "US-014",
-      "title": "Auto-Evaluation Engine - Core Evaluators",
-      "description": "As a developer, I want evaluation functions for each auto-trackable condition so that trades can be automatically checked against rules.",
-      "acceptanceCriteria": [
-        "Create /src/lib/strategy/evaluation.ts",
-        "Implement evaluateAutoCondition(condition, trade, context): AutoEvaluationResult dispatcher",
-        "Implement evaluateMaxRiskPerTrade - abs(entry-stop) * pointValue * qty <= limit",
-        "Implement evaluateMinRRRatio - plannedRR >= minRatio",
-        "Implement evaluateBreakevenTrigger - if MFE >= triggerR, check trailedStopLoss >= entry",
-        "Implement evaluateScaleOutAtR - find TradeExecutions near target price",
-        "Implement evaluateDailyLossLimit - sum day's trades P&L > -limit",
-        "Implement evaluateMaxConcurrentPositions - count open trades at entry <= max",
-        "Define EvaluationContext interface (executions, dayTrades, concurrentTrades, mfeR)",
-        "Handle missing data: return dataQuality: 'unavailable' gracefully",
-        "Reuse existing calculations from src/lib/trades/calculations.ts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": "Created evaluation.ts with all 6 core evaluators (maxRisk, minRR, breakeven, scaleOut, dailyLoss, maxConcurrent) plus EvaluationContext interface and calculateMfeInR helper. TrailingStopTrigger returns unavailable as it's semi_auto requiring manual verification."
-    },
-    {
-      "id": "US-015",
-      "title": "Build Evaluation Context Helper",
-      "description": "As a developer, I want a helper to build evaluation context so that endpoints can easily get required data.",
-      "acceptanceCriteria": [
-        "Add buildEvaluationContext(db, trade, userId): Promise<EvaluationContext> in evaluation.ts",
-        "Fetch trade executions",
-        "Fetch other trades on same calendar day (for daily loss limit)",
-        "Count trades that were open at trade's entry time (for max concurrent)",
-        "Calculate MFE in R-multiples if stopLoss exists",
-        "Efficient queries (minimize DB round trips)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 15,
-      "passes": true,
-      "notes": "Added buildEvaluationContext async helper with 4 parallel queries: fetchTradeExecutions, fetchSameDayTrades, countConcurrentTrades, fetchAccountBalance. Uses getUserTimezone for date boundaries. TradeWithAccount interface for type-safe trade input."
-    },
-    {
-      "id": "US-016",
-      "title": "Evaluate Trade Rules Endpoint",
-      "description": "As a developer, I want a tRPC endpoint to auto-evaluate rules for a trade so that the UI can trigger evaluation.",
-      "acceptanceCriteria": [
-        "Add evaluateTradeRules mutation to strategies router",
-        "Input: { tradeId: z.string() }",
-        "Validate trade ownership and has strategy",
-        "Build evaluation context",
-        "Loop through strategy rules where ruleType !== 'manual'",
-        "Call evaluateAutoCondition for each",
-        "Upsert tradeRuleChecks with checked = result.passed, evaluationResult, wasAutoEvaluated = true",
-        "Return { evaluated: number, results: AutoEvaluationResult[] }",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 16,
-      "passes": true,
-      "notes": "Added evaluateTradeRules mutation to strategies router. Takes tradeId, validates ownership and strategy, builds evaluation context via buildEvaluationContext, loops through non-manual rules with autoCondition, calls evaluateAutoCondition, and upserts tradeRuleChecks with passed, evaluationResult JSON, wasAutoEvaluated=true."
-    },
-    {
-      "id": "US-017",
-      "title": "Integration Tests for Auto-Evaluation",
-      "description": "As a developer, I want integration tests for the evaluation engine so that we verify evaluators return correct results.",
-      "acceptanceCriteria": [
-        "Create tests/integration/strategy-evaluation.test.ts",
-        "Test max risk evaluator: passing case (risk below limit)",
-        "Test max risk evaluator: failing case (risk above limit)",
-        "Test min R:R evaluator: passing and failing",
-        "Test breakeven evaluator: MFE reached, SL moved",
-        "Test breakeven evaluator: MFE reached, SL not moved",
-        "Test breakeven evaluator: MFE not reached (rule N/A)",
-        "Test scale out evaluator with matching TradeExecution",
-        "Test daily loss limit with multiple trades",
-        "Test missing data returns dataQuality: 'unavailable'",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 17,
-      "passes": true,
-      "notes": "Created tests/integration/strategy-evaluation.test.ts with 23 test cases covering all evaluators (maxRisk, minRR, breakeven, scaleOut, dailyLoss, maxConcurrent), missing data handling, manual rule skipping, percent-based risk, and short trades. Biome check and build pass. Note: Docker required for integration tests to run."
-    },
-    {
-      "id": "US-018",
-      "title": "Update Rules Display with Rule Type Badges",
-      "description": "As a user, I want to see which rules are auto-tracked vs manual so that I understand how compliance is calculated.",
-      "acceptanceCriteria": [
-        "Add rule type badge to each rule in strategy-rules-display.tsx",
-        "AUTO badge: bg-profit/20 text-profit with Zap icon",
-        "SEMI badge: bg-accent/20 text-accent with Info icon",
-        "MANUAL badge: bg-white/10 text-muted-foreground with ArrowRight icon",
-        "Badge text: font-mono text-[8px]",
-        "Shows after category color indicator",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: badges appear correctly"
-      ],
-      "priority": 18,
-      "passes": true,
-      "notes": "Added RuleTypeBadge component with AUTO (Zap icon, profit colors), SEMI (Info icon, accent colors), MANUAL (ArrowRight icon, muted colors). Updated Rule interface with optional ruleType. Updated strategy detail page to pass ruleType to StrategyRulesDisplay."
-    },
-    {
-      "id": "US-019",
-      "title": "Enhanced Trade Checklist with Evaluation Results",
-      "description": "As a user, I want to see auto-evaluation results in the trade checklist so that I understand why rules passed/failed.",
-      "acceptanceCriteria": [
-        "Update rule-checklist.tsx to show evaluation results",
-        "For auto rules with evaluationResult: show CheckCircle (green) or XCircle (red) based on passed",
-        "Show 'actual / expected' in font-mono text-[10px] text-muted-foreground",
-        "Auto-evaluated checkboxes are disabled (checked state from evaluation)",
-        "Add 'Override' button for auto rules (enables manual check)",
-        "Parse evaluationResult JSON from tradeRuleChecks",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 19,
-      "passes": true,
-      "notes": "Enhanced rule-checklist.tsx with auto-evaluation display: CheckCircle/XCircle indicators, actual/expected values, disabled checkboxes for auto-evaluated rules, Override button. Updated checkRule mutation to support userOverride field."
-    },
-    {
-      "id": "US-020",
-      "title": "User Override for Auto-Evaluated Rules",
-      "description": "As a user, I want to override auto-evaluation results so that I can correct system mistakes.",
-      "acceptanceCriteria": [
-        "'Override' button toggles userOverride state",
-        "When override active: checkbox becomes editable, badge shows 'OVERRIDDEN' in orange",
-        "User can check/uncheck when overridden",
-        "Save override via existing checkRule mutation (add userOverride field)",
-        "Update tradeRuleChecks with userOverride boolean",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 20,
-      "passes": true,
-      "notes": "Fixed OVERRIDDEN badge to show when user enters override mode. Override functionality was already implemented in US-019."
-    },
-    {
-      "id": "US-021",
-      "title": "Trigger Auto-Evaluation on Trade Close",
-      "description": "As a developer, I want rules to auto-evaluate when a trade closes so that compliance is calculated automatically.",
-      "acceptanceCriteria": [
-        "In trades router, when trade status changes to 'closed': check if trade has strategyId",
-        "Call evaluateTradeRules logic inline (not separate endpoint call)",
-        "Handle errors gracefully (don't fail trade close)",
-        "Evaluation happens after trade is saved with final data",
-        "Works for both manual close and stop loss hit",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify: Close trade, check rule evaluations appear"
-      ],
-      "priority": 21,
-      "passes": true,
-      "notes": "Added autoEvaluateTradeRules helper to trades router. Integrated into close mutation and update mutation (when status changes to closed). Errors are caught and logged - trade close won't fail. Preserves existing user overrides."
-    },
-    {
-      "id": "US-022",
-      "title": "E2E Tests for Strategy Checklist Flow",
-      "description": "As a developer, I want E2E tests for the complete checklist flow so that we verify the feature works end-to-end.",
-      "acceptanceCriteria": [
-        "Create tests/e2e/strategy-checklist.spec.ts",
-        "Test flow: Create strategy with max risk enabled toggle",
-        "Test flow: Verify rule appears in strategy detail with AUTO badge",
-        "Test flow: Create trade linked to strategy",
-        "Test flow: Close trade",
-        "Test flow: Navigate to trade detail",
-        "Test flow: Verify auto-evaluation result shows in checklist",
-        "Test flow: Override an auto-evaluated rule",
-        "Test flow: Verify compliance score updates",
-        "Add data-testid attributes to new UI elements",
-        "All tests pass (bun run test:e2e)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 22,
-      "passes": true,
-      "notes": "Created tests/e2e/strategy-checklist.spec.ts with 10 tests covering: risk toggle visibility, toggle state changes, strategy detail rules section, AUTO badge detection, form navigation, submit button state, trade checklist visibility, rules display categories, and full create strategy flow. Added data-testid attributes to: strategy-form, strategy-form-tab-*, strategy-form-input-name, strategy-form-button-submit, risk-config-max-risk-toggle, risk-config-max-risk-value, rule-checklist, rule-checklist-compliance, rule-checklist-compliance-value."
+      "notes": "Removed RULE_TYPE_CONFIG, RuleTypeBadge component, and unused imports (Zap, Info). Also cleaned up Rule interface by removing ruleType field."
     }
   ]
 }

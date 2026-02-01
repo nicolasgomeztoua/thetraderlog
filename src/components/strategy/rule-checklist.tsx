@@ -1,14 +1,6 @@
 "use client";
 
-import {
-	CheckCircle,
-	CheckCircle2,
-	Circle,
-	Info,
-	RotateCcw,
-	XCircle,
-	Zap,
-} from "lucide-react";
+import { CheckCircle, CheckCircle2, Circle, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -38,6 +30,7 @@ interface RuleChecklistProps {
 	tradeId: string;
 	rules: Rule[];
 	checks: RuleCheck[];
+	relevantRuleIds?: string[];
 	onUpdate?: () => void;
 	onComplianceChange?: (compliance: number) => void;
 }
@@ -81,63 +74,11 @@ function formatEvalValue(value: number | string | null): string {
 	return String(value);
 }
 
-// Rule type badge component
-function RuleTypeBadge({
-	ruleType,
-	isOverridden,
-}: {
-	ruleType: RuleType;
-	isOverridden: boolean;
-}) {
-	if (isOverridden) {
-		return (
-			<span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-orange-500/20 px-1 py-0.5 font-mono text-[8px] text-orange-400">
-				<RotateCcw className="h-2 w-2" />
-				OVERRIDDEN
-			</span>
-		);
-	}
-
-	const config: Record<
-		RuleType,
-		{ label: string; icon: React.ReactNode; className: string }
-	> = {
-		auto: {
-			label: "AUTO",
-			icon: <Zap className="h-2 w-2" />,
-			className: "bg-profit/20 text-profit",
-		},
-		semi_auto: {
-			label: "SEMI",
-			icon: <Info className="h-2 w-2" />,
-			className: "bg-accent/20 text-accent",
-		},
-		manual: {
-			label: "MANUAL",
-			icon: null,
-			className: "bg-white/10 text-muted-foreground",
-		},
-	};
-
-	const { label, icon, className } = config[ruleType];
-
-	return (
-		<span
-			className={cn(
-				"inline-flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[8px]",
-				className,
-			)}
-		>
-			{icon}
-			{label}
-		</span>
-	);
-}
-
 export function RuleChecklist({
 	tradeId,
 	rules,
 	checks,
+	relevantRuleIds,
 	onUpdate,
 	onComplianceChange,
 }: RuleChecklistProps) {
@@ -192,10 +133,20 @@ export function RuleChecklist({
 		});
 	}, []);
 
+	// Filter rules to only include relevant ones
+	const filteredRules = useMemo(() => {
+		// If no relevantRuleIds provided, show all rules (backwards compatibility)
+		if (!relevantRuleIds) {
+			return rules;
+		}
+		const relevantSet = new Set(relevantRuleIds);
+		return rules.filter((rule) => relevantSet.has(rule.id));
+	}, [rules, relevantRuleIds]);
+
 	// Group rules by category
 	const groupedRules = useMemo(() => {
 		const groups: Record<string, Rule[]> = {};
-		for (const rule of rules) {
+		for (const rule of filteredRules) {
 			const category = rule.category;
 			if (!groups[category]) {
 				groups[category] = [];
@@ -203,7 +154,7 @@ export function RuleChecklist({
 			groups[category].push(rule);
 		}
 		return groups;
-	}, [rules]);
+	}, [filteredRules]);
 
 	// Get check data for a rule
 	const getCheckData = useCallback(
@@ -227,23 +178,23 @@ export function RuleChecklist({
 		[optimisticUpdates, checks],
 	);
 
-	// Calculate optimistic compliance
+	// Calculate optimistic compliance based on filtered (relevant) rules
 	const optimisticCompliance = useMemo(() => {
-		if (rules.length === 0) return 100;
-		const checkedCount = rules.filter((r) => isChecked(r.id)).length;
-		return (checkedCount / rules.length) * 100;
-	}, [rules, isChecked]);
+		if (filteredRules.length === 0) return 100;
+		const checkedCount = filteredRules.filter((r) => isChecked(r.id)).length;
+		return (checkedCount / filteredRules.length) * 100;
+	}, [filteredRules, isChecked]);
 
 	// Notify parent of compliance changes
 	useEffect(() => {
 		onComplianceChange?.(optimisticCompliance);
 	}, [optimisticCompliance, onComplianceChange]);
 
-	if (rules.length === 0) {
+	if (filteredRules.length === 0) {
 		return (
 			<div className="py-8 text-center">
 				<p className="font-mono text-muted-foreground text-sm">
-					No rules defined for this strategy
+					No relevant rules for this trade
 				</p>
 			</div>
 		);
@@ -310,7 +261,6 @@ export function RuleChecklist({
 										checkData?.evaluationResult,
 									);
 									const isAutoEvaluated = checkData?.wasAutoEvaluated ?? false;
-									const hasUserOverride = checkData?.userOverride === true;
 									const isInOverrideMode = overrideMode.has(rule.id);
 									const isAutoRule =
 										rule.ruleType === "auto" || rule.ruleType === "semi_auto";
@@ -366,32 +316,22 @@ export function RuleChecklist({
 
 												{/* Rule content */}
 												<div className="flex-1">
-													<div className="flex items-center gap-2">
-														{rule.ruleType && rule.ruleType !== "manual" && (
-															<RuleTypeBadge
-																isOverridden={
-																	hasUserOverride || isInOverrideMode
-																}
-																ruleType={rule.ruleType}
-															/>
+													<label
+														className={cn(
+															"font-mono text-sm",
+															isCheckboxDisabled
+																? "cursor-default"
+																: "cursor-pointer",
+															checked
+																? "text-foreground"
+																: "text-muted-foreground",
 														)}
-														<label
-															className={cn(
-																"flex-1 font-mono text-sm",
-																isCheckboxDisabled
-																	? "cursor-default"
-																	: "cursor-pointer",
-																checked
-																	? "text-foreground"
-																	: "text-muted-foreground",
-															)}
-															htmlFor={
-																isCheckboxDisabled ? undefined : checkboxId
-															}
-														>
-															{rule.text}
-														</label>
-													</div>
+														htmlFor={
+															isCheckboxDisabled ? undefined : checkboxId
+														}
+													>
+														{rule.text}
+													</label>
 
 													{/* Evaluation details for auto rules */}
 													{isAutoEvaluated && evalResult && (

@@ -138,3 +138,51 @@ export async function objectExists(key: string): Promise<boolean> {
 	const client = getS3Client();
 	return client.exists(key);
 }
+
+/**
+ * Transform HTML content by replacing S3 keys in img src with presigned URLs.
+ * S3 keys are stored in the format: images/{userId}/{context}/{uuid}-{filename}
+ * or attachments/{userId}/{entityType}/{entityId}/{uuid}-{filename}
+ *
+ * @param html - HTML string potentially containing S3 keys in img src
+ * @returns HTML with S3 keys replaced by presigned URLs, or null if input is null
+ */
+export function transformHtmlWithPresignedUrls(
+	html: string | null,
+): string | null {
+	if (!html || !isS3Configured()) return html;
+
+	// Match img src with S3 keys (paths starting with "images/" or "attachments/")
+	// Captures: <img ... src="images/user_xxx/context/file.png" ...>
+	// Or: <img ... src="attachments/user_xxx/trade/tr-xxx/file.png" ...>
+	return html.replace(
+		/(<img[^>]*\ssrc=")((?:images|attachments)\/[^"]+)("[^>]*>)/gi,
+		(_, before: string, key: string, after: string) => {
+			const url = getPresignedDownloadUrl(key, 3600);
+			return `${before}${url}${after}`;
+		},
+	);
+}
+
+/**
+ * Extract S3 keys from HTML content for orphan tracking.
+ * Finds all img src attributes that contain S3 object keys.
+ *
+ * @param html - HTML string potentially containing S3 keys in img src
+ * @returns Array of S3 keys found in the HTML
+ */
+export function extractS3KeysFromHtml(html: string | null): string[] {
+	if (!html) return [];
+
+	const keys: string[] = [];
+	// Match img src with S3 keys (paths starting with "images/" or "attachments/")
+	const regex = /<img[^>]*\ssrc="((?:images|attachments)\/[^"]+)"[^>]*>/gi;
+
+	for (const match of html.matchAll(regex)) {
+		if (match[1]) {
+			keys.push(match[1]);
+		}
+	}
+
+	return keys;
+}

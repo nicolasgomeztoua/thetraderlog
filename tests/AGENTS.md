@@ -4,6 +4,42 @@
 
 **Reference:** `.claude/skills/testing/SKILL.md` (integration), `.claude/skills/e2e-testing/SKILL.md` (E2E)
 
+---
+
+## Testing Pyramid Philosophy
+
+```
+        /\
+       /  \     E2E (Smoke tests only)
+      /----\    - Critical user flows
+     /      \   - Login → create → verify
+    /--------\
+   /          \ Unit Tests
+  /            \ - Pure functions
+ /              \ - Parsers, generators
+/----------------\ - Utilities
+|                |
+| Integration    | PRIMARY LAYER
+| Tests          | - tRPC endpoints
+|                | - Business logic
+|                | - Database operations
+|________________| - Fast, reliable
+```
+
+### When to Write Which Test Type
+
+| Question | Test Type |
+|----------|-----------|
+| Can I test this with a tRPC call? | Integration test |
+| Is this a pure function with no DB? | Unit test |
+| Is this a critical user journey? | E2E smoke test |
+
+**Integration tests are king.** They're fast, reliable, and test real business logic with a real DB.
+
+**E2E tests are smoke tests only.** Don't write detailed UI tests for form validation, toggle states, or button behaviors. Those belong in integration tests or aren't worth testing.
+
+---
+
 ## Unit Test Patterns
 
 ### Running Unit Tests (No Database Required)
@@ -45,49 +81,34 @@ Example: Trade at `new Date("2025-01-16T04:00:00Z")` is 11 PM EST on Jan 15.
 - Total trades: `sum of (bucket.tradeCount * bucket.days)`
 - Total days: `sum of bucket.days`
 
-## E2E Test Patterns
+## E2E Test Patterns (Smoke Tests Only)
 
-### Strict Mode: Use data-testid (Critical)
-**Problem:** Playwright strict mode fails when locators match multiple elements:
-```
-Error: strict mode violation - [class*="cl-signIn"] resolved to 3 elements
-```
-**Solution:** Always use `data-testid` attributes instead of CSS classes or vague text selectors:
+E2E tests are expensive (slow, flaky, hard to maintain). Use them sparingly for critical user journeys only.
+
+**Good E2E tests:**
+- User can log in and see dashboard
+- User can create a strategy and see it in the list
+- User can import trades and see them in journal
+
+**Bad E2E tests (don't write these):**
+- Form shows validation error when name is empty
+- Toggle switch changes state when clicked
+- Button is disabled until form is valid
+- Specific UI element has correct styling
+
+### Use data-testid for Selectors
 ```typescript
-// Bad - matches multiple elements
-page.locator('[class*="cl-signIn"]')
-page.locator('text="Dashboard"')  // matches nav AND heading
-
 // Good - unique selectors
-page.getByTestId("dashboard-heading-overview")
-page.locator('[data-clerk-component="SignIn"]')  // Clerk's own attribute
+page.getByTestId("strategies-header")
+
+// Bad - matches multiple elements
+page.locator('text="Dashboard"')
 ```
 
-### Handle Loading States
-**Problem:** Test finds element but it's still showing skeleton (no content)
-**Solution:** Add same `data-testid` to BOTH skeleton and loaded state, then wait for child element:
+### Wait for Loading States
 ```typescript
-// Component has data-testid on both loading and loaded divs
 const hero = page.getByTestId("dashboard-hero-journal");
-await expect(hero).toBeVisible();
-
-// Wait for button that only exists after loading
-const button = hero.getByRole("button", { name: /start/i });
-await expect(button).toBeVisible({ timeout: 10000 });
-```
-
-### Unauthenticated Tests
-**When:** Testing auth redirects
-**How:** Clear storage state at test level:
-```typescript
-test.describe("Auth Redirects", () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
-
-  test("redirects to sign-in", async ({ page }) => {
-    await page.goto("/protected-route");
-    await page.waitForURL(/\/sign-in/, { timeout: 15000 });
-  });
-});
+await expect(hero).toBeVisible({ timeout: 10000 });
 ```
 
 ## Gotchas

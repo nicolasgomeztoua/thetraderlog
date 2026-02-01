@@ -2,6 +2,50 @@
 
 You are a test engineer working on EdgeJournal, a professional trading journal application. You write tests that validate trading behavior using domain-driven language.
 
+---
+
+## Testing Pyramid
+
+```
+        /\
+       /  \     E2E (Smoke tests only)
+      /----\    - Critical user flows
+     /      \   - Login → create → verify
+    /--------\
+   /          \ Unit Tests
+  /            \ - Pure functions
+ /              \ - Parsers, generators
+/----------------\ - Utilities
+|                |
+| Integration    | PRIMARY LAYER
+| Tests          | - tRPC endpoints
+|                | - Business logic
+|                | - Database operations
+|________________| - Fast, reliable
+```
+
+| Layer | Purpose | Speed | Location |
+|-------|---------|-------|----------|
+| **Integration** | Business logic, tRPC, DB | Fast (ms) | `tests/integration/` |
+| **Unit** | Pure functions, parsers, utilities | Fast (ms) | `tests/unit/` |
+| **E2E** | Critical user flows (smoke tests) | Slow (s) | `tests/e2e/` |
+
+### When to Use Each Test Type
+
+| Question | Test Type |
+|----------|-----------|
+| Can I test this with a tRPC call? | Integration test |
+| Is this a pure function with no DB? | Unit test |
+| Is this a critical user journey? | E2E smoke test |
+
+**Integration tests are king.** They're fast, reliable, and test real business logic with a real DB.
+
+**Unit tests for pure logic.** Parsers, generators, utilities that don't need database access.
+
+**E2E tests are smoke tests only.** Don't write detailed UI tests for form validation, toggle states, or button behaviors.
+
+---
+
 ## Testing Philosophy
 
 ### 1. Test Trading Behavior, Not Implementation
@@ -268,9 +312,10 @@ it("should reject unauthenticated requests", async () => {
 
 | Command | Description |
 |---------|-------------|
-| `bun run test` | Run all tests once |
+| `bun run test` | Run integration tests |
+| `bunx vitest run --config vitest.config.unit.ts` | Run unit tests |
 | `bun run test:watch` | Run tests in watch mode |
-| `bun run test:integration` | Run only integration tests |
+| `bun run test:e2e` | Run E2E smoke tests |
 | `bun run test:coverage` | Run tests with coverage report |
 
 ## File Locations
@@ -278,9 +323,12 @@ it("should reject unauthenticated requests", async () => {
 | Path | Purpose |
 |------|---------|
 | `tests/integration/` | Integration tests (tRPC routers) |
+| `tests/unit/` | Unit tests (pure functions) |
+| `tests/e2e/` | E2E smoke tests (Playwright) |
 | `tests/utils/` | Test utilities and fixtures |
 | `tests/setup.ts` | Global test setup (Testcontainers) |
-| `vitest.config.ts` | Vitest configuration |
+| `vitest.config.ts` | Vitest configuration (integration) |
+| `vitest.config.unit.ts` | Vitest configuration (unit) |
 
 ## Troubleshooting
 

@@ -228,7 +228,7 @@ export default function TradeDetailPage() {
 		(field: string, value: string | number | boolean | null) => {
 			updateTrade.mutate({
 				id: tradeId,
-				[field]: value === "" ? null : value,
+				[field]: value === "" ? undefined : value,
 			});
 		},
 		[tradeId, updateTrade],

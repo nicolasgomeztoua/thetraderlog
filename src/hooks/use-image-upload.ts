@@ -8,7 +8,7 @@ interface UseImageUploadOptions {
 }
 
 interface UseImageUploadReturn {
-	/** Upload an image file and return the public URL */
+	/** Upload an image file and return the S3 key */
 	uploadImage: (file: File) => Promise<string | null>;
 }
 
@@ -44,8 +44,8 @@ export function useImageUpload({
 			const toastId = toast.loading("Uploading... 0%");
 
 			try {
-				// Get presigned upload URL
-				const { presignedUrl, publicUrl } = await getUploadUrl.mutateAsync({
+				// Get presigned upload URL and S3 key
+				const { presignedUrl, key } = await getUploadUrl.mutateAsync({
 					filename: file.name,
 					mimeType: file.type,
 					size: file.size,
@@ -85,7 +85,8 @@ export function useImageUpload({
 				});
 
 				toast.success("Image uploaded", { id: toastId });
-				return publicUrl;
+				// Return S3 key (not URL) - will be transformed to presigned URL when loading
+				return key;
 			} catch (error) {
 				console.error("Image upload failed:", error);
 				toast.error("Upload failed", { id: toastId });

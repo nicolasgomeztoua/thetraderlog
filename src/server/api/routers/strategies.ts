@@ -7,8 +7,10 @@ import type { TrailingRules } from "@/components/strategy/trailing-config";
 import { calculateAggregateStats } from "@/lib/analytics";
 import {
 	buildEvaluationContext,
+	calculateMfeInR,
 	evaluateAutoCondition,
 	generateRulesFromConfig,
+	isRuleRelevant,
 } from "@/lib/strategy";
 import type { AutoCondition, AutoEvaluationResult } from "@/lib/strategy/types";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
@@ -862,11 +864,56 @@ export const strategiesRouter = createTRPCRouter({
 			}
 
 			if (!trade.strategy) {
-				return { strategy: null, rules: [], checks: [], compliance: 0 };
+				return {
+					strategy: null,
+					rules: [],
+					checks: [],
+					compliance: 0,
+					relevantRuleIds: [],
+				};
 			}
 
 			const rules = trade.strategy.rules;
 			const checks = trade.ruleChecks;
+
+			// Calculate MFE in R-multiples for relevance filtering
+			const mfeR = calculateMfeInR({
+				id: trade.id,
+				symbol: trade.symbol,
+				instrumentType: trade.instrumentType,
+				direction: trade.direction,
+				entryPrice: trade.entryPrice,
+				exitPrice: trade.exitPrice,
+				quantity: trade.quantity,
+				stopLoss: trade.stopLoss,
+				takeProfit: trade.takeProfit,
+				trailedStopLoss: trade.trailedStopLoss,
+				wasTrailed: trade.wasTrailed,
+				netPnl: trade.netPnl,
+				mfePrice: trade.mfePrice,
+				mfeAmount: trade.mfeAmount,
+			});
+
+			// Determine which rules are relevant based on MFE
+			const relevantRuleIds: string[] = [];
+			for (const rule of rules) {
+				// Rules without autoCondition (pure manual) are always relevant
+				if (!rule.autoCondition) {
+					relevantRuleIds.push(rule.id);
+					continue;
+				}
+
+				// Parse the auto condition and check relevance
+				try {
+					const condition = JSON.parse(rule.autoCondition) as AutoCondition;
+					if (isRuleRelevant(condition, mfeR)) {
+						relevantRuleIds.push(rule.id);
+					}
+				} catch {
+					// Invalid JSON - consider the rule relevant (safe default)
+					relevantRuleIds.push(rule.id);
+				}
+			}
 
 			// Calculate compliance
 			const totalRules = rules.length;
@@ -882,6 +929,7 @@ export const strategiesRouter = createTRPCRouter({
 				rules,
 				checks,
 				compliance,
+				relevantRuleIds,
 			};
 		}),
 

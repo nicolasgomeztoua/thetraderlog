@@ -204,6 +204,7 @@ function StrategySection({
 					onUpdate={() =>
 						utils.strategies.getTradeRuleChecks.invalidate({ tradeId })
 					}
+					relevantRuleIds={ruleChecksData.relevantRuleIds}
 					rules={ruleChecksData.rules}
 					tradeId={tradeId}
 				/>

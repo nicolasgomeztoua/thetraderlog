@@ -20,49 +20,64 @@ Fix any issues found, commit with descriptive messages.
 
 ## Step 1: Run Full Test Suite
 
-Run both integration and E2E tests to catch any regressions:
+Run tests based on what changed. **Integration tests are the priority.**
 
 ```bash
-# Integration tests (if backend changed)
+# Integration tests (PRIMARY - always run if backend changed)
 bun run test
 
-# E2E tests (if frontend changed)
+# Unit tests (if pure functions changed)
+bunx vitest run --config vitest.config.unit.ts
+
+# E2E smoke tests (only if frontend UI flow changed)
 bun run test:e2e
 ```
+
+**Testing Pyramid:**
+- **Integration tests are king** - Fast, reliable, test real business logic with real DB
+- **Unit tests for pure logic** - Parsers, generators, utilities (no DB needed)
+- **E2E tests are smoke tests only** - Just verify critical flows work end-to-end
 
 If tests fail:
 1. Fix the issue
 2. Commit with `fix: failing test - description`
 3. Re-run until all pass
 
-**Reference:** `.claude/skills/e2e-testing/SKILL.md` for E2E patterns.
+**Reference:** `.claude/skills/testing/SKILL.md` for test patterns.
 
 ## Step 2: Verify Test Coverage
 
-Check that all new code has corresponding tests:
+Check that new code has appropriate test coverage. **Prioritize integration tests.**
 
 ```bash
-# Find new/modified UI components without E2E tests
-git diff main --name-only | grep -E "components/.*\.tsx$|app/.*page\.tsx$" | while read f; do
-  basename=$(basename "$f" .tsx)
-  if ! grep -rq "$basename" tests/e2e/; then
-    echo "WARNING: No E2E test found for $f"
-  fi
-done
-
-# Find new/modified routers without integration tests
+# Find new/modified routers without integration tests (IMPORTANT)
 git diff main --name-only | grep "routers/.*\.ts$" | while read f; do
   basename=$(basename "$f" .ts)
   if ! grep -rq "$basename" tests/integration/; then
     echo "WARNING: No integration test found for $f"
   fi
 done
+
+# Find new/modified pure functions without unit tests
+git diff main --name-only | grep "lib/.*\.ts$" | while read f; do
+  basename=$(basename "$f" .ts)
+  if ! grep -rq "$basename" tests/unit/; then
+    echo "INFO: Consider unit test for $f if it contains pure functions"
+  fi
+done
 ```
 
+**Test Coverage Expectations:**
+- **tRPC routers** → Must have integration tests
+- **Pure functions (lib/)** → Should have unit tests
+- **UI components** → Covered by E2E smoke tests (no detailed UI tests needed)
+
 If coverage is missing:
-1. Add the missing tests
-2. Commit with `test: add [e2e|integration] tests for [feature]`
+1. Add the missing tests (integration > unit > E2E)
+2. Commit with `test: add [integration|unit] tests for [feature]`
 3. Verify tests pass
+
+**Note:** Don't write detailed E2E tests for UI components. E2E tests are smoke tests for critical flows only.
 
 ## Step 3: Identify Changed Files
 
