@@ -1069,3 +1069,58 @@ skeletonVariant?: SkeletonVariant; // defaults to "default"
 - Dashboard heading changed from "Trading Overview" to "Trading Dashboard"
 
 ---
+
+## 2026-02-01 - US-022 (Mobile Responsive Adjustments)
+
+### What was implemented
+- Added mobile-responsive behavior to Command Center widgets
+- Updated quick actions, P&L calendar, and journal status for touch
+
+### Mobile Responsive Features
+
+1. **Grid Layout (CommandCenterGrid)**
+   - Already responsive: 1 col mobile → 2 cols tablet → 3 cols desktop
+   - Widgets stack in DOM order on mobile (priority preserved)
+
+2. **Quick Actions Widget**
+   - Mobile: Horizontal scroll with flex + overflow-x-auto
+   - Desktop: 3-column grid
+   - Touch-friendly: min-h-[44px] min-w-[44px] on buttons
+
+3. **P&L Calendar Widget**
+   - Mobile: Compact summary view with large stats (Month P&L, Trading Days, Total Trades)
+   - Desktop: Full 7-column calendar grid with heatmap
+   - Navigation buttons: h-11 on mobile, h-7 on desktop
+
+4. **Journal Status Widget**
+   - Action buttons: h-11 for touch-friendly targets
+
+### CSS Classes Used
+```css
+/* Touch target minimum */
+min-h-[44px] min-w-[44px] h-11
+
+/* Mobile horizontal scroll */
+overflow-x-auto shrink-0 sm:overflow-visible sm:shrink
+
+/* Show/hide by breakpoint */
+hidden sm:block     /* Desktop only */
+sm:hidden           /* Mobile only */
+```
+
+### Breakpoints
+- < 640px (sm): Mobile - single column, compact views
+- 640px+ (sm): Tablet/Desktop - multi-column, full views
+
+### Files Changed
+- Modified: `src/components/dashboard/widgets/quick-actions-widget.tsx`
+- Modified: `src/components/dashboard/widgets/pnl-calendar-widget.tsx`
+- Modified: `src/components/dashboard/widgets/journal-status-widget.tsx`
+
+### Learnings for future iterations
+- Tailwind sm: breakpoint is 640px, use for mobile threshold
+- Horizontal scroll with shrink-0 prevents items from collapsing
+- Use h-11 (44px) for touch-friendly buttons, matches iOS HIG
+- hidden/block with sm: prefix cleanly toggles mobile vs desktop views
+
+---

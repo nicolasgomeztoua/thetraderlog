@@ -429,8 +429,8 @@
         "Verify in browser at mobile viewport"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Single column on mobile via CommandCenterGrid. Quick Actions horizontal scroll instead of bottom sheet (simpler UX). P&L Calendar shows compact summary stats on mobile. Touch targets min 44px via h-11 class."
     }
   ]
 }
