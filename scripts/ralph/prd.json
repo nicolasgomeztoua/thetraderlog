@@ -1,107 +1,436 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/clean-rule-checklist",
-  "description": "Remove AUTO/SEMI/MANUAL badges from checklist and hide rules where trigger conditions weren't met (MFE-based relevance filtering)",
+  "branchName": "ralph/command-center-dashboard",
+  "description": "Complete dashboard redesign into an adaptive Command Center with journal adjacency, rule compliance scorecard, P&L calendar, and page snapshots",
   "userStories": [
     {
-      "id": "US-001",
-      "title": "Add isRuleRelevant Function",
-      "description": "As a developer, I want a utility function that determines if a rule was relevant to a specific trade based on MFE, so that irrelevant rules can be filtered out.",
+      "id": "US-000",
+      "title": "Audit Existing Dashboard & Utilities",
+      "description": "As a developer, I want to audit existing dashboard code and utilities before implementing the Command Center so that we reuse components and avoid duplication.",
       "acceptanceCriteria": [
-        "Add isRuleRelevant(condition: AutoCondition, mfeR: number | null): boolean to src/lib/strategy/evaluation.ts",
-        "Returns true for always-relevant rules: maxRiskPerTrade, minRRRatio, dailyLossLimit, maxConcurrentPositions",
-        "Returns mfeR >= triggerR for breakevenTrigger",
-        "Returns mfeR >= targetR for scaleOutAtR",
-        "Returns mfeR >= triggerR for trailingStopTrigger",
-        "Returns true for unknown condition types (safe default)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Document current dashboard components and their data sources in scripts/ralph/progress.txt",
+        "Search src/lib/ for date/calendar utilities that can be reused",
+        "Search for existing P&L calculation utilities",
+        "Search for existing journal/checklist status utilities",
+        "Identify components to keep vs replace",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Added isRuleRelevant function with exhaustive switch statement covering all AutoCondition types"
+      "notes": "Audit complete. Documented all existing utilities, components to keep/replace, and new endpoints needed."
     },
     {
-      "id": "US-002",
-      "title": "Update getTradeRuleChecks to Return Relevance Data",
-      "description": "As a frontend, I want the getTradeRuleChecks endpoint to include relevance information so that I can filter which rules to display.",
+      "id": "US-001",
+      "title": "Create Trading Context Hook",
+      "description": "As a developer, I want a hook that determines the user's trading context based on their actual activity so that the dashboard can adapt its layout and emphasis.",
       "acceptanceCriteria": [
-        "Modify getTradeRuleChecks in src/server/api/routers/strategies.ts",
-        "Calculate MFE in R for the trade using existing calculateMfeInR()",
-        "For each rule with autoCondition, call isRuleRelevant()",
-        "Add relevantRuleIds: string[] to the response object",
+        "Create src/hooks/use-trading-context.ts",
+        "Hook returns: hasOpenPositions (boolean), tradedToday (boolean), journaledToday (boolean), lastTradeTime (Date | null), suggestedAction ('start-journal' | 'review-trades' | 'log-trade' | 'idle')",
+        "suggestedAction logic: Traded today + no journal = 'start-journal', Has unreviewed trades = 'review-trades', No trades today = 'log-trade', Otherwise = 'idle'",
+        "Hook fetches data via existing tRPC queries",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Added relevantRuleIds to getTradeRuleChecks response. Calculates MFE in R and uses isRuleRelevant() to determine which rules should be shown."
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Create Dashboard Layout Grid Component",
+      "description": "As a developer, I want a responsive grid layout component for the Command Center so that widgets can be arranged in a cohesive dashboard.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/command-center-grid.tsx",
+        "CSS Grid layout with named areas for widget placement",
+        "Responsive: 3-column on desktop, 2-column on tablet, 1-column on mobile",
+        "Supports widget size variants: sm (1x1), md (2x1), lg (2x2), wide (3x1)",
+        "Terminal design system styling (dark bg, border accents)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Integration Tests for Relevance Logic",
-      "description": "As a developer, I want integration tests for the rule relevance logic to verify correct filtering behavior.",
+      "title": "Create Base Dashboard Widget Component",
+      "description": "As a developer, I want a reusable widget wrapper component so that all dashboard cards have consistent styling and behavior.",
       "acceptanceCriteria": [
-        "Add tests to tests/integration/strategies.test.ts or create tests/integration/rule-relevance.test.ts",
-        "Test: Rule with breakevenTrigger at 1R is relevant when MFE >= 1R",
-        "Test: Rule with breakevenTrigger at 1R is NOT relevant when MFE < 1R",
-        "Test: Risk rules (maxRiskPerTrade, etc.) are always relevant",
-        "Test: Trade with no MFE data still returns risk rules as relevant",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Created tests/integration/rule-relevance.test.ts with 13 tests covering: breakeven trigger relevance above/below/at threshold, risk rules always relevant (maxRiskPerTrade, minRRRatio, dailyLossLimit, maxConcurrentPositions), mixed rules with no MFE data, scaleOutAtR relevance, manual rules always relevant, and trailingStopTrigger relevance."
-    },
-    {
-      "id": "US-004",
-      "title": "Remove Badges from RuleChecklist Component",
-      "description": "As a user, I want the trade checklist to not show AUTO/SEMI/MANUAL badges so that I see a cleaner interface.",
-      "acceptanceCriteria": [
-        "Remove RuleTypeBadge component definition from src/components/strategy/rule-checklist.tsx",
-        "Remove RuleTypeBadge usage from rule rendering",
-        "Remove unused imports: Zap, Info, RotateCcw from lucide-react if no longer needed",
+        "Create src/components/dashboard/dashboard-widget.tsx",
+        "Props: title, icon, size, href (optional link to full page), loading, children",
+        "Terminal window chrome styling (title bar with action dots)",
+        "View More link in header when href provided",
+        "Loading skeleton state",
+        "Hover state with subtle glow effect",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: Trade checklist no longer shows badges"
+        "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Removed RuleTypeBadge component definition, usage, and unused imports (Zap, Info, RotateCcw). Also removed hasUserOverride variable that was only used for the badge."
-    },
-    {
-      "id": "US-005",
-      "title": "Filter Irrelevant Rules in RuleChecklist",
-      "description": "As a user, I want the trade checklist to only show rules that were relevant to my trade so that I focus on what matters.",
-      "acceptanceCriteria": [
-        "RuleChecklist component receives relevantRuleIds from query response",
-        "Filter rules before rendering to only include those in relevantRuleIds",
-        "Rules without autoCondition (pure manual) are always shown",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: Rules that weren't triggered don't appear"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Added relevantRuleIds prop to RuleChecklist, filtering rules via useMemo. Compliance calculation updated to use filtered rules. Backend already includes manual rules in relevantRuleIds."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Remove Badges from StrategyRulesDisplay Component",
-      "description": "As a user, I want the strategy rules display to not show AUTO/SEMI/MANUAL badges.",
+      "title": "Create tRPC Endpoint for Journal Adjacency Data",
+      "description": "As a frontend, I want an API endpoint that returns journal completion status alongside trading days so that the streak widget can display accurate data.",
       "acceptanceCriteria": [
-        "Remove RULE_TYPE_CONFIG constant from src/components/strategy/strategy-rules-display.tsx",
-        "Remove RuleTypeBadge component",
-        "Remove badge rendering from rules display",
-        "Remove unused imports: Zap, Info from lucide-react if no longer needed",
+        "Add getJournalAdjacency query to dailyJournal router",
+        "Input: { accountId, startDate, endDate }",
+        "Returns array of: { date, hasTrades, tradeCount, pnl, hasJournal, journalWordCount, checklistCompletion }",
+        "Efficient query joining trades and journals by date",
+        "Uses protectedProcedure for auth",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: Strategy display no longer shows badges"
+        "Build passes (bun run build)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Integration Tests for Journal Adjacency Endpoint",
+      "description": "As a developer, I want integration tests for the journal adjacency endpoint so that we verify correct data aggregation.",
+      "acceptanceCriteria": [
+        "Test file: tests/integration/journal-adjacency.test.ts",
+        "Uses setupTrader() or setupTraderWithTrades() fixtures",
+        "Test returns correct data for dates with trades + journal",
+        "Test returns correct data for dates with trades + no journal",
+        "Test returns correct data for dates with no trades",
+        "Test respects account filtering",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Removed RULE_TYPE_CONFIG, RuleTypeBadge component, and unused imports (Zap, Info). Also cleaned up Rule interface by removing ruleType field."
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Create tRPC Endpoint for Rule Compliance Summary",
+      "description": "As a frontend, I want an API endpoint that calculates rule compliance for a date range so that the widget can display accurate scorecard data.",
+      "acceptanceCriteria": [
+        "Add getRuleCompliance query to strategies router",
+        "Input: { accountId, startDate, endDate }",
+        "Returns: { overall: number, byCategory: { entry, exit, risk, management }, violations: [{ ruleId, ruleName, count }] }",
+        "Calculates from trade rule check records",
+        "Uses protectedProcedure for auth",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Integration Tests for Rule Compliance Endpoint",
+      "description": "As a developer, I want integration tests for the rule compliance endpoint so that we verify correct calculations.",
+      "acceptanceCriteria": [
+        "Test file: tests/integration/rule-compliance.test.ts",
+        "Uses setupTrader() fixtures",
+        "Test returns 100% when all rules followed",
+        "Test returns correct % with partial compliance",
+        "Test violation counting is accurate",
+        "Test category breakdown is correct",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Create Journal Status Widget",
+      "description": "As a trader, I want to see today's journal status prominently so that I never forget to journal on trading days.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/journal-status-widget.tsx",
+        "Shows status: Not Started / In Progress / Completed",
+        "Displays word count if started",
+        "Shows checklist completion percentage",
+        "One-click Start Journal or Continue Journal button",
+        "Visual indicator (icon/color) for each status",
+        "Links to /daily-journal",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Create Journal Streak Calendar Widget",
+      "description": "As a trader, I want to see a calendar showing which trading days I journaled so that I can maintain consistency.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/journal-streak-widget.tsx",
+        "Mini calendar view (current month)",
+        "Color coding: Traded+Journaled (green), Traded+No Journal (red/warning), No Trades (neutral)",
+        "Shows current streak count (e.g., 5 day streak)",
+        "Shows completion rate (e.g., 23/25 trading days journaled)",
+        "Hover on date shows: trade count, journal status, P&L",
+        "Links to /daily-journal on date click",
+        "Uses getJournalAdjacency endpoint",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Create Journal Metrics Widget",
+      "description": "As a trader, I want to see journal metrics (completion rate, avg word count, emotional patterns) so that I can track my journaling habits.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/journal-metrics-widget.tsx",
+        "Shows: Completion rate %, Avg word count, Most common emotional state",
+        "Sparkline chart for journal length over last 30 days",
+        "Emotional state distribution mini-donut",
+        "Compact layout fitting sm widget size",
+        "Links to /daily-journal",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Create Recent Journal Excerpts Widget",
+      "description": "As a trader, I want to see snippets from my recent journal entries so that I can recall recent insights without navigating away.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/journal-excerpts-widget.tsx",
+        "Shows last 3 journal entries as cards",
+        "Each card: date, first ~100 chars of content (stripped HTML), P&L badge",
+        "Truncate with ... and Read more link",
+        "Click opens that date in /daily-journal",
+        "Empty state: No recent journals",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Create Rule Compliance Scorecard Widget",
+      "description": "As a trader, I want to see what percentage of today's trades followed my strategy rules so that I stay accountable.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/rule-compliance-widget.tsx",
+        "Shows overall compliance percentage with circular gauge",
+        "Breakdown by rule category (Entry, Exit, Risk, Management)",
+        "List of violated rules with violation count",
+        "Color coding: >80% green, 50-80% yellow, <50% red",
+        "Uses getRuleCompliance endpoint",
+        "Links to /strategies",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Create P&L Calendar Widget",
+      "description": "As a trader, I want a P&L calendar heatmap so that I can visually see my daily performance over time.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/pnl-calendar-widget.tsx",
+        "Full month calendar grid view",
+        "Heatmap coloring: profit intensity (greens), loss intensity (reds), no trades (neutral)",
+        "Hover shows: date, P&L amount, trade count, win rate",
+        "Month navigation (prev/next)",
+        "Summary row: total P&L, trading days, win rate for displayed month",
+        "Uses md or lg widget size",
+        "Links to /analytics time tab",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Create Analytics Snapshot Widget",
+      "description": "As a trader, I want a mini-preview of my analytics so that I can see key metrics without navigating to the full page.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/analytics-snapshot-widget.tsx",
+        "Shows: Win Rate gauge, Profit Factor, Current Streak, Expectancy",
+        "Mini cumulative P&L sparkline (last 20 trades)",
+        "Period toggle: Today / This Week / This Month",
+        "Compact 2x2 metric grid",
+        "View Analytics link to /analytics",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Create Strategies Snapshot Widget",
+      "description": "As a trader, I want a mini-preview of my strategy performance so that I can see which strategies are working.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/strategies-snapshot-widget.tsx",
+        "Shows top 3 strategies by P&L (mini leaderboard)",
+        "Each row: strategy name, color dot, P&L, trade count",
+        "Highlights Top Performer badge on #1",
+        "Shows No strategies empty state if none configured",
+        "View Strategies link to /strategies",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Create Recent Trades Snapshot Widget",
+      "description": "As a trader, I want a mini-preview of my recent trades so that I can see latest activity at a glance.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/trades-snapshot-widget.tsx",
+        "Shows last 5 trades in compact list",
+        "Each row: symbol, direction icon, P&L (colored), time ago",
+        "Quick stats row: Today's trades count, Today's P&L",
+        "View All Trades link to /journal",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Create Today's Performance Widget",
+      "description": "As a trader, I want a prominent display of today's trading performance so that I can track my daily progress.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/today-performance-widget.tsx",
+        "Large P&L display with profit/loss coloring",
+        "Trade count, Win/Loss count, Win rate",
+        "Comparison to daily average: Above/Below average",
+        "For prop accounts: Daily loss limit progress bar",
+        "Shows No trades yet state when tradedToday is false",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Create Quick Actions Widget",
+      "description": "As a trader, I want contextual quick action buttons so that I can perform common tasks without navigation.",
+      "acceptanceCriteria": [
+        "Create src/components/dashboard/widgets/quick-actions-widget.tsx",
+        "Actions adapt based on user's actual trading context from use-trading-context hook",
+        "Has open positions = View Open Positions prominent",
+        "Traded today + no journal = Start Journal prominent",
+        "Has unreviewed trades = Review Trades prominent",
+        "Default actions always available: Log Trade, View Analytics, View Strategies",
+        "Primary action highlighted based on suggestedAction from context hook",
+        "Icon + label for each action",
+        "Compact horizontal or grid layout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Assemble Command Center Dashboard Page",
+      "description": "As a developer, I want to assemble all widgets into the new Command Center dashboard page replacing the old dashboard.",
+      "acceptanceCriteria": [
+        "Update src/app/(protected)/dashboard/page.tsx",
+        "Use CommandCenterGrid layout",
+        "Top row: Today's Performance (wide), Quick Actions",
+        "Left column: Journal Status, Journal Streak, Rule Compliance",
+        "Center: P&L Calendar (large)",
+        "Right column: Analytics Snapshot, Strategies Snapshot, Recent Trades",
+        "Bottom: Journal Excerpts (wide)",
+        "Pass trading context to widgets that need it",
+        "Loading states for all async data",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser - all widgets render correctly"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Add Dashboard Widget Loading Skeletons",
+      "description": "As a trader, I want smooth loading states so that the dashboard feels responsive while data loads.",
+      "acceptanceCriteria": [
+        "Create skeleton variants for each widget type in dashboard-widget.tsx or separate file",
+        "Skeletons match widget dimensions",
+        "Subtle pulse animation using Tailwind animate-pulse",
+        "No layout shift when data loads",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "E2E Tests for Command Center Dashboard",
+      "description": "As a developer, I want E2E tests for the Command Center so that we verify the dashboard works correctly.",
+      "acceptanceCriteria": [
+        "Test file: tests/e2e/command-center.spec.ts",
+        "Test dashboard loads with all widgets visible",
+        "Test P&L calendar navigation works",
+        "Test quick actions navigate correctly",
+        "Test journal status click opens journal",
+        "All new UI elements have data-testid attributes",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Mobile Responsive Adjustments",
+      "description": "As a trader on mobile, I want the Command Center to be usable on smaller screens so that I can check my dashboard on the go.",
+      "acceptanceCriteria": [
+        "Single column layout on mobile (<768px)",
+        "Widgets stack in priority order (Today's Performance first)",
+        "P&L Calendar switches to compact week view on mobile",
+        "Touch-friendly tap targets (min 44px)",
+        "Quick Actions become bottom sheet or collapsible",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at mobile viewport"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
