@@ -178,8 +178,8 @@
         "Verify in browser"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Calendar with month navigation. Streak counts consecutive trading days journaled. Completion rate shows journaled/total trading days for displayed month."
     },
     {
       "id": "US-008",

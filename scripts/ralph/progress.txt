@@ -430,3 +430,58 @@ const totalChecked = userCheckedCount + forcedCheckedCount;
 - Word count should strip HTML tags before counting: `content.replace(/<[^>]*>/g, " ")`
 
 ---
+
+## 2026-02-01 - US-005 (Create Journal Streak Calendar Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/journal-streak-widget.tsx`
+
+### Widget Features
+1. **Mini Calendar View**
+   - 7-column grid for Sun-Sat
+   - Displays full calendar month view (including overlap days)
+   - Month navigation (prev/next buttons)
+   - Today highlighted with primary ring
+
+2. **Color Coding**
+   - Traded + Journaled: profit green (bg-profit/20, text-profit)
+   - Traded + Not Journaled: loss red (bg-loss/20, text-loss)
+   - No Trades: neutral gray (bg-white/5, text-muted-foreground)
+   - Future dates: faded (opacity-40)
+
+3. **Stats Display**
+   - Current streak count (consecutive trading days journaled)
+   - Completion rate (X/Y journaled trading days)
+
+4. **Hover Tooltips**
+   - Date formatted as "Thu, Feb 1"
+   - Trade count
+   - P&L with color coding
+   - Journal status
+
+5. **Navigation**
+   - Click on any date links to `/daily-journal?date=YYYY-MM-DD`
+   - Next month disabled when viewing current month
+
+### Data Source
+- Uses `dailyJournal.getJournalAdjacency` endpoint
+- Returns array of: date, hasTrades, tradeCount, pnl, hasJournal, journalWordCount, checklistCompletion
+
+### Streak Calculation Logic
+```typescript
+// Iterates backwards from today
+// Counts consecutive trading days that were journaled
+// Trading day without journal breaks the streak
+// Non-trading days don't break the streak
+```
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/journal-streak-widget.tsx`
+
+### Learnings for future iterations
+- Use `getStartOfMonth`/`getEndOfMonth` from `@/lib/shared` for month bounds
+- Tooltip component from `@/components/ui/tooltip` wraps Radix tooltip
+- Calendar grid calculation: start on Sunday of week containing 1st, end on Saturday of week containing last day
+- Use template literals for string concatenation (Biome rule: useTemplate)
+
+---
