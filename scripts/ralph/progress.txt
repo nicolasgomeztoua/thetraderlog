@@ -686,3 +686,48 @@ function getPnLHeatmapColor(pnl: number, maxAbsPnl: number): string {
 - Links to `/analytics?tab=time&date=YYYY-MM-DD` for date-specific view
 
 ---
+
+## 2026-02-01 - US-014 (Create Analytics Snapshot Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/analytics-snapshot-widget.tsx`
+
+### Widget Features
+1. **Period Toggle**
+   - Today / Week / Month buttons
+   - Dynamically filters stats and trades
+
+2. **Win Rate Gauge**
+   - Circular progress showing win percentage
+   - Color: >=50% green, <50% red
+
+3. **Metric Grid (2x2)**
+   - Profit Factor (PF)
+   - Expectancy (Exp.) - avgPnl per trade
+   - Total trades count
+   - Win/Loss ratio
+
+4. **Total P&L Row**
+   - Large formatted currency display
+   - Cumulative P&L sparkline (last 20 trades)
+
+### Data Sources
+- `trades.getStats` - Win rate, profit factor, avgPnl, wins, losses, totalPnl
+- `trades.getAll` - Recent trades for sparkline (status: closed, limit: 20)
+
+### Period Date Ranges
+```typescript
+today: Start of today
+week: Start of this week (Sunday)
+month: Start of this month (1st)
+```
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/analytics-snapshot-widget.tsx`
+
+### Learnings for future iterations
+- trades.getAll uses `sortField` and `sortDirection` (not sortBy/sortOrder)
+- sortField enum values: "entry", "exit", "pnl", etc. (not "entryTime")
+- trades.getAll returns `{ items, nextCursor }` structure
+
+---
