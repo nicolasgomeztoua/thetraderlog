@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Dashboard E2E Tests
+ * Dashboard E2E Tests (Legacy - Basic)
  *
- * These tests verify the dashboard page loads correctly for authenticated users.
+ * These tests verify basic dashboard page functionality.
+ * More comprehensive tests are in command-center.spec.ts.
+ *
  * Auth state is pre-loaded from global.setup.ts via storageState config.
  */
 test.describe("Dashboard", () => {
@@ -16,7 +18,7 @@ test.describe("Dashboard", () => {
 		await expect(heading).toBeVisible({ timeout: 15000 });
 	});
 
-	test("displays stats grid section", async ({ page }, testInfo) => {
+	test("displays Command Center grid layout", async ({ page }, testInfo) => {
 		testInfo.setTimeout(60000);
 		// Navigate to dashboard
 		await page.goto("/dashboard");
@@ -26,26 +28,15 @@ test.describe("Dashboard", () => {
 			timeout: 15000,
 		});
 
-		// Wait for stats to load from API
+		// Wait for content to load
 		await page.waitForTimeout(3000);
 
-		// Verify stats section labels are present
-		// These are the stat card titles that should always be visible
-		const expectedStatLabels = [
-			"Net P&L",
-			"Win Rate",
-			"Profit Factor",
-			"Avg Win",
-			"Avg Loss",
-		];
-
-		for (const label of expectedStatLabels) {
-			const statCard = page.locator(`text="${label}"`);
-			await expect(statCard).toBeVisible({ timeout: 15000 });
-		}
+		// Verify Command Center grid is present
+		const grid = page.getByTestId("command-center-grid");
+		await expect(grid).toBeVisible({ timeout: 15000 });
 	});
 
-	test("displays start journal hero section", async ({ page }, testInfo) => {
+	test("displays journal status widget", async ({ page }, testInfo) => {
 		testInfo.setTimeout(60000);
 		// Navigate to dashboard
 		await page.goto("/dashboard");
@@ -55,15 +46,17 @@ test.describe("Dashboard", () => {
 			timeout: 15000,
 		});
 
-		// Use data-testid for hero section
-		const heroSection = page.getByTestId("dashboard-hero-journal");
-		await expect(heroSection).toBeVisible({ timeout: 15000 });
+		// Wait for content to load
+		await page.waitForTimeout(3000);
 
-		// Wait for hero to load (either shows "Ready to start" or "Journal Started")
-		// One of these buttons/text should appear after loading completes
-		const startButton = heroSection.getByRole("button", {
-			name: /start|journal/i,
+		// Verify journal status widget is present
+		const journalStatus = page.getByTestId("widget-journal-status");
+		await expect(journalStatus).toBeVisible({ timeout: 15000 });
+
+		// Wait for hero to load (either shows "Start Journal" or "Continue/View Journal")
+		const actionButton = journalStatus.getByRole("button", {
+			name: /start|continue|view/i,
 		});
-		await expect(startButton).toBeVisible({ timeout: 15000 });
+		await expect(actionButton).toBeVisible({ timeout: 15000 });
 	});
 });

@@ -57,7 +57,7 @@ setup("authenticate and save state", async ({ page }) => {
 	await page.goto("/dashboard");
 
 	// Wait for dashboard to load (confirms auth worked)
-	await page.waitForSelector('h1:has-text("Trading Overview")', {
+	await page.waitForSelector('h1:has-text("Trading Dashboard")', {
 		timeout: 15000,
 	});
 
