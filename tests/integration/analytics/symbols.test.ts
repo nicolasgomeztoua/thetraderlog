@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	createTestCaller,
+	getAnalyticsFixtureMonth,
 	setupTrader,
 	setupTraderWithAnalyticsData,
 	type TestCaller,
@@ -432,15 +433,15 @@ describe("Analytics Symbols", () => {
 	// ============================================================================
 
 	describe("getSymbolTrend", () => {
-		// NOTE: The test fixture data is from January 2024, so we need to use
-		// months: 36 to go back far enough to include the test data in the results.
-		// The default is 12 months from the current date.
+		// NOTE: The test fixture data uses dynamic dates (3 months ago) to stay
+		// within the 24-month lookback window. Use getAnalyticsFixtureMonth() to
+		// get the expected month.
 
 		describe("Return Type Verification", () => {
 			it("should return months and symbols arrays", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				expect(result).toHaveProperty("months");
@@ -452,7 +453,7 @@ describe("Analytics Symbols", () => {
 			it("should have all expected fields for each symbol", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				for (const symbolData of result.symbols) {
@@ -466,7 +467,7 @@ describe("Analytics Symbols", () => {
 			it("should have all expected fields for each monthly data point", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				for (const symbolData of result.symbols) {
@@ -481,7 +482,7 @@ describe("Analytics Symbols", () => {
 			it("should return correct types for all fields", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				for (const month of result.months) {
@@ -502,19 +503,19 @@ describe("Analytics Symbols", () => {
 		});
 
 		describe("Month Data", () => {
-			it("should have January 2024 in months (from test data)", async () => {
+			it("should have the fixture month in months (from test data)", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36, // Need 36 months to include Jan 2024 from Feb 2026
+					months: 24,
 				});
 
-				expect(result.months).toContain("2024-01");
+				expect(result.months).toContain(getAnalyticsFixtureMonth());
 			});
 
 			it("should have months in chronological order", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				const sortedMonths = [...result.months].sort();
@@ -524,7 +525,7 @@ describe("Analytics Symbols", () => {
 			it("should have month format as YYYY-MM", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				const monthRegex = /^\d{4}-\d{2}$/;
@@ -538,7 +539,7 @@ describe("Analytics Symbols", () => {
 			it("should include all traded symbols (ES, NQ, EURUSD)", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				const symbolNames = result.symbols.map((s) => s.symbol);
@@ -550,7 +551,7 @@ describe("Analytics Symbols", () => {
 			it("should have 3 symbols total", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				expect(result.symbols.length).toBe(3);
@@ -559,7 +560,7 @@ describe("Analytics Symbols", () => {
 			it("should have data array length matching months array length", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				for (const symbolData of result.symbols) {
@@ -572,7 +573,7 @@ describe("Analytics Symbols", () => {
 			it("should have totalPnl matching sum of P&L from getPerformanceBySymbol", async () => {
 				const trendResult = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 				const perfResult = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
@@ -591,7 +592,7 @@ describe("Analytics Symbols", () => {
 			it("should have ES with positive totalPnl", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				const es = result.symbols.find((s) => s.symbol === "ES");
@@ -601,7 +602,7 @@ describe("Analytics Symbols", () => {
 			it("should have EURUSD with negative totalPnl", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				const eurusd = result.symbols.find((s) => s.symbol === "EURUSD");
@@ -613,7 +614,7 @@ describe("Analytics Symbols", () => {
 			it("should have cumulative P&L that accumulates correctly", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				for (const symbolData of result.symbols) {
@@ -628,7 +629,7 @@ describe("Analytics Symbols", () => {
 			it("should have final cumulative equal to totalPnl", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				for (const symbolData of result.symbols) {
@@ -644,7 +645,7 @@ describe("Analytics Symbols", () => {
 			it("should be sorted by total P&L descending (best performing first)", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				for (let i = 1; i < result.symbols.length; i++) {
@@ -659,7 +660,7 @@ describe("Analytics Symbols", () => {
 			it("should have ES as the first symbol (best performer)", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
-					months: 36,
+					months: 24,
 				});
 
 				expect(result.symbols[0]?.symbol).toBe("ES");
@@ -758,7 +759,7 @@ describe("Analytics Symbols", () => {
 			});
 			const trendResult = await caller.analytics.getSymbolTrend({
 				accountId: testData.account.id,
-				months: 36,
+				months: 24,
 			});
 
 			const perfSymbols = perfResult.map((p) => p.symbol).sort();
@@ -773,7 +774,7 @@ describe("Analytics Symbols", () => {
 			});
 			const trendResult = await caller.analytics.getSymbolTrend({
 				accountId: testData.account.id,
-				months: 36,
+				months: 24,
 			});
 
 			for (const perfSymbol of perfResult) {

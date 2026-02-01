@@ -24,6 +24,7 @@ import {
 	Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -125,10 +126,10 @@ function SortableItem({
 			<button
 				aria-label={template.isActive ? "Deactivate" : "Activate"}
 				className={cn(
-					"size-4 shrink-0 rounded border transition-colors",
+					"size-4 shrink-0 rounded border transition-all duration-200 active:scale-75",
 					template.isActive
-						? "border-primary bg-primary"
-						: "border-border bg-transparent",
+						? "border-primary bg-primary scale-100"
+						: "border-border bg-transparent scale-90",
 				)}
 				disabled={isMutating}
 				onClick={() => onToggleActive(template.id, template.isActive)}
@@ -258,12 +259,43 @@ export function ChecklistSettings({
 		},
 	});
 
-	// Update template mutation
+	// Update template mutation with optimistic updates
 	const updateTemplate = api.dailyJournal.updateTemplate.useMutation({
-		onSuccess: () => {
-			setEditingId(null);
-			setEditingText("");
-			utils.dailyJournal.getTemplates.invalidate();
+		onMutate: async (variables) => {
+			await utils.dailyJournal.getTemplates.cancel();
+			const previousTemplates = utils.dailyJournal.getTemplates.getData();
+
+			// Optimistically update the cache
+			utils.dailyJournal.getTemplates.setData(undefined, (old) => {
+				if (!old) return old;
+				return old.map((t) =>
+					t.id === variables.id
+						? {
+								...t,
+								...(variables.text !== undefined && { text: variables.text }),
+								...(variables.isActive !== undefined && {
+									isActive: variables.isActive,
+								}),
+							}
+						: t,
+				);
+			});
+
+			// Clear editing state immediately for text edits
+			if (variables.text !== undefined) {
+				setEditingId(null);
+				setEditingText("");
+			}
+
+			return { previousTemplates };
+		},
+		onError: (_err, _vars, context) => {
+			if (context?.previousTemplates) {
+				utils.dailyJournal.getTemplates.setData(
+					undefined,
+					context.previousTemplates,
+				);
+			}
 		},
 	});
 
@@ -278,18 +310,13 @@ export function ChecklistSettings({
 	// Reorder templates mutation with optimistic updates
 	const reorderTemplates = api.dailyJournal.reorderTemplates.useMutation({
 		onMutate: async ({ items }) => {
-			// Cancel outgoing refetches
 			await utils.dailyJournal.getTemplates.cancel();
-
-			// Snapshot previous value
 			const previousTemplates = utils.dailyJournal.getTemplates.getData();
 
 			// Optimistically update the cache
 			utils.dailyJournal.getTemplates.setData(undefined, (old) => {
 				if (!old) return old;
-				// Create a map of id -> new order
 				const orderMap = new Map(items.map((item) => [item.id, item.order]));
-				// Sort templates by new order
 				return [...old].sort(
 					(a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
 				);
@@ -298,17 +325,12 @@ export function ChecklistSettings({
 			return { previousTemplates };
 		},
 		onError: (_err, _vars, context) => {
-			// Roll back on error
 			if (context?.previousTemplates) {
 				utils.dailyJournal.getTemplates.setData(
 					undefined,
 					context.previousTemplates,
 				);
 			}
-		},
-		onSettled: () => {
-			// Sync with server
-			utils.dailyJournal.getTemplates.invalidate();
 		},
 	});
 
@@ -354,6 +376,7 @@ export function ChecklistSettings({
 
 	const handleToggleActive = (id: string, isActive: boolean) => {
 		updateTemplate.mutate({ id, isActive: !isActive });
+		toast(isActive ? "Item deactivated" : "Item activated");
 	};
 
 	const handleDelete = (id: string) => {

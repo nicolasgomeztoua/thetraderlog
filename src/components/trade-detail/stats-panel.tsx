@@ -200,9 +200,6 @@ function StrategySection({
 				<RuleChecklist
 					checks={ruleChecksData.checks}
 					onComplianceChange={setOptimisticCompliance}
-					onUpdate={() =>
-						utils.strategies.getTradeRuleChecks.invalidate({ tradeId })
-					}
 					relevantRuleIds={ruleChecksData.relevantRuleIds}
 					rules={ruleChecksData.rules}
 					tradeId={tradeId}
@@ -234,7 +231,6 @@ export function StatsPanel({
 	className,
 }: StatsPanelProps) {
 	const { formatTime } = useTimezone();
-	const utils = api.useUtils();
 	const netPnl = trade.netPnl ? parseFloat(trade.netPnl) : null;
 	const isProfit = netPnl !== null && netPnl > 0;
 	const isLoss = netPnl !== null && netPnl < 0;
@@ -649,9 +645,6 @@ export function StatsPanel({
 										</span>
 										<TradeTags
 											maxDisplay={3}
-											onUpdate={() =>
-												utils.trades.getById.invalidate({ id: trade.id })
-											}
 											tags={trade.tradeTags ?? []}
 											tradeId={trade.id}
 										/>

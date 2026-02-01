@@ -99,38 +99,54 @@ function getPnLColorClass(pnl: number, maxAbsPnl: number): string {
 
 ### Optimistic Updates Pattern (tRPC)
 **When:** Any mutation where you want instant UI feedback before server confirmation
-**Structure:**
+
+**CRITICAL: Choose the right pattern based on interaction type:**
+
+#### Pattern A: Standard (single actions like form submits, saves)
+Use when user makes ONE action, then waits for result.
 ```tsx
 const mutation = api.entity.update.useMutation({
-  // 1. onMutate: Runs BEFORE the mutation - update cache optimistically
   onMutate: async (input) => {
-    // Cancel outgoing refetches to prevent overwriting optimistic update
     await utils.entity.getAll.cancel();
-
-    // Snapshot current data for rollback
     const previousData = utils.entity.getAll.getData();
-
-    // Optimistically update the cache
-    utils.entity.getAll.setData(undefined, (old) => {
-      if (!old) return old;
-      // Transform data based on mutation type
-      return transformedData;
-    });
-
-    // Return context for potential rollback
+    utils.entity.getAll.setData(undefined, (old) => transformedData);
     return { previousData };
   },
-
-  // 2. onError: Rollback on failure
   onError: (_err, _input, context) => {
     if (context?.previousData) {
       utils.entity.getAll.setData(undefined, context.previousData);
     }
   },
-
-  // 3. onSettled: Always sync with server (success or failure)
+  // OK to invalidate here - user isn't spamming clicks
   onSettled: () => utils.entity.getAll.invalidate(),
 });
+```
+
+#### Pattern B: Rapid-fire (checkboxes, toggles, star ratings, drag-reorder)
+Use when user might click multiple times quickly. **DO NOT invalidate on settle.**
+```tsx
+const { applyUpdate, clearUpdate } = useOptimisticState<{ checked: boolean }>();
+
+const mutation = api.entity.toggle.useMutation({
+  onMutate: ({ id, checked }) => {
+    // Optimistic state IS the source of truth
+    applyUpdate(id, { checked });
+  },
+  onError: (_err, variables) => {
+    // Only revert on actual error
+    clearUpdate(variables.id);
+    toast.error("Failed to update");
+  },
+  // NO onSettled - don't refetch, don't clear optimistic state
+  // The frontend is authoritative, backend syncs quietly
+});
+```
+
+**Why Pattern B exists:** With rapid clicks, `onSettled` fires for EACH mutation. If you invalidate/refetch, stale responses race against newer mutations and cause UI flickering. The fix is to trust the optimistic state and never refetch on checkbox-style interactions.
+
+**Rule of thumb:**
+- Can user click it 5 times in 2 seconds? → Pattern B (no invalidate)
+- Single action then wait? → Pattern A (invalidate OK)
 ```
 
 **Common Transformations:**

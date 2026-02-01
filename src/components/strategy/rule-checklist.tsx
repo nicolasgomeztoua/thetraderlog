@@ -31,7 +31,6 @@ interface RuleChecklistProps {
 	rules: Rule[];
 	checks: RuleCheck[];
 	relevantRuleIds?: string[];
-	onUpdate?: () => void;
 	onComplianceChange?: (compliance: number) => void;
 }
 
@@ -79,7 +78,6 @@ export function RuleChecklist({
 	rules,
 	checks,
 	relevantRuleIds,
-	onUpdate,
 	onComplianceChange,
 }: RuleChecklistProps) {
 	// Track which rules are in override mode (user clicked Override button)
@@ -94,19 +92,16 @@ export function RuleChecklist({
 
 	const checkRule = api.strategies.checkRule.useMutation({
 		onMutate: ({ ruleId, checked }) => {
-			// Apply optimistic update immediately
+			// Apply optimistic update immediately - this IS the source of truth
 			applyOptimisticUpdate(ruleId, { checked });
 		},
 		onError: (_error, variables) => {
-			// On error, clear only this rule's optimistic state
+			// Only revert on actual error
 			clearOptimisticUpdate(variables.ruleId);
 			toast.error("Failed to update rule");
 		},
-		onSettled: async (_data, _error, variables) => {
-			// Wait for refetch to complete, then clear only this rule's optimistic state
-			await onUpdate?.();
-			clearOptimisticUpdate(variables.ruleId);
-		},
+		// No onSettled - we don't refetch or clear optimistic state
+		// The optimistic state IS correct, backend just persists quietly
 	});
 
 	const handleCheck = useCallback(

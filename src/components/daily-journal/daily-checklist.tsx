@@ -121,14 +121,6 @@ export function DailyChecklist({
 				);
 			}
 		},
-		onSettled: () => {
-			// Refetch to ensure consistency
-			utils.dailyJournal.getChecks.invalidate({
-				date: selectedDate.toISOString(),
-			});
-			// Update compliance stats in calendar sidebar
-			utils.dailyJournal.getComplianceStats.invalidate();
-		},
 	});
 
 	// Filter to only active templates
@@ -201,11 +193,6 @@ export function DailyChecklist({
 					context.previousData,
 				);
 			}
-		},
-		onSettled: () => {
-			utils.dailyJournal.getWithTrades.invalidate({ date: dateString });
-			// Update compliance stats in calendar sidebar
-			utils.dailyJournal.getComplianceStats.invalidate();
 		},
 	});
 
@@ -290,7 +277,7 @@ export function DailyChecklist({
 							>
 								<Checkbox
 									checked={item.checked}
-									disabled={isAutoChecked || toggleForcedCheck.isPending}
+									disabled={isAutoChecked}
 									id={checkboxId}
 									onCheckedChange={() =>
 										handleToggleForcedItem(item.id, isAutoChecked)
@@ -351,7 +338,6 @@ export function DailyChecklist({
 							>
 								<Checkbox
 									checked={isChecked}
-									disabled={toggleCheck.isPending}
 									id={checkboxId}
 									onCheckedChange={() => handleToggle(template.id)}
 								/>

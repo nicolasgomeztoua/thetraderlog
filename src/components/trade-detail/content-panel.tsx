@@ -2,7 +2,6 @@ import { DailyJournalPreview } from "@/components/daily-journal/daily-journal-pr
 import { TradeTags } from "@/components/tags/tag-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/shared";
-import { api } from "@/trpc/react";
 import type { TradeForContentPanel } from "@/types";
 import { TradeReplay } from "./replay";
 import { RunningPnlTab } from "./running-pnl-tab";
@@ -38,8 +37,6 @@ function NotesSection({
 	trade: Trade;
 	onUpdateField: (field: string, value: string | null) => void;
 }) {
-	const utils = api.useUtils();
-
 	return (
 		<div className="flex h-full flex-col">
 			{/* Sub-tabs for Trade note vs Daily Journal */}
@@ -89,7 +86,6 @@ function NotesSection({
 				</div>
 				<TradeTags
 					maxDisplay={10}
-					onUpdate={() => utils.trades.getById.invalidate({ id: trade.id })}
 					tags={trade.tradeTags ?? []}
 					tradeId={trade.id}
 				/>
