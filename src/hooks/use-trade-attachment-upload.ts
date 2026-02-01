@@ -141,6 +141,7 @@ export function useTradeAttachmentUpload({
 	return {
 		uploadFile,
 		progress,
-		isUploading: progress.status === "uploading" || progress.status === "confirming",
+		isUploading:
+			progress.status === "uploading" || progress.status === "confirming",
 	};
 }

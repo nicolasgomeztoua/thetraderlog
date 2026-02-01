@@ -209,7 +209,9 @@ export function transformHtmlToS3Keys(html: string | null): string | null {
 		/<img([^>]*)\ssrc="([^"]+)"([^>]*)>/gi,
 		(match, before: string, src: string, after: string) => {
 			// Check if this is a presigned URL containing one of our S3 key patterns
-			const keyMatch = src.match(/((?:images|attachments|journals|trades)\/[^?]+)/);
+			const keyMatch = src.match(
+				/((?:images|attachments|journals|trades)\/[^?]+)/,
+			);
 			if (keyMatch?.[1]) {
 				// Extract just the S3 key (path without query params)
 				return `<img${before} src="${keyMatch[1]}"${after}>`;

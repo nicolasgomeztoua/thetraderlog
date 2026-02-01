@@ -197,7 +197,10 @@ export function TradeNoteEditor({
 				className,
 			)}
 		>
-			<EditorContent className="min-h-0 flex-1 overflow-y-auto" editor={editor} />
+			<EditorContent
+				className="min-h-0 flex-1 overflow-y-auto"
+				editor={editor}
+			/>
 		</div>
 	);
 }

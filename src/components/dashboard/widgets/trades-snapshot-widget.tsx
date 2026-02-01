@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownIcon, ArrowUpIcon, ListIcon } from "lucide-react";
+import { useMemo } from "react";
 import { useAccount } from "@/contexts/account-context";
 import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
@@ -43,9 +44,13 @@ export function TradesSnapshotWidget() {
 		{ staleTime: 30000 },
 	);
 
-	// Get today's stats (start of today in local time)
-	const todayStart = new Date();
-	todayStart.setHours(0, 0, 0, 0);
+	// Memoize date calculation to prevent infinite re-renders
+	// (new Date objects would create new query keys on every render)
+	const todayStart = useMemo(() => {
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		return d;
+	}, []);
 
 	const { data: todayStats } = api.trades.getStats.useQuery(
 		{

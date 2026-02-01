@@ -66,9 +66,20 @@ function DailyLossProgress({
 export function TodayPerformanceWidget() {
 	const { selectedAccountId, selectedAccount } = useAccount();
 
-	// Get today's date range (start of today in local time)
-	const todayStart = new Date();
-	todayStart.setHours(0, 0, 0, 0);
+	// Memoize date calculations to prevent infinite re-renders
+	// (new Date objects would create new query keys on every render)
+	const todayStart = useMemo(() => {
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		return d;
+	}, []);
+
+	const thirtyDaysAgo = useMemo(() => {
+		const d = new Date();
+		d.setDate(d.getDate() - 30);
+		d.setHours(0, 0, 0, 0);
+		return d;
+	}, []);
 
 	// Get today's stats
 	const { data: todayStats, isLoading: todayLoading } =
@@ -81,9 +92,6 @@ export function TodayPerformanceWidget() {
 		);
 
 	// Get overall stats for comparison (last 30 days average)
-	const thirtyDaysAgo = new Date();
-	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
 	const { data: overallStats, isLoading: overallLoading } =
 		api.trades.getStats.useQuery(
 			{

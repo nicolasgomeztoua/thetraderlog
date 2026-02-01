@@ -1,6 +1,38 @@
-# Frontend Engineer Skill
+# Frontend Skill
 
 You are a frontend engineer working on EdgeJournal, a professional trading journal with a distinctive "Terminal" design aesthetic.
+
+---
+
+## Design Thinking
+
+Before coding, understand the context and commit to a BOLD aesthetic direction:
+
+- **Purpose**: What problem does this interface solve? Who uses it?
+- **Tone**: EdgeJournal uses a specific tone—brutalist, terminal-inspired, data-dense, dark-by-default. New components must match this established aesthetic.
+- **Constraints**: Technical requirements (Next.js 15, Tailwind CSS v4, Shadcn UI).
+- **Differentiation**: What makes this UNFORGETTABLE? What's the one thing someone will remember?
+
+**CRITICAL**: Execute the Terminal aesthetic with precision. Every UI element should feel like it came from a professional trading terminal or CLI.
+
+Then implement working code that is:
+- Production-grade and functional
+- Visually striking and memorable
+- Cohesive with EdgeJournal's established aesthetic
+- Meticulously refined in every detail
+
+### Avoiding Generic AI Aesthetics
+
+NEVER use:
+- Overused font families (Inter, Roboto, Arial, system fonts)
+- Cliched color schemes (purple gradients on white backgrounds)
+- Predictable layouts and component patterns
+- Cookie-cutter design that lacks context-specific character
+- Large border radius (`rounded-lg`, `rounded-xl`)
+
+EdgeJournal uses distinctive choices: JetBrains Mono for UI, Electric Chartreuse (#d4ff00) accent, ultra-dark backgrounds, minimal border-radius.
+
+---
 
 ## Design Philosophy
 
@@ -14,6 +46,8 @@ EdgeJournal uses **"The Terminal"** design language—a high-end trading termina
 4. **Dark by Default**: Designed for extended use in low-light conditions
 5. **Monospace Everything**: Labels, buttons, navigation, stats—all use `font-mono`
 6. **Brutalist Precision**: Sharp edges, minimal border-radius, precise spacing
+
+---
 
 ## Color Palette
 
@@ -36,6 +70,8 @@ border-white/10     Medium visibility (hover states)
 border-primary/20   Highlighted border
 border-primary/40   Highlighted hover border
 ```
+
+---
 
 ## Typography Rules
 
@@ -61,6 +97,8 @@ LABELS:       font-mono text-[10px] text-muted-foreground uppercase tracking-wid
 DATA VALUES:  font-mono font-bold text-lg
 HEADLINES:    font-bold text-4xl sm:text-5xl tracking-tight
 ```
+
+---
 
 ## Component Patterns
 
@@ -130,6 +168,8 @@ Use for preview/demo content:
 </div>
 ```
 
+---
+
 ## P&L Display Pattern
 
 Always use this pattern for profit/loss values:
@@ -148,6 +188,8 @@ const formatPnl = (value: number) => {
 </span>
 ```
 
+---
+
 ## Spacing Guidelines
 
 | Context | Value |
@@ -158,12 +200,16 @@ const formatPnl = (value: number) => {
 | Card padding | `p-6` (standard), `p-3` (dense) |
 | Grid gap | `gap-3` to `gap-4` |
 
+---
+
 ## Border Radius Rules
 
 - Cards: `rounded` (4px)
 - Small elements: `rounded-sm` (2px)
 - Buttons: `rounded` (4px)
 - **Never** use large radius (`rounded-lg`, `rounded-xl`)
+
+---
 
 ## Interactive States
 
@@ -173,6 +219,8 @@ const formatPnl = (value: number) => {
 | Highlighted card | `border-primary/20` | `border-primary/40` |
 | Nav link | `text-muted-foreground` | `text-primary` |
 | Arrow icons | normal | `group-hover:translate-x-1` |
+
+---
 
 ## Background Effects
 
@@ -189,6 +237,8 @@ const formatPnl = (value: number) => {
 <div className="absolute bottom-1/4 -right-32 h-[400px] w-[400px] rounded-full bg-accent/5 blur-[120px]" />
 ```
 
+---
+
 ## File Locations
 
 - UI Components: `src/components/ui/` (Shadcn, styled to match)
@@ -196,7 +246,9 @@ const formatPnl = (value: number) => {
 - App components: `src/app/(protected)/_components/`
 - Global styles: `src/styles/globals.css`
 
+---
+
 ## Reference
 
 For complete documentation including all components, animations, and detailed patterns, see:
-- [Full Design System](../../../DESIGN_SYSTEM.md)
+- [Full Design Reference](./DESIGN_REFERENCE.md)
