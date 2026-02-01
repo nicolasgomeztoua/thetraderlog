@@ -485,3 +485,64 @@ const totalChecked = userCheckedCount + forcedCheckedCount;
 - Use template literals for string concatenation (Biome rule: useTemplate)
 
 ---
+
+## 2026-02-01 - US-008 (Create Journal Metrics Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/journal-metrics-widget.tsx`
+
+### Widget Features
+1. **Metrics Display**
+   - Completion rate % (trading days journaled / total trading days)
+   - Average word count (from journals with content)
+
+2. **Sparkline Chart**
+   - Inline SVG polyline showing journal word counts over 30 days
+   - Simple single-line implementation, no external charting library
+
+3. **Emotional State Distribution**
+   - Mini donut chart showing top 4 emotional states from trades
+   - Uses analytics.getBehavioralPatterns endpoint
+   - Shows "Top Emotion" label below chart
+
+### Data Sources
+- `dailyJournal.getJournalAdjacency` - For completion rate, word counts, sparkline data
+- `analytics.getBehavioralPatterns` - For emotionalStateBreakdown array
+
+### Custom SVG Components
+```typescript
+// Sparkline - simple polyline
+function Sparkline({ data, height, width }) {
+  const points = data.map((val, i) => `${x},${y}`).join(" ");
+  return <svg><polyline points={points} /></svg>;
+}
+
+// MiniDonut - stacked circles with strokeDasharray
+function MiniDonut({ segments, size }) {
+  const arcs = segments.map((s) => {
+    const strokeDasharray = `${percentage * circumference} ${circumference}`;
+    return <circle strokeDasharray={strokeDasharray} strokeDashoffset={offset} />;
+  });
+  return <svg>{arcs}</svg>;
+}
+```
+
+### Emotional State Colors
+- confident: profit green
+- fearful: loss red
+- greedy: orange (#ff9500)
+- neutral: muted gray
+- frustrated: red (#ff5555)
+- excited: green (#55ff55)
+- anxious: orange (#ffaa00)
+- untracked: white/20
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/journal-metrics-widget.tsx`
+
+### Learnings for future iterations
+- SVGs need `aria-hidden="true"` for decorative charts (Biome accessibility rule)
+- Don't use array index as key - use meaningful keys like `segment-${idx}-${value}`
+- getBehavioralPatterns returns emotionalStateBreakdown with state, trades, pnl, avgPnl, winRate
+
+---
