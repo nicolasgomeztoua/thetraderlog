@@ -167,3 +167,35 @@ Started: Sun Feb  1 15:39:39 WET 2026
 - Widget sizes collapse gracefully on smaller screens (lg→md→sm breakpoints)
 
 ---
+
+## 2026-02-01 - US-003 (Create Base Dashboard Widget Component)
+
+### What was implemented
+- Created `src/components/dashboard/dashboard-widget.tsx` with Terminal window chrome styling
+
+### DashboardWidget Props
+- `title: string` - Widget title in header
+- `icon?: LucideIcon` - Optional header icon
+- `size?: WidgetSize` - Grid size variant (used with GridItem)
+- `href?: string` - Optional link (shows View arrow)
+- `loading?: boolean` - Shows skeleton when true
+- `children: ReactNode` - Widget content
+- `className?: string` - Additional classes
+- `data-testid?: string` - Testing ID
+
+### Features
+- Terminal-style header with traffic light dots (loss/breakeven/profit colors)
+- View link with hover arrow animation
+- Loading skeleton state (WidgetSkeleton)
+- Hover glow effect (`hover:shadow-[0_0_15px_rgba(212,255,0,0.1)]`)
+- WidgetEmptyState helper for no-data states
+
+### Files Changed
+- Created: `src/components/dashboard/dashboard-widget.tsx`
+
+### Learnings for future iterations
+- Traffic light dots use semantic colors: loss/breakeven/profit
+- Hover glow uses primary color at 0.1 opacity for subtle effect
+- WidgetSkeleton provides generic loading pattern for all widgets
+
+---

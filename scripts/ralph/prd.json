@@ -67,8 +67,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Includes WidgetSkeleton and WidgetEmptyState helper components."
     },
     {
       "id": "US-006",
