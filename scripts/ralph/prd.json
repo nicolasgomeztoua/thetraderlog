@@ -236,8 +236,8 @@
         "Verify in browser"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses getDashboardRuleCompliance endpoint. Shows circular gauge, category bars, and top 3 violations."
     },
     {
       "id": "US-013",

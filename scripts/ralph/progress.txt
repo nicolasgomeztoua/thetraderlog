@@ -586,3 +586,48 @@ function MiniDonut({ segments, size }) {
 - Use `line-clamp-2` CSS utility for truncating multi-line text
 
 ---
+
+## 2026-02-01 - US-010 (Create Rule Compliance Scorecard Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/rule-compliance-widget.tsx`
+
+### Widget Features
+1. **Circular Gauge**
+   - Shows overall compliance percentage
+   - Color coded: >=80% green, 50-79% yellow, <50% red
+   - Centered percentage display
+
+2. **Category Breakdown**
+   - Horizontal progress bars for each category:
+     - Entry rules
+     - Exit rules
+     - Risk rules
+     - Management rules
+   - Same color coding as gauge
+
+3. **Top Violations List**
+   - Shows top 3 most violated rules
+   - Rule name + violation count
+   - Red text for violation names
+
+4. **Empty State**
+   - "No strategies with rules configured" when no data
+
+### Data Source
+- `strategies.getDashboardRuleCompliance` endpoint (created in US-011)
+- Returns: overall %, byCategory object, violations array, trade counts
+
+### Components
+- `ComplianceGauge` - SVG circular progress with centered value
+- `CategoryBar` - Horizontal progress bar with label and percentage
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/rule-compliance-widget.tsx`
+
+### Learnings for future iterations
+- CSS class sorting: Biome prefers border-white/5 before border-t
+- tradesWithStrategies indicates if any relevant data exists
+- Use slice(0, 3) for limiting violations display
+
+---
