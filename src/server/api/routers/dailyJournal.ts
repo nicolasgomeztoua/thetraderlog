@@ -1254,9 +1254,11 @@ export const dailyJournalRouter = createTRPCRouter({
 				}
 
 				// Determine if has journal (dayStarted or has content)
-				const hasJournal =
-					journal?.dayStartedAt !== null ||
-					(journal?.content !== null && journal.content.trim() !== "");
+				// Note: Must check journal exists first, as undefined !== null is true in JS
+				const hasJournal = journal
+					? journal.dayStartedAt !== null ||
+						(journal.content !== null && journal.content.trim() !== "")
+					: false;
 
 				// Calculate checklist completion for this day
 				let checklistCompletion = 0;
