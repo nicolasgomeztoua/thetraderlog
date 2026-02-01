@@ -2,7 +2,7 @@
 
 import { ArrowDownIcon, ArrowUpIcon, ListIcon } from "lucide-react";
 import { useAccount } from "@/contexts/account-context";
-import { cn, formatCurrency, toDateString } from "@/lib/shared";
+import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
 import { DashboardWidget, WidgetEmptyState } from "../dashboard-widget";
 
@@ -43,9 +43,8 @@ export function TradesSnapshotWidget() {
 		{ staleTime: 30000 },
 	);
 
-	// Get today's stats
-	const today = toDateString(new Date());
-	const todayStart = new Date(today);
+	// Get today's stats (start of today in local time)
+	const todayStart = new Date();
 	todayStart.setHours(0, 0, 0, 0);
 
 	const { data: todayStats } = api.trades.getStats.useQuery(

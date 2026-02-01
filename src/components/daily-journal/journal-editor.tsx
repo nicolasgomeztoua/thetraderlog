@@ -215,7 +215,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				utils.dailyJournal.getByDate.invalidate({ date: dateString });
 
 				toast.success("Image uploaded", { id: toastId });
-				return attachment.url;
+				return attachment.key;
 			} catch (error) {
 				console.error("Image upload failed:", error);
 				toast.error("Upload failed", { id: toastId });

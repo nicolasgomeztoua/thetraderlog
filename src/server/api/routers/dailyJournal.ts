@@ -11,6 +11,7 @@ import {
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
+	transformHtmlWithPresignedUrls,
 } from "@/lib/storage/s3";
 import { getUserTimezone } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
@@ -231,9 +232,13 @@ export const dailyJournalRouter = createTRPCRouter({
 				},
 			});
 
-			// Generate presigned URLs for attachments on-demand
+			// Generate presigned URLs for attachments and content images on-demand
 			if (journal) {
-				return withPresignedUrls(journal);
+				const withAttachmentUrls = withPresignedUrls(journal);
+				return {
+					...withAttachmentUrls,
+					content: transformHtmlWithPresignedUrls(withAttachmentUrls.content),
+				};
 			}
 			return journal;
 		}),
@@ -373,9 +378,18 @@ export const dailyJournalRouter = createTRPCRouter({
 				});
 			}
 
+			// Generate presigned URLs for attachments and content images on-demand
+			let processedJournal = journal;
+			if (journal) {
+				const withAttachmentUrls = withPresignedUrls(journal);
+				processedJournal = {
+					...withAttachmentUrls,
+					content: transformHtmlWithPresignedUrls(withAttachmentUrls.content),
+				};
+			}
+
 			return {
-				// Generate presigned URLs for attachments on-demand
-				journal: journal ? withPresignedUrls(journal) : journal,
+				journal: processedJournal,
 				trades: tradesForDate,
 				forcedItems,
 			};

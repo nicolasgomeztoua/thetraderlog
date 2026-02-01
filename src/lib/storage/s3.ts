@@ -152,11 +152,12 @@ export function transformHtmlWithPresignedUrls(
 ): string | null {
 	if (!html || !isS3Configured()) return html;
 
-	// Match img src with S3 keys (paths starting with "images/" or "attachments/")
+	// Match img src with S3 keys (paths starting with "images/", "attachments/", or "journals/")
 	// Captures: <img ... src="images/user_xxx/context/file.png" ...>
 	// Or: <img ... src="attachments/user_xxx/trade/tr-xxx/file.png" ...>
+	// Or: <img ... src="journals/user_xxx/2024-01-01/file.png" ...>
 	return html.replace(
-		/(<img[^>]*\ssrc=")((?:images|attachments)\/[^"]+)("[^>]*>)/gi,
+		/(<img[^>]*\ssrc=")((?:images|attachments|journals)\/[^"]+)("[^>]*>)/gi,
 		(_, before: string, key: string, after: string) => {
 			const url = getPresignedDownloadUrl(key, 3600);
 			return `${before}${url}${after}`;
@@ -175,8 +176,9 @@ export function extractS3KeysFromHtml(html: string | null): string[] {
 	if (!html) return [];
 
 	const keys: string[] = [];
-	// Match img src with S3 keys (paths starting with "images/" or "attachments/")
-	const regex = /<img[^>]*\ssrc="((?:images|attachments)\/[^"]+)"[^>]*>/gi;
+	// Match img src with S3 keys (paths starting with "images/", "attachments/", or "journals/")
+	const regex =
+		/<img[^>]*\ssrc="((?:images|attachments|journals)\/[^"]+)"[^>]*>/gi;
 
 	for (const match of html.matchAll(regex)) {
 		if (match[1]) {
