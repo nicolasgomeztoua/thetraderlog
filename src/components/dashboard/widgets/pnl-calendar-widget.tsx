@@ -4,11 +4,6 @@ import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useAccount } from "@/contexts/account-context";
 import {
 	cn,
@@ -20,7 +15,29 @@ import {
 import { api } from "@/trpc/react";
 import { DashboardWidget } from "../dashboard-widget";
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_LABELS = [
+	{ key: "sun", label: "S" },
+	{ key: "mon", label: "M" },
+	{ key: "tue", label: "T" },
+	{ key: "wed", label: "W" },
+	{ key: "thu", label: "T" },
+	{ key: "fri", label: "F" },
+	{ key: "sat", label: "S" },
+];
+const MONTH_ABBREVS = [
+	"JAN",
+	"FEB",
+	"MAR",
+	"APR",
+	"MAY",
+	"JUN",
+	"JUL",
+	"AUG",
+	"SEP",
+	"OCT",
+	"NOV",
+	"DEC",
+];
 
 interface DayData {
 	date: string;
@@ -29,36 +46,15 @@ interface DayData {
 	pnl: number;
 }
 
-// Get heatmap color based on P&L value and intensity
-function getPnLHeatmapColor(pnl: number, maxAbsPnl: number): string {
-	if (pnl === 0) return "bg-breakeven/20";
-
-	// Calculate intensity (0-1)
-	const intensity = Math.min(Math.abs(pnl) / maxAbsPnl, 1);
-
-	if (pnl > 0) {
-		// Profit colors: from light to dark green
-		if (intensity < 0.25) return "bg-profit/20";
-		if (intensity < 0.5) return "bg-profit/40";
-		if (intensity < 0.75) return "bg-profit/60";
-		return "bg-profit/80";
-	}
-	// Loss colors: from light to dark red
-	if (intensity < 0.25) return "bg-loss/20";
-	if (intensity < 0.5) return "bg-loss/40";
-	if (intensity < 0.75) return "bg-loss/60";
-	return "bg-loss/80";
-}
-
 /**
  * P&L Calendar Widget for the Command Center dashboard.
  *
  * Shows:
- * - Full month calendar heatmap
- * - Color intensity based on P&L magnitude
- * - Hover tooltips with date, P&L, trade count
+ * - Full month calendar grid with date, trade count, and P&L per cell
+ * - TODAY badge on current day
  * - Month navigation
  * - Summary stats for displayed month
+ * - Links to daily journal for each day
  */
 export function PnLCalendarWidget() {
 	const { selectedAccountId } = useAccount();
@@ -130,15 +126,6 @@ export function PnLCalendarWidget() {
 		};
 	}, [data, currentMonth]);
 
-	// Calculate max absolute P&L for intensity scaling
-	const maxAbsPnl = useMemo(() => {
-		if (!data) return 1000;
-		const pnlValues = data
-			.filter((d) => d.hasTrades)
-			.map((d) => Math.abs(d.pnl));
-		return Math.max(...pnlValues, 100); // Minimum of 100 to avoid division issues
-	}, [data]);
-
 	const handlePrevMonth = () => {
 		setCurrentMonth((prev) => {
 			const next = new Date(prev);
@@ -167,7 +154,7 @@ export function PnLCalendarWidget() {
 	return (
 		<DashboardWidget
 			data-testid="widget-pnl-calendar"
-			href="/analytics?tab=time"
+			href="/daily-journal"
 			icon={CalendarIcon}
 			loading={isLoading}
 			skeletonVariant="calendar"
@@ -197,21 +184,26 @@ export function PnLCalendarWidget() {
 				</div>
 
 				{/* Calendar grid - hidden on mobile, shown on sm+ */}
-				<div className="hidden flex-1 sm:block">
+				<div className="hidden flex-1 flex-col sm:flex">
 					{/* Day labels */}
-					<div className="mb-1 grid grid-cols-7 gap-1">
+					<div className="grid grid-cols-7 border-white/10 border-t border-l">
 						{DAY_LABELS.map((day) => (
 							<div
-								className="text-center font-mono text-[9px] text-muted-foreground"
-								key={day}
+								className="border-white/10 border-r border-b py-1 text-center font-mono text-[9px] text-muted-foreground"
+								key={day.key}
 							>
-								{day}
+								{day.label}
 							</div>
 						))}
 					</div>
 
-					{/* Calendar days */}
-					<div className="grid grid-cols-7 gap-1">
+					{/* Calendar days - grid rows fill available height */}
+					<div
+						className="grid flex-1 grid-cols-7 border-white/10 border-l"
+						style={{
+							gridTemplateRows: `repeat(${Math.ceil(calendarDays.length / 7)}, 1fr)`,
+						}}
+					>
 						{calendarDays.map((dateStr) => {
 							const day = dayDataMap.get(dateStr);
 							const today = toDateString(new Date());
@@ -221,115 +213,126 @@ export function PnLCalendarWidget() {
 								dateStr.substring(0, 7) ===
 								toDateString(currentMonth).substring(0, 7);
 
-							const dayNum = Number.parseInt(dateStr.split("-")[2] ?? "1", 10);
-
-							// Determine background color
-							let bgColor = "bg-white/5";
-							if (day?.hasTrades && !isFuture) {
-								bgColor = getPnLHeatmapColor(day.pnl, maxAbsPnl);
-							}
+							const dateParts = dateStr.split("-");
+							const monthIdx = Number.parseInt(dateParts[1] ?? "1", 10) - 1;
+							const dayNum = Number.parseInt(dateParts[2] ?? "1", 10);
+							const monthAbbrev = MONTH_ABBREVS[monthIdx] ?? "JAN";
 
 							return (
-								<Tooltip key={dateStr}>
-									<TooltipTrigger asChild>
-										<Link
-											className={cn(
-												"relative flex aspect-square items-center justify-center rounded text-[10px] transition-all",
-												bgColor,
-												!isCurrentMonthDay && "opacity-40",
-												isFuture && "opacity-30",
-												isToday && "ring-1 ring-primary",
-												!isFuture &&
-													day?.hasTrades &&
-													"hover:ring-1 hover:ring-white/30",
-											)}
-											href={`/analytics?tab=time&date=${dateStr}`}
-										>
-											<span
+								<Link
+									className={cn(
+										"flex flex-col justify-between border-white/10 border-r border-b p-1.5 transition-colors hover:bg-white/5",
+										!isCurrentMonthDay && "opacity-40",
+										isFuture && "opacity-30",
+									)}
+									href={`/daily-journal?date=${dateStr}`}
+									key={dateStr}
+								>
+									{/* Top: Date + TODAY badge */}
+									<div className="flex items-center gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wide">
+											{monthAbbrev}
+										</span>
+										<span className="font-medium font-mono text-[11px]">
+											{dayNum}
+										</span>
+										{isToday && (
+											<span className="rounded bg-primary/20 px-1 font-mono text-[7px] text-primary">
+												TODAY
+											</span>
+										)}
+									</div>
+
+									{/* Bottom: Trade data (only if has trades) */}
+									{day?.hasTrades && !isFuture && (
+										<div className="mt-auto">
+											<div className="font-mono text-[8px] text-muted-foreground">
+												{day.tradeCount} Trade{day.tradeCount !== 1 && "s"}
+											</div>
+											<div
 												className={cn(
-													"font-mono",
-													day?.hasTrades && !isFuture && day.pnl !== 0
-														? "font-semibold text-white"
-														: "text-muted-foreground",
+													"font-mono font-semibold text-[10px]",
+													day.pnl >= 0 ? "text-profit" : "text-loss",
 												)}
 											>
-												{dayNum}
-											</span>
-										</Link>
-									</TooltipTrigger>
-									{!isFuture && day?.hasTrades && (
-										<TooltipContent className="font-mono text-xs">
-											<div className="space-y-1">
-												<div className="font-semibold">
-													{new Date(`${dateStr}T12:00:00`).toLocaleDateString(
-														"en-US",
-														{
-															weekday: "short",
-															month: "short",
-															day: "numeric",
-														},
-													)}
-												</div>
-												<div
-													className={day.pnl >= 0 ? "text-profit" : "text-loss"}
-												>
-													{formatCurrency(day.pnl)}
-												</div>
-												<div className="text-muted-foreground">
-													{day.tradeCount} trade{day.tradeCount !== 1 && "s"}
-												</div>
+												{formatCurrency(day.pnl)}
 											</div>
-										</TooltipContent>
+										</div>
 									)}
-								</Tooltip>
+								</Link>
 							);
 						})}
 					</div>
 				</div>
 
-				{/* Mobile: Compact summary view (replaces calendar grid) */}
-				<div className="flex-1 sm:hidden">
-					<div className="grid grid-cols-3 gap-4 text-center">
-						<div>
-							<div
-								className={cn(
-									"font-bold font-mono text-2xl",
-									monthStats.totalPnl >= 0 ? "text-profit" : "text-loss",
-								)}
-							>
-								{formatCurrency(monthStats.totalPnl)}
-							</div>
-							<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Month P&L
-							</div>
-						</div>
-						<div>
-							<div className="font-bold font-mono text-2xl">
-								{monthStats.tradingDays}
-							</div>
-							<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Trading Days
-							</div>
-						</div>
-						<div>
-							<div className="font-bold font-mono text-2xl">
-								{monthStats.totalTrades}
-							</div>
-							<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Total Trades
-							</div>
-						</div>
-					</div>
-					{/* Mobile legend */}
-					<div className="mt-4 flex items-center justify-center gap-1">
-						<div className="h-3 w-3 rounded bg-loss/80" />
-						<div className="h-3 w-3 rounded bg-loss/40" />
-						<div className="h-3 w-3 rounded bg-white/10" />
-						<div className="h-3 w-3 rounded bg-profit/40" />
-						<div className="h-3 w-3 rounded bg-profit/80" />
-						<span className="ml-2 font-mono text-muted-foreground text-xs">
-							Loss → Profit
-						</span>
+				{/* Mobile: 2-column calendar grid */}
+				<div className="-mx-4 max-h-[400px] flex-1 overflow-y-auto sm:hidden">
+					<div className="grid grid-cols-2 border-white/10 border-t border-l">
+						{calendarDays
+							.filter((dateStr) => {
+								// Only show days from current month on mobile
+								return (
+									dateStr.substring(0, 7) ===
+									toDateString(currentMonth).substring(0, 7)
+								);
+							})
+							.map((dateStr) => {
+								const day = dayDataMap.get(dateStr);
+								const today = toDateString(new Date());
+								const isFuture = dateStr > today;
+								const isToday = dateStr === today;
+
+								const dateParts = dateStr.split("-");
+								const dayNum = Number.parseInt(dateParts[2] ?? "1", 10);
+
+								return (
+									<Link
+										className={cn(
+											"flex flex-col justify-between border-white/10 border-r border-b p-3",
+											isToday && "bg-primary/5",
+											isFuture && "opacity-40",
+										)}
+										href={`/daily-journal?date=${dateStr}`}
+										key={dateStr}
+									>
+										{/* Day number */}
+										<div className="flex items-center gap-2">
+											<span
+												className={cn(
+													"font-medium font-mono text-lg",
+													isToday && "text-primary",
+												)}
+											>
+												{dayNum}
+											</span>
+											{isToday && (
+												<span className="rounded bg-primary/20 px-1.5 py-0.5 font-mono text-[9px] text-primary">
+													TODAY
+												</span>
+											)}
+										</div>
+
+										{/* Trade data */}
+										{day?.hasTrades && !isFuture ? (
+											<div className="mt-2">
+												<div className="font-mono text-muted-foreground text-xs">
+													{day.tradeCount} Trade{day.tradeCount !== 1 && "s"}
+												</div>
+												<div
+													className={cn(
+														"font-mono font-semibold text-sm",
+														day.pnl >= 0 ? "text-profit" : "text-loss",
+													)}
+												>
+													{formatCurrency(day.pnl)}
+												</div>
+											</div>
+										) : (
+											<div className="mt-2 h-[38px]" />
+										)}
+									</Link>
+								);
+							})}
 					</div>
 				</div>
 
@@ -364,18 +367,6 @@ export function PnLCalendarWidget() {
 							Trades
 						</div>
 					</div>
-				</div>
-
-				{/* Legend - desktop only */}
-				<div className="mt-2 hidden items-center justify-center gap-1 sm:flex">
-					<div className="h-2 w-2 rounded bg-loss/80" />
-					<div className="h-2 w-2 rounded bg-loss/40" />
-					<div className="h-2 w-2 rounded bg-white/10" />
-					<div className="h-2 w-2 rounded bg-profit/40" />
-					<div className="h-2 w-2 rounded bg-profit/80" />
-					<span className="ml-1 font-mono text-[8px] text-muted-foreground">
-						Loss → Profit
-					</span>
 				</div>
 			</div>
 		</DashboardWidget>

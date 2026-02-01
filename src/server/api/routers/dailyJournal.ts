@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, isNull, lt, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
@@ -327,6 +327,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					gte(trades.entryTime, dayStart),
 					lt(trades.entryTime, dayEnd),
 					isNull(trades.deletedAt),
+					isNotNull(trades.accountId),
 				),
 				with: {
 					account: true,
@@ -999,6 +1000,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					gte(trades.entryTime, rangeStart),
 					lt(trades.entryTime, rangeEnd),
 					isNull(trades.deletedAt),
+					isNotNull(trades.accountId),
 				),
 				columns: {
 					entryTime: true,
@@ -1200,6 +1202,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				gte(trades.entryTime, rangeStart),
 				lt(trades.entryTime, rangeEnd),
 				isNull(trades.deletedAt),
+				isNotNull(trades.accountId),
 			];
 
 			// Filter by account if specified

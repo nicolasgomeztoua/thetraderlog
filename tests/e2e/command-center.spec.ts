@@ -28,9 +28,9 @@ test.describe("Command Center Dashboard", () => {
 		const gridItems = page.getByTestId("grid-item");
 		await expect(gridItems.first()).toBeVisible({ timeout: 10000 });
 
-		// Count grid items - should have 10 widgets
+		// Count grid items - should have 9 widgets
 		const count = await gridItems.count();
-		expect(count).toBe(10);
+		expect(count).toBe(9);
 	});
 
 	test("displays all dashboard widgets", async ({ page }, testInfo) => {
@@ -39,7 +39,6 @@ test.describe("Command Center Dashboard", () => {
 		// List of all widget test IDs
 		const widgetTestIds = [
 			"widget-today-performance",
-			"widget-quick-actions",
 			"widget-journal-status",
 			"widget-pnl-calendar",
 			"widget-analytics-snapshot",
@@ -66,34 +65,6 @@ test.describe("Command Center Dashboard", () => {
 
 		// Widget container should be visible (content may still be loading)
 		await expect(calendar).toBeVisible();
-	});
-
-	test("quick actions widget has clickable actions", async ({
-		page,
-	}, testInfo) => {
-		testInfo.setTimeout(90000);
-
-		// Find the quick actions widget
-		const quickActions = page.getByTestId("widget-quick-actions");
-		await expect(quickActions).toBeVisible({ timeout: 15000 });
-
-		// Wait for content to load
-		await page.waitForTimeout(5000);
-
-		// Quick actions should have links (action buttons)
-		const links = quickActions.locator("a[href]");
-
-		// Wait for at least one link to appear (may still be loading)
-		try {
-			await expect(links.first()).toBeVisible({ timeout: 10000 });
-			// If links are visible, verify we have multiple
-			const linkCount = await links.count();
-			expect(linkCount).toBeGreaterThanOrEqual(1);
-		} catch {
-			// If loading, widget skeleton may be showing - that's okay
-			const widget = page.getByTestId("widget-quick-actions");
-			await expect(widget).toBeVisible();
-		}
 	});
 
 	test("journal status widget is visible", async ({ page }, testInfo) => {

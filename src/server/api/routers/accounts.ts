@@ -400,10 +400,10 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (associatedTrades) {
-				// Unassign trades from this account (set accountId to null)
+				// Soft-delete trades from this account
 				await ctx.db
 					.update(trades)
-					.set({ accountId: null })
+					.set({ deletedAt: new Date() })
 					.where(eq(trades.accountId, input.id));
 			}
 

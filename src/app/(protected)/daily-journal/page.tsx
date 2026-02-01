@@ -15,7 +15,7 @@ import {
 	ResizablePanel,
 	ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
@@ -199,6 +199,7 @@ export default function DailyJournalPage() {
 			{/* Mobile Sidebar Sheet */}
 			<Sheet onOpenChange={setSidebarOpen} open={sidebarOpen}>
 				<SheetContent className="w-[300px] overflow-y-auto p-0" side="left">
+					<SheetTitle className="sr-only">Navigation Sidebar</SheetTitle>
 					<div className="px-4 pt-12 pb-4">
 						{/* Calendar */}
 						<div className="mb-4 rounded border border-white/5 bg-white/1 p-4">

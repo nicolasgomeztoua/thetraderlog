@@ -9,7 +9,6 @@ import { JournalExcerptsWidget } from "@/components/dashboard/widgets/journal-ex
 import { JournalStatusWidget } from "@/components/dashboard/widgets/journal-status-widget";
 import { JournalStreakWidget } from "@/components/dashboard/widgets/journal-streak-widget";
 import { PnLCalendarWidget } from "@/components/dashboard/widgets/pnl-calendar-widget";
-import { QuickActionsWidget } from "@/components/dashboard/widgets/quick-actions-widget";
 import { RuleComplianceWidget } from "@/components/dashboard/widgets/rule-compliance-widget";
 import { StrategiesSnapshotWidget } from "@/components/dashboard/widgets/strategies-snapshot-widget";
 import { TodayPerformanceWidget } from "@/components/dashboard/widgets/today-performance-widget";
@@ -20,7 +19,7 @@ import { useAccount } from "@/contexts/account-context";
  * Command Center Dashboard - Adaptive trading dashboard
  *
  * Layout (3-column grid on desktop):
- * Row 1: [Today's Performance (wide)] [Quick Actions]
+ * Row 1: [Today's Performance (wide)]
  * Row 2: [Journal Status] [P&L Calendar  ] [Analytics Snapshot]
  * Row 3: [Journal Streak] [   (large)    ] [Strategies Snapshot]
  * Row 4: [Rule Compliance]               [Recent Trades]
@@ -59,12 +58,9 @@ export default function DashboardPage() {
 
 			{/* Command Center Grid */}
 			<CommandCenterGrid>
-				{/* Row 1: Today's Performance (wide) + Quick Actions */}
+				{/* Row 1: Today's Performance (wide) */}
 				<GridItem size="md">
 					<TodayPerformanceWidget />
-				</GridItem>
-				<GridItem size="sm">
-					<QuickActionsWidget />
 				</GridItem>
 
 				{/* Row 2-4 Left Column: Journal widgets + Rule Compliance */}

@@ -211,7 +211,7 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
 	}
 
 	return (
-		<div className="flex flex-wrap items-center gap-0.5 rounded-t border border-white/10 bg-white/2 px-2 py-1.5">
+		<div className="flex items-center gap-0.5 overflow-x-auto rounded-t border border-white/10 bg-white/2 px-2 py-1.5">
 			{/* Text formatting */}
 			<ToolbarButton
 				icon={<BoldIcon className="size-4" />}
