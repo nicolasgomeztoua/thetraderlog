@@ -631,3 +631,58 @@ function MiniDonut({ segments, size }) {
 - Use slice(0, 3) for limiting violations display
 
 ---
+
+## 2026-02-01 - US-013 (Create P&L Calendar Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/pnl-calendar-widget.tsx`
+
+### Widget Features
+1. **Calendar Heatmap**
+   - Full month calendar grid (7 columns)
+   - Color intensity based on P&L magnitude
+   - 4 levels each for profit (green) and loss (red)
+   - Neutral gray for no trades
+
+2. **Month Navigation**
+   - Previous/Next month buttons
+   - Current month label
+   - Next disabled on current month
+
+3. **Hover Tooltips**
+   - Date (formatted)
+   - P&L amount (colored)
+   - Trade count
+
+4. **Summary Row**
+   - Total P&L for displayed month
+   - Trading days count
+   - Total trades count
+
+5. **Legend**
+   - Visual gradient from loss to profit
+
+### Heatmap Color Logic
+```typescript
+function getPnLHeatmapColor(pnl: number, maxAbsPnl: number): string {
+  const intensity = Math.min(Math.abs(pnl) / maxAbsPnl, 1);
+  if (pnl > 0) {
+    // 4 levels: bg-profit/20, /40, /60, /80
+  } else {
+    // 4 levels: bg-loss/20, /40, /60, /80
+  }
+}
+```
+
+### Data Source
+- `dailyJournal.getJournalAdjacency` - Returns date, hasTrades, tradeCount, pnl
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/pnl-calendar-widget.tsx`
+
+### Learnings for future iterations
+- For heatmap intensity, calculate maxAbsPnl from data to normalize colors
+- Use minimum value (100) to avoid division issues with small data sets
+- Links to `/analytics?tab=time&date=YYYY-MM-DD` for date-specific view
+
+---
