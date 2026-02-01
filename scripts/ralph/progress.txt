@@ -546,3 +546,43 @@ function MiniDonut({ segments, size }) {
 - getBehavioralPatterns returns emotionalStateBreakdown with state, trades, pnl, avgPnl, winRate
 
 ---
+
+## 2026-02-01 - US-009 (Create Recent Journal Excerpts Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/journal-excerpts-widget.tsx`
+
+### Widget Features
+1. **Journal Entry Cards**
+   - Shows last 3 journal entries that have content
+   - Each card has: date (formatted), P&L badge (if trades), excerpt text
+   - Click card to navigate to /daily-journal?date=YYYY-MM-DD
+
+2. **Excerpt Generation**
+   - Strip HTML tags from content
+   - First 100 characters
+   - Truncate with "..." if longer
+   - "Read more →" link on hover
+
+3. **Empty State**
+   - Uses WidgetEmptyState component
+   - "No recent journal entries" message
+
+### Data Sources
+- `getJournalAdjacency` - Filter for journals with content, get P&L data
+- `getByDate` (x3) - Fetch actual content for top 3 entries
+
+### Design Decisions
+- Used individual getByDate queries for 3 entries instead of creating new endpoint
+- Acceptable trade-off: only 3 queries, cached with staleTime: 60000
+- Alternative would be modifying getRange to return content (currently strips it)
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/journal-excerpts-widget.tsx`
+
+### Learnings for future iterations
+- getRange currently strips content (only returns hasContent boolean)
+- For small N (3 entries), individual queries are acceptable vs creating new endpoint
+- Use `line-clamp-2` CSS utility for truncating multi-line text
+
+---
