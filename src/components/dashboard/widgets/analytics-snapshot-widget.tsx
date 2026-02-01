@@ -7,6 +7,7 @@ import { useAccount } from "@/contexts/account-context";
 import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
 import { DashboardWidget, WidgetEmptyState } from "../dashboard-widget";
+import { CumulativePnLSparkline, WinRateGauge } from "./chart-components";
 
 type Period = "today" | "week" | "month";
 
@@ -42,109 +43,6 @@ function getDateRange(period: Period) {
 		startDate: start.toISOString(),
 		endDate: end.toISOString(),
 	};
-}
-
-// Circular gauge for win rate
-function WinRateGauge({ value, size = 56 }: { value: number; size?: number }) {
-	const strokeWidth = 5;
-	const radius = (size - strokeWidth) / 2;
-	const circumference = radius * 2 * Math.PI;
-	const percent = Math.min(Math.max(value / 100, 0), 1);
-	const offset = circumference - percent * circumference;
-
-	const color = value >= 50 ? "stroke-profit" : "stroke-loss";
-
-	return (
-		<div className="relative">
-			<svg
-				aria-hidden="true"
-				className="-rotate-90 transform"
-				height={size}
-				width={size}
-			>
-				<circle
-					className="stroke-white/10"
-					cx={size / 2}
-					cy={size / 2}
-					fill="none"
-					r={radius}
-					strokeWidth={strokeWidth}
-				/>
-				<circle
-					className={cn(color, "transition-all duration-500")}
-					cx={size / 2}
-					cy={size / 2}
-					fill="none"
-					r={radius}
-					strokeDasharray={circumference}
-					strokeDashoffset={offset}
-					strokeLinecap="round"
-					strokeWidth={strokeWidth}
-				/>
-			</svg>
-			<div className="absolute inset-0 flex items-center justify-center">
-				<span className={cn("font-mono font-semibold text-xs", color)}>
-					{Math.round(value)}%
-				</span>
-			</div>
-		</div>
-	);
-}
-
-// Mini sparkline for cumulative P&L
-function CumulativePnLSparkline({
-	data,
-	height = 24,
-	width = 80,
-}: {
-	data: number[];
-	height?: number;
-	width?: number;
-}) {
-	if (data.length === 0) return null;
-
-	// Calculate cumulative values
-	const cumulative: number[] = [];
-	let sum = 0;
-	for (const val of data) {
-		sum += val;
-		cumulative.push(sum);
-	}
-
-	const max = Math.max(...cumulative, 0);
-	const min = Math.min(...cumulative, 0);
-	const range = max - min || 1;
-
-	// Create path
-	const points = cumulative
-		.map((val, i) => {
-			const x = (i / Math.max(cumulative.length - 1, 1)) * width;
-			const y = height - ((val - min) / range) * height;
-			return `${x},${y}`;
-		})
-		.join(" ");
-
-	// Determine color based on final value
-	const finalValue = cumulative[cumulative.length - 1] ?? 0;
-	const strokeColor = finalValue >= 0 ? "stroke-profit" : "stroke-loss";
-
-	return (
-		<svg
-			aria-hidden="true"
-			className="overflow-visible"
-			height={height}
-			viewBox={`0 0 ${width} ${height}`}
-			width={width}
-		>
-			<polyline
-				className={cn("fill-none", strokeColor)}
-				points={points}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-				strokeWidth={1.5}
-			/>
-		</svg>
-	);
 }
 
 /**

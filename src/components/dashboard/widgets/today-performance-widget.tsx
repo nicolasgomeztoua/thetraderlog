@@ -3,56 +3,10 @@
 import { TrendingDownIcon, TrendingUpIcon, ZapIcon } from "lucide-react";
 import { useMemo } from "react";
 import { useAccount } from "@/contexts/account-context";
-import { cn, formatCurrency, toDateString } from "@/lib/shared";
+import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
 import { DashboardWidget, WidgetEmptyState } from "../dashboard-widget";
-
-// Circular gauge for win rate
-function WinRateGauge({ value, size = 48 }: { value: number; size?: number }) {
-	const strokeWidth = 4;
-	const radius = (size - strokeWidth) / 2;
-	const circumference = radius * 2 * Math.PI;
-	const percent = Math.min(Math.max(value / 100, 0), 1);
-	const offset = circumference - percent * circumference;
-
-	const color = value >= 50 ? "stroke-profit" : "stroke-loss";
-
-	return (
-		<div className="relative">
-			<svg
-				aria-hidden="true"
-				className="-rotate-90 transform"
-				height={size}
-				width={size}
-			>
-				<circle
-					className="stroke-white/10"
-					cx={size / 2}
-					cy={size / 2}
-					fill="none"
-					r={radius}
-					strokeWidth={strokeWidth}
-				/>
-				<circle
-					className={cn(color, "transition-all duration-500")}
-					cx={size / 2}
-					cy={size / 2}
-					fill="none"
-					r={radius}
-					strokeDasharray={circumference}
-					strokeDashoffset={offset}
-					strokeLinecap="round"
-					strokeWidth={strokeWidth}
-				/>
-			</svg>
-			<div className="absolute inset-0 flex items-center justify-center">
-				<span className={cn("font-mono font-semibold text-[10px]", color)}>
-					{Math.round(value)}%
-				</span>
-			</div>
-		</div>
-	);
-}
+import { WinRateGauge } from "./chart-components";
 
 // Progress bar for daily loss limit (prop accounts)
 function DailyLossProgress({
@@ -112,9 +66,8 @@ function DailyLossProgress({
 export function TodayPerformanceWidget() {
 	const { selectedAccountId, selectedAccount } = useAccount();
 
-	// Get today's date range
-	const today = toDateString(new Date());
-	const todayStart = new Date(today);
+	// Get today's date range (start of today in local time)
+	const todayStart = new Date();
 	todayStart.setHours(0, 0, 0, 0);
 
 	// Get today's stats
