@@ -815,3 +815,48 @@ return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 - formatTimeAgo helper for relative time display
 
 ---
+
+## 2026-02-01 - US-017 (Create Today's Performance Widget)
+
+### What was implemented
+- Created `src/components/dashboard/widgets/today-performance-widget.tsx`
+
+### Widget Features
+1. **Large P&L Display**
+   - Prominent formatted currency
+   - Profit (green) / Loss (red) coloring
+   - 3xl font size for impact
+
+2. **Comparison to Average**
+   - Shows "+$X vs avg" or "-$X vs avg"
+   - Calculated from 30-day stats / ~20 trading days
+   - Trend arrow icon (up for better, down for worse)
+
+3. **Stats Row**
+   - Total trades
+   - Win/Loss count
+   - Profit Factor
+
+4. **Win Rate Gauge**
+   - Circular progress (48px)
+   - >=50% green, <50% red
+
+5. **Daily Loss Limit (Prop Accounts)**
+   - Progress bar showing usage
+   - Color changes: green < 70%, yellow 70-90%, red > 90%
+   - Only shows if account.dailyLossLimit is set
+
+### Data Sources
+- `trades.getStats` (today) - Today's performance
+- `trades.getStats` (30 days) - For daily average comparison
+- `selectedAccount.dailyLossLimit` - From account context
+
+### Files Changed
+- Created: `src/components/dashboard/widgets/today-performance-widget.tsx`
+
+### Learnings for future iterations
+- Account dailyLossLimit is stored as decimal string, needs parseFloat
+- Prop challenge/funded accounts have dailyLossLimit in schema
+- Use ~20 trading days when estimating daily average from 30 calendar days
+
+---
