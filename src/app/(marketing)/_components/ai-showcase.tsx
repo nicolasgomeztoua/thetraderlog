@@ -147,9 +147,9 @@ export function AIShowcase() {
 
 				{/* Terminal interface */}
 				<div className="mx-auto max-w-4xl">
-					<div className="overflow-hidden rounded border border-white/10 bg-black/80 shadow-2xl">
+					<div className="overflow-hidden rounded border border-border bg-black/80 shadow-2xl">
 						{/* Terminal header */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4 sm:py-3">
+						<div className="flex items-center justify-between border-border/50 border-b bg-muted/50 px-3 py-2 sm:px-4 sm:py-3">
 							<div className="flex items-center gap-2 sm:gap-3">
 								<div className="flex items-center gap-1.5 sm:gap-2">
 									<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-3 sm:w-3" />
@@ -169,7 +169,7 @@ export function AIShowcase() {
 						</div>
 
 						{/* Query selector - horizontal scroll on mobile */}
-						<div className="-mx-4 border-white/5 border-b px-4 sm:mx-0 sm:px-0">
+						<div className="-mx-4 border-border/50 border-b px-4 sm:mx-0 sm:px-0">
 							<div className="overflow-x-auto p-3 sm:p-4">
 								<div className="flex gap-2 sm:flex-wrap">
 									{queries.map((query, index) => (
@@ -177,7 +177,7 @@ export function AIShowcase() {
 											className={`flex min-h-[36px] shrink-0 items-center gap-1.5 rounded border px-2.5 py-1.5 font-mono text-[10px] transition-all sm:min-h-0 sm:gap-2 sm:px-3 sm:py-2 sm:text-xs ${
 												activeIndex === index
 													? "border-primary/50 bg-primary/10 text-primary"
-													: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground"
+													: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
 											}`}
 											key={query.question}
 											onClick={() => handleQuerySelect(index)}
@@ -236,7 +236,7 @@ export function AIShowcase() {
 						</div>
 
 						{/* Terminal footer */}
-						<div className="border-white/5 border-t bg-white/2 px-3 py-2 sm:px-4 sm:py-3">
+						<div className="border-border/50 border-t bg-muted/50 px-3 py-2 sm:px-4 sm:py-3">
 							<div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
 								<span className="font-mono text-[10px] text-muted-foreground sm:text-xs">
 									Powered by your API key

@@ -54,7 +54,7 @@ export function DashboardWidget({
 				// Base container with Terminal styling
 				"flex h-full flex-col overflow-hidden rounded",
 				// Border with hover glow effect
-				"border border-white/5 bg-white/1",
+				"border border-border/50 bg-card/50",
 				"hover:border-primary/20 hover:shadow-[0_0_15px_rgba(212,255,0,0.1)]",
 				"transition-all duration-300",
 				className,
@@ -62,7 +62,7 @@ export function DashboardWidget({
 			data-testid={testId}
 		>
 			{/* Terminal window chrome header */}
-			<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2">
+			<div className="flex items-center justify-between border-border/50 border-b bg-muted/50 px-4 py-2">
 				<div className="flex items-center gap-2">
 					{/* Traffic light dots */}
 					<div className="flex items-center gap-1.5">
@@ -174,12 +174,12 @@ function PerformanceSkeleton() {
 					<Skeleton className="h-6 w-8" />
 					<Skeleton className="mt-1 h-3 w-12" />
 				</div>
-				<div className="h-8 w-px bg-white/10" />
+				<div className="h-8 w-px bg-card/500" />
 				<div>
 					<Skeleton className="h-6 w-12" />
 					<Skeleton className="mt-1 h-3 w-8" />
 				</div>
-				<div className="h-8 w-px bg-white/10" />
+				<div className="h-8 w-px bg-card/500" />
 				<div>
 					<Skeleton className="h-6 w-10" />
 					<Skeleton className="mt-1 h-3 w-8" />
@@ -218,7 +218,7 @@ function CalendarSkeleton() {
 				))}
 			</div>
 			{/* Summary row */}
-			<div className="mt-3 flex items-center justify-between border-white/5 border-t pt-3">
+			<div className="mt-3 flex items-center justify-between border-border/50 border-t pt-3">
 				<Skeleton className="h-8 w-16" />
 				<Skeleton className="h-8 w-12" />
 				<Skeleton className="h-8 w-14" />
@@ -234,7 +234,7 @@ function ListSkeleton() {
 			<div className="flex-1 space-y-2">
 				{[...Array(5)].map((_, i) => (
 					<div
-						className="flex items-center gap-2 rounded bg-white/2 p-1.5"
+						className="flex items-center gap-2 rounded bg-muted/50 p-1.5"
 						key={`list-item-${i.toString()}`}
 					>
 						<Skeleton className="h-5 w-5 shrink-0 rounded" />
@@ -245,7 +245,7 @@ function ListSkeleton() {
 				))}
 			</div>
 			{/* Footer stats */}
-			<div className="mt-2 flex items-center justify-between border-white/5 border-t pt-2">
+			<div className="mt-2 flex items-center justify-between border-border/50 border-t pt-2">
 				<Skeleton className="h-3 w-12" />
 				<div className="flex items-center gap-3">
 					<Skeleton className="h-4 w-16" />
@@ -277,7 +277,7 @@ function StatusSkeleton() {
 					<Skeleton className="h-5 w-8" />
 					<Skeleton className="mt-1 h-3 w-14" />
 				</div>
-				<div className="h-6 w-px bg-white/10" />
+				<div className="h-6 w-px bg-card/500" />
 				<div>
 					<Skeleton className="h-5 w-12" />
 					<Skeleton className="mt-1 h-3 w-16" />

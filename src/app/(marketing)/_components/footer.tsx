@@ -23,7 +23,7 @@ const footerLinks = {
 
 export function Footer() {
 	return (
-		<footer className="relative border-white/5 border-t bg-black/50">
+		<footer className="relative border-border/50 border-t bg-black/50">
 			<div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
 				<div className="grid gap-8 sm:gap-12 md:grid-cols-2 lg:grid-cols-5">
 					{/* Brand column */}
@@ -88,7 +88,7 @@ export function Footer() {
 				</div>
 
 				{/* Bottom bar */}
-				<div className="mt-10 flex flex-col items-center justify-between gap-4 border-white/5 border-t pt-6 sm:mt-16 sm:gap-6 sm:pt-8 lg:flex-row">
+				<div className="mt-10 flex flex-col items-center justify-between gap-4 border-border/50 border-t pt-6 sm:mt-16 sm:gap-6 sm:pt-8 lg:flex-row">
 					<p className="font-mono text-[10px] text-muted-foreground sm:text-xs">
 						© {new Date().getFullYear()} EdgeJournal. All rights reserved.
 					</p>
@@ -122,7 +122,7 @@ export function Footer() {
 
 			{/* Large background text - smaller on mobile */}
 			<div className="pointer-events-none absolute right-0 bottom-0 left-0 overflow-hidden">
-				<div className="translate-y-1/2 text-center font-bold text-[25vw] text-white/2 leading-none sm:text-[20vw]">
+				<div className="translate-y-1/2 text-center font-bold text-[25vw] text-muted/20 leading-none sm:text-[20vw]">
 					EDGE
 				</div>
 			</div>

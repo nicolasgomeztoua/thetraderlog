@@ -309,10 +309,7 @@ export function CalendarSidebar({
 								// P&L background color
 								pnlColorClass,
 								// No trades - subtle background (except today which has its own hover)
-								!hasTrades &&
-									!isFutureDate &&
-									!isDayToday &&
-									"hover:bg-white/5",
+								!hasTrades && !isFutureDate && !isDayToday && "hover:bg-muted",
 								// Today indicator with distinct hover
 								isDayToday &&
 									!isSelected &&

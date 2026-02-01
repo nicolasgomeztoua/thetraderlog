@@ -152,7 +152,7 @@ export function WhatFilters({
 									className={`rounded border px-2.5 py-1 font-mono text-xs transition-all ${
 										selectedTags.includes(tag.id)
 											? "border-primary/40 bg-primary/10"
-											: "border-white/10 bg-white/2 hover:border-white/20"
+											: "border-border bg-muted/50 hover:border-border"
 									}`}
 									key={tag.id}
 									onClick={() => toggleTag(tag.id)}

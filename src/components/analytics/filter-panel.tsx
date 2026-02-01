@@ -119,7 +119,7 @@ function MultiSelectFilter({
 						className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 font-mono text-xs transition-colors ${
 							isSelected
 								? "border-primary bg-primary/10 text-primary"
-								: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground"
+								: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
 						}`}
 						key={option.id}
 						onClick={() => toggleOption(option.id)}
@@ -193,7 +193,7 @@ function RadioGroup({
 					className={`rounded border px-3 py-1.5 font-mono text-xs transition-colors ${
 						value === option.value
 							? "border-primary bg-primary/10 text-primary"
-							: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground"
+							: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
 					}`}
 					key={option.value}
 					onClick={() => onChange(option.value)}

@@ -946,13 +946,13 @@ export default function JournalPage() {
 			<Tabs onValueChange={(v) => setTab(v as "trades" | "trash")} value={tab}>
 				<TabsList className="border border-border bg-secondary">
 					<TabsTrigger
-						className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
+						className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-muted/300"
 						value="trades"
 					>
 						All Trades
 					</TabsTrigger>
 					<TabsTrigger
-						className="gap-2 font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
+						className="gap-2 font-mono text-xs uppercase tracking-wider data-[state=active]:bg-muted/300"
 						value="trash"
 					>
 						<Trash2 className="h-3.5 w-3.5" />

@@ -66,7 +66,7 @@ const STATUS_STYLES: Record<
 		ring: "ring-loss/40",
 	},
 	"no-trades": {
-		bg: "bg-white/5",
+		bg: "bg-muted",
 		text: "text-muted-foreground",
 		ring: "ring-white/10",
 	},
@@ -250,7 +250,7 @@ export function JournalStreakWidget() {
 							</div>
 						</div>
 
-						<div className="h-8 w-px bg-white/10" />
+						<div className="h-8 w-px bg-muted/300" />
 
 						{/* Completion */}
 						<div>
@@ -401,7 +401,7 @@ export function JournalStreakWidget() {
 						Missing
 					</span>
 					<span className="flex items-center gap-1">
-						<div className="h-2 w-2 rounded bg-white/10" />
+						<div className="h-2 w-2 rounded bg-muted/300" />
 						No trades
 					</span>
 				</div>

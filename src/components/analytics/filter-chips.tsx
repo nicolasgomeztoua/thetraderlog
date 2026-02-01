@@ -280,7 +280,7 @@ export function FilterChips({
 					<span className="max-w-[150px] truncate">{chip.value}</span>
 					<button
 						aria-label={`Remove ${chip.label} filter`}
-						className="ml-1 rounded-sm p-0.5 hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-primary"
+						className="ml-1 rounded-sm p-0.5 hover:bg-muted/300 focus:outline-none focus:ring-1 focus:ring-primary"
 						onClick={() => clearFilter(chip.key)}
 						type="button"
 					>

@@ -27,6 +27,11 @@ export default function StrategiesPage() {
 	const router = useRouter();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [strategyToDelete, setStrategyToDelete] = useState<string | null>(null);
+	const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+	const [strategyToDuplicate, setStrategyToDuplicate] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
 
 	const utils = api.useUtils();
 
@@ -51,6 +56,8 @@ export default function StrategiesPage() {
 		onSuccess: (newStrategy) => {
 			toast.success("Strategy duplicated");
 			utils.strategies.getAll.invalidate();
+			setDuplicateDialogOpen(false);
+			setStrategyToDuplicate(null);
 			router.push(`/strategies/${newStrategy.id}`);
 		},
 		onError: (error) => {
@@ -66,6 +73,17 @@ export default function StrategiesPage() {
 	const confirmDelete = () => {
 		if (strategyToDelete) {
 			deleteMutation.mutate({ id: strategyToDelete });
+		}
+	};
+
+	const handleDuplicate = (id: string, name: string) => {
+		setStrategyToDuplicate({ id, name });
+		setDuplicateDialogOpen(true);
+	};
+
+	const confirmDuplicate = () => {
+		if (strategyToDuplicate) {
+			duplicateMutation.mutate({ id: strategyToDuplicate.id });
 		}
 	};
 
@@ -361,7 +379,7 @@ export default function StrategiesPage() {
 									key={strategy.id}
 									onDelete={() => handleDelete(strategy.id)}
 									onDuplicate={() =>
-										duplicateMutation.mutate({ id: strategy.id })
+										handleDuplicate(strategy.id, strategy.name)
 									}
 									onEdit={() => router.push(`/strategies/${strategy.id}`)}
 									stats={statsMap.get(strategy.id) ?? null}
@@ -414,6 +432,41 @@ export default function StrategiesPage() {
 								variant="destructive"
 							>
 								{deleteMutation.isPending ? "Deleting..." : "Delete"}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+
+				{/* Duplicate confirmation dialog */}
+				<Dialog
+					onOpenChange={setDuplicateDialogOpen}
+					open={duplicateDialogOpen}
+				>
+					<DialogContent className="border-border bg-background">
+						<DialogHeader>
+							<DialogTitle className="font-mono uppercase tracking-wider">
+								Duplicate Strategy
+							</DialogTitle>
+							<DialogDescription className="font-mono text-xs">
+								Create a copy of &quot;{strategyToDuplicate?.name}&quot;? The
+								new strategy will be named &quot;{strategyToDuplicate?.name}{" "}
+								(Copy) &quot;.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+							<Button
+								className="min-h-[44px] sm:min-h-0"
+								onClick={() => setDuplicateDialogOpen(false)}
+								variant="ghost"
+							>
+								Cancel
+							</Button>
+							<Button
+								className="min-h-[44px] sm:min-h-0"
+								disabled={duplicateMutation.isPending}
+								onClick={confirmDuplicate}
+							>
+								{duplicateMutation.isPending ? "Duplicating..." : "Duplicate"}
 							</Button>
 						</DialogFooter>
 					</DialogContent>

@@ -72,7 +72,7 @@ export function QuickFilters({
 	);
 
 	return (
-		<div className="flex items-center gap-3 rounded border border-white/10 bg-white/2 px-4 py-2.5">
+		<div className="flex items-center gap-3 rounded border border-border bg-muted/50 px-4 py-2.5">
 			{/* Command prompt */}
 			<div className="flex items-center gap-2">
 				<span className="font-mono text-muted-foreground text-xs">$</span>
@@ -82,7 +82,7 @@ export function QuickFilters({
 			</div>
 
 			{/* Divider */}
-			<div className="h-5 w-px bg-white/10" />
+			<div className="h-5 w-px bg-muted/300" />
 
 			{/* Symbols */}
 			<div className="flex items-center gap-1.5">
@@ -92,7 +92,7 @@ export function QuickFilters({
 							className={cn(
 								"rounded border px-2 py-0.5 font-mono text-xs",
 								symbol.startsWith("+")
-									? "border-white/10 bg-white/2 text-muted-foreground"
+									? "border-border bg-muted/50 text-muted-foreground"
 									: "border-primary/30 bg-primary/10 text-primary",
 							)}
 							key={symbol}
@@ -108,7 +108,7 @@ export function QuickFilters({
 			</div>
 
 			{/* Divider */}
-			<div className="h-5 w-px bg-white/10" />
+			<div className="h-5 w-px bg-muted/300" />
 
 			{/* Date Range */}
 			<span className="font-mono text-muted-foreground text-xs">
@@ -121,7 +121,7 @@ export function QuickFilters({
 			{/* Clear All (if filters active) */}
 			{hasActiveFilters && (
 				<button
-					className="flex items-center gap-1 rounded border border-white/10 px-2 py-0.5 font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-white/20 hover:text-foreground"
+					className="flex items-center gap-1 rounded border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-border hover:text-foreground"
 					onClick={onClearAll}
 					type="button"
 				>
@@ -136,7 +136,7 @@ export function QuickFilters({
 					"flex items-center gap-1.5 rounded border px-3 py-1 font-mono text-xs uppercase tracking-wider transition-all",
 					isExpanded
 						? "border-primary/40 bg-primary/10 text-primary"
-						: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground",
+						: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground",
 				)}
 				onClick={onToggleExpand}
 				type="button"

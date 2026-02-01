@@ -18,7 +18,7 @@ const navLinks = [
 
 export function Navbar() {
 	return (
-		<header className="fixed top-0 z-50 w-full border-white/5 border-b bg-background/80 backdrop-blur-xl">
+		<header className="fixed top-0 z-50 w-full border-border/50 border-b bg-background/80 backdrop-blur-xl">
 			<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
 				{/* Logo */}
 				<Link className="group flex items-center gap-2 sm:gap-3" href="/">

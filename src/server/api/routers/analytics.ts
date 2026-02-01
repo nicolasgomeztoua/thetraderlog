@@ -935,7 +935,7 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
-					months: z.number().min(1).max(24).default(12),
+					months: z.number().min(1).max(36).default(12),
 					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),
@@ -2037,7 +2037,7 @@ export const analyticsRouter = createTRPCRouter({
 			z
 				.object({
 					accountId: z.string().nullish(),
-					months: z.number().min(1).max(24).default(12),
+					months: z.number().min(1).max(36).default(12),
 					filters: analyticsFilterInput.optional(),
 				})
 				.optional(),

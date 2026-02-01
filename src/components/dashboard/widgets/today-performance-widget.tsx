@@ -23,7 +23,7 @@ function DailyLossProgress({
 	const isDanger = progress >= 90;
 
 	return (
-		<div className="mt-3 border-white/5 border-t pt-3">
+		<div className="mt-3 border-border/50 border-t pt-3">
 			<div className="mb-1 flex items-center justify-between">
 				<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider">
 					Daily Loss Limit
@@ -41,7 +41,7 @@ function DailyLossProgress({
 					{formatCurrency(absLoss)} / {formatCurrency(limit)}
 				</span>
 			</div>
-			<div className="h-1.5 overflow-hidden rounded bg-white/10">
+			<div className="h-1.5 overflow-hidden rounded bg-muted/300">
 				<div
 					className={cn(
 						"h-full transition-all duration-300",
@@ -183,7 +183,7 @@ export function TodayPerformanceWidget() {
 							</div>
 						</div>
 
-						<div className="h-8 w-px bg-white/10" />
+						<div className="h-8 w-px bg-muted/300" />
 
 						{/* Win/Loss */}
 						<div>
@@ -197,7 +197,7 @@ export function TodayPerformanceWidget() {
 							</div>
 						</div>
 
-						<div className="h-8 w-px bg-white/10" />
+						<div className="h-8 w-px bg-muted/300" />
 
 						{/* Profit Factor */}
 						<div>

@@ -86,7 +86,7 @@ function CategoryBar({ label, value }: { label: string; value: number }) {
 			<span className="w-16 shrink-0 font-mono text-[10px] text-muted-foreground uppercase">
 				{label}
 			</span>
-			<div className="h-1.5 flex-1 overflow-hidden rounded bg-white/10">
+			<div className="h-1.5 flex-1 overflow-hidden rounded bg-muted/300">
 				<div
 					className={cn(color, "h-full transition-all duration-300")}
 					style={{ width: `${value}%` }}
@@ -156,7 +156,7 @@ export function RuleComplianceWidget() {
 					</div>
 
 					{/* Category breakdown */}
-					<div className="mt-3 space-y-2 border-white/5 border-t pt-3">
+					<div className="mt-3 space-y-2 border-border/50 border-t pt-3">
 						<CategoryBar label="Entry" value={data.byCategory.entry} />
 						<CategoryBar label="Exit" value={data.byCategory.exit} />
 						<CategoryBar label="Risk" value={data.byCategory.risk} />
@@ -165,7 +165,7 @@ export function RuleComplianceWidget() {
 
 					{/* Top violations */}
 					{data.violations.length > 0 && (
-						<div className="mt-3 border-white/5 border-t pt-2">
+						<div className="mt-3 border-border/50 border-t pt-2">
 							<div className="mb-1 font-mono text-[9px] text-muted-foreground uppercase tracking-wider">
 								Top Violations
 							</div>

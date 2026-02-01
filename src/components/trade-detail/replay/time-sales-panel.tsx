@@ -76,12 +76,12 @@ export function TimeSalesPanel({
 	return (
 		<div
 			className={cn(
-				"flex h-full flex-col rounded-lg border border-white/10 bg-white/2",
+				"flex h-full flex-col rounded-lg border border-border bg-muted/50",
 				className,
 			)}
 		>
 			{/* Header */}
-			<div className="shrink-0 border-white/10 border-b px-3 py-2">
+			<div className="shrink-0 border-border border-b px-3 py-2">
 				<h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 					Time & Sales
 				</h3>
@@ -97,7 +97,7 @@ export function TimeSalesPanel({
 									className={cn(
 										"flex items-center gap-2 rounded px-2 py-1.5 transition-all",
 										// Highlight most recent execution
-										index === 0 && "bg-white/3",
+										index === 0 && "bg-muted/50",
 									)}
 									key={execution.id}
 								>
@@ -182,7 +182,7 @@ export function TimeSalesPanel({
 
 			{/* Footer - Running Summary */}
 			{executions.length > 0 && (
-				<div className="shrink-0 border-white/10 border-t px-3 py-2">
+				<div className="shrink-0 border-border border-t px-3 py-2">
 					<div className="flex items-center justify-between font-mono text-[10px]">
 						<span className="text-muted-foreground uppercase tracking-wider">
 							Executions

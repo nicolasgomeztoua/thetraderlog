@@ -37,7 +37,7 @@ function MenuButton({ icon, onClick, isActive, label }: MenuButtonProps) {
 			aria-label={label}
 			className={cn(
 				"inline-flex size-8 items-center justify-center rounded transition-colors",
-				"text-foreground/80 hover:bg-white/10 hover:text-foreground",
+				"text-foreground/80 hover:bg-muted/300 hover:text-foreground",
 				isActive && "bg-primary/20 text-primary",
 			)}
 			onClick={onClick}
@@ -98,7 +98,7 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
 
 	return (
 		<BubbleMenu
-			className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-card p-1 shadow-lg"
+			className="flex items-center gap-0.5 rounded-lg border border-border bg-card p-1 shadow-lg"
 			editor={editor}
 		>
 			<MenuButton
@@ -126,7 +126,7 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
 				onClick={() => editor.chain().focus().toggleCode().run()}
 			/>
 
-			<div className="mx-1 h-5 w-px bg-white/10" />
+			<div className="mx-1 h-5 w-px bg-muted/300" />
 
 			<Popover onOpenChange={setIsLinkPopoverOpen} open={isLinkPopoverOpen}>
 				<PopoverTrigger asChild>
@@ -134,7 +134,7 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
 						aria-label="Link"
 						className={cn(
 							"inline-flex size-8 items-center justify-center rounded transition-colors",
-							"text-foreground/80 hover:bg-white/10 hover:text-foreground",
+							"text-foreground/80 hover:bg-muted/300 hover:text-foreground",
 							editor.isActive("link") && "bg-primary/20 text-primary",
 						)}
 						onClick={openLinkPopover}

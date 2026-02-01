@@ -202,7 +202,7 @@ export function JournalStatusWidget() {
 						</div>
 
 						{/* Checklist completion */}
-						<div className="h-8 w-px bg-white/10" />
+						<div className="h-8 w-px bg-muted/300" />
 						<div>
 							<div
 								className={cn(

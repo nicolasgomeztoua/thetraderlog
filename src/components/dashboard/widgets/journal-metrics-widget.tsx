@@ -172,7 +172,7 @@ export function JournalMetricsWidget() {
 				</div>
 
 				{/* Bottom row: Emotional state donut */}
-				<div className="flex items-center gap-3 border-white/5 border-t pt-3">
+				<div className="flex items-center gap-3 border-border/50 border-t pt-3">
 					{emotionalData.length > 0 ? (
 						<>
 							<MiniDonut

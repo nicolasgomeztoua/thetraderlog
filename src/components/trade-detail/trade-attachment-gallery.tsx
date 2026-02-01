@@ -79,7 +79,7 @@ function LightboxWithSkeleton({ attachment, onClose }: LightboxProps) {
 		>
 			{/* Close button */}
 			<button
-				className="absolute top-4 right-4 rounded bg-white/10 p-2 transition-colors hover:bg-white/20"
+				className="absolute top-4 right-4 rounded bg-muted/300 p-2 transition-colors hover:bg-muted/500"
 				onClick={onClose}
 				type="button"
 			>
@@ -106,7 +106,7 @@ function LightboxWithSkeleton({ attachment, onClose }: LightboxProps) {
 
 			{/* Filename */}
 			<div className="-translate-x-1/2 absolute bottom-4 left-1/2">
-				<span className="rounded bg-white/10 px-3 py-1 font-mono text-sm">
+				<span className="rounded bg-muted/300 px-3 py-1 font-mono text-sm">
 					{attachment.filename}
 				</span>
 			</div>
@@ -214,7 +214,7 @@ export function TradeAttachmentGallery({
 
 						return (
 							<div
-								className="group relative aspect-square cursor-grab overflow-hidden rounded border border-white/5 bg-white/1 active:cursor-grabbing"
+								className="group relative aspect-square cursor-grab overflow-hidden rounded border border-border/50 bg-muted/30 active:cursor-grabbing"
 								draggable
 								key={attachment.id}
 								onDragStart={(e) => handleDragStart(e, attachment)}
@@ -297,7 +297,7 @@ export function TradeAttachmentGallery({
 
 						return (
 							<div
-								className="group flex items-center gap-3 rounded border border-white/5 bg-white/1 p-2"
+								className="group flex items-center gap-3 rounded border border-border/50 bg-muted/30 p-2"
 								key={attachment.id}
 							>
 								{/* Icon */}

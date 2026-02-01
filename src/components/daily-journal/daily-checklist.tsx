@@ -344,7 +344,7 @@ export function DailyChecklist({
 							<div
 								className={cn(
 									"flex cursor-pointer items-center gap-2 rounded p-1.5 transition-colors",
-									"hover:bg-white/2",
+									"hover:bg-muted/50",
 									isChecked && "opacity-75",
 								)}
 								key={template.id}
@@ -392,7 +392,7 @@ export function DailyChecklist({
 					</div>
 
 					{/* Progress bar */}
-					<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
+					<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
 						<div
 							className={cn(
 								"h-full transition-all duration-300",

@@ -272,26 +272,33 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 											</SelectContent>
 										</Select>
 									</div>
-									<div className="flex flex-col items-center justify-end gap-1">
-										<span className="font-mono text-[9px] text-muted-foreground">
+									<div className="space-y-1">
+										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 											Track
 										</span>
-										<Switch
-											checked={rule.enabled ?? false}
-											onCheckedChange={(checked) =>
-												updateTrailStop(idx, "enabled", checked)
-											}
-										/>
+										<div className="flex h-[44px] items-center justify-center sm:h-9">
+											<Switch
+												checked={rule.enabled ?? false}
+												onCheckedChange={(checked) =>
+													updateTrailStop(idx, "enabled", checked)
+												}
+											/>
+										</div>
 									</div>
-									<Button
-										className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-8 sm:w-8"
-										onClick={() => removeTrailStop(idx)}
-										size="icon"
-										type="button"
-										variant="ghost"
-									>
-										<Trash2 className="h-4 w-4" />
-									</Button>
+									<div className="space-y-1">
+										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+											&nbsp;
+										</span>
+										<Button
+											className="h-[44px] w-[44px] shrink-0 text-muted-foreground hover:text-loss sm:h-9 sm:w-9"
+											onClick={() => removeTrailStop(idx)}
+											size="icon"
+											type="button"
+											variant="ghost"
+										>
+											<Trash2 className="h-4 w-4" />
+										</Button>
+									</div>
 								</div>
 							</div>
 						))}

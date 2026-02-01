@@ -333,7 +333,7 @@ export function DailyJournalPreview({
 				</div>
 
 				{/* Editor skeleton */}
-				<div className="mt-3 min-h-0 flex-1 rounded border border-white/10 bg-white/1 p-3">
+				<div className="mt-3 min-h-0 flex-1 rounded border border-border bg-muted/30 p-3">
 					<div className="space-y-2">
 						<Skeleton className="h-3 w-3/4" />
 						<Skeleton className="h-3 w-1/2" />
@@ -364,7 +364,7 @@ export function DailyJournalPreview({
 									? "bg-profit/10 text-profit"
 									: compliance.percentage >= 75
 										? "bg-primary/10 text-primary"
-										: "bg-white/5 text-muted-foreground",
+										: "bg-muted text-muted-foreground",
 							)}
 						>
 							<CheckCircle2Icon className="size-3" />
@@ -387,7 +387,7 @@ export function DailyJournalPreview({
 			{/* Editor */}
 			<div
 				className={cn(
-					"mt-3 min-h-0 flex-1 overflow-y-auto rounded border border-white/10 bg-white/1",
+					"mt-3 min-h-0 flex-1 overflow-y-auto rounded border border-border bg-muted/30",
 					editable && "focus-within:border-primary/50",
 				)}
 			>

@@ -128,9 +128,9 @@ export function EditableField({
 				<input
 					className={cn(
 						"h-10 w-full rounded-sm border px-3 font-mono text-sm transition-all",
-						"border-white/10 bg-white/3 placeholder:text-muted-foreground/40",
-						"hover:border-white/20 hover:bg-white/5",
-						"focus:border-primary/50 focus:bg-white/5 focus:outline-none focus:ring-1 focus:ring-primary/30",
+						"border-border bg-muted/50 placeholder:text-muted-foreground/40",
+						"hover:border-border hover:bg-muted",
+						"focus:border-primary/50 focus:bg-muted focus:outline-none focus:ring-1 focus:ring-primary/30",
 						"disabled:cursor-not-allowed disabled:opacity-50",
 						align === "right" && "text-right",
 						prefix && "pl-8",
@@ -215,9 +215,9 @@ export function EditableTextarea({
 			<textarea
 				className={cn(
 					"w-full resize-none rounded-sm border px-3 py-3 font-mono text-sm transition-all",
-					"border-white/10 bg-white/3 placeholder:text-muted-foreground/40",
-					"hover:border-white/20 hover:bg-white/5",
-					"focus:border-primary/50 focus:bg-white/5 focus:outline-none focus:ring-1 focus:ring-primary/30",
+					"border-border bg-muted/50 placeholder:text-muted-foreground/40",
+					"hover:border-border hover:bg-muted",
+					"focus:border-primary/50 focus:bg-muted focus:outline-none focus:ring-1 focus:ring-primary/30",
 				)}
 				id={id}
 				onBlur={handleBlur}
@@ -271,9 +271,9 @@ export function EditableSelect({
 			<select
 				className={cn(
 					"h-10 w-full cursor-pointer appearance-none rounded-sm border px-3 pr-8 font-mono text-sm transition-all",
-					"border-white/10 bg-white/3",
-					"hover:border-white/20 hover:bg-white/5",
-					"focus:border-primary/50 focus:bg-white/5 focus:outline-none focus:ring-1 focus:ring-primary/30",
+					"border-border bg-muted/50",
+					"hover:border-border hover:bg-muted",
+					"focus:border-primary/50 focus:bg-muted focus:outline-none focus:ring-1 focus:ring-primary/30",
 					!value && "text-muted-foreground/40",
 					selectedOption?.color,
 				)}

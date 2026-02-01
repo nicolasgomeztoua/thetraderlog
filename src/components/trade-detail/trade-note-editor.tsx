@@ -193,7 +193,7 @@ export function TradeNoteEditor({
 	return (
 		<div
 			className={cn(
-				"flex min-h-0 flex-col rounded border border-white/10 bg-white/1 transition-colors focus-within:border-primary/50",
+				"flex min-h-0 flex-col rounded border border-border bg-muted/30 transition-colors focus-within:border-primary/50",
 				className,
 			)}
 		>

@@ -205,7 +205,7 @@ export function TradeReplay({
 	return (
 		<div className={cn("flex h-full flex-col", className)}>
 			{/* Top Bar: Interval Selector */}
-			<div className="flex shrink-0 items-center border-white/10 border-b px-3 py-2">
+			<div className="flex shrink-0 items-center border-border border-b px-3 py-2">
 				{/* Interval Selector */}
 				<div className="flex items-center gap-1">
 					{(Object.keys(INTERVAL_LABELS) as ChartInterval[]).map((tf) => (
@@ -214,7 +214,7 @@ export function TradeReplay({
 								"rounded px-2 py-1 font-mono text-[10px] uppercase transition-colors",
 								interval === tf
 									? "bg-primary text-primary-foreground"
-									: "bg-white/5 text-muted-foreground hover:bg-white/10",
+									: "bg-muted text-muted-foreground hover:bg-muted/300",
 							)}
 							key={tf}
 							onClick={() => setInterval(tf)}
@@ -244,7 +244,7 @@ export function TradeReplay({
 			</div>
 
 			{/* Controls */}
-			<div className="shrink-0 border-white/10 border-t p-3">
+			<div className="shrink-0 border-border border-t p-3">
 				<ReplayControls
 					currentTime={replay.currentTime}
 					endTime={replay.endTime}

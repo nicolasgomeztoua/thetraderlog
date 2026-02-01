@@ -252,7 +252,7 @@ export const CommandList = forwardRef<CommandListRef, CommandListProps>(
 
 		if (items.length === 0) {
 			return (
-				<div className="rounded-lg border border-white/10 bg-card p-3 shadow-xl">
+				<div className="rounded-lg border border-border bg-card p-3 shadow-xl">
 					<span className="font-mono text-muted-foreground text-sm">
 						No results
 					</span>
@@ -262,14 +262,14 @@ export const CommandList = forwardRef<CommandListRef, CommandListProps>(
 
 		return (
 			<div
-				className="flex max-h-80 w-52 flex-col gap-0.5 overflow-y-auto rounded-lg border border-white/10 bg-card p-1 shadow-xl"
+				className="flex max-h-80 w-52 flex-col gap-0.5 overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-xl"
 				ref={containerRef}
 			>
 				{items.map((item, index) => (
 					<button
 						className={cn(
 							"flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left transition-colors",
-							"hover:bg-white/5",
+							"hover:bg-muted",
 							index === selectedIndex && "bg-primary/10",
 						)}
 						key={item.title}
@@ -281,7 +281,7 @@ export const CommandList = forwardRef<CommandListRef, CommandListProps>(
 					>
 						<div
 							className={cn(
-								"flex size-7 shrink-0 items-center justify-center rounded bg-white/5",
+								"flex size-7 shrink-0 items-center justify-center rounded bg-muted",
 								index === selectedIndex && "bg-primary/20 text-primary",
 							)}
 						>

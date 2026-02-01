@@ -71,7 +71,7 @@ export function ReplayControls({
 	return (
 		<div
 			className={cn(
-				"flex flex-col gap-3 rounded-lg border border-white/10 bg-white/2 p-3",
+				"flex flex-col gap-3 rounded-lg border border-border bg-muted/50 p-3",
 				className,
 			)}
 		>
@@ -162,7 +162,7 @@ export function ReplayControls({
 								"rounded px-2 py-1 font-mono text-[10px] uppercase transition-colors",
 								speed === s
 									? "bg-primary text-primary-foreground"
-									: "bg-white/5 text-muted-foreground hover:bg-white/10",
+									: "bg-muted text-muted-foreground hover:bg-muted/80",
 							)}
 							key={s}
 							onClick={() => onSpeedChange(s)}

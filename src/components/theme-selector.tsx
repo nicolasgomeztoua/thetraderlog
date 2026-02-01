@@ -17,7 +17,7 @@ import { darkThemes, lightThemes, type Theme } from "@/lib/ui";
 function ThemeSwatch({ theme }: { theme: Theme }) {
 	return (
 		<div
-			className="flex h-5 w-8 overflow-hidden rounded border border-white/10"
+			className="flex h-5 w-8 overflow-hidden rounded border border-border"
 			style={{ backgroundColor: theme.preview.background }}
 		>
 			<div

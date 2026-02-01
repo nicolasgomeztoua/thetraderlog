@@ -98,10 +98,10 @@ function SortableItem({
 	return (
 		<div
 			className={cn(
-				"group flex items-center gap-2 rounded border border-white/5 bg-white/2 p-2 transition-colors",
+				"group flex items-center gap-2 rounded border border-border/50 bg-muted/50 p-2 transition-colors",
 				!template.isActive && "opacity-50",
 				deletingId === template.id && "border-destructive/50 bg-destructive/10",
-				isDragging && "z-10 border-primary/50 bg-white/5 shadow-lg",
+				isDragging && "z-10 border-primary/50 bg-muted shadow-lg",
 			)}
 			ref={setNodeRef}
 			style={style}
@@ -112,7 +112,7 @@ function SortableItem({
 				{...listeners}
 				aria-label="Drag to reorder"
 				className={cn(
-					"cursor-grab touch-none rounded p-0.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground",
+					"cursor-grab touch-none rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted/300 hover:text-foreground",
 					isDragging && "cursor-grabbing",
 				)}
 				disabled={isMutating}
@@ -128,7 +128,7 @@ function SortableItem({
 					"size-4 shrink-0 rounded border transition-colors",
 					template.isActive
 						? "border-primary bg-primary"
-						: "border-white/20 bg-transparent",
+						: "border-border bg-transparent",
 				)}
 				disabled={isMutating}
 				onClick={() => onToggleActive(template.id, template.isActive)}

@@ -145,8 +145,8 @@ export function JournalExcerptsWidget() {
 					{excerpts.map((entry) => (
 						<Link
 							className={cn(
-								"group rounded border border-white/5 bg-white/2 p-3",
-								"transition-all hover:border-primary/20 hover:bg-white/5",
+								"group rounded border border-border/50 bg-muted/50 p-3",
+								"transition-all hover:border-primary/20 hover:bg-muted",
 							)}
 							href={`/daily-journal?date=${entry.date}`}
 							key={entry.date}

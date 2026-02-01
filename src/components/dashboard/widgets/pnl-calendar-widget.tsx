@@ -186,10 +186,10 @@ export function PnLCalendarWidget() {
 				{/* Calendar grid - hidden on mobile, shown on sm+ */}
 				<div className="hidden flex-1 flex-col sm:flex">
 					{/* Day labels */}
-					<div className="grid grid-cols-7 border-white/10 border-t border-l">
+					<div className="grid grid-cols-7 border-border border-t border-l">
 						{DAY_LABELS.map((day) => (
 							<div
-								className="border-white/10 border-r border-b py-1 text-center font-mono text-[9px] text-muted-foreground"
+								className="border-border border-r border-b py-1 text-center font-mono text-[9px] text-muted-foreground"
 								key={day.key}
 							>
 								{day.label}
@@ -199,7 +199,7 @@ export function PnLCalendarWidget() {
 
 					{/* Calendar days - grid rows fill available height */}
 					<div
-						className="grid flex-1 grid-cols-7 border-white/10 border-l"
+						className="grid flex-1 grid-cols-7 border-border border-l"
 						style={{
 							gridTemplateRows: `repeat(${Math.ceil(calendarDays.length / 7)}, 1fr)`,
 						}}
@@ -221,7 +221,7 @@ export function PnLCalendarWidget() {
 							return (
 								<Link
 									className={cn(
-										"flex flex-col justify-between border-white/10 border-r border-b p-1.5 transition-colors hover:bg-white/5",
+										"flex flex-col justify-between border-border border-r border-b p-1.5 transition-colors hover:bg-muted",
 										!isCurrentMonthDay && "opacity-40",
 										isFuture && "opacity-30",
 									)}
@@ -267,7 +267,7 @@ export function PnLCalendarWidget() {
 
 				{/* Mobile: 2-column calendar grid */}
 				<div className="-mx-4 max-h-[400px] flex-1 overflow-y-auto sm:hidden">
-					<div className="grid grid-cols-2 border-white/10 border-t border-l">
+					<div className="grid grid-cols-2 border-border border-t border-l">
 						{calendarDays
 							.filter((dateStr) => {
 								// Only show days from current month on mobile
@@ -288,7 +288,7 @@ export function PnLCalendarWidget() {
 								return (
 									<Link
 										className={cn(
-											"flex flex-col justify-between border-white/10 border-r border-b p-3",
+											"flex flex-col justify-between border-border border-r border-b p-3",
 											isToday && "bg-primary/5",
 											isFuture && "opacity-40",
 										)}
@@ -337,7 +337,7 @@ export function PnLCalendarWidget() {
 				</div>
 
 				{/* Summary row - desktop only */}
-				<div className="mt-3 hidden items-center justify-between border-white/5 border-t pt-3 sm:flex">
+				<div className="mt-3 hidden items-center justify-between border-border/50 border-t pt-3 sm:flex">
 					<div className="text-center">
 						<div
 							className={cn(

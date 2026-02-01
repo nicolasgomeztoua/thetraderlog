@@ -156,7 +156,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.status}
 				>
-					<SelectTrigger className="w-[120px] font-mono text-xs transition-colors hover:border-white/20">
+					<SelectTrigger className="w-[120px] font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Status" />
 					</SelectTrigger>
 					<SelectContent>
@@ -179,7 +179,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.direction}
 				>
-					<SelectTrigger className="w-[120px] font-mono text-xs transition-colors hover:border-white/20">
+					<SelectTrigger className="w-[120px] font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Direction" />
 					</SelectTrigger>
 					<SelectContent>
@@ -202,7 +202,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.result}
 				>
-					<SelectTrigger className="w-[130px] font-mono text-xs transition-colors hover:border-white/20">
+					<SelectTrigger className="w-[130px] font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Result" />
 					</SelectTrigger>
 					<SelectContent>
@@ -228,7 +228,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.isReviewed}
 				>
-					<SelectTrigger className="w-[140px] font-mono text-xs transition-colors hover:border-white/20">
+					<SelectTrigger className="w-[140px] font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Review Status" />
 					</SelectTrigger>
 					<SelectContent>
@@ -251,7 +251,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.strategyId || "all"}
 				>
-					<SelectTrigger className="w-[160px] font-mono text-xs transition-colors hover:border-white/20">
+					<SelectTrigger className="w-[160px] font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Strategy">
 							{filters.strategyId ? (
 								<div className="flex items-center gap-1.5">
@@ -290,7 +290,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 				{/* Advanced Filters Toggle */}
 				<Button
 					className={cn(
-						"font-mono text-xs uppercase tracking-wider transition-all hover:border-white/20",
+						"font-mono text-xs uppercase tracking-wider transition-all hover:border-border",
 						isExpanded && "border-primary/30 bg-primary/5",
 					)}
 					onClick={() => setIsExpanded(!isExpanded)}
@@ -319,7 +319,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button
-							className="font-mono text-xs uppercase tracking-wider transition-colors hover:border-white/20"
+							className="font-mono text-xs uppercase tracking-wider transition-colors hover:border-border"
 							size="sm"
 							variant="outline"
 						>
@@ -434,13 +434,13 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					isExpanded ? "mt-3 max-h-[1000px] opacity-100" : "max-h-0 opacity-0",
 				)}
 			>
-				<div className="overflow-hidden rounded border border-white/10">
+				<div className="overflow-hidden rounded border border-border">
 					{/* Panel Header */}
-					<div className="flex items-center gap-2 border-white/5 border-b bg-white/3 px-4 py-2.5">
+					<div className="flex items-center gap-2 border-border/50 border-b bg-muted/50 px-4 py-2.5">
 						<div className="flex gap-1">
-							<div className="size-2 rounded-full bg-white/20" />
-							<div className="size-2 rounded-full bg-white/20" />
-							<div className="size-2 rounded-full bg-white/20" />
+							<div className="size-2 rounded-full bg-muted-foreground/30" />
+							<div className="size-2 rounded-full bg-muted-foreground/30" />
+							<div className="size-2 rounded-full bg-muted-foreground/30" />
 						</div>
 						<span className="font-mono text-[10px] text-muted-foreground tracking-wider">
 							ADVANCED FILTERS
@@ -448,7 +448,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					</div>
 
 					{/* Filter Content */}
-					<div className="space-y-4 bg-white/2 p-4">
+					<div className="space-y-4 bg-muted/50 p-4">
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 							{/* Date Range */}
 							<div className="space-y-2">
@@ -548,7 +548,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 										}
 										value={filters.minRating || "any"}
 									>
-										<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-white/20">
+										<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-border">
 											<SelectValue placeholder="Min" />
 										</SelectTrigger>
 										<SelectContent>
@@ -566,7 +566,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 										}
 										value={filters.maxRating || "any"}
 									>
-										<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-white/20">
+										<SelectTrigger className="h-8 font-mono text-xs transition-colors hover:border-border">
 											<SelectValue placeholder="Max" />
 										</SelectTrigger>
 										<SelectContent>
@@ -598,7 +598,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 						</div>
 
 						{/* Divider */}
-						<div className="h-px bg-white/5" />
+						<div className="h-px bg-border/50" />
 
 						{/* Day of Week */}
 						<div className="space-y-2">
@@ -609,7 +609,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 								{DAY_LABELS.map((day) => (
 									<Button
 										className={cn(
-											"h-8 w-12 border-white/10 font-mono text-xs transition-colors hover:border-white/20 hover:text-foreground",
+											"h-8 w-12 border-border font-mono text-xs transition-colors hover:border-border hover:text-foreground",
 											filters.dayOfWeek.includes(day.value) &&
 												"border-primary/40 bg-primary/10 text-primary hover:border-primary/50",
 										)}
@@ -635,7 +635,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 								}
 								value={filters.exitReason || "any"}
 							>
-								<SelectTrigger className="h-8 w-[200px] font-mono text-xs transition-colors hover:border-white/20">
+								<SelectTrigger className="h-8 w-[200px] font-mono text-xs transition-colors hover:border-border">
 									<SelectValue placeholder="Any" />
 								</SelectTrigger>
 								<SelectContent>

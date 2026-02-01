@@ -44,6 +44,7 @@ export default function StrategyDetailPage() {
 	const formRef = useRef<HTMLDivElement>(null);
 
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [duplicateOpen, setDuplicateOpen] = useState(false);
 
 	const utils = api.useUtils();
 
@@ -62,6 +63,7 @@ export default function StrategyDetailPage() {
 			toast.success("Strategy updated");
 			utils.strategies.getById.invalidate({ id: strategyId });
 			utils.strategies.getAll.invalidate();
+			utils.strategies.getTradeRuleChecks.invalidate();
 		},
 		onError: (error) => {
 			toast.error(error.message || "Failed to update strategy");
@@ -83,6 +85,7 @@ export default function StrategyDetailPage() {
 		onSuccess: (newStrategy) => {
 			toast.success("Strategy duplicated");
 			utils.strategies.getAll.invalidate();
+			setDuplicateOpen(false);
 			router.push(`/strategies/${newStrategy.id}`);
 		},
 		onError: (error) => {
@@ -278,16 +281,48 @@ export default function StrategyDetailPage() {
 						<Pencil className="h-3.5 w-3.5 sm:mr-2 sm:h-3 sm:w-3" />
 						<span className="hidden sm:inline">Edit</span>
 					</Button>
-					<Button
-						className="min-h-[36px] min-w-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
-						data-testid="strategy-detail-action-duplicate"
-						onClick={() => duplicateMutation.mutate({ id: strategyId })}
-						size={isMobile ? "icon" : "sm"}
-						variant="outline"
-					>
-						<Copy className="h-3.5 w-3.5 sm:mr-2 sm:h-3 sm:w-3" />
-						<span className="hidden sm:inline">Duplicate</span>
-					</Button>
+					<AlertDialog onOpenChange={setDuplicateOpen} open={duplicateOpen}>
+						<AlertDialogTrigger asChild>
+							<Button
+								className="min-h-[36px] min-w-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
+								data-testid="strategy-detail-action-duplicate"
+								size={isMobile ? "icon" : "sm"}
+								variant="outline"
+							>
+								<Copy className="h-3.5 w-3.5 sm:mr-2 sm:h-3 sm:w-3" />
+								<span className="hidden sm:inline">Duplicate</span>
+							</Button>
+						</AlertDialogTrigger>
+						<AlertDialogContent className="mx-4 border-border bg-background sm:mx-0">
+							<AlertDialogHeader>
+								<AlertDialogTitle className="font-mono text-sm uppercase tracking-wider sm:text-base">
+									Duplicate Strategy
+								</AlertDialogTitle>
+								<AlertDialogDescription className="font-mono text-xs">
+									Create a copy of &quot;{strategy.name}&quot;? The new strategy
+									will be named &quot;{strategy.name} (Copy)&quot;.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+								<AlertDialogCancel className="min-h-[44px] font-mono text-xs sm:min-h-0">
+									Cancel
+								</AlertDialogCancel>
+								<AlertDialogAction
+									className="min-h-[44px] font-mono text-xs sm:min-h-0"
+									disabled={duplicateMutation.isPending}
+									onClick={(e) => {
+										e.preventDefault();
+										duplicateMutation.mutate({ id: strategyId });
+									}}
+								>
+									{duplicateMutation.isPending && (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									)}
+									Duplicate
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
 					<AlertDialog onOpenChange={setDeleteOpen} open={deleteOpen}>
 						<AlertDialogTrigger asChild>
 							<Button

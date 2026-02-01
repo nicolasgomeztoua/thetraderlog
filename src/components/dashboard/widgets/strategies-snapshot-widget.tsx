@@ -58,7 +58,7 @@ export function StrategiesSnapshotWidget() {
 					{topStrategies.map((strategy, index) => (
 						<div
 							className={cn(
-								"flex items-center gap-3 rounded border border-white/5 p-2",
+								"flex items-center gap-3 rounded border border-border/50 p-2",
 								index === 0 && "border-primary/20 bg-primary/5",
 							)}
 							key={strategy.strategyId}

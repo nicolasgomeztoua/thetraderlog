@@ -430,7 +430,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				<Skeleton className="h-10 w-full rounded-b-none" />
 
 				{/* Editor skeleton */}
-				<div className="flex min-h-0 flex-1 flex-col rounded-b border border-white/10 border-t-0 bg-white/1 p-4">
+				<div className="flex min-h-0 flex-1 flex-col rounded-b border border-border border-t-0 bg-muted/30 p-4">
 					<div className="space-y-3">
 						<Skeleton className="h-4 w-3/4" />
 						<Skeleton className="h-4 w-1/2" />
@@ -456,7 +456,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 			<EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
 
 			{/* Editor content */}
-			<div className="flex min-h-0 flex-1 flex-col rounded-b border border-white/10 border-t-0 bg-white/1">
+			<div className="flex min-h-0 flex-1 flex-col rounded-b border border-border border-t-0 bg-muted/30">
 				<EditorContent
 					className="min-h-0 flex-1 overflow-y-auto"
 					editor={editor}

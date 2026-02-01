@@ -332,7 +332,7 @@ export function AttachmentUpload({
 					"relative rounded border-2 border-dashed transition-colors",
 					isDragging
 						? "border-primary bg-primary/5"
-						: "border-white/10 hover:border-white/20",
+						: "border-border hover:border-border",
 					!journalId && "pointer-events-none opacity-50",
 				)}
 				onDragEnter={handleDragEnter}
@@ -387,7 +387,7 @@ export function AttachmentUpload({
 				<div className="space-y-2">
 					{uploadingFiles.map((upload) => (
 						<div
-							className="flex items-center gap-3 rounded border border-white/5 bg-white/1 p-2"
+							className="flex items-center gap-3 rounded border border-border/50 bg-muted/30 p-2"
 							key={upload.id}
 						>
 							{/* File info */}
@@ -398,7 +398,7 @@ export function AttachmentUpload({
 										{upload.error}
 									</p>
 								) : (
-									<div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
+									<div className="mt-1 h-1 overflow-hidden rounded-full bg-muted/300">
 										<div
 											className="h-full bg-primary transition-all duration-300"
 											style={{ width: `${upload.progress}%` }}

@@ -45,15 +45,15 @@ export function FilterSection({
 	return (
 		<div
 			className={cn(
-				"overflow-hidden rounded border border-white/5 bg-white/1",
+				"overflow-hidden rounded border border-border/50 bg-card",
 				className,
 			)}
 		>
 			{/* Section Header */}
 			<button
 				className={cn(
-					"flex w-full items-center justify-between border-white/5 border-b bg-white/2 px-4 py-2.5",
-					collapsible && "cursor-pointer transition-colors hover:bg-white/3",
+					"flex w-full items-center justify-between border-border/50 border-b bg-muted/50 px-4 py-2.5",
+					collapsible && "cursor-pointer transition-colors hover:bg-muted/50",
 					!collapsible && "cursor-default",
 				)}
 				disabled={!collapsible}
@@ -142,7 +142,7 @@ export function FilterPill({
 				"inline-flex items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-xs transition-all",
 				selected
 					? "border-primary/40 bg-primary/10 text-primary"
-					: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground",
+					: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground",
 				className,
 			)}
 			onClick={onClick}
@@ -187,22 +187,22 @@ export function FilterToggle({
 	const variantClasses = {
 		default: active
 			? "border-primary/40 bg-primary/10 text-primary"
-			: "border-white/10 bg-white/2 text-muted-foreground",
+			: "border-border bg-muted/50 text-muted-foreground",
 		profit: active
 			? "border-profit/40 bg-profit/10 text-profit"
-			: "border-white/10 bg-white/2 text-muted-foreground",
+			: "border-border bg-muted/50 text-muted-foreground",
 		loss: active
 			? "border-loss/40 bg-loss/10 text-loss"
-			: "border-white/10 bg-white/2 text-muted-foreground",
+			: "border-border bg-muted/50 text-muted-foreground",
 		neutral: active
 			? "border-yellow-500/40 bg-yellow-500/10 text-yellow-500"
-			: "border-white/10 bg-white/2 text-muted-foreground",
+			: "border-border bg-muted/50 text-muted-foreground",
 	};
 
 	return (
 		<button
 			className={cn(
-				"rounded border px-3 py-1.5 font-mono text-xs transition-all hover:border-white/20",
+				"rounded border px-3 py-1.5 font-mono text-xs transition-all hover:border-border",
 				variantClasses[variant],
 				className,
 			)}

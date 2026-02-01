@@ -84,7 +84,7 @@ export function TradesSnapshotWidget() {
 					<div className="flex-1 space-y-1">
 						{trades.map((trade) => (
 							<div
-								className="flex items-center gap-2 rounded bg-white/2 p-1.5"
+								className="flex items-center gap-2 rounded bg-muted/50 p-1.5"
 								key={trade.id}
 							>
 								{/* Direction icon */}
@@ -133,7 +133,7 @@ export function TradesSnapshotWidget() {
 					</div>
 
 					{/* Today's quick stats */}
-					<div className="mt-2 flex items-center justify-between border-white/5 border-t pt-2">
+					<div className="mt-2 flex items-center justify-between border-border/50 border-t pt-2">
 						<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Today
 						</div>

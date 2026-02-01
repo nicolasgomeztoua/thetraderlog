@@ -192,7 +192,7 @@ export function AnalyticsSnapshotWidget() {
 					</div>
 
 					{/* Total P&L */}
-					<div className="mt-3 flex items-center justify-between border-white/5 border-t pt-3">
+					<div className="mt-3 flex items-center justify-between border-border/50 border-t pt-3">
 						<div>
 							<div
 								className={cn(
