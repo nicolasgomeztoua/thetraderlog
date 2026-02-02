@@ -25,10 +25,20 @@ function getFixtureDateRanges() {
 
 	return {
 		mondayStart: new Date(monday.setUTCHours(0, 0, 0, 0)).toISOString(),
-		tuesdayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 1); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		tuesdayEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCDate(d.getUTCDate() + 1);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
 		thursdayStart: new Date(thursday.setUTCHours(0, 0, 0, 0)).toISOString(),
 		beforeWeekStart: new Date(beforeWeek.setUTCHours(0, 0, 0, 0)).toISOString(),
-		beforeWeekEnd: (() => { const d = new Date(beforeWeek); d.setUTCDate(d.getUTCDate() + 6); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		beforeWeekEnd: (() => {
+			const d = new Date(beforeWeek);
+			d.setUTCDate(d.getUTCDate() + 6);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
 	};
 }
 

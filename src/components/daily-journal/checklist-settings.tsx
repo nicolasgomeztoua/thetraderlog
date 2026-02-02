@@ -128,8 +128,8 @@ function SortableItem({
 				className={cn(
 					"size-4 shrink-0 rounded border transition-all duration-200 active:scale-75",
 					template.isActive
-						? "border-primary bg-primary scale-100"
-						: "border-border bg-transparent scale-90",
+						? "scale-100 border-primary bg-primary"
+						: "scale-90 border-border bg-transparent",
 				)}
 				disabled={isMutating}
 				onClick={() => onToggleActive(template.id, template.isActive)}

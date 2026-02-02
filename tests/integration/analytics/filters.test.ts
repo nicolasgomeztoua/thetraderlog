@@ -35,14 +35,43 @@ function getFixtureDateRanges() {
 		thursdayStart: new Date(thursday.setUTCHours(0, 0, 0, 0)).toISOString(),
 		fridayStart: new Date(friday.setUTCHours(0, 0, 0, 0)).toISOString(),
 		// Day ends (23:59:59Z)
-		mondayEnd: (() => { const d = new Date(baseMonday); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
-		tuesdayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 1); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
-		wednesdayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 2); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
-		thursdayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 3); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
-		fridayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 4); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		mondayEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
+		tuesdayEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCDate(d.getUTCDate() + 1);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
+		wednesdayEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCDate(d.getUTCDate() + 2);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
+		thursdayEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCDate(d.getUTCDate() + 3);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
+		fridayEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCDate(d.getUTCDate() + 4);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
 		// Before week (no trades)
 		beforeWeekStart: new Date(beforeWeek.setUTCHours(0, 0, 0, 0)).toISOString(),
-		beforeWeekEnd: (() => { const d = new Date(beforeWeek); d.setUTCDate(d.getUTCDate() + 6); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		beforeWeekEnd: (() => {
+			const d = new Date(beforeWeek);
+			d.setUTCDate(d.getUTCDate() + 6);
+			d.setUTCHours(23, 59, 59, 0);
+			return d.toISOString();
+		})(),
 		// Exact Monday morning trade time
 		mondayMorningExact: mondayMorning.toISOString(),
 	};
