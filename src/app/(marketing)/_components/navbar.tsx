@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	SignedIn,
-	SignedOut,
-	SignInButton,
-	SignUpButton,
-	UserButton,
-} from "@clerk/nextjs";
+import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +11,11 @@ const navLinks = [
 ];
 
 export function Navbar() {
+	const { isLoaded, isSignedIn } = useAuth();
+
+	// Only show signed-in content when we're certain user is signed in
+	const showSignedIn = isLoaded && isSignedIn;
+
 	return (
 		<header className="fixed top-0 z-50 w-full border-border/50 border-b bg-background/80 backdrop-blur-xl">
 			<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
@@ -62,42 +61,47 @@ export function Navbar() {
 				<div className="flex items-center gap-2 sm:gap-3">
 					{/* Desktop Auth */}
 					<div className="hidden items-center gap-3 sm:flex">
-						<SignedOut>
-							<SignInButton mode="modal">
-								<Button
-									className="font-mono text-xs uppercase tracking-wider"
-									size="sm"
-									variant="ghost"
-								>
-									Login
-								</Button>
-							</SignInButton>
-							<SignUpButton mode="modal">
-								<Button
-									className="font-mono text-xs uppercase tracking-wider"
-									size="sm"
-								>
-									Get Started
-								</Button>
-							</SignUpButton>
-						</SignedOut>
-						<SignedIn>
-							<Link href="/dashboard">
-								<Button
-									className="font-mono text-xs uppercase tracking-wider"
-									size="sm"
-									variant="ghost"
-								>
-									Dashboard
-								</Button>
-							</Link>
-							<UserButton afterSignOutUrl="/" />
-						</SignedIn>
+						{showSignedIn ? (
+							<>
+								<Link href="/dashboard">
+									<Button
+										className="font-mono text-xs uppercase tracking-wider"
+										size="sm"
+										variant="ghost"
+									>
+										Dashboard
+									</Button>
+								</Link>
+								<UserButton afterSignOutUrl="/" />
+							</>
+						) : (
+							<>
+								<SignInButton mode="modal">
+									<Button
+										className="font-mono text-xs uppercase tracking-wider"
+										size="sm"
+										variant="ghost"
+									>
+										Login
+									</Button>
+								</SignInButton>
+								<SignUpButton mode="modal">
+									<Button
+										className="font-mono text-xs uppercase tracking-wider"
+										size="sm"
+									>
+										Get Started
+									</Button>
+								</SignUpButton>
+							</>
+						)}
 					</div>
 
 					{/* Mobile Auth - Simplified */}
 					<div className="flex items-center gap-2 sm:hidden">
-						<SignedOut>
+						{showSignedIn ? (
+							<UserButton afterSignOutUrl="/" />
+						) : (
 							<SignUpButton mode="modal">
 								<Button
 									className="min-h-[44px] font-mono text-xs uppercase tracking-wider"
@@ -106,10 +110,7 @@ export function Navbar() {
 									Start
 								</Button>
 							</SignUpButton>
-						</SignedOut>
-						<SignedIn>
-							<UserButton afterSignOutUrl="/" />
-						</SignedIn>
+						)}
 					</div>
 				</div>
 			</div>

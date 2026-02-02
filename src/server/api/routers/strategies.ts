@@ -1382,6 +1382,15 @@ export const strategiesRouter = createTRPCRouter({
 				return { evaluated: 0, results: [] };
 			}
 
+			// Fetch existing checks with user overrides - we won't overwrite these
+			const existingOverrides = await ctx.db.query.tradeRuleChecks.findMany({
+				where: and(
+					eq(tradeRuleChecks.tradeId, input.tradeId),
+					eq(tradeRuleChecks.userOverride, true),
+				),
+			});
+			const overriddenRuleIds = new Set(existingOverrides.map((c) => c.ruleId));
+
 			// Build evaluation context with all required data
 			const context = await buildEvaluationContext(
 				ctx.db,
@@ -1418,6 +1427,11 @@ export const strategiesRouter = createTRPCRouter({
 			for (const rule of rulesToEvaluate) {
 				// Skip rules without auto condition
 				if (!rule.autoCondition) {
+					continue;
+				}
+
+				// Skip rules that user has manually overridden
+				if (overriddenRuleIds.has(rule.id)) {
 					continue;
 				}
 
@@ -1472,7 +1486,6 @@ export const strategiesRouter = createTRPCRouter({
 							checkedAt: new Date(),
 							evaluationResult: JSON.stringify(result),
 							wasAutoEvaluated: true,
-							// Don't update userOverride - preserve existing overrides
 						},
 					});
 			}

@@ -106,8 +106,14 @@ The AI writes its own SQL queries - that's the whole point. Canned endpoints can
 - Validates queries are SELECT-only before execution
 - Returns results as JSON for AI to analyze
 
+**Secondary: Existing tRPC endpoints**
+- For pre-computed metrics that already exist (win rate by day, P&L by session, etc.)
+- AI can call these as a shortcut instead of rewriting the query
+- Already enforce user ownership, already tested
+
 **Schema context in system prompt**
 - AI gets full schema definitions (tables, columns, types, relationships)
+- List of available tRPC analytics endpoints with descriptions
 - Example queries for common patterns
 - This lets it write accurate SQL without hallucinating column names
 
@@ -127,8 +133,9 @@ The AI writes its own SQL queries - that's the whole point. Canned endpoints can
 - [ ] Create read-only Postgres role for AI queries
 - [ ] Generate schema context for system prompt (tables, columns, relationships)
 - [ ] Define AI tools:
-  - `run_query` - execute read-only SQL with user scoping (primary tool)
-  - `get_market_data` - fetch candles for price analysis (joins with trades)
+  - `run_query` - execute read-only SQL with user scoping (primary)
+  - `call_analytics` - invoke existing tRPC endpoints (convenience)
+  - `get_market_data` - fetch candles for price analysis
 - [ ] Tool execution layer:
   - Validates query is SELECT-only (no INSERT/UPDATE/DELETE/DROP)
   - Wraps query in user-scoped CTE
@@ -188,6 +195,7 @@ src/lib/ai/
 └── tools/
     ├── index.ts           # Tool definitions
     ├── run-query.ts       # Execute read-only SQL with user scoping
+    ├── call-analytics.ts  # Invoke existing tRPC endpoints
     ├── get-market-data.ts # Fetch candles for price analysis
     └── run-python.ts      # Execute Python in Daytona sandbox
 
@@ -250,7 +258,7 @@ ALTER TABLE user_settings ADD COLUMN ai_credits_reset_at TIMESTAMP;
 ## Resolved Decisions
 
 1. **Database**: Keep existing Neon (no Turso per-user complexity)
-2. **AI data access**: AI writes custom SQL (read-only role + user-scoped CTE)
+2. **AI data access**: Custom SQL (primary) + tRPC endpoints (convenience)
 3. **AI execution**: Trigger.dev orchestration + Daytona Python sandboxes
 4. **Python sandbox**: matplotlib, pandas, scipy, plotly, statsmodels
 5. **Model flexibility**: OpenRouter for Opus/GPT-4.5/future models

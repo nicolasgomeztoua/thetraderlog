@@ -161,6 +161,8 @@ export default function TradeDetailPage() {
 			// Invalidate to refetch with presigned URLs (notes are saved with S3 keys,
 			// server transforms them to presigned URLs on read)
 			utils.trades.getById.invalidate({ id: tradeId });
+			// Invalidate rule checks since trade fields (like wasTrailed) affect rule relevance
+			utils.strategies.getTradeRuleChecks.invalidate({ tradeId });
 		},
 		onError: (error, _newData, context) => {
 			if (context?.previousTrade) {

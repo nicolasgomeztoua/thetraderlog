@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle, CheckCircle2, Circle, XCircle } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -82,6 +82,10 @@ export function RuleChecklist({
 }: RuleChecklistProps) {
 	// Track which rules are in override mode (user clicked Override button)
 	const [overrideMode, setOverrideMode] = useState<Set<string>>(new Set());
+	// Track pending override values (ruleId -> new checked value)
+	const [pendingOverrides, setPendingOverrides] = useState<
+		Map<string, boolean>
+	>(new Map());
 
 	// Use shared optimistic state utility
 	const {
@@ -89,6 +93,31 @@ export function RuleChecklist({
 		clearUpdate: clearOptimisticUpdate,
 		updates: optimisticUpdates,
 	} = useOptimisticState<{ checked: boolean }>();
+
+	const utils = api.useUtils();
+
+	// Auto-evaluate rules on mount
+	const evaluateRules = api.strategies.evaluateTradeRules.useMutation({
+		onSuccess: () => {
+			// Invalidate to refetch with new evaluation results
+			utils.strategies.getTradeRuleChecks.invalidate({ tradeId });
+		},
+	});
+
+	// Store rules in ref to avoid dependency on rules array
+	const rulesRef = useRef(rules);
+	rulesRef.current = rules;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Only run on mount/tradeId change, not when rules change
+	useEffect(() => {
+		// Only evaluate if there are auto/semi_auto rules
+		const hasAutoRules = rulesRef.current.some(
+			(r) => r.ruleType === "auto" || r.ruleType === "semi_auto",
+		);
+		if (tradeId && hasAutoRules) {
+			evaluateRules.mutate({ tradeId });
+		}
+	}, [tradeId]);
 
 	const checkRule = api.strategies.checkRule.useMutation({
 		onMutate: ({ ruleId, checked }) => {
@@ -116,14 +145,50 @@ export function RuleChecklist({
 		[tradeId, checkRule],
 	);
 
-	const toggleOverrideMode = useCallback((ruleId: string) => {
+	// Handle pending override change (when checkbox is toggled in override mode)
+	const handlePendingOverride = useCallback(
+		(ruleId: string, checked: boolean) => {
+			setPendingOverrides((prev) => {
+				const next = new Map(prev);
+				next.set(ruleId, checked);
+				return next;
+			});
+		},
+		[],
+	);
+
+	// Accept override: save the pending change and exit override mode
+	const acceptOverride = useCallback(
+		(ruleId: string) => {
+			const pendingValue = pendingOverrides.get(ruleId);
+			if (pendingValue !== undefined) {
+				handleCheck(ruleId, pendingValue, true);
+			}
+			// Exit override mode and clear pending
+			setOverrideMode((prev) => {
+				const next = new Set(prev);
+				next.delete(ruleId);
+				return next;
+			});
+			setPendingOverrides((prev) => {
+				const next = new Map(prev);
+				next.delete(ruleId);
+				return next;
+			});
+		},
+		[pendingOverrides, handleCheck],
+	);
+
+	// Cancel override: discard pending change and exit override mode
+	const cancelOverride = useCallback((ruleId: string) => {
 		setOverrideMode((prev) => {
 			const next = new Set(prev);
-			if (next.has(ruleId)) {
-				next.delete(ruleId);
-			} else {
-				next.add(ruleId);
-			}
+			next.delete(ruleId);
+			return next;
+		});
+		setPendingOverrides((prev) => {
+			const next = new Map(prev);
+			next.delete(ruleId);
 			return next;
 		});
 	}, []);
@@ -259,6 +324,15 @@ export function RuleChecklist({
 									const isInOverrideMode = overrideMode.has(rule.id);
 									const isAutoRule =
 										rule.ruleType === "auto" || rule.ruleType === "semi_auto";
+									const pendingValue = pendingOverrides.get(rule.id);
+									// Only consider it a pending change if the value differs from original
+									const hasPendingChange =
+										pendingValue !== undefined && pendingValue !== checked;
+									// Show pending value while in override mode, otherwise show actual checked state
+									const displayChecked =
+										isInOverrideMode && pendingValue !== undefined
+											? pendingValue
+											: checked;
 
 									// For auto-evaluated rules: disable checkbox unless user is overriding
 									const isCheckboxDisabled =
@@ -295,17 +369,19 @@ export function RuleChecklist({
 													</div>
 												) : (
 													<Checkbox
-														checked={checked}
+														checked={displayChecked}
 														className="mt-0.5"
 														disabled={isCheckboxDisabled}
 														id={checkboxId}
-														onCheckedChange={(value) =>
-															handleCheck(
-																rule.id,
-																value === true,
-																isInOverrideMode,
-															)
-														}
+														onCheckedChange={(value) => {
+															if (isInOverrideMode) {
+																// In override mode, store pending change
+																handlePendingOverride(rule.id, value === true);
+															} else {
+																// Normal mode, save immediately
+																handleCheck(rule.id, value === true, false);
+															}
+														}}
 													/>
 												)}
 
@@ -357,11 +433,30 @@ export function RuleChecklist({
 													<Button
 														className="h-6 shrink-0 font-mono text-[9px]"
 														data-testid={`rule-override-btn-${rule.id}`}
-														onClick={() => toggleOverrideMode(rule.id)}
+														onClick={() => {
+															if (isInOverrideMode) {
+																if (hasPendingChange) {
+																	acceptOverride(rule.id);
+																} else {
+																	cancelOverride(rule.id);
+																}
+															} else {
+																// Enter override mode
+																setOverrideMode((prev) => {
+																	const next = new Set(prev);
+																	next.add(rule.id);
+																	return next;
+																});
+															}
+														}}
 														size="sm"
 														variant="ghost"
 													>
-														{isInOverrideMode ? "Cancel" : "Override"}
+														{isInOverrideMode
+															? hasPendingChange
+																? "Accept"
+																: "Cancel"
+															: "Override"}
 													</Button>
 												)}
 											</div>

@@ -656,15 +656,16 @@ export function StatsPanel({
 				</TabsContent>
 
 				{/* STRATEGY TAB */}
-				<TabsContent
-					className="m-0 flex-1 overflow-hidden p-4"
-					value="strategy"
-				>
-					<StrategySection
-						onStrategyChange={(id) => onUpdateField("strategyId", id)}
-						strategyId={trade.strategyId}
-						tradeId={trade.id}
-					/>
+				<TabsContent className="m-0 flex-1 overflow-hidden" value="strategy">
+					<ScrollArea className="h-full">
+						<div className="p-4">
+							<StrategySection
+								onStrategyChange={(id) => onUpdateField("strategyId", id)}
+								strategyId={trade.strategyId}
+								tradeId={trade.id}
+							/>
+						</div>
+					</ScrollArea>
 				</TabsContent>
 
 				{/* EXECUTIONS TAB */}

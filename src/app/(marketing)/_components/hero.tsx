@@ -1,6 +1,6 @@
 "use client";
 
-import { SignedIn, SignedOut, SignUpButton } from "@clerk/nextjs";
+import { SignUpButton, useAuth } from "@clerk/nextjs";
 import { ArrowRight, BarChart3, Play, Target, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -247,6 +247,40 @@ function DashboardPreview() {
 	return <DemoDashboard />;
 }
 
+// CTA button that shows "Start Free" by default until signed in
+function HeroCTA() {
+	const { isLoaded, isSignedIn } = useAuth();
+
+	// Show dashboard button only when we're certain user is signed in
+	if (isLoaded && isSignedIn) {
+		return (
+			<Button
+				asChild
+				className="group h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
+				size="lg"
+			>
+				<Link href="/dashboard">
+					Go to Dashboard
+					<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+				</Link>
+			</Button>
+		);
+	}
+
+	// Default: show signup button (while loading or when signed out)
+	return (
+		<SignUpButton mode="modal">
+			<Button
+				className="group h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
+				size="lg"
+			>
+				Start Free
+				<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+			</Button>
+		</SignUpButton>
+	);
+}
+
 export function Hero() {
 	return (
 		<section className="relative min-h-screen overflow-hidden">
@@ -292,29 +326,7 @@ export function Hero() {
 
 						{/* CTA buttons */}
 						<div className="mt-6 flex flex-col items-center justify-center gap-3 sm:mt-8 sm:flex-row sm:gap-4">
-							<SignedOut>
-								<SignUpButton mode="modal">
-									<Button
-										className="group h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
-										size="lg"
-									>
-										Start Free
-										<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-									</Button>
-								</SignUpButton>
-							</SignedOut>
-							<SignedIn>
-								<Button
-									asChild
-									className="group h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
-									size="lg"
-								>
-									<Link href="/dashboard">
-										Go to Dashboard
-										<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-									</Link>
-								</Button>
-							</SignedIn>
+							<HeroCTA />
 							<Button
 								asChild
 								className="h-11 w-full gap-2 px-6 font-mono text-xs uppercase tracking-wider sm:h-12 sm:w-auto sm:gap-3 sm:px-8 sm:text-sm"
