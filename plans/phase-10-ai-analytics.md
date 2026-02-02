@@ -32,47 +32,15 @@ This is EdgeJournal's core differentiator - the reason to use this over TradeZel
 
 **No quick chat** - Focus entirely on making reports exceptional. Quick questions are answered by the existing analytics UI.
 
-## Architecture: Hybrid Database (Neon + Turso)
+## Architecture: Simple & Pragmatic
 
-### Decision: Neon (shared) + Turso (per-user)
+### Decision: Keep existing Neon DB
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  NEON (Central PostgreSQL) - Shared Data                    │
-│  - users table (Clerk sync, auth)                           │
-│  - candle_cache (market data, shared across all users)      │
-│  - billing/subscriptions                                    │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│  TURSO (Per-User SQLite) - User Data                        │
-│                                                             │
-│  User A: libsql://{hash(userA)}.turso.io                   │
-│  ├── trades, trade_executions                               │
-│  ├── strategies, strategy_rules                             │
-│  ├── tags, trade_tags                                       │
-│  ├── daily_journals, journal_attachments                    │
-│  ├── ai_reports, ai_conversations                           │
-│  └── user_settings, filter_presets                          │
-│                                                             │
-│  User B: libsql://{hash(userB)}.turso.io                   │
-│  └── [same schema, completely isolated]                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Why this architecture:**
-- **Monster aggregations** - Query just that user's DB, no filtering, no RLS
-- **True isolation** - AI literally cannot see other users' data
-- **Safe AI queries** - Read-only connection to user's Turso DB
-- **Edge performance** - Turso is SQLite at edge, fast globally
-- **Shared data stays shared** - candle_cache doesn't duplicate
-
-**Turso setup:**
-- Clerk webhook creates user DB on signup
-- Drizzle ORM supports both Postgres (Neon) and SQLite (Turso)
-- Schema synced via Turso parent database
-
-## Proposed Architecture
+No need for per-user database isolation. The existing Neon PostgreSQL handles this fine:
+- A very active trader has ~10k trades - trivial for Postgres
+- AI tools always include `WHERE user_id = ?` (enforced in tool layer)
+- Read-only database role for AI queries
+- Existing tRPC endpoints already enforce user ownership
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -88,20 +56,19 @@ This is EdgeJournal's core differentiator - the reason to use this over TradeZel
 │  Trigger.dev (Long-Running AI Task)                         │
 │  - Orchestrates multi-step AI conversation                  │
 │  - Runs for 30-60+ minutes if needed                        │
-│  - Handles tool calls (SQL queries)                         │
+│  - Handles tool calls (tRPC + SQL)                          │
 │  - Generates PDF report                                     │
 │  - Sends email when complete                                │
 └─────────────────────────────────────────────────────────────┘
                           │
         ┌─────────────────┼─────────────────┐
         ▼                 ▼                 ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│ User's Turso │  │ Shared Neon  │  │ OpenRouter   │  │ Daytona      │
-│ DB (trades,  │  │ (candles,    │  │ (Opus,       │  │ (Python)     │
-│ strategies)  │  │ users)       │  │ GPT-4.5)     │  │ pandas       │
-│ READ-ONLY    │  │ READ-ONLY    │  │              │  │ matplotlib   │
-│              │  │              │  │              │  │ scipy        │
-└──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Neon DB      │  │ OpenRouter   │  │ Daytona      │
+│ (read-only   │  │ (Opus,       │  │ (Python)     │
+│ role, user   │  │ GPT-4.5)     │  │ pandas       │
+│ scoped)      │  │              │  │ matplotlib   │
+└──────────────┘  └──────────────┘  └──────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -115,38 +82,60 @@ This is EdgeJournal's core differentiator - the reason to use this over TradeZel
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Daytona for Python execution** - AI writes custom Python code for analysis and visualizations. Sandbox runs pandas, matplotlib, scipy for professional-grade charts and statistical analysis. Code is saved with report for reproducibility.
+### Why NOT per-user databases (Turso)?
+
+We considered Turso per-user SQLite DBs but decided against it:
+- **Overkill for scale** - Even 10k trades per user is trivial for Postgres
+- **Operational complexity** - Schema migrations across thousands of DBs
+- **Cost** - Per-database pricing adds up
+- **Two ORMs** - Postgres + SQLite dialects have differences
+- **Simpler solution exists** - Read-only role + WHERE clauses = same security
+
+### AI Data Access Strategy
+
+The AI writes its own SQL queries - that's the whole point. Canned endpoints can't answer "what if I held 5 minutes longer on my ES trades during London open?"
+
+**Primary: Read-only SQL tool**
+- AI writes custom queries for any analysis
+- Dedicated read-only Postgres role (can't modify data)
+- Tool layer wraps queries in user-scoped CTE:
+  ```sql
+  WITH user_trades AS (SELECT * FROM trades WHERE user_id = $1)
+  -- AI's query uses user_trades instead of trades
+  ```
+- Validates queries are SELECT-only before execution
+- Returns results as JSON for AI to analyze
+
+**Schema context in system prompt**
+- AI gets full schema definitions (tables, columns, types, relationships)
+- Example queries for common patterns
+- This lets it write accurate SQL without hallucinating column names
 
 ## Implementation Phases
 
-### Phase 4.1: Database Migration (Neon → Turso per-user)
-- [ ] Set up Turso account and parent schema database
-- [ ] Create Clerk webhook to provision user DB on signup
-- [ ] Set up Drizzle for Turso (libsql driver)
-- [ ] Create `src/server/db/turso.ts` - per-user connection factory
-- [ ] Keep `src/server/db/neon.ts` - shared data (users, candles, billing)
-- [ ] Migrate existing user data from Neon to Turso (migration script)
-- [ ] Update all routers to use user's Turso DB for user-specific data
-
-### Phase 4.2: AI Infrastructure
+### Phase 4.1: AI Infrastructure
 - [ ] Add OpenRouter integration (or direct Anthropic/OpenAI)
 - [ ] Create AI service (`src/lib/ai/client.ts`) with streaming
 - [ ] Support model selection (Opus, GPT-4.5)
-- [ ] Add `ai_reports` table to Turso schema
+- [ ] Add `ai_reports` table to schema
 - [ ] Add `ai_conversations` table for multi-turn clarification
-- [ ] Add credit tracking (aiCreditsUsed, aiCreditsResetAt) to user settings
-- [ ] Monthly reset cron job for credits
+- [ ] Add credit tracking columns to user_settings
+- [ ] Monthly reset cron job for credits (Trigger.dev scheduled task)
 
-### Phase 4.3: Context Builder & Tools
+### Phase 4.2: Context Builder & Tools
 - [ ] Context builder loads user's strategies, tags, recent journals
-- [ ] Define SQL tools for AI:
-  - `run_query` - execute read-only SQL against user's Turso
-  - `get_market_data` - fetch candles from shared Neon
-  - `get_trade_details` - deep dive on specific trades
-- [ ] Tool execution layer (validates SQL is read-only, executes, returns)
-- [ ] AI can call tools iteratively during analysis
+- [ ] Create read-only Postgres role for AI queries
+- [ ] Generate schema context for system prompt (tables, columns, relationships)
+- [ ] Define AI tools:
+  - `run_query` - execute read-only SQL with user scoping (primary tool)
+  - `get_market_data` - fetch candles for price analysis (joins with trades)
+- [ ] Tool execution layer:
+  - Validates query is SELECT-only (no INSERT/UPDATE/DELETE/DROP)
+  - Wraps query in user-scoped CTE
+  - Returns results as JSON
+  - Handles errors gracefully
 
-### Phase 4.4: Daytona Python Sandbox
+### Phase 4.3: Daytona Python Sandbox
 - [ ] Daytona account and SDK integration
 - [ ] Python environment with pre-installed packages:
   - pandas, numpy (data manipulation)
@@ -158,24 +147,24 @@ This is EdgeJournal's core differentiator - the reason to use this over TradeZel
 - [ ] Sandbox resource limits and timeouts
 - [ ] Error handling for failed code execution
 
-### Phase 4.5: Conversation & Clarification Flow
+### Phase 4.4: Conversation & Clarification Flow
 - [ ] Multi-turn conversation support (AI asks clarifying questions)
 - [ ] User can reference specific trades ("look at trade #47")
 - [ ] AI builds understanding before deep analysis
 - [ ] Conversation persisted in `ai_conversations` table
 - [ ] Clear transition from "clarifying" to "generating report"
 
-### Phase 4.6: Report Generation Pipeline (Trigger.dev)
+### Phase 4.5: Report Generation Pipeline (Trigger.dev)
 - [ ] Create `generate-ai-report` Trigger.dev task
 - [ ] Long-running (30-60+ min) with progress updates
 - [ ] Compile Python-generated charts into report
-- [ ] PDF compilation (Puppeteer HTML→PDF)
+- [ ] PDF compilation (Puppeteer HTML→PDF or react-pdf)
 - [ ] Include code artifacts as appendix
 - [ ] Upload PDF to S3
 - [ ] Send email via Resend with download link
 - [ ] Update `ai_reports` with completed report
 
-### Phase 4.7: Frontend UI
+### Phase 4.6: Frontend UI
 - [ ] Redesign `/ai` page:
   - Conversation interface for clarification
   - Report request form (date range, prompt)
@@ -188,28 +177,19 @@ This is EdgeJournal's core differentiator - the reason to use this over TradeZel
 
 ## Key Files to Create/Modify
 
-### Database Layer
-```
-src/server/db/
-├── neon.ts                # Shared DB connection (users, candles, billing)
-├── turso.ts               # Per-user DB factory: getUserDb(userId)
-├── schema/
-│   ├── shared.ts          # Neon schema (users, candle_cache)
-│   └── user.ts            # Turso schema (trades, journals, ai_reports, etc.)
-```
-
 ### AI System
 ```
 src/lib/ai/
 ├── client.ts              # OpenRouter wrapper (streaming, model selection)
 ├── context-builder.ts     # Load strategies, tags, journals for AI context
+├── schema-context.ts      # Generate schema definitions for system prompt
 ├── prompts/
-│   └── trading-analyst.ts # System prompt: expert trading coach
+│   └── trading-analyst.ts # System prompt: expert trading coach + schema
 └── tools/
     ├── index.ts           # Tool definitions
-    ├── run-query.ts       # Execute read-only SQL on user's Turso
-    ├── get-market-data.ts # Fetch candles from shared Neon
-    └── get-trade-details.ts # Deep dive on specific trades
+    ├── run-query.ts       # Execute read-only SQL with user scoping
+    ├── get-market-data.ts # Fetch candles for price analysis
+    └── run-python.ts      # Execute Python in Daytona sandbox
 
 src/trigger/
 └── generate-ai-report.ts  # Long-running report generation task
@@ -229,65 +209,67 @@ src/app/(protected)/ai/
 │   └── credit-tracker.tsx # X/5 credits display
 ```
 
-### Schema (Turso per-user)
+### Schema Additions (existing Neon DB)
 ```sql
 -- AI conversations (multi-turn clarification)
-ai_conversations (
+CREATE TABLE ai_conversations (
   id TEXT PRIMARY KEY,
-  status TEXT,              -- 'clarifying' | 'generating' | 'complete'
-  initial_prompt TEXT,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  status TEXT NOT NULL DEFAULT 'clarifying',  -- 'clarifying' | 'generating' | 'complete'
+  initial_prompt TEXT NOT NULL,
   date_range_start TIMESTAMP,
   date_range_end TIMESTAMP,
-  created_at TIMESTAMP
-)
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
-ai_messages (
+CREATE TABLE ai_messages (
   id TEXT PRIMARY KEY,
-  conversation_id TEXT,
-  role TEXT,                -- 'user' | 'assistant'
-  content TEXT,
-  created_at TIMESTAMP
-)
+  conversation_id TEXT NOT NULL REFERENCES ai_conversations(id),
+  role TEXT NOT NULL,  -- 'user' | 'assistant'
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
 -- Generated reports
-ai_reports (
+CREATE TABLE ai_reports (
   id TEXT PRIMARY KEY,
-  conversation_id TEXT,     -- Links to conversation that generated it
-  prompt TEXT,              -- Final question after clarification
-  model TEXT,               -- 'opus' | 'gpt-4.5'
-  pdf_url TEXT,             -- S3 URL for download
+  user_id TEXT NOT NULL REFERENCES users(id),
+  conversation_id TEXT REFERENCES ai_conversations(id),
+  prompt TEXT NOT NULL,
+  model TEXT NOT NULL,  -- 'opus' | 'gpt-4.5'
+  pdf_url TEXT,
   tokens_used INTEGER,
-  created_at TIMESTAMP
-)
-```
+  created_at TIMESTAMP DEFAULT NOW()
+);
 
-### User Settings Addition
-```sql
-ai_credits_used INTEGER DEFAULT 0,
-ai_credits_reset_at TIMESTAMP
+-- Add to user_settings
+ALTER TABLE user_settings ADD COLUMN ai_credits_used INTEGER DEFAULT 0;
+ALTER TABLE user_settings ADD COLUMN ai_credits_reset_at TIMESTAMP;
 ```
 
 ## Resolved Decisions
 
-1. **Database**: Neon (shared) + Turso (per-user)
-2. **AI execution**: Trigger.dev orchestration + Daytona Python sandboxes
-3. **Python sandbox**: matplotlib, pandas, scipy, plotly, statsmodels for professional charts & analysis
-4. **Model flexibility**: OpenRouter for Opus/GPT-4.5/future models
-5. **Interaction**: Conversational clarification → deep report
-6. **Output**: PDF reports with custom Python charts, emailed + downloadable
-7. **Limits**: 5 reports/month
-8. **Business model**: Subscription (you pay API costs)
+1. **Database**: Keep existing Neon (no Turso per-user complexity)
+2. **AI data access**: AI writes custom SQL (read-only role + user-scoped CTE)
+3. **AI execution**: Trigger.dev orchestration + Daytona Python sandboxes
+4. **Python sandbox**: matplotlib, pandas, scipy, plotly, statsmodels
+5. **Model flexibility**: OpenRouter for Opus/GPT-4.5/future models
+6. **Interaction**: Conversational clarification → deep report
+7. **Output**: PDF reports with custom Python charts, emailed + downloadable
+8. **Limits**: 5 reports/month
+9. **Business model**: Subscription (you pay API costs)
 
 ## Open Questions
 
 1. **Report templates**: Suggested prompts to help users get started?
 2. **Chart styling**: Custom theme for matplotlib/plotly to match Terminal design?
+3. **Vector search**: Add pgvector later for "find similar trades"? (nice-to-have)
 
 ## Verification
 
-- [ ] Clerk webhook creates Turso DB for new users
-- [ ] Existing data migrated to Turso successfully
-- [ ] AI can run SQL queries against user's Turso (read-only)
+- [ ] AI can write and execute custom SQL queries
+- [ ] Read-only SQL queries scoped to user work correctly
+- [ ] AI has accurate schema context (no hallucinated columns)
 - [ ] Daytona sandbox executes Python code successfully
 - [ ] Python charts render with Terminal design theme
 - [ ] Conversation flow works (clarify → generate)
@@ -299,36 +281,15 @@ ai_credits_reset_at TIMESTAMP
 
 ## Estimate
 
-This is the largest feature in the roadmap:
+Simplified without database migration:
 
 | Sub-phase | Effort |
 |-----------|--------|
-| 4.1 Database Migration | 2-3 weeks |
-| 4.2 AI Infrastructure | 1-2 weeks |
-| 4.3 Context & Tools | 1-2 weeks |
-| 4.4 Daytona Python Sandbox | 1-2 weeks |
-| 4.5 Conversation Flow | 1 week |
-| 4.6 Report Pipeline | 2-3 weeks |
-| 4.7 Frontend UI | 1-2 weeks |
+| 4.1 AI Infrastructure | 1 week |
+| 4.2 Context & Tools | 1 week |
+| 4.3 Daytona Python Sandbox | 1-2 weeks |
+| 4.4 Conversation Flow | 1 week |
+| 4.5 Report Pipeline | 1-2 weeks |
+| 4.6 Frontend UI | 1-2 weeks |
 
-**Total: 10-15 weeks**
-
-## Roadmap Addition
-
-Add to `ROADMAP.md` as **Phase 4: AI Analytics** after Dashboard (Phase 3):
-
-```markdown
-## Phase 4: AI Analytics (Core Differentiator)
-
-> **Priority:** HIGHEST | **Dependencies:** Phase 3 | **Estimate:** 8-13 weeks
-
-### Goal
-Deep AI-powered analysis reports. Users ask any question, get professional-grade PDF reports with charts and case studies. 5 reports/month.
-
-### Key Features
-- Neon + Turso hybrid database (per-user isolation)
-- Conversational clarification before analysis
-- Long-running Trigger.dev tasks (30-60+ min)
-- PDF reports with charts, emailed to user
-- Opus / GPT-4.5 model selection
-```
+**Total: 6-9 weeks** (down from 10-15 weeks)

@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useImagePreloader } from "@/hooks/use-image-preloader";
 import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
 import { cn } from "@/lib/shared";
-import { transformHtmlToS3Keys } from "@/lib/storage/s3";
+import { transformHtmlToS3Keys } from "@/lib/storage/s3-utils";
 import { api } from "@/trpc/react";
 
 // =============================================================================

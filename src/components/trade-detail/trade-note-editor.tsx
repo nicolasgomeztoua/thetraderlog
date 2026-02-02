@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useImageUpload } from "@/hooks/use-image-upload";
 import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
 import { cn } from "@/lib/shared";
-import { transformHtmlToS3Keys } from "@/lib/storage/s3";
+import { transformHtmlToS3Keys } from "@/lib/storage/s3-utils";
 
 // =============================================================================
 // TYPES
