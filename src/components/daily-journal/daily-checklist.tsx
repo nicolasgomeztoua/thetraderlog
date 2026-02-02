@@ -121,14 +121,6 @@ export function DailyChecklist({
 				);
 			}
 		},
-		onSettled: () => {
-			// Refetch to ensure consistency
-			utils.dailyJournal.getChecks.invalidate({
-				date: selectedDate.toISOString(),
-			});
-			// Update compliance stats in calendar sidebar
-			utils.dailyJournal.getComplianceStats.invalidate();
-		},
 	});
 
 	// Filter to only active templates
@@ -201,11 +193,6 @@ export function DailyChecklist({
 					context.previousData,
 				);
 			}
-		},
-		onSettled: () => {
-			utils.dailyJournal.getWithTrades.invalidate({ date: dateString });
-			// Update compliance stats in calendar sidebar
-			utils.dailyJournal.getComplianceStats.invalidate();
 		},
 	});
 
@@ -290,7 +277,7 @@ export function DailyChecklist({
 							>
 								<Checkbox
 									checked={item.checked}
-									disabled={isAutoChecked || toggleForcedCheck.isPending}
+									disabled={isAutoChecked}
 									id={checkboxId}
 									onCheckedChange={() =>
 										handleToggleForcedItem(item.id, isAutoChecked)
@@ -344,14 +331,13 @@ export function DailyChecklist({
 							<div
 								className={cn(
 									"flex cursor-pointer items-center gap-2 rounded p-1.5 transition-colors",
-									"hover:bg-white/2",
+									"hover:bg-muted/50",
 									isChecked && "opacity-75",
 								)}
 								key={template.id}
 							>
 								<Checkbox
 									checked={isChecked}
-									disabled={toggleCheck.isPending}
 									id={checkboxId}
 									onCheckedChange={() => handleToggle(template.id)}
 								/>
@@ -392,7 +378,7 @@ export function DailyChecklist({
 					</div>
 
 					{/* Progress bar */}
-					<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
+					<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
 						<div
 							className={cn(
 								"h-full transition-all duration-300",

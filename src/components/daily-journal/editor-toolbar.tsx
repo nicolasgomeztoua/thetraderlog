@@ -75,7 +75,7 @@ function ToolbarButton({
 					aria-label={label}
 					className={cn(
 						"inline-flex size-8 items-center justify-center rounded transition-colors",
-						"text-muted-foreground hover:bg-white/10 hover:text-foreground",
+						"text-muted-foreground hover:bg-muted hover:text-foreground",
 						"disabled:pointer-events-none disabled:opacity-50",
 						isActive && "bg-primary/20 text-primary",
 					)}
@@ -211,7 +211,7 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
 	}
 
 	return (
-		<div className="flex flex-wrap items-center gap-0.5 rounded-t border border-white/10 bg-white/2 px-2 py-1.5">
+		<div className="flex items-center gap-0.5 overflow-x-auto rounded-t border border-border bg-muted/50 px-2 py-1.5">
 			{/* Text formatting */}
 			<ToolbarButton
 				icon={<BoldIcon className="size-4" />}
@@ -279,7 +279,7 @@ export function EditorToolbar({ editor, onImageUpload }: EditorToolbarProps) {
 						aria-label="Insert Link"
 						className={cn(
 							"inline-flex size-8 items-center justify-center rounded transition-colors",
-							"text-muted-foreground hover:bg-white/10 hover:text-foreground",
+							"text-muted-foreground hover:bg-muted hover:text-foreground",
 							editor.isActive("link") && "bg-primary/20 text-primary",
 						)}
 						onClick={openLinkPopover}

@@ -1,6 +1,10 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { getPresignedUploadUrl, isS3Configured } from "@/lib/storage/s3";
+import {
+	getPresignedDownloadUrl,
+	getPresignedUploadUrl,
+	isS3Configured,
+} from "@/lib/storage/s3";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 export const storageRouter = createTRPCRouter({
@@ -37,5 +41,34 @@ export const storageRouter = createTRPCRouter({
 				presignedUrl,
 				key,
 			};
+		}),
+
+	/**
+	 * Get a presigned URL for downloading/viewing an image.
+	 * Used after upload to get a URL that can be displayed in the browser.
+	 */
+	getDownloadUrl: protectedProcedure
+		.input(
+			z.object({
+				key: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (!isS3Configured()) {
+				throw new Error(
+					"File downloads are not configured. S3 settings are missing.",
+				);
+			}
+
+			// Verify the key belongs to this user (starts with images/{userId}/)
+			const expectedPrefix = `images/${ctx.user.id}/`;
+			if (!input.key.startsWith(expectedPrefix)) {
+				throw new Error("Access denied");
+			}
+
+			// Generate presigned GET URL (valid for 1 hour)
+			const url = getPresignedDownloadUrl(input.key, 3600);
+
+			return { url };
 		}),
 });

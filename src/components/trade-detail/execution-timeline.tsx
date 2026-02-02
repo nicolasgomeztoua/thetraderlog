@@ -115,7 +115,7 @@ export function ExecutionTimeline({
 				<div className="space-y-1">
 					{sortedExecutions.map((execution) => (
 						<div
-							className="group flex items-center gap-3 rounded px-3 py-2 transition-colors hover:bg-white/2"
+							className="group flex items-center gap-3 rounded px-3 py-2 transition-colors hover:bg-muted/50"
 							key={execution.id}
 						>
 							{/* Icon */}
@@ -206,7 +206,7 @@ export function ExecutionTimeline({
 
 			{/* Add Execution Dialog */}
 			<Dialog onOpenChange={setIsAddingExecution} open={isAddingExecution}>
-				<DialogContent className="border-white/10 bg-background">
+				<DialogContent className="border-border bg-background">
 					<DialogHeader>
 						<DialogTitle className="font-mono uppercase tracking-wider">
 							Add Execution
@@ -226,7 +226,7 @@ export function ExecutionTimeline({
 								Type
 							</label>
 							<select
-								className="h-9 w-full rounded border border-white/10 bg-transparent px-3 font-mono text-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
+								className="h-9 w-full rounded border border-border bg-transparent px-3 font-mono text-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/20"
 								id="exec-type"
 								onChange={(e) =>
 									setNewExecution({

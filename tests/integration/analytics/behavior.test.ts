@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	createTestCaller,
+	getAnalyticsFixtureDates,
 	setupTrader,
 	setupTraderWithAnalyticsData,
 	type TestCaller,
@@ -918,12 +919,19 @@ describe("Analytics Behavior", () => {
 		});
 
 		it("should filter by date range correctly", async () => {
+			const { baseMonday } = getAnalyticsFixtureDates();
+			const mondayStart = new Date(baseMonday);
+			mondayStart.setUTCHours(0, 0, 0, 0);
+			const tuesdayEnd = new Date(baseMonday);
+			tuesdayEnd.setUTCDate(tuesdayEnd.getUTCDate() + 1);
+			tuesdayEnd.setUTCHours(23, 59, 59, 0);
+
 			const result = await caller.analytics.getBehavioralPatterns({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
-						start: "2024-01-08T00:00:00Z",
-						end: "2024-01-09T23:59:59Z",
+						start: mondayStart.toISOString(),
+						end: tuesdayEnd.toISOString(),
 					},
 				},
 			});

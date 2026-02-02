@@ -115,7 +115,7 @@ export function TagManager() {
 					<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
 				</div>
 			) : !tags || tags.length === 0 ? (
-				<div className="rounded border border-white/5 bg-white/1 py-8 text-center">
+				<div className="rounded border border-border/50 bg-muted/30 py-8 text-center">
 					<p className="font-mono text-muted-foreground text-xs">
 						No tags yet. Create your first tag to organize trades.
 					</p>
@@ -124,7 +124,7 @@ export function TagManager() {
 				<div className="space-y-2">
 					{tags.map((tag) => (
 						<div
-							className="flex items-center justify-between gap-2 rounded border border-white/5 bg-white/1 px-3 py-2.5 sm:px-4 sm:py-3"
+							className="flex items-center justify-between gap-2 rounded border border-border/50 bg-muted/30 px-3 py-2.5 sm:px-4 sm:py-3"
 							key={tag.id}
 						>
 							<div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
@@ -172,7 +172,7 @@ export function TagManager() {
 
 			{/* Create Dialog */}
 			<Dialog onOpenChange={setIsCreateOpen} open={isCreateOpen}>
-				<DialogContent className="border-white/10 bg-background">
+				<DialogContent className="border-border bg-background">
 					<DialogHeader>
 						<DialogTitle className="font-mono uppercase tracking-wider">
 							Create Tag
@@ -247,7 +247,7 @@ export function TagManager() {
 
 			{/* Edit Dialog */}
 			<Dialog onOpenChange={setIsEditOpen} open={isEditOpen}>
-				<DialogContent className="border-white/10 bg-background">
+				<DialogContent className="border-border bg-background">
 					<DialogHeader>
 						<DialogTitle className="font-mono uppercase tracking-wider">
 							Edit Tag

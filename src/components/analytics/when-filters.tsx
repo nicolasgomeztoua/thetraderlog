@@ -165,7 +165,7 @@ export function WhenFilters({
 											"rounded border px-2 py-1 font-mono text-[10px] uppercase tracking-wider transition-all",
 											activePreset === preset.label
 												? "border-primary/40 bg-primary/10 text-primary"
-												: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground",
+												: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground",
 										)}
 										key={preset.label}
 										onClick={() => handleQuickDate(preset)}
@@ -242,7 +242,7 @@ export function WhenFilters({
 										"flex size-8 items-center justify-center rounded border font-mono text-xs transition-all",
 										selectedDays.includes(day.value)
 											? "border-primary/40 bg-primary/10 text-primary"
-											: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground",
+											: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground",
 									)}
 									key={day.value}
 									onClick={() => toggleDay(day.value)}
@@ -265,7 +265,7 @@ export function WhenFilters({
 									"flex h-7 items-center justify-center rounded-sm border font-mono text-[10px] transition-all",
 									selectedHours.includes(hour)
 										? "border-primary/40 bg-primary/10 text-primary"
-										: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground",
+										: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground",
 								)}
 								key={`hour-${hour}`}
 								onClick={() => toggleHour(hour)}

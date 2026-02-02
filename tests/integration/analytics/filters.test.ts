@@ -2,11 +2,51 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	createTestCaller,
 	createTestTrade,
+	getAnalyticsFixtureDates,
 	setupTrader,
 	setupTraderWithAnalyticsData,
 	type TestCaller,
 	truncateAllTables,
 } from "../../utils";
+
+// Get dynamic fixture dates for date range filters
+function getFixtureDateRanges() {
+	const { baseMonday, mondayMorning } = getAnalyticsFixtureDates();
+
+	const monday = new Date(baseMonday);
+	const tuesday = new Date(baseMonday);
+	tuesday.setUTCDate(tuesday.getUTCDate() + 1);
+	const wednesday = new Date(baseMonday);
+	wednesday.setUTCDate(wednesday.getUTCDate() + 2);
+	const thursday = new Date(baseMonday);
+	thursday.setUTCDate(thursday.getUTCDate() + 3);
+	const friday = new Date(baseMonday);
+	friday.setUTCDate(friday.getUTCDate() + 4);
+
+	// Before the week (no trades expected)
+	const beforeWeek = new Date(baseMonday);
+	beforeWeek.setUTCDate(beforeWeek.getUTCDate() - 7);
+
+	return {
+		// Day starts (00:00:00Z)
+		mondayStart: new Date(monday.setUTCHours(0, 0, 0, 0)).toISOString(),
+		tuesdayStart: new Date(tuesday.setUTCHours(0, 0, 0, 0)).toISOString(),
+		wednesdayStart: new Date(wednesday.setUTCHours(0, 0, 0, 0)).toISOString(),
+		thursdayStart: new Date(thursday.setUTCHours(0, 0, 0, 0)).toISOString(),
+		fridayStart: new Date(friday.setUTCHours(0, 0, 0, 0)).toISOString(),
+		// Day ends (23:59:59Z)
+		mondayEnd: (() => { const d = new Date(baseMonday); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		tuesdayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 1); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		wednesdayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 2); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		thursdayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 3); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		fridayEnd: (() => { const d = new Date(baseMonday); d.setUTCDate(d.getUTCDate() + 4); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		// Before week (no trades)
+		beforeWeekStart: new Date(beforeWeek.setUTCHours(0, 0, 0, 0)).toISOString(),
+		beforeWeekEnd: (() => { const d = new Date(beforeWeek); d.setUTCDate(d.getUTCDate() + 6); d.setUTCHours(23, 59, 59, 0); return d.toISOString(); })(),
+		// Exact Monday morning trade time
+		mondayMorningExact: mondayMorning.toISOString(),
+	};
+}
 
 describe("Analytics Filters", () => {
 	let caller: TestCaller;
@@ -146,12 +186,13 @@ describe("Analytics Filters", () => {
 
 	describe("Date Range Filter", () => {
 		it("should filter by start date only", async () => {
-			// Only Thursday and Friday trades (Jan 11-12)
+			const dates = getFixtureDateRanges();
+			// Only Thursday and Friday trades
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
-						start: "2024-01-11T00:00:00Z",
+						start: dates.thursdayStart,
 						end: null,
 					},
 				},
@@ -162,13 +203,14 @@ describe("Analytics Filters", () => {
 		});
 
 		it("should filter by end date only", async () => {
-			// Only Monday and Tuesday trades (Jan 8-9)
+			const dates = getFixtureDateRanges();
+			// Only Monday and Tuesday trades
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
 						start: null,
-						end: "2024-01-09T23:59:59Z",
+						end: dates.tuesdayEnd,
 					},
 				},
 			});
@@ -178,12 +220,13 @@ describe("Analytics Filters", () => {
 		});
 
 		it("should filter by date range (Monday and Tuesday)", async () => {
+			const dates = getFixtureDateRanges();
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
-						start: "2024-01-08T00:00:00Z",
-						end: "2024-01-09T23:59:59Z",
+						start: dates.mondayStart,
+						end: dates.tuesdayEnd,
 					},
 				},
 			});
@@ -193,12 +236,13 @@ describe("Analytics Filters", () => {
 		});
 
 		it("should filter by single day (Wednesday)", async () => {
+			const dates = getFixtureDateRanges();
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
-						start: "2024-01-10T00:00:00Z",
-						end: "2024-01-10T23:59:59Z",
+						start: dates.wednesdayStart,
+						end: dates.wednesdayEnd,
 					},
 				},
 			});
@@ -208,12 +252,13 @@ describe("Analytics Filters", () => {
 		});
 
 		it("should return no trades for date range with no trades", async () => {
+			const dates = getFixtureDateRanges();
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
-						start: "2024-01-01T00:00:00Z",
-						end: "2024-01-07T23:59:59Z",
+						start: dates.beforeWeekStart,
+						end: dates.beforeWeekEnd,
 					},
 				},
 			});
@@ -572,12 +617,13 @@ describe("Analytics Filters", () => {
 		});
 
 		it("should combine date range and day of week filters", async () => {
+			const dates = getFixtureDateRanges();
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
-						start: "2024-01-08T00:00:00Z",
-						end: "2024-01-12T23:59:59Z",
+						start: dates.mondayStart,
+						end: dates.fridayEnd,
 					},
 					daysOfWeek: [1], // Monday only
 				},
@@ -628,14 +674,15 @@ describe("Analytics Filters", () => {
 		});
 
 		it("should combine all major filter types", async () => {
+			const dates = getFixtureDateRanges();
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					symbols: ["ES", "NQ"],
 					outcome: "win",
 					dateRange: {
-						start: "2024-01-08T00:00:00Z",
-						end: "2024-01-11T23:59:59Z",
+						start: dates.mondayStart,
+						end: dates.thursdayEnd,
 					},
 					daysOfWeek: [1, 3, 4], // Mon, Wed, Thu
 				},
@@ -768,12 +815,13 @@ describe("Analytics Filters", () => {
 		});
 
 		it("should handle date range at exact trade time", async () => {
+			const dates = getFixtureDateRanges();
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
 					dateRange: {
-						start: "2024-01-08T09:30:00Z",
-						end: "2024-01-08T09:30:00Z",
+						start: dates.mondayMorningExact,
+						end: dates.mondayMorningExact,
 					},
 				},
 			});

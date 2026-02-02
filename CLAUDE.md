@@ -119,7 +119,7 @@ Reference documentation is organized in `.claude/skills/` for AI-assisted develo
 
 | Topic | Skill | Full Reference |
 |-------|-------|----------------|
-| Design System | `.claude/skills/frontend-engineer/SKILL.md` | `.claude/skills/frontend-engineer/DESIGN_REFERENCE.md` |
+| Design System | `.claude/skills/frontend/SKILL.md` | `.claude/skills/frontend/DESIGN_REFERENCE.md` |
 | Architecture | `.claude/skills/architecture/SKILL.md` | `.claude/skills/architecture/MARKET_DATA_REFERENCE.md` |
 | Testing | `.claude/skills/testing/SKILL.md` | `.claude/skills/testing/TESTING_REFERENCE.md` |
 | Planning | `.claude/skills/planning/SKILL.md` | - |
@@ -140,7 +140,7 @@ Claude Code skills provide contextual guidance when invoked:
 
 | Skill | Purpose |
 |-------|---------|
-| `frontend-engineer` | Terminal design system, component patterns, Tailwind styling |
+| `frontend` | Terminal design system, component patterns, Tailwind styling |
 | `architecture` | System architecture, data flow, market data caching |
 | `testing` | Testing patterns, fixtures, database testing |
 | `planning` | Interview-based planning to collaboratively design features through Q&A |

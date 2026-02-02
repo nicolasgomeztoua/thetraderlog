@@ -8,6 +8,9 @@ export {
 } from "./accounts";
 // Pre-composed scenarios
 export {
+	getAnalyticsBaseDate,
+	getAnalyticsFixtureDates,
+	getAnalyticsFixtureMonth,
 	setupPropChallenge,
 	setupTrader,
 	setupTraderWithAnalyticsData,

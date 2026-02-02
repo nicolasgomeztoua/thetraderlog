@@ -61,6 +61,30 @@ const trades = await ctx.db.query.trades.findMany({
 **When:** Deleting/updating a child record (attachment, check, etc.)
 **How:** Query child with `{ with: { parent: true } }`, then check `child.parent.userId === ctx.user.id`. Use same error message for "not found" and "not authorized" to avoid leaking information.
 
+### Image Upload Pattern (S3 Keys vs Presigned URLs)
+**Problem:** Presigned URLs expire after ~1 hour. Storing them in the database causes broken images.
+**Solution:** Store S3 keys in DB, generate presigned URLs on-demand.
+
+**Upload Flow:**
+1. Client uploads to S3 via presigned PUT URL
+2. Server returns presigned GET URL for display (NOT the S3 key)
+3. Client displays image using presigned URL
+4. Before save, client transforms presigned URLs → S3 keys (`transformHtmlToS3Keys`)
+5. S3 keys stored in database (never expire)
+6. On read, server transforms S3 keys → fresh presigned URLs (`transformHtmlWithPresignedUrls`)
+
+**Critical Rules:**
+- Never save blob URLs (`blob:...`) - these are temporary previews during upload
+- Never save presigned URLs - they expire after 1 hour
+- Always save S3 keys (e.g., `images/user_xxx/context/file.png`)
+- Use `transformHtmlToS3Keys()` before saving HTML content with images
+- Use `transformHtmlWithPresignedUrls()` when returning HTML content to client
+
+**Files:**
+- `src/lib/storage/s3.ts` - Transform functions
+- `src/hooks/use-image-upload.ts` - Generic upload hook (returns presigned URL)
+- `src/hooks/use-tiptap-image-handlers.ts` - Paste/drop handlers with blob preview
+
 ## Decisions
 
 <!-- Architectural decisions and rationale -->

@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, eq, gte, isNotNull, isNull, lt, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
@@ -11,6 +11,7 @@ import {
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
+	transformHtmlWithPresignedUrls,
 } from "@/lib/storage/s3";
 import { getUserTimezone } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
@@ -231,9 +232,13 @@ export const dailyJournalRouter = createTRPCRouter({
 				},
 			});
 
-			// Generate presigned URLs for attachments on-demand
+			// Generate presigned URLs for attachments and content images on-demand
 			if (journal) {
-				return withPresignedUrls(journal);
+				const withAttachmentUrls = withPresignedUrls(journal);
+				return {
+					...withAttachmentUrls,
+					content: transformHtmlWithPresignedUrls(withAttachmentUrls.content),
+				};
 			}
 			return journal;
 		}),
@@ -322,6 +327,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					gte(trades.entryTime, dayStart),
 					lt(trades.entryTime, dayEnd),
 					isNull(trades.deletedAt),
+					isNotNull(trades.accountId),
 				),
 				with: {
 					account: true,
@@ -373,9 +379,18 @@ export const dailyJournalRouter = createTRPCRouter({
 				});
 			}
 
+			// Generate presigned URLs for attachments and content images on-demand
+			let processedJournal = journal;
+			if (journal) {
+				const withAttachmentUrls = withPresignedUrls(journal);
+				processedJournal = {
+					...withAttachmentUrls,
+					content: transformHtmlWithPresignedUrls(withAttachmentUrls.content),
+				};
+			}
+
 			return {
-				// Generate presigned URLs for attachments on-demand
-				journal: journal ? withPresignedUrls(journal) : journal,
+				journal: processedJournal,
 				trades: tradesForDate,
 				forcedItems,
 			};
@@ -985,6 +1000,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					gte(trades.entryTime, rangeStart),
 					lt(trades.entryTime, rangeEnd),
 					isNull(trades.deletedAt),
+					isNotNull(trades.accountId),
 				),
 				columns: {
 					entryTime: true,
@@ -1126,6 +1142,211 @@ export const dailyJournalRouter = createTRPCRouter({
 
 		return { streak };
 	}),
+
+	// Get journal adjacency data for a date range
+	// Returns journal + trading data per day for streak calendar widget
+	getJournalAdjacency: protectedProcedure
+		.input(
+			z.object({
+				accountId: z.string().optional(), // Optional account filter
+				startDate: z.string(), // YYYY-MM-DD date string
+				endDate: z.string(), // YYYY-MM-DD date string
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const startNormalized = normalizeDate(new Date(input.startDate));
+			const endNormalized = normalizeDate(new Date(input.endDate));
+
+			// Get user timezone for trade filtering
+			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+
+			// Get all active templates for this user (for checklist completion)
+			const templates = await ctx.db.query.dailyChecklistTemplates.findMany({
+				where: and(
+					eq(dailyChecklistTemplates.userId, ctx.user.id),
+					eq(dailyChecklistTemplates.isActive, true),
+				),
+				columns: { id: true },
+			});
+			const templateIds = new Set(templates.map((t) => t.id));
+			const userTemplatesCount = templates.length;
+
+			// Get all journals in the date range with their checks
+			const journals = await ctx.db.query.dailyJournals.findMany({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					gte(dailyJournals.date, startNormalized),
+					lte(dailyJournals.date, endNormalized),
+				),
+				with: {
+					checklistChecks: true,
+				},
+			});
+
+			// Get all trades in the date range
+			const startDateStr = input.startDate.split("T")[0] ?? input.startDate;
+			const endDateStr = input.endDate.split("T")[0] ?? input.endDate;
+
+			const { start: rangeStart } = getDayBoundsInTimezone(
+				startDateStr,
+				userTimezone,
+			);
+			const { end: rangeEnd } = getDayBoundsInTimezone(
+				endDateStr,
+				userTimezone,
+			);
+
+			// Build trade query conditions
+			const tradeConditions = [
+				eq(trades.userId, ctx.user.id),
+				gte(trades.entryTime, rangeStart),
+				lt(trades.entryTime, rangeEnd),
+				isNull(trades.deletedAt),
+				isNotNull(trades.accountId),
+			];
+
+			// Filter by account if specified
+			if (input.accountId) {
+				tradeConditions.push(eq(trades.accountId, input.accountId));
+			}
+
+			const allTrades = await ctx.db.query.trades.findMany({
+				where: and(...tradeConditions),
+				columns: {
+					entryTime: true,
+					netPnl: true,
+					stopLoss: true,
+				},
+			});
+
+			// Group trades by date (using user's timezone)
+			const tradesByDate = new Map<
+				string,
+				{ trades: typeof allTrades; pnl: number }
+			>();
+			for (const trade of allTrades) {
+				const dateStr = getDateStringInTimezone(trade.entryTime, userTimezone);
+				if (!tradesByDate.has(dateStr)) {
+					tradesByDate.set(dateStr, { trades: [], pnl: 0 });
+				}
+				const dayData = tradesByDate.get(dateStr);
+				if (dayData) {
+					dayData.trades.push(trade);
+					dayData.pnl += trade.netPnl ? parseFloat(trade.netPnl) : 0;
+				}
+			}
+
+			// Create lookup for journals by date
+			const journalsByDate = new Map<string, (typeof journals)[0]>();
+			for (const journal of journals) {
+				const dateStr = getUTCDateString(journal.date);
+				journalsByDate.set(dateStr, journal);
+			}
+
+			// Build result for each date in the range
+			const result: Array<{
+				date: string;
+				hasTrades: boolean;
+				tradeCount: number;
+				pnl: number;
+				hasJournal: boolean;
+				journalWordCount: number;
+				checklistCompletion: number;
+			}> = [];
+
+			// Iterate through each day in the range
+			const currentDate = new Date(startNormalized);
+			while (currentDate <= endNormalized) {
+				const dateStr = currentDate.toISOString().split("T")[0] ?? "";
+				const journal = journalsByDate.get(dateStr);
+				const dayTradeData = tradesByDate.get(dateStr);
+
+				// Calculate journal word count (strip HTML tags)
+				let journalWordCount = 0;
+				if (journal?.content) {
+					const textContent = journal.content.replace(/<[^>]*>/g, " ").trim();
+					journalWordCount = textContent
+						? textContent.split(/\s+/).filter(Boolean).length
+						: 0;
+				}
+
+				// Determine if has journal (dayStarted or has content)
+				// Note: Must check journal exists first, as undefined !== null is true in JS
+				const hasJournal = journal
+					? journal.dayStartedAt !== null ||
+						(journal.content !== null && journal.content.trim() !== "")
+					: false;
+
+				// Calculate checklist completion for this day
+				let checklistCompletion = 0;
+				if (journal) {
+					const dayTrades = dayTradeData?.trades ?? [];
+					const hasTrades = dayTrades.length > 0;
+					const dayStarted = journal.dayStartedAt !== null;
+
+					// Only calculate if day was eligible (started or has trades)
+					if (dayStarted || hasTrades) {
+						// Forced items count
+						let forcedItemsCount = 0;
+						let forcedItemsChecked = 0;
+
+						// Pre Market Check - required if dayStarted OR hasTrades
+						if (dayStarted || hasTrades) {
+							forcedItemsCount++;
+							const preMarketCheck = journal.checklistChecks.find(
+								(c) => c.forcedItemId === "forced-pre-market",
+							);
+							if (preMarketCheck?.checked) {
+								forcedItemsChecked++;
+							}
+						}
+
+						// SL Check - required if hasTrades
+						if (hasTrades) {
+							forcedItemsCount++;
+							const allTradesHaveSL = dayTrades.every(
+								(t) => t.stopLoss !== null,
+							);
+							if (allTradesHaveSL) {
+								forcedItemsChecked++;
+							}
+						}
+
+						// User template checks
+						const userCheckedCount = journal.checklistChecks.filter(
+							(check) =>
+								check.checked &&
+								check.templateId !== null &&
+								templateIds.has(check.templateId),
+						).length;
+
+						// Total = user templates + forced items
+						const totalItems = userTemplatesCount + forcedItemsCount;
+						const totalChecked = userCheckedCount + forcedItemsChecked;
+
+						checklistCompletion =
+							totalItems > 0
+								? Math.round((totalChecked / totalItems) * 100)
+								: 100;
+					}
+				}
+
+				result.push({
+					date: dateStr,
+					hasTrades: (dayTradeData?.trades.length ?? 0) > 0,
+					tradeCount: dayTradeData?.trades.length ?? 0,
+					pnl: dayTradeData?.pnl ?? 0,
+					hasJournal: hasJournal ?? false,
+					journalWordCount,
+					checklistCompletion,
+				});
+
+				// Move to next day
+				currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+			}
+
+			return result;
+		}),
 
 	// Delete an attachment (from S3 and database)
 	deleteAttachment: protectedProcedure

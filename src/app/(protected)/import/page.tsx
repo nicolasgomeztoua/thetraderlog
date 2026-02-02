@@ -481,7 +481,7 @@ export default function ImportPage() {
 											? "Account"
 											: s.charAt(0).toUpperCase() + s.slice(1)}
 									</span>
-									{i < 4 && <div className="h-px w-4 bg-white/10 sm:w-8" />}
+									{i < 4 && <div className="h-px w-4 bg-muted/300 sm:w-8" />}
 								</div>
 							);
 						},

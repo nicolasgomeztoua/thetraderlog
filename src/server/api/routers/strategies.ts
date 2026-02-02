@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import type { RiskParameters } from "@/components/strategy/risk-config";
@@ -1483,6 +1483,196 @@ export const strategiesRouter = createTRPCRouter({
 					ruleId: r.ruleId,
 					...r.result,
 				})),
+			};
+		}),
+
+	// Get dashboard-level rule compliance for a date range
+	// Returns overall compliance, breakdown by category, and top violations
+	getDashboardRuleCompliance: protectedProcedure
+		.input(
+			z.object({
+				accountId: z.string().optional(), // Optional account filter
+				startDate: z.string(), // YYYY-MM-DD date string
+				endDate: z.string(), // YYYY-MM-DD date string
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			// Get user timezone for trade filtering
+			const { getUserTimezone } = await import("@/server/api/helpers");
+			const { getDayBoundsInTimezone } = await import("@/lib/shared");
+
+			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+
+			// Get date bounds in user's timezone
+			const startDateStr = input.startDate.split("T")[0] ?? input.startDate;
+			const endDateStr = input.endDate.split("T")[0] ?? input.endDate;
+
+			const { start: rangeStart } = getDayBoundsInTimezone(
+				startDateStr,
+				userTimezone,
+			);
+			const { end: rangeEnd } = getDayBoundsInTimezone(
+				endDateStr,
+				userTimezone,
+			);
+
+			// Build trade query conditions
+			const tradeConditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				gte(trades.entryTime, rangeStart),
+				lt(trades.entryTime, rangeEnd),
+			];
+
+			// Filter by account if specified
+			if (input.accountId) {
+				tradeConditions.push(eq(trades.accountId, input.accountId));
+			}
+
+			// Get all closed trades in the date range with their rule checks
+			const tradesInRange = await ctx.db.query.trades.findMany({
+				where: and(...tradeConditions),
+				with: {
+					ruleChecks: {
+						with: {
+							rule: true,
+						},
+					},
+					strategy: {
+						with: {
+							rules: true,
+						},
+					},
+				},
+			});
+
+			// Filter to only trades that have a strategy with rules
+			const tradesWithStrategies = tradesInRange.filter(
+				(trade) => trade.strategy && trade.strategy.rules.length > 0,
+			);
+
+			if (tradesWithStrategies.length === 0) {
+				return {
+					overall: 100,
+					byCategory: {
+						entry: 100,
+						exit: 100,
+						risk: 100,
+						management: 100,
+					},
+					violations: [],
+					totalTrades: 0,
+					tradesWithStrategies: 0,
+				};
+			}
+
+			// Calculate compliance per trade and aggregate
+			let totalChecks = 0;
+			let passedChecks = 0;
+
+			// Track by category with explicit type
+			type CategoryKey = "entry" | "exit" | "risk" | "management";
+			const categoryStats: Record<
+				CategoryKey,
+				{ total: number; passed: number }
+			> = {
+				entry: { total: 0, passed: 0 },
+				exit: { total: 0, passed: 0 },
+				risk: { total: 0, passed: 0 },
+				management: { total: 0, passed: 0 },
+			};
+
+			// Track violations per rule
+			const ruleViolations: Map<
+				string,
+				{
+					ruleId: string;
+					ruleName: string;
+					ruleCategory: string;
+					count: number;
+				}
+			> = new Map();
+
+			for (const trade of tradesWithStrategies) {
+				const strategy = trade.strategy;
+				if (!strategy) continue;
+
+				// For each rule in the strategy, check if it was followed
+				for (const rule of strategy.rules) {
+					const ruleCheck = trade.ruleChecks.find(
+						(rc) => rc.ruleId === rule.id,
+					);
+
+					// Count this rule as a check
+					totalChecks++;
+					const category = rule.category as CategoryKey;
+					categoryStats[category].total++;
+
+					// Check if the rule was followed
+					const wasFollowed = ruleCheck?.checked ?? false;
+
+					if (wasFollowed) {
+						passedChecks++;
+						categoryStats[category].passed++;
+					} else {
+						// Track the violation
+						const existing = ruleViolations.get(rule.id);
+						if (existing) {
+							existing.count++;
+						} else {
+							ruleViolations.set(rule.id, {
+								ruleId: rule.id,
+								ruleName: rule.text,
+								ruleCategory: rule.category,
+								count: 1,
+							});
+						}
+					}
+				}
+			}
+
+			// Calculate percentages
+			const overall =
+				totalChecks > 0 ? (passedChecks / totalChecks) * 100 : 100;
+
+			const byCategory = {
+				entry:
+					categoryStats.entry.total > 0
+						? (categoryStats.entry.passed / categoryStats.entry.total) * 100
+						: 100,
+				exit:
+					categoryStats.exit.total > 0
+						? (categoryStats.exit.passed / categoryStats.exit.total) * 100
+						: 100,
+				risk:
+					categoryStats.risk.total > 0
+						? (categoryStats.risk.passed / categoryStats.risk.total) * 100
+						: 100,
+				management:
+					categoryStats.management.total > 0
+						? (categoryStats.management.passed /
+								categoryStats.management.total) *
+							100
+						: 100,
+			};
+
+			// Sort violations by count (most frequent first)
+			const violations = Array.from(ruleViolations.values()).sort(
+				(a, b) => b.count - a.count,
+			);
+
+			return {
+				overall: Math.round(overall * 100) / 100,
+				byCategory: {
+					entry: Math.round(byCategory.entry * 100) / 100,
+					exit: Math.round(byCategory.exit * 100) / 100,
+					risk: Math.round(byCategory.risk * 100) / 100,
+					management: Math.round(byCategory.management * 100) / 100,
+				},
+				violations,
+				totalTrades: tradesInRange.length,
+				tradesWithStrategies: tradesWithStrategies.length,
 			};
 		}),
 });

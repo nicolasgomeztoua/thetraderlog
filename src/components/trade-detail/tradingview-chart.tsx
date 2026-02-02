@@ -188,7 +188,7 @@ function TimeframeSelector({
 				value={interval}
 			>
 				<SelectTrigger
-					className="h-7 min-h-[36px] w-auto min-w-[60px] gap-1 border-none bg-white/5 px-2 font-mono text-[10px] uppercase hover:bg-white/10"
+					className="h-7 min-h-[36px] w-auto min-w-[60px] gap-1 border-none bg-muted px-2 font-mono text-[10px] uppercase hover:bg-muted/80"
 					size="sm"
 				>
 					<SelectValue />
@@ -218,7 +218,7 @@ function TimeframeSelector({
 						"disabled:cursor-not-allowed disabled:opacity-50",
 						interval === tf
 							? "bg-primary text-primary-foreground"
-							: "bg-white/5 text-muted-foreground hover:bg-white/10",
+							: "bg-muted text-muted-foreground hover:bg-muted/80",
 					)}
 					disabled={disabled}
 					key={tf}
@@ -752,7 +752,7 @@ function LightweightChartInner({
 
 				{/* Fit to trade button */}
 				<button
-					className="flex min-h-[36px] min-w-[36px] items-center justify-center gap-1 rounded bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground sm:min-h-0 sm:min-w-0"
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center gap-1 rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground sm:min-h-0 sm:min-w-0"
 					onClick={handleFitToTrade}
 					title="Fit to trade"
 					type="button"
@@ -778,7 +778,7 @@ function LightweightChartInner({
 					{dataSource === "live" && `${chartData?.barCount ?? 0} bars`}
 				</span>
 				<a
-					className="flex items-center gap-1 rounded bg-white/5 px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+					className="flex items-center gap-1 rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
 					href={tradingViewUrl}
 					rel="noopener noreferrer"
 					target="_blank"

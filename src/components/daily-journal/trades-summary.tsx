@@ -107,7 +107,7 @@ export function TradesSummary({ selectedDate, className }: TradesSummaryProps) {
 
 						return (
 							<Link
-								className="group flex items-center justify-between rounded border border-white/5 bg-white/1 p-2 transition-colors hover:border-white/10 hover:bg-white/2"
+								className="group flex items-center justify-between rounded border border-border/50 bg-muted/30 p-2 transition-colors hover:border-border hover:bg-muted/50"
 								href={`/journal/${trade.id}`}
 								key={trade.id}
 							>
@@ -151,7 +151,7 @@ export function TradesSummary({ selectedDate, className }: TradesSummaryProps) {
 				totalPnL !== null &&
 				data?.trades &&
 				data.trades.length > 0 && (
-					<div className="flex items-center justify-between border-white/5 border-t pt-3">
+					<div className="flex items-center justify-between border-border/50 border-t pt-3">
 						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 							Daily P&L
 						</span>

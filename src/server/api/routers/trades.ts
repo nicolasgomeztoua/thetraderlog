@@ -11,6 +11,7 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
 import type { SortField } from "@/lib/constants/trade-log";
@@ -23,7 +24,13 @@ import {
 	instrumentTypeEnum,
 	tradeStatusEnum,
 } from "@/lib/shared";
-import { transformHtmlWithPresignedUrls } from "@/lib/storage/s3";
+import {
+	deleteObject,
+	getPresignedDownloadUrl,
+	getPresignedUploadUrl,
+	isS3Configured,
+	transformHtmlWithPresignedUrls,
+} from "@/lib/storage/s3";
 import { buildEvaluationContext, evaluateAutoCondition } from "@/lib/strategy";
 import type { AutoCondition } from "@/lib/strategy/types";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
@@ -45,6 +52,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import type { db as DbType } from "@/server/db";
 import {
 	strategyRules,
+	tradeAttachments,
 	tradeExecutions,
 	tradeRuleChecks,
 	trades,
@@ -54,6 +62,37 @@ import { processTradeMAEMFE } from "@/trigger/process-trade-maemfe";
 
 // Database type for helper function
 type Db = typeof DbType;
+
+// Type for attachment from database
+interface AttachmentRecord {
+	id: string;
+	tradeId: string;
+	url: string; // Contains S3 key
+	key: string;
+	filename: string;
+	mimeType: string;
+	size: number;
+	caption: string | null;
+	createdAt: Date;
+}
+
+// Helper to generate presigned URLs for attachments on-demand
+function withPresignedUrls<T extends { attachments: AttachmentRecord[] }>(
+	trade: T,
+): T {
+	if (!isS3Configured()) {
+		return trade;
+	}
+
+	return {
+		...trade,
+		attachments: trade.attachments.map((attachment) => ({
+			...attachment,
+			// Generate fresh presigned URL from the stored key
+			url: getPresignedDownloadUrl(attachment.key ?? attachment.url, 3600), // 1 hour expiry
+		})),
+	};
+}
 
 // =============================================================================
 // HELPERS
@@ -565,10 +604,10 @@ export const tradesRouter = createTRPCRouter({
 							tag: true,
 						},
 					},
-					screenshots: true,
 					account: true,
 					strategy: true,
 					ruleChecks: true,
+					attachments: true,
 				},
 			});
 
@@ -576,9 +615,10 @@ export const tradesRouter = createTRPCRouter({
 				throw new Error("Trade not found");
 			}
 
-			// Transform S3 keys in notes to presigned URLs
+			// Transform S3 keys in notes and attachments to presigned URLs
+			const tradeWithPresignedAttachments = withPresignedUrls(trade);
 			return {
-				...trade,
+				...tradeWithPresignedAttachments,
 				notes: transformHtmlWithPresignedUrls(trade.notes),
 			};
 		}),
@@ -1677,5 +1717,154 @@ export const tradesRouter = createTRPCRouter({
 				isComplete: processed === total,
 				progress: total > 0 ? Math.round((processed / total) * 100) : 100,
 			};
+		}),
+
+	// ============================================================================
+	// ATTACHMENT MANAGEMENT
+	// ============================================================================
+
+	// Get a presigned URL for uploading a file to S3
+	getUploadUrl: protectedProcedure
+		.input(
+			z.object({
+				tradeId: z.string(),
+				filename: z.string().min(1),
+				mimeType: z.string().min(1),
+				size: z.number().int().positive(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (!isS3Configured()) {
+				throw new Error(
+					"File uploads are not configured. S3 settings are missing.",
+				);
+			}
+
+			// Verify user owns the trade
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+				),
+			});
+
+			if (!trade) {
+				throw new Error("Trade not found");
+			}
+
+			// Generate a unique key for the file
+			// Format: trades/{userId}/{tradeId}/{uuid}-{filename}
+			const uuid = nanoid();
+			const key = `trades/${ctx.user.id}/${input.tradeId}/${uuid}-${input.filename}`;
+
+			// Generate presigned PUT URL (valid for 1 hour)
+			const presignedUrl = getPresignedUploadUrl(key, 3600);
+
+			return {
+				presignedUrl,
+				key,
+			};
+		}),
+
+	// Confirm an upload completed and create database record
+	confirmUpload: protectedProcedure
+		.input(
+			z.object({
+				tradeId: z.string(),
+				key: z.string(),
+				filename: z.string().min(1),
+				mimeType: z.string().min(1),
+				size: z.number().int().positive(),
+				caption: z.string().nullable().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (!isS3Configured()) {
+				throw new Error(
+					"File uploads are not configured. S3 settings are missing.",
+				);
+			}
+
+			// Verify user owns the trade
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+				),
+			});
+
+			if (!trade) {
+				throw new Error("Trade not found");
+			}
+
+			// Store the key, not the presigned URL - URLs will be generated on-demand
+			// when fetching attachments to avoid expiration issues
+			const [attachment] = await ctx.db
+				.insert(tradeAttachments)
+				.values({
+					tradeId: input.tradeId,
+					url: input.key, // Store key in url field - will generate presigned URL on read
+					key: input.key,
+					filename: input.filename,
+					mimeType: input.mimeType,
+					size: input.size,
+					caption: input.caption ?? null,
+				})
+				.returning();
+
+			if (!attachment) {
+				throw new Error("Failed to create attachment");
+			}
+
+			// Generate presigned URL for immediate use (e.g., inserting into editor)
+			const presignedUrl = isS3Configured()
+				? getPresignedDownloadUrl(input.key, 3600)
+				: attachment.url;
+
+			return { ...attachment, url: presignedUrl };
+		}),
+
+	// Delete an attachment (from S3 and database)
+	deleteAttachment: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Find the attachment and verify ownership through trade
+			const attachment = await ctx.db.query.tradeAttachments.findFirst({
+				where: eq(tradeAttachments.id, input.id),
+				with: {
+					trade: true,
+				},
+			});
+
+			if (!attachment) {
+				throw new Error("Attachment not found");
+			}
+
+			// Verify user owns the trade that contains this attachment
+			if (attachment.trade.userId !== ctx.user.id) {
+				throw new Error("Attachment not found");
+			}
+
+			// Delete from S3 if configured
+			if (isS3Configured() && attachment.key) {
+				try {
+					await deleteObject(attachment.key);
+				} catch {
+					// Log error but continue with database deletion
+					// The file may have already been deleted or not exist
+					console.error(`Failed to delete S3 object: ${attachment.key}`);
+				}
+			}
+
+			// Delete from database
+			await ctx.db
+				.delete(tradeAttachments)
+				.where(eq(tradeAttachments.id, input.id));
+
+			return { success: true };
 		}),
 });

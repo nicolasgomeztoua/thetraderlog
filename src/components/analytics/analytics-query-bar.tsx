@@ -191,7 +191,7 @@ export function AnalyticsQueryBar({
 			/>
 
 			{/* Presets */}
-			<div className="flex items-center justify-end border-white/5 border-t pt-4">
+			<div className="flex items-center justify-end border-border/50 border-t pt-4">
 				<PresetSelector
 					activePresetId={activePresetId}
 					onManageClick={() => setManagePresetsOpen(true)}
@@ -205,14 +205,14 @@ export function AnalyticsQueryBar({
 		<div className="space-y-0">
 			{/* Mobile: Filter button + Sheet */}
 			{isMobile ? (
-				<div className="flex items-center gap-2 rounded border border-white/10 bg-white/2 px-3 py-2">
+				<div className="flex items-center gap-2 rounded border border-border bg-muted/50 px-3 py-2">
 					{/* Quick summary */}
 					<div className="flex flex-1 items-center gap-2 overflow-hidden">
 						<span className="font-mono text-muted-foreground text-xs">$</span>
 						<span className="font-mono text-[10px] text-primary uppercase tracking-widest">
 							QUERY
 						</span>
-						<div className="h-4 w-px bg-white/10" />
+						<div className="h-4 w-px bg-border" />
 						<span className="truncate font-mono text-muted-foreground text-xs">
 							{hasMounted && hasActiveFilters()
 								? "Filters active"
@@ -223,7 +223,7 @@ export function AnalyticsQueryBar({
 					{/* Clear button (if filters active) */}
 					{hasMounted && hasActiveFilters() && (
 						<button
-							className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded border border-white/10 font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-white/20 hover:text-foreground"
+							className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded border border-border font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-border hover:text-foreground"
 							onClick={handleClearAll}
 							type="button"
 						>
@@ -239,7 +239,7 @@ export function AnalyticsQueryBar({
 									"flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border px-3 font-mono text-xs uppercase tracking-wider transition-all",
 									isSheetOpen
 										? "border-primary/40 bg-primary/10 text-primary"
-										: "border-white/10 bg-white/2 text-muted-foreground hover:border-white/20 hover:text-foreground",
+										: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground",
 								)}
 								type="button"
 							>
@@ -251,7 +251,7 @@ export function AnalyticsQueryBar({
 							className="flex w-full flex-col overflow-y-auto sm:max-w-md"
 							side="right"
 						>
-							<SheetHeader className="border-white/5 border-b pb-4">
+							<SheetHeader className="border-border/50 border-b pb-4">
 								<div className="flex items-center justify-between">
 									<SheetTitle className="font-mono text-sm">
 										Filter Trades
@@ -267,7 +267,7 @@ export function AnalyticsQueryBar({
 							<div className="flex-1 overflow-y-auto py-4">{filterContent}</div>
 
 							{/* Action buttons - sticky at bottom */}
-							<div className="flex items-center gap-2 border-white/5 border-t pt-4">
+							<div className="flex items-center gap-2 border-border/50 border-t pt-4">
 								<Button
 									className="min-h-[44px] flex-1 gap-1.5 font-mono text-xs"
 									onClick={handleReset}
@@ -308,9 +308,9 @@ export function AnalyticsQueryBar({
 								: "max-h-0 opacity-0",
 						)}
 					>
-						<div className="rounded-b border border-white/10 border-t-0 bg-white/1">
+						<div className="rounded-b border border-border border-t-0 bg-card">
 							{/* Terminal Header */}
-							<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-4 py-3">
+							<div className="flex items-center justify-between border-border/50 border-b bg-muted/50 px-4 py-3">
 								<div className="flex items-center gap-3">
 									{/* Traffic light dots */}
 									<div className="flex gap-1.5">

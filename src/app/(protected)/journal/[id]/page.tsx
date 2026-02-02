@@ -157,6 +157,11 @@ export default function TradeDetailPage() {
 			optimisticUpdate(newData as Partial<NonNullable<TradeData>>);
 			return { previousTrade };
 		},
+		onSuccess: () => {
+			// Invalidate to refetch with presigned URLs (notes are saved with S3 keys,
+			// server transforms them to presigned URLs on read)
+			utils.trades.getById.invalidate({ id: tradeId });
+		},
 		onError: (error, _newData, context) => {
 			if (context?.previousTrade) {
 				utils.trades.getById.setData({ id: tradeId }, context.previousTrade);
@@ -216,6 +221,7 @@ export default function TradeDetailPage() {
 		onSuccess: () => {
 			toast.success("Trade deleted");
 			utils.trades.getAll.invalidate();
+			utils.trades.getDeleted.invalidate();
 			router.push("/journal");
 		},
 		onError: (error) => {
@@ -436,7 +442,7 @@ export default function TradeDetailPage() {
 							"flex min-h-[44px] items-center gap-1.5 rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:min-h-0 sm:px-3",
 							trade.isReviewed
 								? "bg-profit/10 text-profit"
-								: "text-muted-foreground hover:bg-white/5",
+								: "text-muted-foreground hover:bg-muted",
 						)}
 						onClick={() =>
 							markReviewed.mutate({
@@ -507,6 +513,7 @@ export default function TradeDetailPage() {
 								maePrice: trade.maePrice,
 								mfePrice: trade.mfePrice,
 								quantity: trade.quantity,
+								attachments: trade.attachments,
 							}}
 						/>
 					</div>
@@ -693,6 +700,7 @@ export default function TradeDetailPage() {
 								maePrice: trade.maePrice,
 								mfePrice: trade.mfePrice,
 								quantity: trade.quantity,
+								attachments: trade.attachments,
 							}}
 						/>
 					</ResizablePanel>
@@ -846,7 +854,7 @@ export default function TradeDetailPage() {
 							This will move the trade to trash. You can restore it later.
 						</DialogDescription>
 					</DialogHeader>
-					<div className="flex items-center justify-between rounded border border-white/10 bg-white/2 p-4">
+					<div className="flex items-center justify-between rounded border border-border bg-muted/50 p-4">
 						<div className="flex items-center gap-3">
 							<Trash2 className="h-5 w-5 text-loss" />
 							<div>

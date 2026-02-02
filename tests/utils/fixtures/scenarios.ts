@@ -7,6 +7,86 @@ import {
 import { type CreateTestUserOptions, createTestUser } from "./users";
 
 /**
+ * Gets the base Monday date for analytics test fixtures.
+ * Uses a date 3 months ago to stay within the 24-month lookback window.
+ * Returns the Monday of that week.
+ */
+export function getAnalyticsBaseDate(): Date {
+	const now = new Date();
+	// Go back 3 months to stay well within the 24-month window
+	now.setMonth(now.getMonth() - 3);
+	// Find the Monday of that week (day 1)
+	const dayOfWeek = now.getDay();
+	const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+	now.setDate(now.getDate() + daysToMonday);
+	// Reset to midnight UTC
+	now.setUTCHours(0, 0, 0, 0);
+	return now;
+}
+
+/**
+ * Gets the YYYY-MM format month string for the analytics fixtures.
+ */
+export function getAnalyticsFixtureMonth(): string {
+	const base = getAnalyticsBaseDate();
+	return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Creates fixture dates for analytics testing.
+ * All dates are relative to a base Monday 3 months ago.
+ */
+export function getAnalyticsFixtureDates() {
+	const baseMonday = getAnalyticsBaseDate();
+
+	const mondayMorning = new Date(baseMonday);
+	mondayMorning.setUTCHours(9, 30, 0, 0);
+
+	const mondayAfternoon = new Date(baseMonday);
+	mondayAfternoon.setUTCHours(14, 0, 0, 0);
+
+	const tuesdayMorning = new Date(baseMonday);
+	tuesdayMorning.setUTCDate(tuesdayMorning.getUTCDate() + 1);
+	tuesdayMorning.setUTCHours(10, 0, 0, 0);
+
+	const wednesdayMorning = new Date(baseMonday);
+	wednesdayMorning.setUTCDate(wednesdayMorning.getUTCDate() + 2);
+	wednesdayMorning.setUTCHours(9, 0, 0, 0);
+
+	const thursdayAfternoon = new Date(baseMonday);
+	thursdayAfternoon.setUTCDate(thursdayAfternoon.getUTCDate() + 3);
+	thursdayAfternoon.setUTCHours(15, 30, 0, 0);
+
+	const fridayMorning = new Date(baseMonday);
+	fridayMorning.setUTCDate(fridayMorning.getUTCDate() + 4);
+	fridayMorning.setUTCHours(8, 30, 0, 0);
+
+	return {
+		baseMonday,
+		mondayMorning,
+		mondayAfternoon,
+		tuesdayMorning,
+		wednesdayMorning,
+		thursdayAfternoon,
+		fridayMorning,
+		// Helper for date range filters
+		mondayStart: new Date(baseMonday.setUTCHours(0, 0, 0, 0)).toISOString(),
+		mondayEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCHours(23, 59, 59, 999);
+			return d.toISOString();
+		})(),
+		weekStart: new Date(baseMonday.setUTCHours(0, 0, 0, 0)).toISOString(),
+		weekEnd: (() => {
+			const d = new Date(baseMonday);
+			d.setUTCDate(d.getUTCDate() + 4);
+			d.setUTCHours(23, 59, 59, 999);
+			return d.toISOString();
+		})(),
+	};
+}
+
+/**
  * Sets up a complete trader scenario with user, account, and optionally trades.
  * This is the most common setup for integration tests.
  */
@@ -141,17 +221,20 @@ export async function setupTraderWithMixedTrades(options?: {
 /**
  * Creates a trader with diverse trade data optimized for analytics testing.
  * Provides predictable data for verifying analytics calculations.
+ * Uses dynamic dates (3 months ago) to stay within the 24-month lookback window.
  */
 export async function setupTraderWithAnalyticsData() {
 	const { user, account } = await setupTrader();
 
-	// Create dates for specific days/hours
-	const mondayMorning = new Date("2024-01-08T09:30:00Z"); // Monday
-	const mondayAfternoon = new Date("2024-01-08T14:00:00Z");
-	const tuesdayMorning = new Date("2024-01-09T10:00:00Z"); // Tuesday
-	const wednesdayMorning = new Date("2024-01-10T09:00:00Z"); // Wednesday
-	const thursdayAfternoon = new Date("2024-01-11T15:30:00Z"); // Thursday
-	const fridayMorning = new Date("2024-01-12T08:30:00Z"); // Friday
+	// Use dynamic dates that stay within the lookback window
+	const {
+		mondayMorning,
+		mondayAfternoon,
+		tuesdayMorning,
+		wednesdayMorning,
+		thursdayAfternoon,
+		fridayMorning,
+	} = getAnalyticsFixtureDates();
 
 	const trades = [];
 

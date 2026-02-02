@@ -21,7 +21,7 @@ const features = [
 		className: "md:col-span-2",
 		visual: (
 			<div className="mt-6 space-y-3">
-				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/2 p-3">
+				<div className="flex items-center gap-4 rounded border border-border/50 bg-muted/50 p-3">
 					<span className="font-mono text-muted-foreground text-xs">
 						ES 03/15
 					</span>
@@ -30,14 +30,14 @@ const features = [
 						+$425.00
 					</span>
 				</div>
-				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/2 p-3">
+				<div className="flex items-center gap-4 rounded border border-border/50 bg-muted/50 p-3">
 					<span className="font-mono text-muted-foreground text-xs">
 						NQ 03/15
 					</span>
 					<span className="font-medium font-mono text-sm">SHORT</span>
 					<span className="ml-auto font-mono text-loss text-sm">-$180.00</span>
 				</div>
-				<div className="flex items-center gap-4 rounded border border-white/5 bg-white/2 p-3">
+				<div className="flex items-center gap-4 rounded border border-border/50 bg-muted/50 p-3">
 					<span className="font-mono text-muted-foreground text-xs">
 						EUR/USD
 					</span>
@@ -77,7 +77,7 @@ const features = [
 		className: "md:col-span-1",
 		visual: (
 			<div className="mt-6 space-y-2">
-				<div className="rounded bg-white/2 p-3">
+				<div className="rounded bg-muted/50 p-3">
 					<p className="font-mono text-muted-foreground text-xs">
 						&gt; Analyze my morning trades
 					</p>
@@ -112,7 +112,7 @@ const features = [
 					<span className="text-muted-foreground">RR Target</span>
 					<span className="text-primary">2.5:1</span>
 				</div>
-				<div className="h-2 overflow-hidden rounded-full bg-white/5">
+				<div className="h-2 overflow-hidden rounded-full bg-muted">
 					<div className="h-full w-3/4 bg-linear-to-r from-primary to-accent" />
 				</div>
 				<div className="flex justify-between font-mono text-xs">
@@ -132,7 +132,7 @@ const features = [
 			<div className="mt-6 flex flex-wrap gap-2">
 				{["Breakout", "Reversal", "Trend", "Range"].map((tag) => (
 					<span
-						className="rounded border border-white/10 bg-white/2 px-2 py-1 font-mono text-xs"
+						className="rounded border border-border bg-muted/50 px-2 py-1 font-mono text-xs"
 						key={tag}
 					>
 						{tag}
@@ -152,7 +152,7 @@ const features = [
 			<div className="mt-6 grid grid-cols-3 gap-2">
 				{["ES", "NQ", "CL", "EUR", "GBP", "JPY"].map((symbol) => (
 					<div
-						className="rounded border border-white/5 bg-white/2 p-2 text-center font-mono text-xs"
+						className="rounded border border-border/50 bg-muted/50 p-2 text-center font-mono text-xs"
 						key={symbol}
 					>
 						{symbol}
@@ -208,14 +208,14 @@ export function Features() {
 							className={`group relative overflow-hidden rounded border transition-all duration-300 ${
 								feature.highlight
 									? "border-primary/20 bg-primary/2 hover:border-primary/40"
-									: "border-white/5 bg-white/1 hover:border-white/10"
+									: "border-border/50 bg-muted/30 hover:border-border"
 							} p-4 sm:p-6 ${feature.className.includes("md:col-span-2") ? "sm:col-span-2 lg:col-span-2" : ""}`}
 							key={feature.title}
 						>
 							{/* Icon */}
 							<div
 								className={`mb-3 inline-flex h-9 w-9 items-center justify-center rounded sm:mb-4 sm:h-10 sm:w-10 ${
-									feature.highlight ? "bg-primary/10" : "bg-white/5"
+									feature.highlight ? "bg-primary/10" : "bg-muted"
 								}`}
 							>
 								<feature.icon

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	createTestCaller,
+	getAnalyticsFixtureMonth,
 	setupTrader,
 	setupTraderWithAnalyticsData,
 	type TestCaller,
@@ -432,9 +433,9 @@ describe("Analytics Symbols", () => {
 	// ============================================================================
 
 	describe("getSymbolTrend", () => {
-		// NOTE: The test fixture data is from January 2024, so we need to use
-		// months: 24 to go back far enough to include the test data in the results.
-		// The default is 12 months from the current date.
+		// NOTE: The test fixture data uses dynamic dates (3 months ago) to stay
+		// within the 24-month lookback window. Use getAnalyticsFixtureMonth() to
+		// get the expected month.
 
 		describe("Return Type Verification", () => {
 			it("should return months and symbols arrays", async () => {
@@ -502,13 +503,13 @@ describe("Analytics Symbols", () => {
 		});
 
 		describe("Month Data", () => {
-			it("should have January 2024 in months (from test data)", async () => {
+			it("should have the fixture month in months (from test data)", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
 					months: 24,
 				});
 
-				expect(result.months).toContain("2024-01");
+				expect(result.months).toContain(getAnalyticsFixtureMonth());
 			});
 
 			it("should have months in chronological order", async () => {

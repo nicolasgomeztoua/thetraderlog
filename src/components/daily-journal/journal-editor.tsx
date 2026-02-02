@@ -14,7 +14,10 @@ import { toast } from "sonner";
 import { EditorBubbleMenu } from "@/components/daily-journal/editor-bubble-menu";
 import { EditorToolbar } from "@/components/daily-journal/editor-toolbar";
 import { SlashCommand } from "@/components/daily-journal/slash-command-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useImagePreloader } from "@/hooks/use-image-preloader";
 import { toDateString } from "@/lib/shared";
+import { transformHtmlToS3Keys } from "@/lib/storage/s3";
 import { api } from "@/trpc/react";
 
 interface JournalEditorProps {
@@ -73,6 +76,14 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 			},
 		);
 
+	// Preload images from journal content
+	const { isLoading: isLoadingImages } = useImagePreloader(
+		journal?.content ?? null,
+	);
+
+	// Combined loading state - journal data and images
+	const isLoading = isLoadingJournal || isLoadingImages;
+
 	// Update content mutation
 	const updateContent = api.dailyJournal.updateContent.useMutation({
 		onSuccess: () => {
@@ -113,14 +124,24 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				clearTimeout(debounceTimerRef.current);
 			}
 
-			const content = editor.getHTML();
-
-			// Don't save if content hasn't changed
-			if (content === lastSavedContentRef.current) {
-				return;
-			}
-
 			debounceTimerRef.current = setTimeout(() => {
+				// Get content at save time (not capture time) to ensure we have latest
+				const rawContent = editor.getHTML();
+
+				// Don't save while blob URLs are present (upload in progress)
+				if (rawContent.includes("blob:")) {
+					return;
+				}
+
+				// Transform presigned URLs to S3 keys before saving
+				// This handles images dragged from gallery (presigned URLs) and pasted images (S3 keys)
+				const content = transformHtmlToS3Keys(rawContent) ?? rawContent;
+
+				// Don't save if content hasn't changed
+				if (content === lastSavedContentRef.current) {
+					return;
+				}
+
 				setSaveStatus("saving");
 				lastSavedContentRef.current = content;
 				updateContent.mutate({
@@ -136,7 +157,8 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 	useEffect(() => {
 		if (!editor || !journal) return;
 		const content = journal.content ?? "";
-		editor.commands.setContent(content);
+		// Use emitUpdate: false to prevent triggering onUpdate (and auto-save) during load
+		editor.commands.setContent(content, { emitUpdate: false });
 		lastSavedContentRef.current = content || "<p></p>";
 	}, [editor, journal]);
 
@@ -215,6 +237,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				utils.dailyJournal.getByDate.invalidate({ date: dateString });
 
 				toast.success("Image uploaded", { id: toastId });
+				// Return presigned URL for display (will be converted to S3 key on save)
 				return attachment.url;
 			} catch (error) {
 				console.error("Image upload failed:", error);
@@ -329,7 +352,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 					const { url, isAttachment } = JSON.parse(attachmentData);
 					if (isAttachment && url) {
 						event.preventDefault();
-						// Insert directly without re-uploading
+						// Insert presigned URL for display (will be converted to S3 key on save)
 						editor.chain().focus().setImage({ src: url }).run();
 						return;
 					}
@@ -399,11 +422,30 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 		[handleImageInsert],
 	);
 
-	// Show loading until journal data arrives (key prop causes remount, so we wait for fresh data)
-	if (isLoadingJournal || !journal) {
+	// Show loading skeleton until journal data AND images are loaded
+	if (isLoading || !journal) {
 		return (
-			<div className="flex min-h-0 flex-1 items-center justify-center">
-				<Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+			<div className="flex min-h-0 flex-1 flex-col">
+				{/* Toolbar skeleton */}
+				<Skeleton className="h-10 w-full rounded-b-none" />
+
+				{/* Editor skeleton */}
+				<div className="flex min-h-0 flex-1 flex-col rounded-b border border-border border-t-0 bg-muted/30 p-4">
+					<div className="space-y-3">
+						<Skeleton className="h-4 w-3/4" />
+						<Skeleton className="h-4 w-1/2" />
+						<Skeleton className="h-4 w-5/6" />
+						{/* Image placeholder skeleton */}
+						{isLoadingImages && (
+							<Skeleton className="mt-4 aspect-video w-full max-w-md" />
+						)}
+						<Skeleton className="h-4 w-2/3" />
+						<Skeleton className="h-4 w-4/5" />
+					</div>
+				</div>
+
+				{/* Status indicator placeholder */}
+				<div className="mt-2 h-5 shrink-0" />
 			</div>
 		);
 	}
@@ -414,7 +456,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 			<EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
 
 			{/* Editor content */}
-			<div className="flex min-h-0 flex-1 flex-col rounded-b border border-white/10 border-t-0 bg-white/1">
+			<div className="flex min-h-0 flex-1 flex-col rounded-b border border-border border-t-0 bg-muted/30">
 				<EditorContent
 					className="min-h-0 flex-1 overflow-y-auto"
 					editor={editor}

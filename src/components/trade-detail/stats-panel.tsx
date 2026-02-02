@@ -1,6 +1,5 @@
 import {
 	BookMarked,
-	Camera,
 	ExternalLink,
 	Info,
 	TrendingDown,
@@ -75,7 +74,7 @@ function Section({
 	return (
 		<div
 			className={cn(
-				"rounded-sm border border-white/6 bg-white/2 p-4",
+				"rounded-sm border border-border/50 bg-muted/50 p-4",
 				className,
 			)}
 		>
@@ -201,9 +200,6 @@ function StrategySection({
 				<RuleChecklist
 					checks={ruleChecksData.checks}
 					onComplianceChange={setOptimisticCompliance}
-					onUpdate={() =>
-						utils.strategies.getTradeRuleChecks.invalidate({ tradeId })
-					}
 					relevantRuleIds={ruleChecksData.relevantRuleIds}
 					rules={ruleChecksData.rules}
 					tradeId={tradeId}
@@ -211,7 +207,7 @@ function StrategySection({
 			)}
 
 			{!strategyId && (
-				<div className="flex items-center gap-3 rounded border border-white/5 bg-white/1 p-3">
+				<div className="flex items-center gap-3 rounded border border-border/50 bg-muted/30 p-3">
 					<BookMarked className="h-4 w-4 text-muted-foreground/50" />
 					<p className="font-mono text-[11px] text-muted-foreground">
 						No strategy assigned
@@ -235,7 +231,6 @@ export function StatsPanel({
 	className,
 }: StatsPanelProps) {
 	const { formatTime } = useTimezone();
-	const utils = api.useUtils();
 	const netPnl = trade.netPnl ? parseFloat(trade.netPnl) : null;
 	const isProfit = netPnl !== null && netPnl > 0;
 	const isLoss = netPnl !== null && netPnl < 0;
@@ -263,12 +258,6 @@ export function StatsPanel({
 						value="executions"
 					>
 						Executions
-					</TabsTrigger>
-					<TabsTrigger
-						className="rounded-none border-transparent border-b-2 font-mono text-[10px] uppercase tracking-wider data-[state=active]:border-primary data-[state=active]:bg-transparent"
-						value="attachments"
-					>
-						Attachments
 					</TabsTrigger>
 				</TabsList>
 
@@ -369,7 +358,7 @@ export function StatsPanel({
 							    SECTION 2: Performance Metrics (Read-only)
 							    ============================================ */}
 							<Section title="Performance">
-								<div className="divide-y divide-white/4">
+								<div className="divide-y divide-border">
 									<StatRow
 										label="Planned R:R"
 										suffix="R"
@@ -425,7 +414,7 @@ export function StatsPanel({
 								trade.mfePrice && (
 									<div className="grid grid-cols-2 gap-2">
 										{/* MAE Card */}
-										<div className="rounded-sm border border-white/6 bg-white/2 p-3">
+										<div className="rounded-sm border border-border/50 bg-muted/50 p-3">
 											<div className="mb-1 flex items-center gap-1">
 												<span className="font-mono text-[10px] text-muted-foreground/80 uppercase tracking-widest">
 													MAE
@@ -451,7 +440,7 @@ export function StatsPanel({
 										</div>
 
 										{/* MFE Card */}
-										<div className="rounded-sm border border-white/6 bg-white/2 p-3">
+										<div className="rounded-sm border border-border/50 bg-muted/50 p-3">
 											<div className="mb-1 flex items-center gap-1">
 												<span className="font-mono text-[10px] text-muted-foreground/80 uppercase tracking-widest">
 													MFE
@@ -482,7 +471,7 @@ export function StatsPanel({
 							    SECTION 4: Trade Details (Read-only)
 							    ============================================ */}
 							<Section title="Trade Details">
-								<div className="divide-y divide-white/4">
+								<div className="divide-y divide-border">
 									<StatRow
 										label={
 											trade.instrumentType === "futures" ? "Contracts" : "Lots"
@@ -547,7 +536,7 @@ export function StatsPanel({
 							    SECTION 5: Entry & Exit
 							    ============================================ */}
 							<Section title="Entry & Exit">
-								<div className="divide-y divide-white/4">
+								<div className="divide-y divide-border">
 									<StatRow
 										label="Entry Price"
 										value={`$${parseFloat(trade.entryPrice).toLocaleString()}`}
@@ -656,9 +645,6 @@ export function StatsPanel({
 										</span>
 										<TradeTags
 											maxDisplay={3}
-											onUpdate={() =>
-												utils.trades.getById.invalidate({ id: trade.id })
-											}
 											tags={trade.tradeTags ?? []}
 											tradeId={trade.id}
 										/>
@@ -693,18 +679,6 @@ export function StatsPanel({
 							// TODO: Implement add execution
 						}}
 					/>
-				</TabsContent>
-
-				{/* ATTACHMENTS TAB */}
-				<TabsContent
-					className="m-0 flex-1 overflow-hidden p-4"
-					value="attachments"
-				>
-					<div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-						<Camera className="mb-3 h-10 w-10 opacity-50" />
-						<p className="font-mono text-xs">Drop images or click to upload</p>
-						<p className="mt-1 font-mono text-[10px] opacity-50">Coming soon</p>
-					</div>
 				</TabsContent>
 			</Tabs>
 		</div>

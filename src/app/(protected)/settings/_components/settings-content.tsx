@@ -718,31 +718,31 @@ export function SettingsContent() {
 				<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
 					<TabsList className="inline-flex w-auto min-w-full border border-border bg-secondary sm:grid sm:w-full sm:grid-cols-5">
 						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
 							value="general"
 						>
 							General
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
 							value="trading"
 						>
 							Trading
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
 							value="accounts"
 						>
 							Accounts
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
 							value="tags"
 						>
 							Tags
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-white/10 sm:px-4 sm:text-xs"
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
 							value="ai"
 						>
 							AI

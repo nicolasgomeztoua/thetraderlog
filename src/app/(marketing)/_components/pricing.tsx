@@ -104,7 +104,7 @@ export function Pricing() {
 							className={`relative flex flex-col rounded border p-5 transition-all sm:p-8 ${
 								plan.highlighted
 									? "order-first border-primary/30 bg-primary/2 shadow-lg shadow-primary/5 lg:order-none"
-									: "border-white/10 bg-white/1 hover:border-white/20"
+									: "border-border bg-muted/30 hover:border-border"
 							}`}
 							key={plan.name}
 						>

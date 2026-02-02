@@ -9,9 +9,9 @@ import type {
 	strategies,
 	strategyRules,
 	tags,
+	tradeAttachments,
 	tradeExecutions,
 	tradeRuleChecks,
-	tradeScreenshots,
 	trades,
 	tradeTags,
 } from "@/server/db/schema";
@@ -22,13 +22,13 @@ import type {
 
 export type Trade = InferSelectModel<typeof trades>;
 export type TradeExecution = InferSelectModel<typeof tradeExecutions>;
-export type TradeScreenshot = InferSelectModel<typeof tradeScreenshots>;
 export type TradeTag = InferSelectModel<typeof tradeTags>;
 export type Tag = InferSelectModel<typeof tags>;
 export type Account = InferSelectModel<typeof accounts>;
 export type Strategy = InferSelectModel<typeof strategies>;
 export type StrategyRule = InferSelectModel<typeof strategyRules>;
 export type TradeRuleCheck = InferSelectModel<typeof tradeRuleChecks>;
+export type TradeAttachment = InferSelectModel<typeof tradeAttachments>;
 
 // =============================================================================
 // RELATION TYPES
@@ -47,7 +47,6 @@ export type TradeTagWithTag = TradeTag & {
 export type TradeWithRelations = Trade & {
 	executions?: TradeExecution[];
 	tradeTags?: TradeTagWithTag[];
-	screenshots?: TradeScreenshot[];
 	strategy?: Strategy | null;
 	account?: Account | null;
 	ruleChecks?: TradeRuleCheck[];
@@ -128,6 +127,7 @@ export type TradeForContentPanel = Pick<
 > & {
 	tradeTags?: TradeTagWithTag[];
 	executions?: TradeExecution[];
+	attachments?: TradeAttachment[];
 };
 
 /**

@@ -8,7 +8,7 @@ interface UseImageUploadOptions {
 }
 
 interface UseImageUploadReturn {
-	/** Upload an image file and return the S3 key */
+	/** Upload an image file and return the presigned download URL for display */
 	uploadImage: (file: File) => Promise<string | null>;
 }
 
@@ -32,6 +32,7 @@ export function useImageUpload({
 	context,
 }: UseImageUploadOptions): UseImageUploadReturn {
 	const getUploadUrl = api.storage.getImageUploadUrl.useMutation();
+	const getDownloadUrl = api.storage.getDownloadUrl.useMutation();
 
 	const uploadImage = useCallback(
 		async (file: File): Promise<string | null> => {
@@ -84,16 +85,19 @@ export function useImageUpload({
 					xhr.send(file);
 				});
 
+				// Get presigned download URL for display
+				const { url } = await getDownloadUrl.mutateAsync({ key });
+
 				toast.success("Image uploaded", { id: toastId });
-				// Return S3 key (not URL) - will be transformed to presigned URL when loading
-				return key;
+				// Return presigned URL for display (will be converted to S3 key on save)
+				return url;
 			} catch (error) {
 				console.error("Image upload failed:", error);
 				toast.error("Upload failed", { id: toastId });
 				return null;
 			}
 		},
-		[context, getUploadUrl],
+		[context, getUploadUrl, getDownloadUrl],
 	);
 
 	return { uploadImage };

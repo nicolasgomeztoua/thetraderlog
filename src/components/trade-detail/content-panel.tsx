@@ -1,9 +1,7 @@
 import { DailyJournalPreview } from "@/components/daily-journal/daily-journal-preview";
 import { TradeTags } from "@/components/tags/tag-selector";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/shared";
-import { api } from "@/trpc/react";
 import type { TradeForContentPanel } from "@/types";
 import { TradeReplay } from "./replay";
 import { RunningPnlTab } from "./running-pnl-tab";
@@ -39,13 +37,11 @@ function NotesSection({
 	trade: Trade;
 	onUpdateField: (field: string, value: string | null) => void;
 }) {
-	const utils = api.useUtils();
-
 	return (
-		<div className="space-y-6">
+		<div className="flex h-full flex-col">
 			{/* Sub-tabs for Trade note vs Daily Journal */}
-			<Tabs defaultValue="trade-note">
-				<TabsList className="w-full justify-start bg-transparent">
+			<Tabs className="flex min-h-0 flex-1 flex-col" defaultValue="trade-note">
+				<TabsList className="w-full shrink-0 justify-start bg-transparent">
 					<TabsTrigger
 						className="rounded-none border-transparent border-b-2 font-mono text-[10px] uppercase tracking-wider data-[state=active]:border-primary data-[state=active]:bg-transparent"
 						value="trade-note"
@@ -60,26 +56,36 @@ function NotesSection({
 					</TabsTrigger>
 				</TabsList>
 
-				<TabsContent className="mt-4" value="trade-note">
+				<TabsContent
+					className="mt-4 flex min-h-0 flex-1 flex-col"
+					value="trade-note"
+				>
 					<TradeNoteEditor
+						className="min-h-0 flex-1"
 						onChange={(v) => onUpdateField("notes", v)}
 						value={trade.notes}
 					/>
 				</TabsContent>
 
-				<TabsContent className="mt-4" value="daily-journal">
-					<DailyJournalPreview date={trade.entryTime} editable />
+				<TabsContent
+					className="mt-4 flex min-h-0 flex-1 flex-col"
+					value="daily-journal"
+				>
+					<DailyJournalPreview
+						className="min-h-0 flex-1"
+						date={trade.entryTime}
+						editable
+					/>
 				</TabsContent>
 			</Tabs>
 
-			{/* Tags Section */}
-			<div className="space-y-2">
+			{/* Tags Section - fixed at bottom */}
+			<div className="mt-6 shrink-0 space-y-2">
 				<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 					Tags
 				</div>
 				<TradeTags
 					maxDisplay={10}
-					onUpdate={() => utils.trades.getById.invalidate({ id: trade.id })}
 					tags={trade.tradeTags ?? []}
 					tradeId={trade.id}
 				/>
@@ -150,12 +156,8 @@ export function ContentPanel({
 				</TabsContent>
 
 				{/* NOTES TAB */}
-				<TabsContent className="m-0 flex-1" value="notes">
-					<ScrollArea className="h-full">
-						<div className="p-4">
-							<NotesSection onUpdateField={onUpdateField} trade={trade} />
-						</div>
-					</ScrollArea>
+				<TabsContent className="m-0 min-h-0 flex-1 p-4" value="notes">
+					<NotesSection onUpdateField={onUpdateField} trade={trade} />
 				</TabsContent>
 
 				{/* REPLAY TAB */}

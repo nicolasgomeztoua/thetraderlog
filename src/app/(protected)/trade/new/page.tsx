@@ -228,13 +228,13 @@ export default function NewTradePage() {
 							>
 								<TabsList className="grid w-full grid-cols-2 border border-border bg-secondary">
 									<TabsTrigger
-										className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
+										className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-muted/300"
 										value="futures"
 									>
 										Futures
 									</TabsTrigger>
 									<TabsTrigger
-										className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-white/10"
+										className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-muted/300"
 										value="forex"
 									>
 										Forex

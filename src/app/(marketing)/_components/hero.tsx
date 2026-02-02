@@ -35,7 +35,7 @@ const demoEquityCurve = [
 
 function Ticker() {
 	return (
-		<div className="relative overflow-hidden border-white/5 border-y bg-black/50 py-3">
+		<div className="relative overflow-hidden border-border/50 border-y bg-black/50 py-3">
 			<div className="ticker-scroll flex">
 				{[...tickerItems, ...tickerItems].map((item, idx) => (
 					<div
@@ -53,7 +53,7 @@ function Ticker() {
 						>
 							{item.change}
 						</span>
-						<span className="text-white/10">│</span>
+						<span className="text-border">│</span>
 					</div>
 				))}
 			</div>
@@ -122,7 +122,7 @@ function DemoDashboard() {
 		<div className="flex h-full flex-col gap-3 p-3 sm:p-4">
 			{/* Stats row - responsive grid */}
 			<div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
+				<div className="rounded border border-border/50 bg-muted/50 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Net P&L
@@ -136,7 +136,7 @@ function DemoDashboard() {
 						47 trades
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
+				<div className="rounded border border-border/50 bg-muted/50 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Win Rate
@@ -150,7 +150,7 @@ function DemoDashboard() {
 						32W · 15L
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
+				<div className="rounded border border-border/50 bg-muted/50 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Best Trade
@@ -164,7 +164,7 @@ function DemoDashboard() {
 						ES · Long
 					</div>
 				</div>
-				<div className="rounded border border-white/5 bg-white/2 p-2 sm:p-3">
+				<div className="rounded border border-border/50 bg-muted/50 p-2 sm:p-3">
 					<div className="flex items-center justify-between">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Avg Win
@@ -183,7 +183,7 @@ function DemoDashboard() {
 			{/* Chart and trades - responsive layout */}
 			<div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
 				{/* Equity curve */}
-				<div className="rounded border border-white/5 bg-white/2 p-2 sm:col-span-2 sm:p-3">
+				<div className="rounded border border-border/50 bg-muted/50 p-2 sm:col-span-2 sm:p-3">
 					<div className="mb-2 flex items-center justify-between sm:mb-3">
 						<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider sm:text-[10px]">
 							Equity Curve
@@ -207,14 +207,14 @@ function DemoDashboard() {
 				</div>
 
 				{/* Recent trades - hidden on smallest screens */}
-				<div className="hidden rounded border border-white/5 bg-white/2 p-2 sm:block sm:p-3">
+				<div className="hidden rounded border border-border/50 bg-muted/50 p-2 sm:block sm:p-3">
 					<div className="mb-3 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Recent Trades
 					</div>
 					<div className="space-y-2">
 						{demoTrades.map((trade) => (
 							<div
-								className="flex items-center justify-between rounded bg-white/2 px-2 py-1"
+								className="flex items-center justify-between rounded bg-muted/50 px-2 py-1"
 								key={`${trade.symbol}-${trade.direction}-${trade.pnl}`}
 							>
 								<div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export function Hero() {
 				<div className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
 					<div className="mx-auto max-w-5xl text-center">
 						{/* Status badge */}
-						<div className="mb-4 inline-flex items-center gap-2 rounded-none border border-white/10 bg-white/2 px-3 py-1.5 sm:mb-6 sm:gap-3 sm:px-4 sm:py-2">
+						<div className="mb-4 inline-flex items-center gap-2 rounded-none border border-border bg-muted/50 px-3 py-1.5 sm:mb-6 sm:gap-3 sm:px-4 sm:py-2">
 							<span className="pulse-dot h-2 w-2 rounded-full bg-profit" />
 							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-xs">
 								Now in public beta
@@ -330,7 +330,7 @@ export function Hero() {
 						</div>
 
 						{/* Stats row */}
-						<div className="mt-8 grid grid-cols-2 gap-4 border-white/5 border-t pt-6 sm:mt-12 sm:gap-6 sm:pt-8 md:grid-cols-4">
+						<div className="mt-8 grid grid-cols-2 gap-4 border-border/50 border-t pt-6 sm:mt-12 sm:gap-6 sm:pt-8 md:grid-cols-4">
 							<div className="text-center">
 								<div className="font-bold font-mono text-2xl text-primary sm:text-3xl md:text-4xl">
 									<AnimatedCounter end={32} prefix="+" suffix="%" />
@@ -369,9 +369,9 @@ export function Hero() {
 
 				{/* Terminal preview section */}
 				<div className="mx-auto w-full max-w-5xl px-4 pb-8 sm:px-6 sm:pb-12">
-					<div className="overflow-hidden rounded border border-white/10 bg-black/90 shadow-2xl">
+					<div className="overflow-hidden rounded border border-border bg-black/90 shadow-2xl">
 						{/* Terminal header */}
-						<div className="flex items-center justify-between border-white/5 border-b bg-white/2 px-3 py-2 sm:px-4">
+						<div className="flex items-center justify-between border-border/50 border-b bg-muted/50 px-3 py-2 sm:px-4">
 							<div className="flex items-center gap-1.5 sm:gap-2">
 								<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
 								<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />

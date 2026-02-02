@@ -143,6 +143,7 @@ export async function objectExists(key: string): Promise<boolean> {
  * Transform HTML content by replacing S3 keys in img src with presigned URLs.
  * S3 keys are stored in the format: images/{userId}/{context}/{uuid}-{filename}
  * or attachments/{userId}/{entityType}/{entityId}/{uuid}-{filename}
+ * or trades/{userId}/{tradeId}/{uuid}-{filename}
  *
  * @param html - HTML string potentially containing S3 keys in img src
  * @returns HTML with S3 keys replaced by presigned URLs, or null if input is null
@@ -152,11 +153,13 @@ export function transformHtmlWithPresignedUrls(
 ): string | null {
 	if (!html || !isS3Configured()) return html;
 
-	// Match img src with S3 keys (paths starting with "images/" or "attachments/")
+	// Match img src with S3 keys (paths starting with "images/", "attachments/", "journals/", or "trades/")
 	// Captures: <img ... src="images/user_xxx/context/file.png" ...>
 	// Or: <img ... src="attachments/user_xxx/trade/tr-xxx/file.png" ...>
+	// Or: <img ... src="journals/user_xxx/2024-01-01/file.png" ...>
+	// Or: <img ... src="trades/user_xxx/tr-xxx/file.png" ...>
 	return html.replace(
-		/(<img[^>]*\ssrc=")((?:images|attachments)\/[^"]+)("[^>]*>)/gi,
+		/(<img[^>]*\ssrc=")((?:images|attachments|journals|trades)\/[^"]+)("[^>]*>)/gi,
 		(_, before: string, key: string, after: string) => {
 			const url = getPresignedDownloadUrl(key, 3600);
 			return `${before}${url}${after}`;
@@ -175,8 +178,9 @@ export function extractS3KeysFromHtml(html: string | null): string[] {
 	if (!html) return [];
 
 	const keys: string[] = [];
-	// Match img src with S3 keys (paths starting with "images/" or "attachments/")
-	const regex = /<img[^>]*\ssrc="((?:images|attachments)\/[^"]+)"[^>]*>/gi;
+	// Match img src with S3 keys (paths starting with "images/", "attachments/", "journals/", or "trades/")
+	const regex =
+		/<img[^>]*\ssrc="((?:images|attachments|journals|trades)\/[^"]+)"[^>]*>/gi;
 
 	for (const match of html.matchAll(regex)) {
 		if (match[1]) {
@@ -185,4 +189,35 @@ export function extractS3KeysFromHtml(html: string | null): string[] {
 	}
 
 	return keys;
+}
+
+/**
+ * Transform HTML content by replacing presigned S3 URLs with their S3 keys.
+ * This is the inverse of transformHtmlWithPresignedUrls - used before saving.
+ *
+ * Detects presigned URLs by looking for URLs containing our S3 key patterns
+ * (images/, attachments/, journals/, trades/) and extracts just the key portion.
+ *
+ * @param html - HTML string potentially containing presigned URLs in img src
+ * @returns HTML with presigned URLs replaced by S3 keys
+ */
+export function transformHtmlToS3Keys(html: string | null): string | null {
+	if (!html) return html;
+
+	// Match img src attributes
+	return html.replace(
+		/<img([^>]*)\ssrc="([^"]+)"([^>]*)>/gi,
+		(match, before: string, src: string, after: string) => {
+			// Check if this is a presigned URL containing one of our S3 key patterns
+			const keyMatch = src.match(
+				/((?:images|attachments|journals|trades)\/[^?]+)/,
+			);
+			if (keyMatch?.[1]) {
+				// Extract just the S3 key (path without query params)
+				return `<img${before} src="${keyMatch[1]}"${after}>`;
+			}
+			// Not a presigned URL with our patterns, leave unchanged
+			return match;
+		},
+	);
 }

@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import {
 	boolean,
 	decimal,
@@ -94,12 +94,6 @@ export const dataQualityEnum = pgEnum("data_quality", [
 	"partial", // Some bars missing (gaps in data)
 	"unavailable", // No data found, MAE/MFE not calculated
 	"pending", // Calculation queued but not yet completed
-]);
-
-export const attachmentEntityTypeEnum = pgEnum("attachment_entity_type", [
-	"journal",
-	"trade",
-	"strategy",
 ]);
 
 // ============================================================================
@@ -415,28 +409,6 @@ export const tradeTags = createTable(
 		index("trade_tag_trade_id_idx").on(t.tradeId),
 		index("trade_tag_tag_id_idx").on(t.tagId),
 	],
-);
-
-// ============================================================================
-// TRADE SCREENSHOTS TABLE
-// ============================================================================
-
-export const tradeScreenshots = createTable(
-	"trade_screenshot",
-	{
-		id: text("id")
-			.primaryKey()
-			.$defaultFn(() => ids.screenshot()),
-		tradeId: text("trade_id")
-			.notNull()
-			.references(() => trades.id, { onDelete: "cascade" }),
-		url: text("url").notNull(),
-		caption: text("caption"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.$defaultFn(() => new Date()),
-	},
-	(t) => [index("screenshot_trade_id_idx").on(t.tradeId)],
 );
 
 // ============================================================================
@@ -804,51 +776,29 @@ export const journalAttachments = createTable(
 );
 
 // ============================================================================
-// ATTACHMENTS TABLE (unified polymorphic attachments)
+// TRADE ATTACHMENTS TABLE
 // ============================================================================
 
-export const attachments = createTable(
-	"attachment",
+export const tradeAttachments = createTable(
+	"trade_attachment",
 	{
 		id: text("id")
 			.primaryKey()
-			.$defaultFn(() => ids.attachment()),
-		userId: text("user_id")
+			.$defaultFn(() => ids.tradeAttachment()),
+		tradeId: text("trade_id")
 			.notNull()
-			.references(() => users.id, { onDelete: "cascade" }),
-
-		// Polymorphic reference
-		entityType: attachmentEntityTypeEnum("entity_type").notNull(),
-		entityId: text("entity_id").notNull(),
-
-		// Storage
+			.references(() => trades.id, { onDelete: "cascade" }),
+		url: text("url").notNull(), // S3/CDN URL (stores S3 key for presigned URL generation)
 		key: text("key").notNull(), // S3 object key
-		filename: text("filename").notNull(),
-		mimeType: text("mime_type").notNull(),
-		size: integer("size").notNull(),
-
-		// Context: null = gallery attachment, "notes" = embedded in HTML
-		embeddedContext: text("embedded_context"),
-
-		// Metadata
-		caption: text("caption"),
-
-		// Orphan tracking
-		isOrphaned: boolean("is_orphaned").default(false),
-		orphanedAt: timestamp("orphaned_at", { withTimezone: true }),
-
+		filename: text("filename").notNull(), // Original filename
+		mimeType: text("mime_type").notNull(), // e.g., "image/png"
+		size: integer("size").notNull(), // File size in bytes
+		caption: text("caption"), // Optional caption
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
-	(t) => [
-		index("attachment_user_id_idx").on(t.userId),
-		index("attachment_entity_idx").on(t.entityType, t.entityId),
-		index("attachment_orphaned_idx")
-			.on(t.isOrphaned)
-			.where(sql`is_orphaned = true`),
-		uniqueIndex("attachment_key_idx").on(t.key),
-	],
+	(t) => [index("trade_attachment_trade_id_idx").on(t.tradeId)],
 );
 
 // ============================================================================
@@ -950,8 +900,8 @@ export const tradesRelations = relations(trades, ({ one, many }) => ({
 	}),
 	executions: many(tradeExecutions),
 	tradeTags: many(tradeTags),
-	screenshots: many(tradeScreenshots),
 	ruleChecks: many(tradeRuleChecks),
+	attachments: many(tradeAttachments),
 }));
 
 export const tradeExecutionsRelations = relations(
@@ -982,16 +932,6 @@ export const tradeTagsRelations = relations(tradeTags, ({ one }) => ({
 		references: [tags.id],
 	}),
 }));
-
-export const tradeScreenshotsRelations = relations(
-	tradeScreenshots,
-	({ one }) => ({
-		trade: one(trades, {
-			fields: [tradeScreenshots.tradeId],
-			references: [trades.id],
-		}),
-	}),
-);
 
 export const userSettingsRelations = relations(userSettings, ({ one }) => ({
 	user: one(users, {
@@ -1099,12 +1039,15 @@ export const journalAttachmentsRelations = relations(
 	}),
 );
 
-export const attachmentsRelations = relations(attachments, ({ one }) => ({
-	user: one(users, {
-		fields: [attachments.userId],
-		references: [users.id],
+export const tradeAttachmentsRelations = relations(
+	tradeAttachments,
+	({ one }) => ({
+		trade: one(trades, {
+			fields: [tradeAttachments.tradeId],
+			references: [trades.id],
+		}),
 	}),
-}));
+);
 
 // ============================================================================
 // TYPE EXPORTS
@@ -1122,7 +1065,6 @@ export type TradeExecution = typeof tradeExecutions.$inferSelect;
 export type NewTradeExecution = typeof tradeExecutions.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
-export type TradeScreenshot = typeof tradeScreenshots.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type AiConversation = typeof aiConversations.$inferSelect;
 export type AiMessage = typeof aiMessages.$inferSelect;
@@ -1146,5 +1088,5 @@ export type DailyChecklistCheck = typeof dailyChecklistChecks.$inferSelect;
 export type NewDailyChecklistCheck = typeof dailyChecklistChecks.$inferInsert;
 export type JournalAttachment = typeof journalAttachments.$inferSelect;
 export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
-export type Attachment = typeof attachments.$inferSelect;
-export type NewAttachment = typeof attachments.$inferInsert;
+export type TradeAttachment = typeof tradeAttachments.$inferSelect;
+export type NewTradeAttachment = typeof tradeAttachments.$inferInsert;
