@@ -60,8 +60,6 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 	const lastSavedContentRef = useRef<string | null>(null);
 	const imageInputRef = useRef<HTMLInputElement>(null);
 
-	const utils = api.useUtils();
-
 	// Date string for API calls - preserves the calendar date as clicked
 	const dateString = toDateString(selectedDate);
 
@@ -233,8 +231,9 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 					size: file.size,
 				});
 
-				// Invalidate attachments
-				utils.dailyJournal.getByDate.invalidate({ date: dateString });
+				// Don't invalidate here - it would reset the editor content before
+				// the blob URL is replaced with the final URL. The autosave will
+				// handle persisting the content with the new image.
 
 				toast.success("Image uploaded", { id: toastId });
 				// Return presigned URL for display (will be converted to S3 key on save)
@@ -245,13 +244,7 @@ export function JournalEditor({ selectedDate }: JournalEditorProps) {
 				return null;
 			}
 		},
-		[
-			journal,
-			dateString,
-			getUploadUrl,
-			confirmUpload,
-			utils.dailyJournal.getByDate,
-		],
+		[journal, dateString, getUploadUrl, confirmUpload],
 	);
 
 	// Handle image paste/drop and insert into editor with instant preview
