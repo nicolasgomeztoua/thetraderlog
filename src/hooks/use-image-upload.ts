@@ -72,12 +72,33 @@ export function useImageUpload({
 						if (xhr.status >= 200 && xhr.status < 300) {
 							resolve();
 						} else {
-							reject(new Error(`Upload failed with status ${xhr.status}`));
+							// Log detailed error info for debugging
+							console.error("[S3 Upload Error]", {
+								status: xhr.status,
+								statusText: xhr.statusText,
+								response: xhr.responseText,
+								presignedUrl: presignedUrl.split("?")[0], // Log URL without signature
+							});
+							const errorMsg =
+								xhr.status === 403
+									? "Upload failed - permission denied (check S3 bucket policy)"
+									: `Upload failed: ${xhr.status} ${xhr.statusText}`;
+							reject(new Error(errorMsg));
 						}
 					});
 
 					xhr.addEventListener("error", () => {
-						reject(new Error("Upload failed"));
+						// Network error (often CORS)
+						console.error("[S3 Upload Network Error]", {
+							readyState: xhr.readyState,
+							status: xhr.status,
+							presignedUrl: presignedUrl.split("?")[0],
+						});
+						reject(
+							new Error(
+								"Upload failed - network error (check CORS configuration)",
+							),
+						);
 					});
 
 					xhr.open("PUT", presignedUrl);
@@ -93,7 +114,9 @@ export function useImageUpload({
 				return url;
 			} catch (error) {
 				console.error("Image upload failed:", error);
-				toast.error("Upload failed", { id: toastId });
+				const errorMessage =
+					error instanceof Error ? error.message : "Upload failed";
+				toast.error(errorMessage, { id: toastId });
 				return null;
 			}
 		},
