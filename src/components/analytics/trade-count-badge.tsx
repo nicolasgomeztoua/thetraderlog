@@ -92,7 +92,6 @@ export function TradeCountBadge({
 			},
 			{
 				staleTime: 10_000, // Consider data fresh for 10 seconds
-				refetchOnWindowFocus: false,
 			},
 		);
 

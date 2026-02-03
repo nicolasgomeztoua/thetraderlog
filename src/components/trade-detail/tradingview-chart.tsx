@@ -317,7 +317,6 @@ function LightweightChartInner({
 			{
 				enabled: canFetchRealData,
 				staleTime: STALE_TIME_MEDIUM,
-				refetchOnWindowFocus: false,
 			},
 		);
 

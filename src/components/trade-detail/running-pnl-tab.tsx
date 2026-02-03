@@ -73,7 +73,6 @@ export function RunningPnlTab({
 		{
 			enabled: !!entryTime,
 			staleTime: STALE_TIME_MEDIUM,
-			refetchOnWindowFocus: false,
 		},
 	);
 

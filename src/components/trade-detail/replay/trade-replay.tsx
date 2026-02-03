@@ -80,7 +80,6 @@ export function TradeReplay({
 			{
 				enabled: !!entryTime,
 				staleTime: STALE_TIME_MEDIUM,
-				refetchOnWindowFocus: false,
 			},
 		);
 

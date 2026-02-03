@@ -12,6 +12,8 @@ export const createQueryClient = () =>
 				// With SSR, we usually want to set some default staleTime
 				// above 0 to avoid refetching immediately on the client
 				staleTime: STALE_TIME_SHORT,
+				// Single-user app - no one else modifies your data
+				refetchOnWindowFocus: false,
 			},
 			dehydrate: {
 				serializeData: SuperJSON.serialize,
