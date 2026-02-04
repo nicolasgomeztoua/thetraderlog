@@ -67,8 +67,6 @@ function getChartColors(themeConfig: ReturnType<typeof getThemeById>) {
 interface ChartProps {
 	symbol: string;
 	instrumentType?: "futures" | "forex";
-	entryPrice?: string | null;
-	exitPrice?: string | null;
 	entryTime?: Date | string | null;
 	exitTime?: Date | string | null;
 	stopLoss?: string | null;
@@ -117,43 +115,6 @@ function calculateVisibleRange(
 		from: (entryTs - contextCandles * candleSeconds) as UTCTimestamp,
 		to: (exitTs + contextCandles * candleSeconds) as UTCTimestamp,
 	};
-}
-
-// =============================================================================
-// MOCK DATA GENERATOR (Fallback when real data unavailable)
-// =============================================================================
-
-function generateMockCandles(
-	basePrice: number,
-	count: number = 100,
-): CandleDataPoint[] {
-	const candles: CandleDataPoint[] = [];
-	let currentPrice = basePrice;
-	const now = new Date();
-
-	for (let i = count; i > 0; i--) {
-		const date = new Date(now);
-		date.setMinutes(date.getMinutes() - i * 15); // 15-min candles
-
-		const volatility = basePrice * 0.002; // 0.2% volatility
-		const change = (Math.random() - 0.5) * volatility * 2;
-		const open = currentPrice;
-		const close = currentPrice + change;
-		const high = Math.max(open, close) + Math.random() * volatility;
-		const low = Math.min(open, close) - Math.random() * volatility;
-
-		candles.push({
-			time: Math.floor(date.getTime() / 1000) as UTCTimestamp,
-			open: Number(open.toFixed(2)),
-			high: Number(high.toFixed(2)),
-			low: Number(low.toFixed(2)),
-			close: Number(close.toFixed(2)),
-		});
-
-		currentPrice = close;
-	}
-
-	return candles;
 }
 
 // =============================================================================
@@ -238,7 +199,6 @@ function TimeframeSelector({
 
 function LightweightChartInner({
 	symbol,
-	entryPrice,
 	exitTime,
 	entryTime,
 	stopLoss,
@@ -252,7 +212,6 @@ function LightweightChartInner({
 	mfePrice,
 	className,
 }: ChartProps) {
-	// entryPrice used for mock data fallback base price
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chartRef = useRef<IChartApi | null>(null);
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -296,9 +255,6 @@ function LightweightChartInner({
 	const themeConfig = getThemeById(theme);
 	const colors = getChartColors(themeConfig);
 
-	// Get base price from entry price for mock data fallback
-	const basePrice = entryPrice ? parseFloat(entryPrice) : 100;
-
 	// For opening TradingView in new tab
 	const tvSymbol = getTradingViewSymbol(symbol);
 	const tradingViewUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
@@ -337,13 +293,8 @@ function LightweightChartInner({
 		};
 	}, [rawChartData, interval]);
 
-	// Determine data source for display
+	// Determine if we have real data
 	const hasRealData = chartData && chartData.bars.length > 0;
-	const dataSource = hasRealData
-		? chartData.source === "cache"
-			? "cached"
-			: "live"
-		: "mock";
 
 	// Build markers array - elegant entry/exit indicators
 	const markers = useMemo(() => {
@@ -466,19 +417,16 @@ function LightweightChartInner({
 
 		seriesRef.current = candlestickSeries;
 
-		// Use real data if available, otherwise fall back to mock
-		let chartBars: CandleDataPoint[];
-		if (hasRealData) {
-			chartBars = chartData.bars.map((bar) => ({
-				time: bar.time as UTCTimestamp,
-				open: bar.open,
-				high: bar.high,
-				low: bar.low,
-				close: bar.close,
-			}));
-		} else {
-			chartBars = generateMockCandles(basePrice, 100);
-		}
+		// Set real chart data
+		const chartBars: CandleDataPoint[] = hasRealData
+			? chartData.bars.map((bar) => ({
+					time: bar.time as UTCTimestamp,
+					open: bar.open,
+					high: bar.high,
+					low: bar.low,
+					close: bar.close,
+				}))
+			: [];
 
 		candlestickSeries.setData(chartBars);
 
@@ -701,7 +649,6 @@ function LightweightChartInner({
 			seriesRef.current = null;
 		};
 	}, [
-		basePrice,
 		stopLoss,
 		takeProfit,
 		wasTrailed,
@@ -717,20 +664,46 @@ function LightweightChartInner({
 		mfePrice,
 	]);
 
+	// Show loading state
+	if (isLoading) {
+		return (
+			<div
+				className={cn(
+					"relative flex h-full w-full flex-col items-center justify-center overflow-hidden",
+					className,
+				)}
+			>
+				<div className="flex items-center gap-2 text-muted-foreground">
+					<Loader2 className="h-4 w-4 animate-spin" />
+					<span className="font-mono text-xs">Loading chart data...</span>
+				</div>
+			</div>
+		);
+	}
+
+	// Show empty state when no data available
+	if (!hasRealData) {
+		return (
+			<div
+				className={cn(
+					"relative flex h-full w-full flex-col items-center justify-center overflow-hidden",
+					className,
+				)}
+			>
+				<p className="font-mono text-muted-foreground text-sm">
+					No chart data available
+				</p>
+				<p className="mt-1 font-mono text-[11px] text-muted-foreground/50">
+					Market data may not be available for this symbol
+				</p>
+			</div>
+		);
+	}
+
 	return (
 		<div className={cn("relative h-full w-full overflow-hidden", className)}>
 			{/* Chart container */}
 			<div className="h-full w-full" ref={containerRef} />
-
-			{/* Loading overlay */}
-			{isLoading && (
-				<div className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-sm">
-					<div className="flex items-center gap-2 text-muted-foreground">
-						<Loader2 className="h-4 w-4 animate-spin" />
-						<span className="font-mono text-xs">Loading chart data...</span>
-					</div>
-				</div>
-			)}
 
 			{/* Top controls bar */}
 			<div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 sm:gap-2">
@@ -763,18 +736,10 @@ function LightweightChartInner({
 
 			{/* Data source notice overlay */}
 			<div className="absolute right-3 bottom-3 z-10 flex items-center gap-2">
-				<span
-					className={cn(
-						"font-mono text-[10px]",
-						dataSource === "mock"
-							? "text-muted-foreground/50"
-							: "text-primary/70",
-					)}
-				>
-					{dataSource === "mock" && "Mock data"}
-					{dataSource === "cached" &&
-						`${chartData?.barCount ?? 0} bars (cached)`}
-					{dataSource === "live" && `${chartData?.barCount ?? 0} bars`}
+				<span className="font-mono text-[10px] text-primary/70">
+					{chartData?.source === "cache"
+						? `${chartData.barCount} bars (cached)`
+						: `${chartData?.barCount ?? 0} bars`}
 				</span>
 				<a
 					className="flex items-center gap-1 rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"

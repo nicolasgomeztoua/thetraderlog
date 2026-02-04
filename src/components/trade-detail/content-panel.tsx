@@ -139,10 +139,8 @@ export function ContentPanel({
 				<TabsContent className="m-0 flex-1 p-0" value="chart">
 					<TradingViewChart
 						direction={trade.direction}
-						entryPrice={trade.entryPrice}
 						entryTime={trade.entryTime}
 						executions={trade.executions}
-						exitPrice={trade.exitPrice}
 						exitTime={trade.exitTime}
 						maePrice={trade.maePrice}
 						mfePrice={trade.mfePrice}
