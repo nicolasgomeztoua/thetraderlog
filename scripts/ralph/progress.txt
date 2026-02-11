@@ -218,3 +218,17 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - DEFAULT_CHAT_MODEL and DEFAULT_REPORT_MODEL are separate strings used by the OpenRouter client
   - SUGGESTED_CHAT_QUERIES and SUGGESTED_REPORT_PROMPTS are `as const` tuples for type safety
 ---
+
+## 2026-02-11 - US-002: OpenRouter Client Service
+- What was implemented: OpenRouter API client with streaming and non-streaming support
+- Files changed:
+  - src/lib/ai/client.ts — New file with chatCompletion, chatCompletionStream, types, retry logic
+  - src/env.js — Added OPENROUTER_API_KEY to server schema and runtimeEnv
+- **Learnings for future iterations:**
+  - Environment variables use @t3-oss/env-nextjs via src/env.js — always add new server vars there with z.string().min(1)
+  - OpenRouter API is OpenAI-compatible — same message format, tool_calls, and SSE streaming
+  - chatCompletion returns full response (for tool loops), chatCompletionStream yields SSE chunks (for UI streaming)
+  - Exported types: ChatMessage, ToolCall, ToolDefinition, ChatCompletionOptions, TokenUsage, ChatCompletionResponse, StreamChunk, OpenRouterError
+  - fetchWithRetry handles 429 (rate limit) and 5xx with exponential backoff (1s, 2s, 4s)
+  - Streaming includes stream_options: { include_usage: true } to get token usage in final chunk
+---

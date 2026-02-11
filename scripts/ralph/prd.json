@@ -78,8 +78,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/client.ts with chatCompletion (non-streaming) and chatCompletionStream (async generator). OpenAI-compatible tool calling support, exponential backoff retry (3 retries, 429/5xx), token usage via response.usage. OPENROUTER_API_KEY added to src/env.js server schema."
     },
     {
       "id": "US-004",
