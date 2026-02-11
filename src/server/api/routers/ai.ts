@@ -11,10 +11,12 @@ import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
 import {
 	DEFAULT_CHAT_MODEL,
+	DEFAULT_REPORT_MODEL,
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
 } from "@/lib/constants/ai";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { aiConversations, aiMessages } from "@/server/db/schema";
+import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
+import { generateAiReport } from "@/trigger/generate-ai-report";
 
 // =============================================================================
 // CONSTANTS
@@ -24,7 +26,7 @@ import { aiConversations, aiMessages } from "@/server/db/schema";
 const MAX_TOOL_ROUNDS = 10;
 
 // =============================================================================
-// AI ROUTER (Chat Endpoints)
+// AI ROUTER (Chat + Report Endpoints)
 // =============================================================================
 
 export const aiRouter = createTRPCRouter({
@@ -326,5 +328,184 @@ export const aiRouter = createTRPCRouter({
 				.where(eq(aiConversations.id, input.conversationId));
 
 			return { success: true };
+		}),
+
+	// =========================================================================
+	// REPORT ENDPOINTS
+	// =========================================================================
+
+	/**
+	 * Start a new AI report generation.
+	 * Creates a report record + conversation in report mode, saves the initial prompt
+	 * as the first message, and triggers the Trigger.dev background task.
+	 */
+	startReport: protectedProcedure
+		.input(
+			z.object({
+				prompt: z.string().min(1).max(10_000),
+				model: z.string().optional(),
+				title: z.string().max(200).optional(),
+				dateRangeStart: z.string().datetime().optional(),
+				dateRangeEnd: z.string().datetime().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const model = input.model ?? DEFAULT_REPORT_MODEL;
+			const title =
+				input.title ??
+				(input.prompt.length > 100
+					? `${input.prompt.slice(0, 97)}...`
+					: input.prompt);
+
+			// Create conversation in report mode
+			const [conversation] = await ctx.db
+				.insert(aiConversations)
+				.values({
+					userId: ctx.user.id,
+					mode: "report",
+					model,
+					title,
+					initialPrompt: input.prompt,
+					status: "generating",
+					dateRangeStart: input.dateRangeStart
+						? new Date(input.dateRangeStart)
+						: null,
+					dateRangeEnd: input.dateRangeEnd
+						? new Date(input.dateRangeEnd)
+						: null,
+				})
+				.returning();
+
+			if (!conversation) {
+				throw new Error("Failed to create report conversation");
+			}
+
+			// Save initial prompt as first user message
+			await ctx.db.insert(aiMessages).values({
+				conversationId: conversation.id,
+				role: "user",
+				content: input.prompt,
+			});
+
+			// Create report record
+			const [report] = await ctx.db
+				.insert(aiReports)
+				.values({
+					userId: ctx.user.id,
+					conversationId: conversation.id,
+					title,
+					prompt: input.prompt,
+					model,
+					status: "queued",
+				})
+				.returning();
+
+			if (!report) {
+				throw new Error("Failed to create report");
+			}
+
+			// Trigger Trigger.dev background task
+			const handle = await generateAiReport.trigger({
+				reportId: report.id,
+				userId: ctx.user.id,
+				conversationId: conversation.id,
+				prompt: input.prompt,
+				model,
+				dateRangeStart: input.dateRangeStart,
+				dateRangeEnd: input.dateRangeEnd,
+			});
+
+			// Store the Trigger.dev task ID for tracking
+			await ctx.db
+				.update(aiReports)
+				.set({ triggerTaskId: handle.id })
+				.where(eq(aiReports.id, report.id));
+
+			return { ...report, triggerTaskId: handle.id };
+		}),
+
+	/**
+	 * Get a report by ID with full details.
+	 */
+	getReport: protectedProcedure
+		.input(z.object({ reportId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.id, input.reportId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+				with: {
+					conversation: {
+						with: {
+							messages: {
+								orderBy: [aiMessages.createdAt],
+							},
+						},
+					},
+				},
+			});
+
+			if (!report) {
+				throw new Error("Report not found");
+			}
+
+			return report;
+		}),
+
+	/**
+	 * List user reports (most recent first), paginated.
+	 */
+	listReports: protectedProcedure
+		.input(
+			z.object({
+				limit: z.number().min(1).max(100).default(20),
+				cursor: z.string().optional(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const reports = await ctx.db.query.aiReports.findMany({
+				where: eq(aiReports.userId, ctx.user.id),
+				orderBy: [desc(aiReports.createdAt)],
+				limit: input.limit + 1,
+			});
+
+			let nextCursor: string | undefined;
+			if (reports.length > input.limit) {
+				const next = reports.pop();
+				nextCursor = next?.id;
+			}
+
+			return {
+				items: reports,
+				nextCursor,
+			};
+		}),
+
+	/**
+	 * Get just the status of a report (for lightweight polling).
+	 */
+	getReportStatus: protectedProcedure
+		.input(z.object({ reportId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.id, input.reportId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+				columns: {
+					id: true,
+					status: true,
+					pdfUrl: true,
+					tokensUsed: true,
+					completedAt: true,
+				},
+			});
+
+			if (!report) {
+				throw new Error("Report not found");
+			}
+
+			return report;
 		}),
 });
