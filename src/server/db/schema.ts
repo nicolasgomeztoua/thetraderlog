@@ -95,6 +95,22 @@ export const dataQualityEnum = pgEnum("data_quality", [
 	"unavailable", // No data found, MAE/MFE not calculated
 	"pending", // Calculation queued but not yet completed
 ]);
+export const aiConversationStatusEnum = pgEnum("ai_conversation_status", [
+	"active",
+	"generating",
+	"complete",
+	"failed",
+]);
+export const aiConversationModeEnum = pgEnum("ai_conversation_mode", [
+	"chat",
+	"report",
+]);
+export const aiReportStatusEnum = pgEnum("ai_report_status", [
+	"queued",
+	"generating",
+	"complete",
+	"failed",
+]);
 
 // ============================================================================
 // USERS TABLE
@@ -506,6 +522,12 @@ export const aiConversations = createTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		title: text("title"),
+		status: aiConversationStatusEnum("status").notNull().default("active"),
+		mode: aiConversationModeEnum("mode"),
+		initialPrompt: text("initial_prompt"),
+		dateRangeStart: timestamp("date_range_start", { withTimezone: true }),
+		dateRangeEnd: timestamp("date_range_end", { withTimezone: true }),
+		model: text("model"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -529,13 +551,52 @@ export const aiMessages = createTable(
 		conversationId: text("conversation_id")
 			.notNull()
 			.references(() => aiConversations.id, { onDelete: "cascade" }),
-		role: text("role").notNull(), // "user" or "assistant"
+		role: text("role").notNull(), // "user", "assistant", or "system"
 		content: text("content").notNull(),
+		model: text("model"), // Model used for this message (assistant messages)
+		tokensUsed: integer("tokens_used"), // Token count for this message
+		toolCalls: text("tool_calls"), // JSON string of tool calls made
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
 	},
 	(t) => [index("message_conversation_id_idx").on(t.conversationId)],
+);
+
+// ============================================================================
+// AI REPORTS TABLE
+// ============================================================================
+
+export const aiReports = createTable(
+	"ai_report",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.aiReport()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		conversationId: text("conversation_id")
+			.notNull()
+			.references(() => aiConversations.id, { onDelete: "cascade" }),
+		title: text("title").notNull(),
+		prompt: text("prompt").notNull(),
+		model: text("model").notNull(),
+		status: aiReportStatusEnum("status").notNull().default("queued"),
+		pdfUrl: text("pdf_url"),
+		pdfKey: text("pdf_key"),
+		tokensUsed: integer("tokens_used").notNull().default(0),
+		triggerTaskId: text("trigger_task_id"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
+	},
+	(t) => [
+		index("ai_report_user_id_idx").on(t.userId),
+		index("ai_report_conversation_id_idx").on(t.conversationId),
+		index("ai_report_status_idx").on(t.status),
+	],
 );
 
 // ============================================================================
@@ -841,6 +902,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	tags: many(tags),
 	settings: one(userSettings),
 	aiConversations: many(aiConversations),
+	aiReports: many(aiReports),
 	filterPresets: many(filterPresets),
 	strategies: many(strategies),
 	dailyJournals: many(dailyJournals),
@@ -948,12 +1010,24 @@ export const aiConversationsRelations = relations(
 			references: [users.id],
 		}),
 		messages: many(aiMessages),
+		reports: many(aiReports),
 	}),
 );
 
 export const aiMessagesRelations = relations(aiMessages, ({ one }) => ({
 	conversation: one(aiConversations, {
 		fields: [aiMessages.conversationId],
+		references: [aiConversations.id],
+	}),
+}));
+
+export const aiReportsRelations = relations(aiReports, ({ one }) => ({
+	user: one(users, {
+		fields: [aiReports.userId],
+		references: [users.id],
+	}),
+	conversation: one(aiConversations, {
+		fields: [aiReports.conversationId],
 		references: [aiConversations.id],
 	}),
 }));
@@ -1068,6 +1142,8 @@ export type NewTag = typeof tags.$inferInsert;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type AiConversation = typeof aiConversations.$inferSelect;
 export type AiMessage = typeof aiMessages.$inferSelect;
+export type AiReport = typeof aiReports.$inferSelect;
+export type NewAiReport = typeof aiReports.$inferInsert;
 export type FilterPreset = typeof filterPresets.$inferSelect;
 export type NewFilterPreset = typeof filterPresets.$inferInsert;
 export type Strategy = typeof strategies.$inferSelect;
