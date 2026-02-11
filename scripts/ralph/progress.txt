@@ -271,3 +271,17 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Tool instructions tell AI that SQL is auto-scoped via CTEs — no need for user_id WHERE clauses
   - The buildSystemPrompt function takes {schemaContext, userContext, mode} — call generateSchemaContext() and buildUserContext() separately and pass results in
 ---
+
+## 2026-02-11 - US-007: AI Tool — run_query (Read-Only SQL Execution)
+- What was implemented: Read-only SQL execution tool with user-scoped CTEs and validation
+- Files changed:
+  - src/lib/ai/tools/run-query.ts — New file with tool definition, executor, validation, and CTE builder
+- **Learnings for future iterations:**
+  - `db.execute(sql.raw(queryString))` works for raw SQL with the Drizzle postgres-js driver
+  - Do NOT use simple word-boundary matching for "DELETE" — it matches "deleted_at". Use phrase patterns like `DELETE FROM` instead
+  - Wrapping user query in `SELECT * FROM (...) AS _result LIMIT N` safely caps rows even when user query has its own LIMIT
+  - User-scoped CTEs cover 15 tables: user_trades, user_accounts, user_account_groups, user_tags, user_strategies, user_strategy_rules, user_trade_tags, user_executions, user_journals, user_settings, user_conversations, user_reports, user_trade_rule_checks, user_trade_attachments, user_filter_presets
+  - Tool definitions use OpenAI function-calling format: `{ type: "function", function: { name, description, parameters } }`
+  - The `executeRunQuery` function takes `db` as a parameter (not importing it directly) for testability
+  - String literal stripping (`replace(/'[^']*'/g, "''")`) prevents false positives in SQL validation
+---

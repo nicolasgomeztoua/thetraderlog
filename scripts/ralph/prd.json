@@ -160,8 +160,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/tools/run-query.ts with runQueryToolDefinition (OpenAI function-calling format) and executeRunQuery(userId, query, db). SELECT-only validation using pattern matching (blocks INSERT INTO, DELETE FROM, UPDATE SET, DROP, ALTER, etc.) with string literal stripping to avoid false positives on 'deleted_at'. User-scoped CTEs for 15 tables (user_trades, user_accounts, user_tags, user_strategies, etc.). Results wrapped in subquery with LIMIT 500. Graceful SQL error handling."
     },
     {
       "id": "US-008",
