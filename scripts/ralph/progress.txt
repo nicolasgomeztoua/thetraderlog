@@ -244,3 +244,18 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Soft delete filter (deleted_at IS NULL) must be included in all example queries
   - The context includes analytics filter schema so AI knows what filters are available
 ---
+
+## 2026-02-11 - US-005: AI Context Builder — User-Specific Context
+- What was implemented: User-specific context builder for AI system prompts
+- Files changed:
+  - src/lib/ai/context-builder.ts — New file with buildUserContext() async function
+- **Learnings for future iterations:**
+  - Drizzle `with` relations work for loading nested data (strategies → rules) in a single query
+  - Use `Promise.all` for parallel loading of independent user data (strategies, tags, accounts, settings, journals)
+  - Database type pattern: `import type { db as DbType } from "@/server/db"; type Db = typeof DbType;`
+  - `userSettings` can be null for new users — always provide defaults
+  - `tradingSessions` is stored as JSON string in userSettings — parse with try/catch
+  - Strategy `entryCriteria` and `exitRules` are HTML (from Tiptap editor) — strip tags for plain text context
+  - Journal `content` is also HTML — strip and truncate for context (300 chars per entry)
+  - `dailyJournals.date` is a timestamp normalized to midnight — use `gte` for 7-day lookback
+---
