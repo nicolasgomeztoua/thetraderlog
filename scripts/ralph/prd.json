@@ -364,8 +364,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/report-email.ts with sendReportEmail(to, reportTitle, downloadUrl) using Resend SDK. Terminal-styled HTML email template with dark bg, monospace fonts, chartreuse accent, download button. Added RESEND_API_KEY to src/env.js server schema. Integrated into Trigger.dev task: after PDF upload, looks up user email from DB and sends notification. Email failure is caught silently — does not fail report generation."
     },
     {
       "id": "US-021",
@@ -384,8 +384,8 @@
         "Verify in browser"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/app/(protected)/ai/_components/message-renderer.tsx using react-markdown with remark-gfm plugin. Renders headings (h1-h4), paragraphs, bold, italic, lists (ordered/unordered), code blocks with terminal styling, inline code, tables with Terminal design, links, blockquotes, horizontal rules, and images via next/image (for S3/Daytona chart URLs). All key elements have data-testid attributes. Memoized with React.memo for performance. Terminal design: monospace fonts, dark bg code blocks, chartreuse accents, ice blue links."
     },
     {
       "id": "US-018",

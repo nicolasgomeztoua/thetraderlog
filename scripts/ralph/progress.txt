@@ -412,3 +412,35 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - aiReports record has `pdfUrl` (presigned GET URL) and `pdfKey` (S3 key) — update these separately from the status update to avoid race conditions
   - The `render` prop on ReactPDF.Text for page numbers uses `({ pageNumber, totalPages })` callback
 ---
+
+## 2026-02-11 - US-017: Report Email Delivery via Resend
+- What was implemented: Resend-based email delivery for completed AI reports
+- Files changed:
+  - src/lib/ai/report-email.ts — New file with sendReportEmail(), Terminal-styled HTML email template, Resend client
+  - src/env.js — Added RESEND_API_KEY to server schema and runtimeEnv
+  - src/trigger/generate-ai-report.ts — Updated generateAndUploadPdf to accept userId, look up user email, and send report email after PDF upload
+  - package.json — Added resend dependency
+- **Learnings for future iterations:**
+  - Resend SDK is simple: `new Resend(apiKey)` then `resend.emails.send({ from, to, subject, html })`
+  - Email delivery should be wrapped in try/catch inside background tasks — never let email failure crash the report generation
+  - The `from` address must match a verified domain in Resend (using `reports@edgejournal.com`)
+  - HTML emails need table-based layout for cross-client compatibility (no flex, no grid)
+  - User email is available via `db.query.users.findFirst({ where: eq(users.id, userId), columns: { email: true } })`
+  - The generateAndUploadPdf helper was updated to accept userId parameter — signature is now (reportId, title, content, chatMessages, userId, dateRange?)
+---
+
+## 2026-02-11 - US-021: Markdown and Chart Rendering Component
+- What was implemented: Reusable markdown + chart image renderer for AI chat and report messages
+- Files changed:
+  - src/app/(protected)/ai/_components/message-renderer.tsx — New file with MessageRenderer component
+  - package.json + bun.lock — Added react-markdown, remark-gfm, rehype-highlight dependencies
+- **Learnings for future iterations:**
+  - react-markdown v10 uses `Components` type for custom renderers — import as `type Components` from "react-markdown"
+  - react-markdown's `img` component receives `src` as `string | Blob` — must check `typeof src !== "string"` before passing to next/image
+  - `remarkGfm` plugin required for GFM table support — without it tables render as plain text
+  - Use `unoptimized` on next/image for external chart URLs (S3/Daytona presigned URLs won't pass through Next.js image optimizer)
+  - Terminal design for code blocks: bg-[#0a0a0a] (slightly lighter than #050505 page bg) for contrast
+  - Ice blue (#00d4ff) used for links to match AI-feature accent color
+  - Memoize with React.memo since markdown content doesn't change after initial render
+  - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY/RESEND_API_KEY env vars
+---
