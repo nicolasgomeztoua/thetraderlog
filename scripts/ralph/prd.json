@@ -222,8 +222,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/tools/run-python.ts with runPythonToolDefinition (OpenAI function-calling format) and executeRunPython(code, dataContext?). Integrates with Daytona SDK (@daytonaio/sdk v0.141.0) using Image.debianSlim('3.12').pipInstall for scipy, seaborn, statsmodels, plotly, kaleido. Ephemeral sandboxes with 60s execution timeout, 5min auto-stop. Captures stdout via response.result, matplotlib charts via response.artifacts.charts (with base64 PNG), and plotly images from /tmp/. Uploads images to S3 (Cloudflare R2) with 7-day presigned URLs, falls back to data URIs when S3 unavailable. DAYTONA_API_KEY added to src/env.js server schema."
     },
     {
       "id": "US-011",

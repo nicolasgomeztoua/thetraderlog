@@ -13,6 +13,7 @@ Started: Wed Feb 11 18:51:59 WET 2026
 - User ownership validated via eq(table.userId, ctx.user.id) in all queries
 - Active accounts filtered via getActiveAccountsSubquery helper
 - User timezone fetched via getUserTimezone helper, date bounds via getDayBoundsInTimezone
+- Daytona SDK: `new Daytona({ apiKey, _experimental: {} })`, `Image.debianSlim('3.12').pipInstall([...])`, `sandbox.process.codeRun(code, params?, timeout?)`
 - Existing AI tables: aiConversations (basic), aiMessages (basic) - need schema updates for US-001
 - No existing AI utilities in src/lib/ - everything needs to be built from scratch
 - Existing constants pattern: src/lib/constants/analytics.ts, src/lib/constants/trade-log.ts
@@ -309,4 +310,27 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Market data tool doesn't need userId — OHLC data is not user-scoped (shared candle cache)
   - Bar timestamps from the service are Unix milliseconds — convert to ISO strings for AI readability
   - `dataQuality` field from CacheResult is useful to pass through so AI knows if data was fully available
+---
+
+## 2026-02-11 - US-010: AI Tool — run_python (Daytona Sandbox Execution)
+- What was implemented: Python code execution tool using Daytona sandboxed environments
+- Files changed:
+  - src/lib/ai/tools/run-python.ts — New file with tool definition, executor, Daytona integration, S3 image upload
+  - src/env.js — Added DAYTONA_API_KEY to server schema and runtimeEnv
+  - package.json — Added @daytonaio/sdk dependency
+  - scripts/ralph/prd.json — Marked US-010 as passes: true
+- **Learnings for future iterations:**
+  - `DaytonaConfig` interface requires `_experimental: {}` property — omitting it causes a TypeScript error
+  - `Daytona.create()` with `Image` param uses the overload that accepts `CreateSandboxFromImageParams` — NOT `CreateSandboxFromSnapshotParams`
+  - `ExecuteResponse` from Daytona has: `exitCode: number`, `result: string` (stdout), `artifacts?: { stdout: string, charts?: Chart[] }`
+  - Matplotlib charts are captured automatically as structured `Chart` objects with optional `png` field (base64 encoded)
+  - Plotly images need explicit `fig.write_image()` to `/tmp/` — they're not auto-captured like matplotlib
+  - `sandbox.fs.uploadFile(Buffer.from(data), remotePath)` uploads data to sandbox
+  - `sandbox.fs.listFiles(path)` returns `FileInfo[]` with `.name` property
+  - `sandbox.fs.downloadFile(remotePath)` returns `Buffer` for in-memory download
+  - Bun `fetch()` doesn't accept `Buffer` as body — must wrap in `new Uint8Array(buffer)`
+  - `createId()` from shared/id.ts requires a prefix argument — use `randomUUID()` for non-entity IDs
+  - `Image.debianSlim('3.12').pipInstall([...])` chains — default image includes pandas, numpy, matplotlib
+  - Ephemeral sandboxes (`ephemeral: true`) auto-delete when stopped — good for one-shot execution
+  - S3 fallback to data URIs (`data:image/png;base64,...`) ensures images work even without S3 configured
 ---
