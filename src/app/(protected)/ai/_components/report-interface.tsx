@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, FileText, Loader2, RefreshCw, Send } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
@@ -30,6 +30,36 @@ export function ReportInterface({ model, ...props }: ReportInterfaceProps) {
 
 	// Fetch reports
 	const { data: reports } = api.ai.listReports.useQuery({ limit: 20 });
+
+	// Find the first active report (queued or generating) to poll
+	const activeReportId = useMemo(() => {
+		if (!reports?.items) return null;
+		const active = reports.items.find(
+			(r) => r.status === "queued" || r.status === "generating",
+		);
+		return active?.id ?? null;
+	}, [reports?.items]);
+
+	// Poll active report status every 5 seconds
+	const { data: activeReportStatus } = api.ai.getReportStatus.useQuery(
+		{ reportId: activeReportId ?? "" },
+		{
+			enabled: !!activeReportId,
+			refetchInterval: 5000,
+		},
+	);
+
+	// When polled status changes to complete/failed, refresh the reports list
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on status change
+	useEffect(() => {
+		if (
+			activeReportStatus &&
+			(activeReportStatus.status === "complete" ||
+				activeReportStatus.status === "failed")
+		) {
+			void utils.ai.listReports.invalidate();
+		}
+	}, [activeReportStatus?.status]);
 
 	// Mutations
 	const startReport = api.ai.startReport.useMutation({
@@ -187,8 +217,50 @@ export function ReportInterface({ model, ...props }: ReportInterfaceProps) {
 				</div>
 				<ScrollArea className="flex-1">
 					<div className="p-2 sm:p-3">
+						{/* Active Report Progress Indicator */}
+						{activeReportId &&
+							activeReportStatus &&
+							(activeReportStatus.status === "queued" ||
+								activeReportStatus.status === "generating") && (
+								<div
+									className="mb-3 rounded border border-[#00d4ff]/30 bg-[#00d4ff]/5 p-3"
+									data-testid="report-active-progress"
+								>
+									<div className="flex items-center gap-2">
+										<Loader2 className="size-3.5 animate-spin text-[#00d4ff]" />
+										<span className="font-mono text-[#00d4ff] text-xs">
+											Report in progress...
+										</span>
+									</div>
+									<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#00d4ff]/10">
+										<div
+											className="h-full animate-pulse rounded-full bg-[#00d4ff]/50"
+											style={{
+												width:
+													activeReportStatus.status === "queued"
+														? "15%"
+														: "60%",
+											}}
+										/>
+									</div>
+									<p className="mt-1.5 font-mono text-[10px] text-muted-foreground">
+										{activeReportStatus.status === "queued"
+											? "Queued — waiting to start..."
+											: "Generating — AI is analyzing your data..."}
+									</p>
+								</div>
+							)}
 						{reports?.items.map((report) => {
-							const status = STATUS_LABELS[report.status] ?? DEFAULT_STATUS;
+							// Use polled status for the active report
+							const reportStatus =
+								report.id === activeReportId && activeReportStatus
+									? activeReportStatus.status
+									: report.status;
+							const reportPdfUrl =
+								report.id === activeReportId && activeReportStatus
+									? activeReportStatus.pdfUrl
+									: report.pdfUrl;
+							const status = STATUS_LABELS[reportStatus] ?? DEFAULT_STATUS;
 							return (
 								<div
 									className="mb-2 rounded border border-border bg-secondary/50 p-3 last:mb-0"
@@ -205,7 +277,7 @@ export function ReportInterface({ model, ...props }: ReportInterfaceProps) {
 													className={`font-mono text-[10px] uppercase tracking-wider ${status.color}`}
 													data-testid={`report-status-${report.id}`}
 												>
-													{report.status === "generating" && (
+													{reportStatus === "generating" && (
 														<Loader2 className="mr-1 inline size-2.5 animate-spin" />
 													)}
 													{status.label}
@@ -217,10 +289,10 @@ export function ReportInterface({ model, ...props }: ReportInterfaceProps) {
 												)}
 											</div>
 										</div>
-										{report.status === "complete" && report.pdfUrl && (
+										{reportStatus === "complete" && reportPdfUrl && (
 											<a
 												data-testid={`report-download-${report.id}`}
-												href={report.pdfUrl}
+												href={reportPdfUrl}
 												rel="noopener noreferrer"
 												target="_blank"
 											>
