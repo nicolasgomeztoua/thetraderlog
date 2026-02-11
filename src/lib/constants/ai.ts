@@ -21,7 +21,7 @@ export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2";
 /**
  * Default model for report mode (deeper analysis)
  */
-export const DEFAULT_REPORT_MODEL = "anthropic/claude-sonnet-4";
+export const DEFAULT_REPORT_MODEL = "z-ai/glm-5-20260211";
 
 /**
  * Available AI models for the model selector
@@ -33,6 +33,27 @@ export const AI_MODELS: AiModel[] = [
 		provider: "Moonshot",
 		description: "Fast and cost-effective for quick questions",
 		mode: "chat",
+	},
+	{
+		id: "moonshotai/kimi-k2.5",
+		name: "Kimi K2.5",
+		provider: "Moonshot",
+		description: "Upgraded K2 with stronger reasoning",
+		mode: "both",
+	},
+	{
+		id: "z-ai/glm-5-20260211",
+		name: "GLM-5",
+		provider: "Zhipu AI",
+		description: "745B MoE model — deep analytical reasoning",
+		mode: "report",
+	},
+	{
+		id: "z-ai/glm-4.7",
+		name: "GLM-4.7",
+		provider: "Zhipu AI",
+		description: "Strong coding and multi-step reasoning",
+		mode: "both",
 	},
 	{
 		id: "openai/gpt-4.1-mini",
@@ -49,25 +70,11 @@ export const AI_MODELS: AiModel[] = [
 		mode: "both",
 	},
 	{
-		id: "openai/gpt-4.1",
-		name: "GPT-4.1",
-		provider: "OpenAI",
-		description: "High-quality analysis and reasoning",
-		mode: "both",
-	},
-	{
 		id: "google/gemini-2.5-pro",
 		name: "Gemini 2.5 Pro",
 		provider: "Google",
 		description: "Strong reasoning with large context window",
 		mode: "report",
-	},
-	{
-		id: "anthropic/claude-haiku-4",
-		name: "Claude Haiku 4",
-		provider: "Anthropic",
-		description: "Ultra-fast responses for simple queries",
-		mode: "chat",
 	},
 ];
 

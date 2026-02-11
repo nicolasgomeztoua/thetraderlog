@@ -5,9 +5,10 @@
 
 set -e
 
-MAX_ITERATIONS=${1:-20}
+MAX_ITERATIONS=${1:-30}
 PR_REVIEW_CYCLES=${2:-10}
-PR_REVIEW_INTERVAL=240  # 4 minutes in seconds
+PR_REVIEW_INITIAL_WAIT=480   # 8 minutes — give Greptile time to finish
+PR_REVIEW_INTERVAL=300       # 5 minutes between subsequent checks
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
@@ -48,6 +49,107 @@ if [ ! -f "$PRD_FILE" ]; then
     exit 1
 fi
 
+# =============================================================================
+# Branch Selection — interactive numbered menus
+# =============================================================================
+PRD_BRANCH=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "")
+GIT_BRANCH=$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+cd "$PROJECT_ROOT"
+
+# Fetch latest remote refs so the list is up-to-date
+git fetch --prune origin 2>/dev/null || true
+
+# Build a de-duped, sorted branch list (local + remote)
+build_branch_list() {
+    {
+        git branch --format='%(refname:short)' 2>/dev/null
+        git branch -r --format='%(refname:short)' 2>/dev/null | sed 's|^origin/||' | grep -v '^HEAD$'
+    } | sort -u
+}
+
+# Display a numbered branch menu with a highlighted default.
+# Args: <prompt_text> [default_branch]
+# Sets SELECTED_BRANCH to the chosen branch name.
+show_branch_menu() {
+    local prompt_text="$1"
+    local default_branch="${2:-$GIT_BRANCH}"
+
+    # Build array — put default branch first, then current branch, then the rest
+    BRANCH_LIST=()
+    BRANCH_LIST+=("$default_branch")
+    [ "$GIT_BRANCH" != "$default_branch" ] && BRANCH_LIST+=("$GIT_BRANCH")
+    while IFS= read -r b; do
+        [ "$b" = "$default_branch" ] && continue
+        [ "$b" = "$GIT_BRANCH" ] && continue
+        BRANCH_LIST+=("$b")
+    done < <(build_branch_list)
+
+    echo ""
+    echo -e "${YELLOW}${prompt_text}${NC}"
+    local i=1
+    for b in "${BRANCH_LIST[@]}"; do
+        local label="$b"
+        local tags=""
+        # Check if branch exists locally or on remote
+        local b_exists=$(git branch --list "$b" 2>/dev/null | tr -d ' ')
+        local b_remote=$(git branch -r --list "origin/$b" 2>/dev/null | tr -d ' ')
+        [ -z "$b_exists" ] && [ -z "$b_remote" ] && tags="${tags} ${YELLOW}(new branch)${NC}"
+        [ "$b" = "$GIT_BRANCH" ] && tags="${tags} ${GREEN}(current)${NC}"
+        [ "$b" = "$PRD_BRANCH" ] && tags="${tags} ${CYAN}(prd.json)${NC}"
+        [ "$i" -eq 1 ] && tags="${tags} ${MAGENTA}← default${NC}"
+        echo -e "  ${i}) ${label}${tags}"
+        i=$((i + 1))
+    done
+    echo ""
+    read -r -p "Pick a number (Enter = default): " MENU_PICK || true
+    MENU_PICK="${MENU_PICK:-1}"
+
+    if [[ "$MENU_PICK" =~ ^[0-9]+$ ]] && [ "$MENU_PICK" -ge 1 ] && [ "$MENU_PICK" -le "${#BRANCH_LIST[@]}" ]; then
+        SELECTED_BRANCH="${BRANCH_LIST[$((MENU_PICK - 1))]}"
+    else
+        echo -e "${RED}Invalid choice, using default.${NC}"
+        SELECTED_BRANCH="${BRANCH_LIST[0]}"
+    fi
+}
+
+# ---- 1. Which branch to PR into? (ask first so we can branch from it) ----
+echo ""
+echo -e "${CYAN}Branch Setup${NC}"
+echo -e "  Current git branch: ${GREEN}$GIT_BRANCH${NC}"
+[ -n "$PRD_BRANCH" ] && echo -e "  Branch in prd.json: ${GREEN}$PRD_BRANCH${NC}"
+
+show_branch_menu "Which branch should the PR target?" "main"
+PR_BASE_BRANCH="$SELECTED_BRANCH"
+
+# ---- 2. Which branch to work on? (default = prd.json branch) ----
+WORK_DEFAULT="${PRD_BRANCH:-$GIT_BRANCH}"
+show_branch_menu "Which branch should Ralph work on?" "$WORK_DEFAULT"
+WORK_BRANCH="$SELECTED_BRANCH"
+
+# ---- 3. Create / switch to the working branch ----
+BRANCH_EXISTS=$(git branch --list "$WORK_BRANCH" 2>/dev/null | tr -d ' ')
+REMOTE_EXISTS=$(git branch -r --list "origin/$WORK_BRANCH" 2>/dev/null | tr -d ' ')
+
+if [ -z "$BRANCH_EXISTS" ] && [ -z "$REMOTE_EXISTS" ]; then
+    echo -e "${YELLOW}Creating branch '$WORK_BRANCH' from '$PR_BASE_BRANCH'...${NC}"
+    git checkout "$PR_BASE_BRANCH" 2>/dev/null
+    git pull origin "$PR_BASE_BRANCH" 2>/dev/null || true
+    git checkout -b "$WORK_BRANCH"
+elif [ "$WORK_BRANCH" != "$GIT_BRANCH" ]; then
+    echo -e "${YELLOW}Switching to branch: $WORK_BRANCH${NC}"
+    git checkout "$WORK_BRANCH" 2>/dev/null || git checkout -b "$WORK_BRANCH"
+fi
+
+# Update prd.json branchName to match
+if [ -n "$PRD_BRANCH" ] && [ "$PRD_BRANCH" != "$WORK_BRANCH" ]; then
+    jq --arg b "$WORK_BRANCH" '.branchName = $b' "$PRD_FILE" > "$PRD_FILE.tmp" && mv "$PRD_FILE.tmp" "$PRD_FILE"
+    echo -e "${YELLOW}Updated prd.json branchName to: $WORK_BRANCH${NC}"
+fi
+
+echo ""
+echo -e "${GREEN}Working branch: $WORK_BRANCH → PR into: $PR_BASE_BRANCH${NC}"
+echo ""
+
 # Archive previous run if branch changed
 if [ -f "$PRD_FILE" ] && [ -f "$LAST_BRANCH_FILE" ]; then
     CURRENT_BRANCH=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "")
@@ -87,6 +189,24 @@ if [ ! -f "$PROGRESS_FILE" ]; then
     echo "Started: $(date)" >> "$PROGRESS_FILE"
     echo "---" >> "$PROGRESS_FILE"
 fi
+
+# Helper: commit all uncommitted changes with a given message
+commit_all_changes() {
+    local msg="$1"
+    cd "$PROJECT_ROOT"
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+        echo -e "${YELLOW}Committing uncommitted changes...${NC}"
+        git add -A
+        git status --short
+        git commit -m "$msg" || true
+        echo -e "${GREEN}Committed: $msg${NC}"
+    else
+        echo -e "${GREEN}Working tree clean — nothing to commit.${NC}"
+    fi
+}
+
+# Commit any local changes before starting (prd.json updates, progress resets, etc.)
+commit_all_changes "chore: ralph pre-run setup (prd.json, progress, branch config)"
 
 echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════════════════════════╗"
@@ -207,7 +327,7 @@ EOF
     PR_URL=$(gh pr create \
         --title "feat: $FEATURE_DESC" \
         --body "$PR_BODY" \
-        --base main \
+        --base "$PR_BASE_BRANCH" \
         2>&1) || {
         echo -e "${RED}Failed to create PR${NC}"
         exit 1
@@ -227,7 +347,7 @@ echo "$PR_NUMBER" > "$PR_NUMBER_FILE"
 echo ""
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
 echo -e "${MAGENTA} Ralph PR Review Phase - Monitoring for Greptile Comments${NC}"
-echo -e "${MAGENTA} Checking every 3 minutes for $PR_REVIEW_CYCLES cycles${NC}"
+echo -e "${MAGENTA} Checking every 5 minutes for $PR_REVIEW_CYCLES cycles${NC}"
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
 
 # Track which comments we've already processed
@@ -238,6 +358,9 @@ touch "$PROCESSED_COMMENTS_FILE"
 NO_COMMENTS_COUNT=0
 # Track if Claude has signaled all reviews are complete
 CLAUDE_SIGNALED_COMPLETE=false
+
+echo -e "${YELLOW}Waiting 8 minutes for Greptile to complete its review...${NC}"
+sleep $PR_REVIEW_INITIAL_WAIT
 
 for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
     echo ""
@@ -323,7 +446,7 @@ for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
 
     # Only wait if we haven't signaled completion
     if [ "$CLAUDE_SIGNALED_COMPLETE" = false ]; then
-        echo -e "${YELLOW}Waiting 3 minutes before next check...${NC}"
+        echo -e "${YELLOW}Waiting 5 minutes before next check...${NC}"
         sleep $PR_REVIEW_INTERVAL
     fi
 done
@@ -337,10 +460,17 @@ echo -e "${GREEN}╔════════════════════
 echo -e "${GREEN}║           Ralph Complete!                                  ║${NC}"
 echo -e "${GREEN}║                                                           ║${NC}"
 echo -e "${GREEN}║  ✓ All user stories implemented                          ║${NC}"
-echo -e "${GREEN}║  ✓ Tests passed (integration + E2E)                      ║${NC}"
+echo -e "${GREEN}║  ✓ Tests passed (integration)                            ║${NC}"
 echo -e "${GREEN}║  ✓ Pull request created: #$PR_NUMBER                              ║${NC}"
 echo -e "${GREEN}║  ✓ Greptile review cycles complete                        ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
+
+# Final commit — catch anything left behind (prd.json passes, progress.txt, etc.)
+commit_all_changes "chore: ralph post-run cleanup (final state)"
+
+# Push final changes
+echo -e "${YELLOW}Pushing final changes...${NC}"
+git push origin "$WORK_BRANCH" 2>&1 || true
 
 PR_URL=$(gh pr view "$PR_NUMBER" --json url --jq '.url')
 echo -e "${CYAN}PR URL: $PR_URL${NC}"
