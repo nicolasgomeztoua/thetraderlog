@@ -36,8 +36,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added 3 new enums (aiConversationStatus, aiConversationMode, aiReportStatus), updated aiConversations with status/mode/initialPrompt/dateRange/model columns, updated aiMessages with model/tokensUsed/toolCalls columns, created aiReports table with full schema, added relations and type exports, added aiReport ID generator."
     },
     {
       "id": "US-003",
@@ -56,8 +56,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/constants/ai.ts with DEFAULT_CHAT_MODEL (moonshotai/kimi-k2), DEFAULT_REPORT_MODEL (anthropic/claude-sonnet-4), AI_MODELS array (6 models), AI_MODES constant, MAX_CHAT_MESSAGES_PER_CONVERSATION (50), MAX_REPORT_TOKENS (100000), SUGGESTED_CHAT_QUERIES (8 queries), SUGGESTED_REPORT_PROMPTS (5 prompts). All exported via constants index."
     },
     {
       "id": "US-002",

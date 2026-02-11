@@ -187,6 +187,34 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
 - No aiReport ID generator exists in src/lib/shared/id.ts — needs to be added
 - The existing AI page is 100% client-side fake logic — entire thing needs replacing
 - createCallerFactory is already exported from root.ts for server-side caller creation
+- New AI enums: aiConversationStatusEnum, aiConversationModeEnum, aiReportStatusEnum
+- aiReports table uses ids.aiReport() prefix "ar"
+- aiConversations now has: status, mode, initialPrompt, dateRangeStart, dateRangeEnd, model
+- aiMessages now has: model, tokensUsed, toolCalls (JSON string)
 - S3 storage patterns exist in src/lib/storage/s3.ts — reuse for PDF uploads
 - Market data service exists at src/lib/market-data/service.ts — reuse for get_market_data tool
+---
+
+## 2026-02-11 - US-001: Update AI Schema — Conversations, Messages, Reports
+- What was implemented: Updated database schema for AI analytics system
+- Files changed:
+  - src/server/db/schema.ts — Added 3 new enums, updated aiConversations & aiMessages tables, created aiReports table, added relations and type exports
+  - src/lib/shared/id.ts — Added ids.aiReport() generator with "ar" prefix
+- **Learnings for future iterations:**
+  - Drizzle pgEnum values must be plain strings — no inline comments inside the array
+  - When adding new tables, remember to update ALL relevant relations (users, parent table, etc.)
+  - The `bun run check` has a pre-existing formatting issue in scripts/ralph/prd.command-center-dashboard.json — this is not a blocker for our changes
+  - db:push NOTICE about truncated FK names is expected (daily_checklist_check_template_id...) — safe to ignore
+---
+
+## 2026-02-11 - US-003: AI Constants and Model Configuration
+- What was implemented: Centralized AI constants file with model configuration, modes, limits, and suggested prompts
+- Files changed:
+  - src/lib/constants/ai.ts — New file with all AI constants
+  - src/lib/constants/index.ts — Added exports for AI constants
+- **Learnings for future iterations:**
+  - Constants index re-exports everything — add new constant files here for barrel import support
+  - AI_MODELS array has a `mode` field to filter models by chat/report/both in UI selectors
+  - DEFAULT_CHAT_MODEL and DEFAULT_REPORT_MODEL are separate strings used by the OpenRouter client
+  - SUGGESTED_CHAT_QUERIES and SUGGESTED_REPORT_PROMPTS are `as const` tuples for type safety
 ---
