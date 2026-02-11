@@ -259,3 +259,15 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Journal `content` is also HTML — strip and truncate for context (300 chars per entry)
   - `dailyJournals.date` is a timestamp normalized to midnight — use `gte` for 7-day lookback
 ---
+
+## 2026-02-11 - US-006: AI System Prompt — Trading Analyst Persona
+- What was implemented: System prompt builder with trading analyst persona and mode-specific instructions
+- Files changed:
+  - src/lib/ai/prompts/trading-analyst.ts — New file with buildSystemPrompt() function
+- **Learnings for future iterations:**
+  - System prompt is composed of 6 sections: persona, tool instructions, data handling notes, mode instructions, schema context, user context
+  - Chat mode instructions emphasize conciseness, prefer call_analytics over raw SQL
+  - Report mode instructions emphasize thoroughness, multi-tool usage, chart generation
+  - Tool instructions tell AI that SQL is auto-scoped via CTEs — no need for user_id WHERE clauses
+  - The buildSystemPrompt function takes {schemaContext, userContext, mode} — call generateSchemaContext() and buildUserContext() separately and pass results in
+---

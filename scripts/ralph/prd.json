@@ -140,8 +140,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/prompts/trading-analyst.ts with buildSystemPrompt({schemaContext, userContext, mode}) function. Persona: expert trading analyst and coach. Includes tool instructions for run_query (SQL auto-scoped via CTEs), call_analytics (tRPC endpoints), get_market_data (OHLC candles), run_python (sandbox execution). Chat mode: concise, conversational, prefer call_analytics over SQL. Report mode: thorough, multi-tool, charts, structured sections. Data handling notes: decimal string P&L, UTC timestamps, soft deletes, breakeven threshold."
     },
     {
       "id": "US-007",
