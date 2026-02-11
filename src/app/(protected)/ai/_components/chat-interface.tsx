@@ -1,13 +1,68 @@
 "use client";
 
-import { Brain, Loader2, Send } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+	BarChart3,
+	Brain,
+	Code2,
+	Database,
+	Loader2,
+	Send,
+	Zap,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
 import { api } from "@/trpc/react";
 import { MessageRenderer } from "./message-renderer";
+
+// =============================================================================
+// TOOL CALL DISPLAY HELPERS
+// =============================================================================
+
+/** Map tool names to user-friendly labels and icons */
+const TOOL_LABELS: Record<string, { label: string; icon: typeof Database }> = {
+	run_query: { label: "Running SQL", icon: Database },
+	call_analytics: { label: "Analyzing data", icon: BarChart3 },
+	get_market_data: { label: "Fetching market data", icon: Zap },
+	run_python: { label: "Generating chart", icon: Code2 },
+};
+
+type ParsedToolCall = {
+	id: string;
+	function: { name: string; arguments: string };
+};
+
+/** Parse tool calls JSON from an assistant message */
+function parseToolCalls(toolCallsJson: string | null): ParsedToolCall[] {
+	if (!toolCallsJson) return [];
+	try {
+		const parsed = JSON.parse(toolCallsJson);
+		if (Array.isArray(parsed)) return parsed as ParsedToolCall[];
+	} catch {
+		// Invalid JSON
+	}
+	return [];
+}
+
+/** Get unique tool names from tool calls */
+function getUniqueToolNames(toolCalls: ParsedToolCall[]): string[] {
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const tc of toolCalls) {
+		const name = tc.function?.name;
+		if (name && !seen.has(name)) {
+			seen.add(name);
+			result.push(name);
+		}
+	}
+	return result;
+}
+
+// =============================================================================
+// CHAT INTERFACE
+// =============================================================================
 
 interface ChatInterfaceProps {
 	model: string;
@@ -19,6 +74,7 @@ export function ChatInterface({ model, ...props }: ChatInterfaceProps) {
 		string | null
 	>(null);
 	const [input, setInput] = useState("");
+	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const utils = api.useUtils();
@@ -44,10 +100,14 @@ export function ChatInterface({ model, ...props }: ChatInterfaceProps) {
 
 	const sendMessage = api.ai.sendMessage.useMutation({
 		onSuccess: () => {
+			setPendingMessage(null);
 			void utils.ai.getConversation.invalidate({
 				conversationId: activeConversationId ?? "",
 			});
 			void utils.ai.listConversations.invalidate();
+		},
+		onError: () => {
+			setPendingMessage(null);
 		},
 	});
 
@@ -60,19 +120,20 @@ export function ChatInterface({ model, ...props }: ChatInterfaceProps) {
 
 	const messageCount = conversation?.messages?.length ?? 0;
 
-	// Auto-scroll to bottom on new messages
-	// biome-ignore lint/correctness/useExhaustiveDependencies: messageCount triggers scroll on new messages
+	// Auto-scroll to bottom on new messages or when pending message changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: messageCount and pendingMessage trigger scroll on new messages
 	useEffect(() => {
 		if (scrollRef.current) {
 			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
 		}
-	}, [messageCount]);
+	}, [messageCount, pendingMessage]);
 
-	const handleSend = async () => {
+	const handleSend = useCallback(async () => {
 		const content = input.trim();
 		if (!content) return;
 
 		setInput("");
+		setPendingMessage(content);
 
 		// Create conversation if needed
 		let conversationId = activeConversationId;
@@ -88,7 +149,7 @@ export function ChatInterface({ model, ...props }: ChatInterfaceProps) {
 			conversationId,
 			content,
 		});
-	};
+	}, [input, activeConversationId, model, createConversation, sendMessage]);
 
 	const handleSuggestedQuery = (query: string) => {
 		setInput(query);
@@ -96,6 +157,7 @@ export function ChatInterface({ model, ...props }: ChatInterfaceProps) {
 
 	const handleNewConversation = () => {
 		setActiveConversationId(null);
+		setPendingMessage(null);
 	};
 
 	const messages = conversation?.messages ?? [];
@@ -221,36 +283,97 @@ export function ChatInterface({ model, ...props }: ChatInterfaceProps) {
 						</div>
 					) : (
 						<div className="space-y-3 sm:space-y-4">
-							{messages.map((message) => (
-								<div className="flex gap-2 sm:gap-3" key={message.id}>
+							{messages.map((message) => {
+								const toolCalls =
+									message.role === "assistant"
+										? parseToolCalls(message.toolCalls)
+										: [];
+								const toolNames = getUniqueToolNames(toolCalls);
+
+								return (
+									<div className="flex gap-2 sm:gap-3" key={message.id}>
+										<span className="mt-0.5 font-mono text-muted-foreground text-xs sm:text-sm">
+											{message.role === "user" ? "$" : "\u2192"}
+										</span>
+										<div className="min-w-0 flex-1">
+											{message.role === "assistant" && toolNames.length > 0 && (
+												<div
+													className="mb-1.5 flex flex-wrap gap-1"
+													data-testid="chat-tool-indicators"
+												>
+													{toolNames.map((name) => {
+														const tool = TOOL_LABELS[name];
+														const Icon = tool?.icon ?? Zap;
+														return (
+															<span
+																className="inline-flex items-center gap-1 rounded bg-[#00d4ff]/10 px-1.5 py-0.5 font-mono text-[#00d4ff] text-[10px]"
+																data-testid={`chat-tool-badge-${name}`}
+																key={name}
+															>
+																<Icon className="size-2.5" />
+																{tool?.label ?? name}
+															</span>
+														);
+													})}
+												</div>
+											)}
+											{message.role === "assistant" ? (
+												<MessageRenderer content={message.content} />
+											) : (
+												<p className="break-words font-mono text-primary text-xs sm:text-sm">
+													{message.content}
+												</p>
+											)}
+										</div>
+									</div>
+								);
+							})}
+							{/* Optimistic pending user message */}
+							{pendingMessage && (
+								<div className="flex gap-2 sm:gap-3">
 									<span className="mt-0.5 font-mono text-muted-foreground text-xs sm:text-sm">
-										{message.role === "user" ? "$" : "→"}
+										$
 									</span>
 									<div className="min-w-0 flex-1">
-										{message.role === "assistant" ? (
-											<MessageRenderer content={message.content} />
-										) : (
-											<p className="break-words font-mono text-primary text-xs sm:text-sm">
-												{message.content}
-											</p>
-										)}
+										<p className="break-words font-mono text-primary/60 text-xs sm:text-sm">
+											{pendingMessage}
+										</p>
 									</div>
 								</div>
-							))}
+							)}
 							{isLoading && (
 								<div
 									className="flex gap-2 sm:gap-3"
 									data-testid="chat-loading-indicator"
 								>
 									<span className="mt-0.5 font-mono text-muted-foreground text-xs sm:text-sm">
-										→
+										{"\u2192"}
 									</span>
-									<div className="flex items-center gap-2">
-										<Loader2 className="h-3 w-3 animate-spin text-[#00d4ff] sm:h-3.5 sm:w-3.5" />
-										<span className="font-mono text-muted-foreground text-xs sm:text-sm">
-											Analyzing trades
-											<span className="animate-blink">_</span>
-										</span>
+									<div className="flex flex-col gap-1.5">
+										<div className="flex items-center gap-2">
+											<Loader2 className="h-3 w-3 animate-spin text-[#00d4ff] sm:h-3.5 sm:w-3.5" />
+											<span className="font-mono text-muted-foreground text-xs sm:text-sm">
+												Analyzing trades
+												<span className="animate-blink">_</span>
+											</span>
+										</div>
+										<div
+											className="flex flex-wrap gap-1"
+											data-testid="chat-loading-tools"
+										>
+											<span className="inline-flex items-center gap-1 rounded bg-[#00d4ff]/5 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+												<Database className="size-2.5" />
+												Running SQL
+											</span>
+											<span className="inline-flex items-center gap-1 rounded bg-[#00d4ff]/5 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+												<BarChart3 className="size-2.5" />
+												Analyzing data
+											</span>
+											<span className="inline-flex items-center gap-1 rounded bg-[#00d4ff]/5 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+												<Code2 className="size-2.5" />
+												Generating chart
+											</span>
+										</div>
 									</div>
 								</div>
 							)}

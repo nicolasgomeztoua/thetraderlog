@@ -406,8 +406,8 @@
         "Verify in browser"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Redesigned src/app/(protected)/ai/page.tsx as layout wrapper with mode switcher (Chat/Report) and model selector dropdown. Mode dropdown uses AI_MODES constant, model selector filters AI_MODELS by current mode. Chat mode renders ChatInterface component (with conversation sidebar, message history, suggested queries, terminal-style input). Report mode renders ReportInterface component (with prompt textarea, date range pickers, suggested prompts, report history with status badges and PDF download). All interactive elements have data-testid attributes. Responsive design: sidebar hidden on mobile, controls stack vertically. Terminal design: monospace fonts, chartreuse accent, ice blue for AI features."
     },
     {
       "id": "US-019",
@@ -432,8 +432,8 @@
         "Verify in browser"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Enhanced chat-interface.tsx with tool call indicators: TOOL_LABELS map (run_query→Running SQL, call_analytics→Analyzing data, get_market_data→Fetching market data, run_python→Generating chart) with lucide icons (Database, BarChart3, Zap, Code2). parseToolCalls/getUniqueToolNames helpers parse toolCalls JSON from assistant messages. Tool badges shown as ice-blue chips above assistant responses. Optimistic pending user message with dimmed text while waiting for AI. Loading indicator shows tool capability badges (Running SQL, Analyzing data, Generating chart). handleSend wrapped in useCallback. All data-testid attributes present: chat-tool-indicators, chat-tool-badge-{name}, chat-loading-tools."
     },
     {
       "id": "US-020",

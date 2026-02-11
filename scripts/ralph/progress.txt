@@ -444,3 +444,31 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Memoize with React.memo since markdown content doesn't change after initial render
   - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY/RESEND_API_KEY env vars
 ---
+
+## 2026-02-11 - US-018: AI Page Layout with Mode Switcher
+- What was implemented: Redesigned AI page as layout wrapper with mode switcher and model selector, plus ChatInterface and ReportInterface components
+- Files changed:
+  - src/app/(protected)/ai/page.tsx — Rewrote as layout wrapper with mode dropdown (Chat/Report), model selector, and conditional rendering of ChatInterface/ReportInterface
+  - src/app/(protected)/ai/_components/chat-interface.tsx — New file with conversation sidebar, message history using MessageRenderer, suggested queries, terminal-style input, tRPC mutations for create/send/delete conversations
+  - src/app/(protected)/ai/_components/report-interface.tsx — New file with prompt textarea, date range pickers, suggested prompts, report generation via startReport mutation, report history list with status badges and PDF download
+- **Learnings for future iterations:**
+  - `AI_MODELS` has a `mode` field — filter with `m.mode === currentMode || m.mode === "both"` to get models available for current mode
+  - When switching modes, reset the model to the default for the new mode (DEFAULT_CHAT_MODEL vs DEFAULT_REPORT_MODEL)
+  - `startReport` expects `dateRangeStart`/`dateRangeEnd` as ISO datetime strings (z.string().datetime()), not Date objects — use `.toISOString()`
+  - Biome's `useExhaustiveDependencies` flags `messageCount` as extra dependency in scroll effect — use `biome-ignore` directive since it's an intentional trigger
+  - `Record<string, T>` index access returns `T | undefined` in strict TypeScript — use a separate `DEFAULT_STATUS` constant as fallback instead of `STATUS_LABELS.queued`
+  - Pre-existing build failures from missing DAYTONA_API_KEY/RESEND_API_KEY env vars still present — not introduced by our changes
+---
+
+## 2026-02-11 - US-019: Chat Mode Interface
+- What was implemented: Enhanced ChatInterface with tool call indicators, optimistic pending messages, and loading state tool badges
+- Files changed:
+  - src/app/(protected)/ai/_components/chat-interface.tsx — Added TOOL_LABELS map, parseToolCalls/getUniqueToolNames helpers, tool call badges on assistant messages, optimistic pending user message, enhanced loading indicator with tool capability badges
+- **Learnings for future iterations:**
+  - `aiMessages.toolCalls` is a JSON string of ToolCall[] — parse with JSON.parse and validate as array
+  - Tool call badges use ice-blue bg-[#00d4ff]/10 with text-[#00d4ff] — matches AI feature accent
+  - Optimistic pending messages show with text-primary/60 (dimmed) to differentiate from confirmed messages
+  - `useCallback` on handleSend prevents unnecessary re-renders of child components receiving it as prop
+  - Loading indicator tool badges use bg-[#00d4ff]/5 (lighter) for muted/subtle appearance vs bg-[#00d4ff]/10 for actual tool call badges
+  - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY/RESEND_API_KEY env vars
+---
