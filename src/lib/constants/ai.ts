@@ -105,6 +105,26 @@ export const MAX_CHAT_MESSAGES_PER_CONVERSATION = 50;
  */
 export const MAX_REPORT_TOKENS = 100_000;
 
+/**
+ * Maximum tool-calling rounds per chat message
+ */
+export const MAX_TOOL_ROUNDS_CHAT = 10;
+
+/**
+ * Maximum tool-calling rounds per report generation (more than chat)
+ */
+export const MAX_TOOL_ROUNDS_REPORT = 20;
+
+/**
+ * Maximum rows returned from AI SQL queries
+ */
+export const MAX_SQL_QUERY_ROWS = 500;
+
+/**
+ * Maximum OHLC bars returned from market data tool
+ */
+export const MAX_MARKET_DATA_BARS = 1000;
+
 // =============================================================================
 // SUGGESTED QUERIES & PROMPTS
 // =============================================================================

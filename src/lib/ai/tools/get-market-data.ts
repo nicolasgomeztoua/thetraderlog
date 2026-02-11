@@ -1,4 +1,5 @@
 import type { ToolDefinition } from "@/lib/ai/client";
+import { MAX_MARKET_DATA_BARS } from "@/lib/constants/ai";
 import {
 	type CacheInterval,
 	getOHLCForTimeRange,
@@ -55,7 +56,7 @@ export const getMarketDataToolDefinition: ToolDefinition = {
 // CONSTANTS
 // =============================================================================
 
-const MAX_BARS = 1000;
+const MAX_BARS = MAX_MARKET_DATA_BARS;
 
 const VALID_INTERVALS = new Set<string>([
 	"1min",

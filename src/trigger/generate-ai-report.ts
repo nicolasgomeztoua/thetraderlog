@@ -11,6 +11,7 @@ import { sendReportEmail } from "@/lib/ai/report-email";
 import { generateReportPdf } from "@/lib/ai/report-pdf";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
+import { MAX_TOOL_ROUNDS_REPORT } from "@/lib/constants/ai";
 import { db } from "@/server/db";
 import {
 	aiConversations,
@@ -18,13 +19,6 @@ import {
 	aiReports,
 	users,
 } from "@/server/db/schema";
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Maximum tool-calling rounds for report generation (more than chat's 10) */
-const MAX_TOOL_ROUNDS = 20;
 
 // =============================================================================
 // HELPERS
@@ -235,7 +229,7 @@ export const generateAiReport = task({
 			let totalTokensUsed = 0;
 			const allToolCalls: ToolCall[] = [];
 
-			for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+			for (let round = 0; round < MAX_TOOL_ROUNDS_REPORT; round++) {
 				const response = await chatCompletion({
 					model: payload.model,
 					messages: chatMessages,

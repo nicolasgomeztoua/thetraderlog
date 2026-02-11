@@ -13,17 +13,11 @@ import {
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
+	MAX_TOOL_ROUNDS_CHAT,
 } from "@/lib/constants/ai";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
 import { generateAiReport } from "@/trigger/generate-ai-report";
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Maximum tool-calling rounds per sendMessage to prevent infinite loops */
-const MAX_TOOL_ROUNDS = 10;
 
 // =============================================================================
 // AI ROUTER (Chat + Report Endpoints)
@@ -141,7 +135,7 @@ export const aiRouter = createTRPCRouter({
 			let totalTokensUsed = 0;
 			let toolCallsSummary: ToolCall[] = [];
 
-			for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+			for (let round = 0; round < MAX_TOOL_ROUNDS_CHAT; round++) {
 				const response = await chatCompletion({
 					model,
 					messages: chatMessages,
