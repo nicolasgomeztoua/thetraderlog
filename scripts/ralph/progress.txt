@@ -334,3 +334,35 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Ephemeral sandboxes (`ephemeral: true`) auto-delete when stopped — good for one-shot execution
   - S3 fallback to data URIs (`data:image/png;base64,...`) ensures images work even without S3 configured
 ---
+
+## 2026-02-11 - US-011: AI Tool Registry and Executor
+- What was implemented: Unified tool registry (AI_TOOLS array) and executeTool dispatcher
+- Files changed:
+  - src/lib/ai/tools/index.ts — New file with AI_TOOLS array and executeTool() function
+  - scripts/ralph/prd.json — Marked US-011 as passes: true
+- **Learnings for future iterations:**
+  - The tool registry is a simple switch-case dispatch — no complex plugin system needed
+  - `executeTool` takes a `ToolContext` with `userId` (required) and `db` (optional) — only run_query needs db
+  - Each tool validates its own required parameters before calling the underlying executor
+  - Unknown tool names return `{ success: false, error: "Unknown tool..." }` — never throws
+  - The AI_TOOLS array is what gets passed as `tools` parameter to the OpenRouter API
+  - Pre-existing issues: Biome error in scripts/ralph/prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY env var — neither introduced by our changes
+---
+
+## 2026-02-11 - US-012: AI tRPC Router — Chat Endpoints
+- What was implemented: Full AI tRPC router with 5 chat endpoints and tool-calling loop
+- Files changed:
+  - src/server/api/routers/ai.ts — New file with createConversation, sendMessage, getConversation, listConversations, deleteConversation
+  - src/server/api/root.ts — Registered ai router in appRouter
+  - scripts/ralph/prd.json — Marked US-012 as passes: true
+- **Learnings for future iterations:**
+  - `chatCompletion` returns `ChatCompletionResponse` with `choices[0].message` — check `tool_calls` array to determine if more rounds needed
+  - Tool-calling loop pattern: call model → check for tool_calls → execute tools → push assistant + tool messages → repeat
+  - Assistant message with tool_calls must be pushed to context BEFORE tool results (OpenAI format requires this order)
+  - Tool results use `role: "tool"` with `tool_call_id` matching the originating tool call ID
+  - Conversation title auto-set from first user message (truncated to 100 chars)
+  - `generateSchemaContext()` is synchronous (returns string) — wrap in Promise.resolve for Promise.all
+  - `MAX_TOOL_ROUNDS = 10` prevents infinite tool-calling loops; fallback message saved if exhausted
+  - `orderBy: [aiMessages.createdAt]` (ascending) for message history; `desc(aiConversations.createdAt)` for conversation list
+  - Drizzle `with: { messages: { orderBy } }` pattern used in getConversation for eager loading with sort
+---

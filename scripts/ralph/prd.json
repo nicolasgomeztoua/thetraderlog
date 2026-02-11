@@ -240,8 +240,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/tools/index.ts with AI_TOOLS array (run_query, call_analytics, get_market_data, run_python) and executeTool dispatcher. Switch-based dispatch validates required parameters per tool, passes context (userId, db) appropriately. Unknown tool names return graceful error. Standardized { success, data?, error? } return type."
     },
     {
       "id": "US-012",
@@ -262,8 +262,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/server/api/routers/ai.ts with 5 chat endpoints: createConversation (mutation), sendMessage (mutation with full tool-calling loop), getConversation (query with messages), listConversations (paginated query), deleteConversation (mutation). All use protectedProcedure with user ownership validation. sendMessage implements multi-round tool-calling loop (up to 10 rounds): builds system prompt via buildSystemPrompt + generateSchemaContext + buildUserContext, sends to OpenRouter via chatCompletion, executes tool_calls via executeTool, feeds results back until text response. Saves all messages to aiMessages table. Auto-sets conversation title from first user message. Registered ai router in root.ts."
     },
     {
       "id": "US-013",
