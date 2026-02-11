@@ -297,3 +297,16 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - The tool doesn't need `db` injected because `createTRPCContext` uses the default db when no override is given
   - Biome auto-format: `bunx biome check --write <file>` is faster than manual fixes
 ---
+
+## 2026-02-11 - US-009: AI Tool — get_market_data (Candle Data for Price Analysis)
+- What was implemented: Market data fetching tool for AI to analyze price action
+- Files changed:
+  - src/lib/ai/tools/get-market-data.ts — New file with tool definition and executor
+  - scripts/ralph/prd.json — Marked US-009 as passes: true
+- **Learnings for future iterations:**
+  - The existing `getOHLCForTimeRange` in `src/lib/market-data/service.ts` handles multi-day fetching, caching, and provider routing — no need to reimplement
+  - `CacheInterval` type is `"1min" | "5min" | "15min" | "30min" | "1h" | "4h"` — use this for validation
+  - Market data tool doesn't need userId — OHLC data is not user-scoped (shared candle cache)
+  - Bar timestamps from the service are Unix milliseconds — convert to ISO strings for AI readability
+  - `dataQuality` field from CacheResult is useful to pass through so AI knows if data was fully available
+---

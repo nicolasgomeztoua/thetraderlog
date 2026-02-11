@@ -199,8 +199,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/tools/get-market-data.ts with getMarketDataToolDefinition (OpenAI function-calling format) and executeGetMarketData(symbol, interval, startDate, endDate). Uses existing getOHLCForTimeRange from market data service (Databento for futures, Twelve Data for forex). Validates interval (1min/5min/15min/30min/1h/4h), parses ISO 8601 dates, limits results to 1000 bars. Returns bars with ISO timestamp strings, OHLCV values, bar count, and data quality indicator."
     },
     {
       "id": "US-010",
