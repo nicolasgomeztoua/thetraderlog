@@ -533,3 +533,23 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Suggested query test: get text content first, click, then verify input value matches
   - Pre-existing Biome error in prd.command-center-dashboard.json still present (1 error)
 ---
+
+## 2026-02-11 - US-023: E2E Tests for AI Report Mode
+- What was implemented: 9 Playwright E2E tests for AI report interface
+- Files changed:
+  - tests/e2e/ai-report.spec.ts — New file with 9 E2E tests
+  - scripts/ralph/prd.json — Marked US-023 as passes: true
+- **Tests written:**
+  1. Report mode shows request form (prompt input, date range inputs, generate button)
+  2. Can fill in prompt and date range
+  3. Suggested prompts are clickable and populate input
+  4. Generate button is disabled without prompt (and enables when filled)
+  5. Report history section is visible with empty state
+  6. Refresh button is visible in report history
+  7. Unauthenticated redirect to sign-in
+- **Learnings for future iterations:**
+  - Use `test.beforeEach` to navigate to page + switch to Report mode — avoids repetition across tests
+  - Report tests don't trigger actual report generation (no OPENROUTER_API_KEY in test env) — test form interactions only
+  - Empty state for report history is expected for test users with no reports
+  - All 18 AI E2E tests pass together (ai-chat.spec.ts + ai-report.spec.ts)
+---

@@ -511,8 +511,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "9 E2E tests covering: report mode shows request form (prompt, date range, generate button), can fill in prompt and date range, suggested prompts are clickable and populate input, generate button disabled without prompt, report history visible with empty state, refresh button visible, unauthenticated redirect. All 18 total AI E2E tests pass (11 chat + 9 report, some overlap in auth tests)."
     }
   ]
 }
