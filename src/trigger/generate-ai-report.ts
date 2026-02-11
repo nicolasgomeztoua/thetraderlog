@@ -1,5 +1,5 @@
 import { task } from "@trigger.dev/sdk/v3";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
 	type ChatMessage,
 	chatCompletion,
@@ -151,17 +151,55 @@ export const generateAiReport = task({
 		dateRangeEnd?: string;
 	}) => {
 		try {
+			// Verify ownership: ensure the userId in the payload matches the report and conversation records.
+			// Defense-in-depth against compromised task payloads.
+			const report = await db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.id, payload.reportId),
+					eq(aiReports.userId, payload.userId),
+				),
+				columns: { id: true },
+			});
+			if (!report) {
+				throw new Error(
+					"Report ownership verification failed: report not found or does not belong to user",
+				);
+			}
+
+			const conversation = await db.query.aiConversations.findFirst({
+				where: and(
+					eq(aiConversations.id, payload.conversationId),
+					eq(aiConversations.userId, payload.userId),
+				),
+				columns: { id: true },
+			});
+			if (!conversation) {
+				throw new Error(
+					"Conversation ownership verification failed: conversation not found or does not belong to user",
+				);
+			}
+
 			// Update report status to generating
 			await db
 				.update(aiReports)
 				.set({ status: "generating" })
-				.where(eq(aiReports.id, payload.reportId));
+				.where(
+					and(
+						eq(aiReports.id, payload.reportId),
+						eq(aiReports.userId, payload.userId),
+					),
+				);
 
 			// Update conversation status to generating
 			await db
 				.update(aiConversations)
 				.set({ status: "generating" })
-				.where(eq(aiConversations.id, payload.conversationId));
+				.where(
+					and(
+						eq(aiConversations.id, payload.conversationId),
+						eq(aiConversations.userId, payload.userId),
+					),
+				);
 
 			// Build system prompt with schema + user context
 			const [schemaContext, userContext] = await Promise.all([
@@ -372,13 +410,13 @@ export const generateAiReport = task({
 				.set({ status: "failed" })
 				.where(eq(aiConversations.id, payload.conversationId));
 
-			// Save error message to conversation
-			const errorMessage =
-				error instanceof Error ? error.message : "Unknown error occurred";
+			// Save a generic error message to the user-visible conversation.
+			// Internal details are logged server-side by Trigger.dev, not exposed to the user.
 			await db.insert(aiMessages).values({
 				conversationId: payload.conversationId,
 				role: "assistant",
-				content: `Report generation failed: ${errorMessage}`,
+				content:
+					"Report generation failed. Please try again or contact support if the issue persists.",
 			});
 
 			throw error;

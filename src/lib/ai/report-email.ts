@@ -138,10 +138,13 @@ export async function sendReportEmail(params: {
 
 	const resend = getResendClient();
 
+	// Sanitize subject to prevent email header injection via newlines
+	const safeTitle = reportTitle.replace(/[\r\n]/g, " ").trim();
+
 	await resend.emails.send({
 		from: "EdgeJournal <reports@edgejournal.com>",
 		to,
-		subject: `Report Ready: ${reportTitle}`,
+		subject: `Report Ready: ${safeTitle}`,
 		html: buildReportEmailHtml({ reportTitle, downloadUrl }),
 	});
 }

@@ -50,6 +50,9 @@ const BLOCKED_PATTERNS = [
 	/\bINSERT\s+INTO\b/i,
 	/\bDELETE\s+FROM\b/i,
 	/\bUPDATE\s+\S+\s+SET\b/i,
+	/\bSELECT\s+INTO\b/i,
+	/\bINTO\s+TEMP\b/i,
+	/\bINTO\s+TEMPORARY\b/i,
 	/\bDROP\b/i,
 	/\bALTER\b/i,
 	/\bTRUNCATE\b/i,
@@ -64,7 +67,49 @@ const BLOCKED_PATTERNS = [
 	/\bNOTIFY\b/i,
 	/\bLISTEN\b/i,
 	/\bUNLISTEN\b/i,
+	/\bEXECUTE\b/i,
+	/\bDO\s+\$/i,
 ] as const;
+
+/**
+ * Dangerous PostgreSQL functions that must never appear in user queries.
+ * These can read the server filesystem, cause DoS, or modify configuration.
+ */
+const BLOCKED_FUNCTIONS = [
+	/\bpg_read_file\s*\(/i,
+	/\bpg_read_binary_file\s*\(/i,
+	/\bpg_ls_dir\s*\(/i,
+	/\bpg_sleep\s*\(/i,
+	/\blo_import\s*\(/i,
+	/\blo_export\s*\(/i,
+	/\bdblink\s*\(/i,
+	/\bset_config\s*\(/i,
+	/\bpg_notify\s*\(/i,
+	/\bpg_terminate_backend\s*\(/i,
+	/\bpg_cancel_backend\s*\(/i,
+] as const;
+
+/**
+ * Allowed table names in FROM/JOIN clauses. Only user-scoped CTE aliases are permitted.
+ * This prevents cross-tenant data access via raw table names.
+ */
+const ALLOWED_TABLE_NAMES = new Set([
+	"user_trades",
+	"user_accounts",
+	"user_account_groups",
+	"user_tags",
+	"user_strategies",
+	"user_strategy_rules",
+	"user_trade_tags",
+	"user_executions",
+	"user_journals",
+	"user_settings",
+	"user_conversations",
+	"user_reports",
+	"user_trade_rule_checks",
+	"user_trade_attachments",
+	"user_filter_presets",
+]);
 
 const MAX_ROWS = 500;
 
@@ -121,6 +166,11 @@ function validateQuery(query: string): string | null {
 		return "Only SELECT queries are allowed. Query must start with SELECT or WITH.";
 	}
 
+	// Block dollar-quoting (used for PL/pgSQL code blocks)
+	if (/\$[a-zA-Z_]*\$/.test(trimmed)) {
+		return "Dollar-quoted strings are not allowed in queries.";
+	}
+
 	// Strip string literals and comments to avoid false positives
 	const sanitized = trimmed
 		.replace(/'[^']*'/g, "''") // Remove string contents
@@ -134,10 +184,54 @@ function validateQuery(query: string): string | null {
 		}
 	}
 
+	// Check for dangerous function calls
+	for (const pattern of BLOCKED_FUNCTIONS) {
+		if (pattern.test(sanitized)) {
+			return "Dangerous function call detected. This function is not allowed.";
+		}
+	}
+
 	// Block multiple statements (semicolons followed by more SQL)
 	const statements = sanitized.split(";").filter((s) => s.trim());
 	if (statements.length > 1) {
 		return "Multiple SQL statements are not allowed. Send one SELECT query at a time.";
+	}
+
+	// Validate that all FROM/JOIN table references use allowed CTE aliases only.
+	// This prevents cross-tenant data access via raw table names.
+	const tableRefError = validateTableReferences(sanitized);
+	if (tableRefError) {
+		return tableRefError;
+	}
+
+	return null;
+}
+
+/**
+ * Validates that all table references in FROM and JOIN clauses use only
+ * the user-scoped CTE aliases. Prevents direct access to raw tables
+ * which would bypass user scoping and expose other users' data.
+ */
+function validateTableReferences(sanitized: string): string | null {
+	// Match table names after FROM and JOIN keywords.
+	// Captures: FROM table_name, JOIN table_name, LEFT JOIN table_name, etc.
+	// Ignores subqueries (opening parenthesis) and the _result wrapper alias.
+	const tableRefRegex =
+		/\b(?:FROM|JOIN)\s+(?![\s(])([a-zA-Z_][a-zA-Z0-9_]*)/gi;
+
+	for (const match of sanitized.matchAll(tableRefRegex)) {
+		const tableName = match[1]?.toLowerCase();
+		if (!tableName) continue;
+
+		// Skip the wrapper alias used by buildScopedQuery
+		if (tableName === "_result") continue;
+
+		// Skip SQL keywords that can appear after FROM/JOIN
+		if (tableName === "select" || tableName === "lateral") continue;
+
+		if (!ALLOWED_TABLE_NAMES.has(tableName)) {
+			return `Table "${tableName}" is not allowed. Use the user-scoped aliases: ${[...ALLOWED_TABLE_NAMES].join(", ")}.`;
+		}
 	}
 
 	return null;
