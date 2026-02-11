@@ -282,8 +282,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added 4 report endpoints to ai router: startReport (mutation — creates conversation in report mode, saves initial prompt as first aiMessage, creates aiReport record, triggers generateAiReport Trigger.dev task), getReport (query — returns report with conversation and messages via nested relations), listReports (paginated query — most recent first), getReportStatus (lightweight query — returns only status/pdfUrl/tokensUsed/completedAt for polling). Created Trigger.dev task stub at src/trigger/generate-ai-report.ts (full implementation in US-015). All procedures use protectedProcedure with user ownership validation."
     },
     {
       "id": "US-014",
@@ -303,8 +303,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "23 integration tests covering: createConversation (chat + report modes, default model), sendMessage (mock OpenRouter, title setting, title truncation, ownership rejection), getConversation (with messages, ownership rejection), listConversations (user isolation, ordering), deleteConversation (cascade delete, ownership rejection), startReport (creation, default model, custom title, auto-title), getReport (with conversation/messages, ownership rejection), getReportStatus (lightweight fields, ownership rejection), listReports (user isolation), authentication (unauthenticated rejection). All 853 tests pass."
     },
     {
       "id": "US-015",
@@ -325,8 +325,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented full Trigger.dev report generation task in src/trigger/generate-ai-report.ts. Multi-turn tool-calling loop (up to 20 rounds) using chatCompletion, AI_TOOLS, and executeTool. Status lifecycle: queued → generating → complete/failed. Saves all messages to aiMessages table. Tracks total tokens across rounds. Date range augmentation appended to prompt. Error handling: catches all errors, marks report/conversation as failed, saves error message to conversation."
     },
     {
       "id": "US-016",
@@ -345,8 +345,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/report-pdf.ts with generateReportPdf() using @react-pdf/renderer. Terminal design theme (dark bg #050505, chartreuse #d4ff00 accents, Courier monospace). Markdown-to-PDF parser handles headings, paragraphs, bold/italic/code inline, lists, code blocks, tables, and horizontal rules. Embeds chart images from tool call results. Code appendix section for artifacts. Uploads PDF to S3 (Cloudflare R2) via presigned PUT URL with 7-day download URL. Updates aiReports record with pdfUrl and pdfKey. Integrated into Trigger.dev task with extractChartUrls/extractCodeArtifacts helpers — called in both normal and fallback completion paths."
     },
     {
       "id": "US-017",

@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
 import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
+import { generateReportPdf } from "@/lib/ai/report-pdf";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
 import { db } from "@/server/db";
@@ -18,6 +19,86 @@ import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
 
 /** Maximum tool-calling rounds for report generation (more than chat's 10) */
 const MAX_TOOL_ROUNDS = 20;
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Extract chart image URLs from tool call results in the message history.
+ * Charts are produced by run_python tool and stored in the result's data.images array.
+ */
+function extractChartUrls(messages: ChatMessage[]): string[] {
+	const urls: string[] = [];
+	for (const msg of messages) {
+		if (msg.role !== "tool") continue;
+		try {
+			const parsed = JSON.parse(msg.content ?? "{}");
+			if (parsed.data?.images && Array.isArray(parsed.data.images)) {
+				for (const url of parsed.data.images) {
+					if (typeof url === "string" && url.length > 0) {
+						urls.push(url);
+					}
+				}
+			}
+		} catch {
+			// Not valid JSON, skip
+		}
+	}
+	return urls;
+}
+
+/**
+ * Extract code artifacts from tool call results (run_python stdout output).
+ */
+function extractCodeArtifacts(messages: ChatMessage[]): string[] {
+	const artifacts: string[] = [];
+	for (const msg of messages) {
+		if (msg.role !== "tool") continue;
+		try {
+			const parsed = JSON.parse(msg.content ?? "{}");
+			if (
+				parsed.data?.artifacts &&
+				Array.isArray(parsed.data.artifacts) &&
+				parsed.data.artifacts.length > 0
+			) {
+				artifacts.push(...parsed.data.artifacts);
+			}
+		} catch {
+			// Not valid JSON, skip
+		}
+	}
+	return artifacts;
+}
+
+/**
+ * Generate PDF and update the report record with pdfUrl and pdfKey.
+ */
+async function generateAndUploadPdf(
+	reportId: string,
+	title: string,
+	content: string,
+	chatMessages: ChatMessage[],
+	dateRange?: { start?: string; end?: string },
+): Promise<void> {
+	const charts = extractChartUrls(chatMessages);
+	const codeArtifacts = extractCodeArtifacts(chatMessages);
+
+	const result = await generateReportPdf({
+		title,
+		content,
+		charts,
+		codeArtifacts,
+		dateRange,
+	});
+
+	if (result) {
+		await db
+			.update(aiReports)
+			.set({ pdfUrl: result.pdfUrl, pdfKey: result.pdfKey })
+			.where(eq(aiReports.id, reportId));
+	}
+}
 
 // =============================================================================
 // TASK
@@ -125,6 +206,22 @@ export const generateAiReport = task({
 							allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
 					});
 
+					// Generate PDF from report content
+					const reportRecord = await db.query.aiReports.findFirst({
+						where: eq(aiReports.id, payload.reportId),
+						columns: { title: true },
+					});
+					await generateAndUploadPdf(
+						payload.reportId,
+						reportRecord?.title ?? payload.prompt,
+						finalContent,
+						chatMessages,
+						{
+							start: payload.dateRangeStart,
+							end: payload.dateRangeEnd,
+						},
+					);
+
 					// Update report as complete
 					await db
 						.update(aiReports)
@@ -194,6 +291,22 @@ export const generateAiReport = task({
 				toolCalls:
 					allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
 			});
+
+			// Generate PDF from fallback content
+			const reportRecord = await db.query.aiReports.findFirst({
+				where: eq(aiReports.id, payload.reportId),
+				columns: { title: true },
+			});
+			await generateAndUploadPdf(
+				payload.reportId,
+				reportRecord?.title ?? payload.prompt,
+				fallbackContent,
+				chatMessages,
+				{
+					start: payload.dateRangeStart,
+					end: payload.dateRangeEnd,
+				},
+			);
 
 			// Still mark as complete since we have partial results
 			await db

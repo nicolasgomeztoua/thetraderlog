@@ -366,3 +366,49 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - `orderBy: [aiMessages.createdAt]` (ascending) for message history; `desc(aiConversations.createdAt)` for conversation list
   - Drizzle `with: { messages: { orderBy } }` pattern used in getConversation for eager loading with sort
 ---
+
+## 2026-02-11 - US-013: AI tRPC Router — Report Endpoints
+- What was implemented: 4 report endpoints added to the AI router + Trigger.dev task stub
+- Files changed:
+  - src/server/api/routers/ai.ts — Added startReport, getReport, listReports, getReportStatus endpoints
+  - src/trigger/generate-ai-report.ts — New file with Trigger.dev task stub (full implementation in US-015)
+- **Learnings for future iterations:**
+  - `generateAiReport.trigger(payload)` returns a handle with `.id` — store this as `triggerTaskId` for tracking
+  - Nested Drizzle `with` relations work for deep eager loading: `with: { conversation: { with: { messages: { orderBy } } } }`
+  - `getReportStatus` uses `columns` option for lightweight queries — only select the fields needed for polling
+  - Trigger.dev task stubs are valid — they compile and can be triggered even with a no-op `run` function
+  - `startReport` creates both conversation (in "generating" status) and report (in "queued" status) — two separate records
+  - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY env var
+---
+
+## 2026-02-11 - US-015: Trigger.dev Report Generation Task
+- What was implemented: Full Trigger.dev background task for orchestrating deep AI report generation with multi-turn tool calling
+- Files changed:
+  - src/trigger/generate-ai-report.ts — Replaced stub with full implementation: multi-turn tool-calling loop (20 rounds), status lifecycle management, token tracking, error handling
+  - scripts/ralph/prd.json — Marked US-015 as passes: true
+- **Learnings for future iterations:**
+  - Trigger.dev tasks can import `db` directly from `@/server/db` — no need for tRPC context
+  - The tool-calling loop pattern is identical to sendMessage in the AI router — call chatCompletion, check tool_calls, execute via executeTool, push results, repeat
+  - Reports use 20 tool rounds (vs chat's 10) for deeper analysis
+  - Date range augmentation is appended to the user's prompt as context, not as a separate system instruction
+  - Error handling in catch block must update BOTH aiReports AND aiConversations status to "failed"
+  - When exhausting tool rounds, still mark as "complete" (not "failed") since partial results are still valuable
+  - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY env var
+---
+
+## 2026-02-11 - US-016: Report PDF Generation and Upload
+- What was implemented: PDF generation from AI report content using @react-pdf/renderer, with S3 upload integration
+- Files changed:
+  - src/lib/ai/report-pdf.ts — New file with generateReportPdf(), markdown parser, Terminal-themed PDF components
+  - src/trigger/generate-ai-report.ts — Added extractChartUrls/extractCodeArtifacts helpers, generateAndUploadPdf integration in both completion paths
+  - package.json — Added @react-pdf/renderer dependency
+- **Learnings for future iterations:**
+  - `@react-pdf/renderer` works server-side without a browser — uses `ReactPDF.renderToBuffer(element)` to produce PDF bytes
+  - Must use `React.createElement()` instead of JSX since this is a .ts file (not .tsx) — keeps it compatible with server-only contexts
+  - Built-in PDF fonts: Courier (monospace), Courier-Bold, Courier-Oblique — no custom font registration needed for terminal theme
+  - `ReactPDF.StyleSheet.create()` is type-safe but `objectFit`, `textAlign`, `position`, `flexDirection` need `as const` assertions
+  - Tool results in chatMessages have `role: "tool"` with JSON content — parse to extract `data.images` (chart URLs) and `data.artifacts` (code descriptions)
+  - PDF upload follows same pattern as run-python S3 uploads: presigned PUT URL → fetch PUT → presigned GET URL with 7-day expiry
+  - aiReports record has `pdfUrl` (presigned GET URL) and `pdfKey` (S3 key) — update these separately from the status update to avoid race conditions
+  - The `render` prop on ReactPDF.Text for page numbers uses `({ pageNumber, totalPages })` callback
+---
