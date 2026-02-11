@@ -472,3 +472,37 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - Loading indicator tool badges use bg-[#00d4ff]/5 (lighter) for muted/subtle appearance vs bg-[#00d4ff]/10 for actual tool call badges
   - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY/RESEND_API_KEY env vars
 ---
+
+## 2026-02-11 - US-020: Report Mode Interface
+- What was implemented: Complete report mode interface with request form, active report polling, progress indicator, report history with status badges, and PDF download
+- Files changed:
+  - src/app/(protected)/ai/_components/report-interface.tsx — Added active report polling (getReportStatus every 5s), progress indicator with animated progress bar, real-time status overlay on report history items, Biome formatting fixes
+  - scripts/ralph/prd.json — Marked US-020 as passes: true
+- **Learnings for future iterations:**
+  - The ReportInterface was partially built in US-018 — US-020 completed it with polling logic, progress indicator, and real-time status overlay
+  - `useMemo` to find activeReportId from reports list — `reports.items.find(r => r.status === "queued" || r.status === "generating")`
+  - `refetchInterval: 5000` on tRPC query for 5-second polling — only enabled when activeReportId is truthy
+  - Real-time status overlay pattern: polled status takes priority over cached list status for the active report — prevents stale badge display
+  - Progress bar: 15% width for "queued", 60% for "generating" with `animate-pulse` — simple visual feedback without exact progress tracking
+  - `biome-ignore lint/correctness/useExhaustiveDependencies` needed for useEffect that intentionally triggers on `activeReportStatus?.status` change only
+  - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY/RESEND_API_KEY env vars
+---
+
+## 2026-02-11 - US-024: Remove Client-Side Fake AI Logic
+- What was implemented: Verified all old client-side fake AI logic was already removed during previous stories (US-018/019/020)
+- Files changed:
+  - scripts/ralph/prd.json — Marked US-024 as passes: true
+  - scripts/ralph/progress.txt — Updated progress log
+- **Verification performed:**
+  - Searched entire src/ for `generateLocalInsight` — not found (removed in US-018)
+  - Searched entire src/ for `EXAMPLE_QUERIES` — not found (replaced by SUGGESTED_CHAT_QUERIES in US-018)
+  - Searched entire src/ for `hasApiKey` — not found (removed in US-018)
+  - Searched AI directory for Key/Settings icon imports — not found (no longer needed)
+  - Current AI page.tsx imports: Brain, FileText, MessageSquare (all actively used)
+  - Current chat-interface.tsx imports: BarChart3, Brain, Code2, Database, Loader2, Send, Zap (all actively used)
+  - Old inline markdown parsing replaced by MessageRenderer component (US-021)
+  - All AI functionality now uses tRPC mutations (createConversation, sendMessage, startReport)
+- **Learnings for future iterations:**
+  - When a page is rewritten from scratch in an earlier story, cleanup stories like this may already be satisfied
+  - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY/RESEND_API_KEY env vars
+---

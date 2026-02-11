@@ -454,8 +454,8 @@
         "Verify in browser"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Report interface complete with: prompt textarea, date range pickers, Generate Report button (calls ai.startReport mutation), suggested prompts from SUGGESTED_REPORT_PROMPTS constant, active report progress indicator (polling ai.getReportStatus every 5 seconds with progress bar), report history list with status badges (queued/generating/complete/failed), PDF download button for completed reports, real-time status updates via polled status overlay, empty state. Terminal design styling throughout. All data-testid attributes present."
     },
     {
       "id": "US-024",
@@ -471,8 +471,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 23,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All old client-side fake AI logic was already removed during US-018/019/020 page rewrite. Verified: no generateLocalInsight, no EXAMPLE_QUERIES, no hasApiKey, no API key notice banner, no old message rendering logic, no Key/Settings icon imports in AI directory. Current AI page uses SUGGESTED_CHAT_QUERIES constant, MessageRenderer component, and tRPC mutations exclusively."
     },
     {
       "id": "US-022",
