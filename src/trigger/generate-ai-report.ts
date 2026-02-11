@@ -7,11 +7,17 @@ import {
 } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
 import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
+import { sendReportEmail } from "@/lib/ai/report-email";
 import { generateReportPdf } from "@/lib/ai/report-pdf";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
 import { db } from "@/server/db";
-import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
+import {
+	aiConversations,
+	aiMessages,
+	aiReports,
+	users,
+} from "@/server/db/schema";
 
 // =============================================================================
 // CONSTANTS
@@ -72,13 +78,14 @@ function extractCodeArtifacts(messages: ChatMessage[]): string[] {
 }
 
 /**
- * Generate PDF and update the report record with pdfUrl and pdfKey.
+ * Generate PDF, update the report record, and send email notification.
  */
 async function generateAndUploadPdf(
 	reportId: string,
 	title: string,
 	content: string,
 	chatMessages: ChatMessage[],
+	userId: string,
 	dateRange?: { start?: string; end?: string },
 ): Promise<void> {
 	const charts = extractChartUrls(chatMessages);
@@ -97,6 +104,23 @@ async function generateAndUploadPdf(
 			.update(aiReports)
 			.set({ pdfUrl: result.pdfUrl, pdfKey: result.pdfKey })
 			.where(eq(aiReports.id, reportId));
+
+		// Send email notification with download link
+		try {
+			const user = await db.query.users.findFirst({
+				where: eq(users.id, userId),
+				columns: { email: true },
+			});
+			if (user?.email) {
+				await sendReportEmail({
+					to: user.email,
+					reportTitle: title,
+					downloadUrl: result.pdfUrl,
+				});
+			}
+		} catch {
+			// Email delivery failure should not fail the report generation
+		}
 	}
 }
 
@@ -216,6 +240,7 @@ export const generateAiReport = task({
 						reportRecord?.title ?? payload.prompt,
 						finalContent,
 						chatMessages,
+						payload.userId,
 						{
 							start: payload.dateRangeStart,
 							end: payload.dateRangeEnd,
@@ -302,6 +327,7 @@ export const generateAiReport = task({
 				reportRecord?.title ?? payload.prompt,
 				fallbackContent,
 				chatMessages,
+				payload.userId,
 				{
 					start: payload.dateRangeStart,
 					end: payload.dateRangeEnd,

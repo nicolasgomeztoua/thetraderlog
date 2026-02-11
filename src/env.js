@@ -29,6 +29,8 @@ export const env = createEnv({
 		OPENROUTER_API_KEY: z.string().min(1),
 		// Daytona API key for Python sandbox execution
 		DAYTONA_API_KEY: z.string().min(1),
+		// Resend API key for transactional emails
+		RESEND_API_KEY: z.string().min(1),
 	},
 
 	/**
@@ -72,6 +74,7 @@ export const env = createEnv({
 		S3_PUBLIC_URL: process.env.S3_PUBLIC_URL,
 		OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 		DAYTONA_API_KEY: process.env.DAYTONA_API_KEY,
+		RESEND_API_KEY: process.env.RESEND_API_KEY,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
