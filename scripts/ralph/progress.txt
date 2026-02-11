@@ -232,3 +232,15 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - fetchWithRetry handles 429 (rate limit) and 5xx with exponential backoff (1s, 2s, 4s)
   - Streaming includes stream_options: { include_usage: true } to get token usage in final chunk
 ---
+
+## 2026-02-11 - US-004: Schema Context Generator
+- What was implemented: Static schema context string for AI system prompts
+- Files changed:
+  - src/lib/ai/schema-context.ts — New file with generateSchemaContext() function
+- **Learnings for future iterations:**
+  - The schema context is a single static string (not generated dynamically from Drizzle schema introspection) — simpler and avoids runtime dependency on schema objects
+  - All 19 enums, 20 tables, relationships, 7 example SQL queries, and 20+ tRPC endpoints documented in markdown table format
+  - P&L columns are decimal strings — SQL queries must use CAST(net_pnl AS NUMERIC) for aggregation
+  - Soft delete filter (deleted_at IS NULL) must be included in all example queries
+  - The context includes analytics filter schema so AI knows what filters are available
+---
