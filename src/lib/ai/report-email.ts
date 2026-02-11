@@ -9,6 +9,11 @@ let resendClient: Resend | null = null;
 
 function getResendClient(): Resend {
 	if (!resendClient) {
+		if (!env.RESEND_API_KEY) {
+			throw new Error(
+				"RESEND_API_KEY is not configured. Email delivery is unavailable.",
+			);
+		}
 		resendClient = new Resend(env.RESEND_API_KEY);
 	}
 	return resendClient;

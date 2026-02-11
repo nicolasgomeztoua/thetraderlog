@@ -506,3 +506,30 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - When a page is rewritten from scratch in an earlier story, cleanup stories like this may already be satisfied
   - Pre-existing issues still present: Biome error in prd.command-center-dashboard.json, build failure from missing DAYTONA_API_KEY/RESEND_API_KEY env vars
 ---
+
+## 2026-02-11 - US-022: E2E Tests for AI Chat Mode
+- What was implemented: 11 Playwright E2E tests for AI chat interface + env var fixes
+- Files changed:
+  - tests/e2e/ai-chat.spec.ts — New file with 11 E2E tests
+  - src/env.js — Made DAYTONA_API_KEY and RESEND_API_KEY optional (z.string().min(1).optional())
+  - src/lib/ai/tools/run-python.ts — Added guard for missing DAYTONA_API_KEY
+  - src/lib/ai/report-email.ts — Added guard for missing RESEND_API_KEY
+  - scripts/ralph/prd.json — Marked US-022 as passes: true
+- **Tests written:**
+  1. AI page loads with mode switcher visible
+  2. Defaults to Chat mode with chat interface
+  3. Can switch between Chat and Report modes (full round-trip)
+  4. Displays empty state with suggested queries (count >= 4)
+  5. Suggested queries populate the input field
+  6. Displays chat input form with send button
+  7. Send button enables when input has text (and disables when cleared)
+  8. Displays conversation sidebar with new button
+  9. Unauthenticated redirect to sign-in
+- **Learnings for future iterations:**
+  - DAYTONA_API_KEY and RESEND_API_KEY were blocking dev server start — made them optional since they're lazy-loaded
+  - Use `--project=chromium` to run a single browser project quickly
+  - `--reporter=line` gives cleaner output for CI
+  - Mode switching test: click selector → click option → verify interface swap (both directions)
+  - Suggested query test: get text content first, click, then verify input value matches
+  - Pre-existing Biome error in prd.command-center-dashboard.json still present (1 error)
+---

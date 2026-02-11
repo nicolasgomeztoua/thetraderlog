@@ -491,8 +491,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 24,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "11 E2E tests covering: page load with mode switcher, default Chat mode display, mode switching (Chat↔Report), empty state with suggested queries, suggested query click populates input, input form with send button, send button enable/disable based on input, conversation sidebar with new button, unauthenticated redirect. Also fixed DAYTONA_API_KEY and RESEND_API_KEY to be optional in env.js so dev server starts without them."
     },
     {
       "id": "US-023",

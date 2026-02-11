@@ -71,6 +71,11 @@ let daytonaClient: Daytona | null = null;
 
 function getDaytonaClient(): Daytona {
 	if (!daytonaClient) {
+		if (!env.DAYTONA_API_KEY) {
+			throw new Error(
+				"DAYTONA_API_KEY is not configured. Python sandbox execution is unavailable.",
+			);
+		}
 		daytonaClient = new Daytona({
 			apiKey: env.DAYTONA_API_KEY,
 			_experimental: {},

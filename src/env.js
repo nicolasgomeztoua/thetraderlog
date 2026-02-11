@@ -27,10 +27,10 @@ export const env = createEnv({
 		S3_PUBLIC_URL: z.string().url().optional(),
 		// OpenRouter API key for AI chat/reports
 		OPENROUTER_API_KEY: z.string().min(1),
-		// Daytona API key for Python sandbox execution
-		DAYTONA_API_KEY: z.string().min(1),
-		// Resend API key for transactional emails
-		RESEND_API_KEY: z.string().min(1),
+		// Daytona API key for Python sandbox execution (optional — only needed for run_python tool)
+		DAYTONA_API_KEY: z.string().min(1).optional(),
+		// Resend API key for transactional emails (optional — only needed for report email delivery)
+		RESEND_API_KEY: z.string().min(1).optional(),
 	},
 
 	/**
