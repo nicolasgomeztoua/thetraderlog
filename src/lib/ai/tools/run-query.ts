@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { ToolDefinition } from "@/lib/ai/client";
+import { MAX_SQL_QUERY_ROWS } from "@/lib/constants/ai";
 import type { db as DbInstance } from "@/server/db";
 
 type Db = typeof DbInstance;
@@ -111,7 +112,7 @@ const ALLOWED_TABLE_NAMES = new Set([
 	"user_filter_presets",
 ]);
 
-const MAX_ROWS = 500;
+const MAX_ROWS = MAX_SQL_QUERY_ROWS;
 
 // =============================================================================
 // EXECUTOR
@@ -211,26 +212,41 @@ function validateQuery(query: string): string | null {
  * Validates that all table references in FROM and JOIN clauses use only
  * the user-scoped CTE aliases. Prevents direct access to raw tables
  * which would bypass user scoping and expose other users' data.
+ *
+ * Also catches comma-separated table lists (e.g., FROM user_trades, trade)
+ * and schema-qualified names (e.g., public.trade).
  */
 function validateTableReferences(sanitized: string): string | null {
-	// Match table names after FROM and JOIN keywords.
-	// Captures: FROM table_name, JOIN table_name, LEFT JOIN table_name, etc.
-	// Ignores subqueries (opening parenthesis) and the _result wrapper alias.
-	const tableRefRegex =
-		/\b(?:FROM|JOIN)\s+(?![\s(])([a-zA-Z_][a-zA-Z0-9_]*)/gi;
+	// Block schema-qualified table names (e.g., public.trade, pg_catalog.pg_class)
+	if (/\b[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\b/.test(sanitized)) {
+		return "Schema-qualified table names (e.g., public.tablename) are not allowed.";
+	}
 
-	for (const match of sanitized.matchAll(tableRefRegex)) {
-		const tableName = match[1]?.toLowerCase();
-		if (!tableName) continue;
+	// Extract all table names from FROM and JOIN clauses, including comma-separated lists.
+	// Captures: FROM table1, table2, table3 and JOIN table_name
+	const fromJoinRegex =
+		/\b(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*)*)/gi;
 
-		// Skip the wrapper alias used by buildScopedQuery
-		if (tableName === "_result") continue;
+	for (const match of sanitized.matchAll(fromJoinRegex)) {
+		const tableList = match[1];
+		if (!tableList) continue;
 
-		// Skip SQL keywords that can appear after FROM/JOIN
-		if (tableName === "select" || tableName === "lateral") continue;
+		// Split comma-separated tables and validate each
+		const tables = tableList.split(",").map((t) => t.trim());
 
-		if (!ALLOWED_TABLE_NAMES.has(tableName)) {
-			return `Table "${tableName}" is not allowed. Use the user-scoped aliases: ${[...ALLOWED_TABLE_NAMES].join(", ")}.`;
+		for (const rawName of tables) {
+			const tableName = rawName.toLowerCase();
+			if (!tableName) continue;
+
+			// Skip the wrapper alias used by buildScopedQuery
+			if (tableName === "_result") continue;
+
+			// Skip SQL keywords that can appear after FROM/JOIN
+			if (tableName === "select" || tableName === "lateral") continue;
+
+			if (!ALLOWED_TABLE_NAMES.has(tableName)) {
+				return `Table "${tableName}" is not allowed. Use the user-scoped aliases: ${[...ALLOWED_TABLE_NAMES].join(", ")}.`;
+			}
 		}
 	}
 
