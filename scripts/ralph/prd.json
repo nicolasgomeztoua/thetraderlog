@@ -180,8 +180,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/tools/call-analytics.ts with callAnalyticsToolDefinition (OpenAI function-calling format) and executeCallAnalytics(userId, router, endpoint, input). Allowlists 22 analytics endpoints (getOverview, getCalendarData, performance by day/hour/session/month, risk metrics, equity curve, drawdowns, R-multiple, position size, symbols, streaks, revenge trading, overtrading, holding time, behavioral patterns, Monte Carlo, trade count, export) and 2 trades endpoints (getStats, getAll). Creates server-side tRPC caller via createTRPCContext + createCaller with userId override. Validates router and endpoint against allowlists. Returns standardized { success, data, error } result."
     },
     {
       "id": "US-009",

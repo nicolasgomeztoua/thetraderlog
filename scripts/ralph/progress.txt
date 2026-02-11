@@ -285,3 +285,15 @@ User-scoping: All queries use eq(trades.userId, ctx.user.id). Ownership validate
   - The `executeRunQuery` function takes `db` as a parameter (not importing it directly) for testability
   - String literal stripping (`replace(/'[^']*'/g, "''")`) prevents false positives in SQL validation
 ---
+
+## 2026-02-11 - US-008: AI Tool — call_analytics (Existing tRPC Endpoints)
+- What was implemented: Tool for AI to call existing tRPC analytics/trades endpoints via server-side caller
+- Files changed:
+  - src/lib/ai/tools/call-analytics.ts — New file with tool definition, executor, and endpoint allowlist
+- **Learnings for future iterations:**
+  - Server-side tRPC caller: `createTRPCContext({ headers: new Headers() }, { userId })` then `createCaller(ctx)` — the userId override bypasses Clerk auth
+  - Caller type access: `caller.analytics[endpointName](input)` — dynamic endpoint names require `as any` cast since tRPC caller is strongly typed
+  - 22 analytics + 2 trades endpoints allowlisted — only query procedures, no mutations
+  - The tool doesn't need `db` injected because `createTRPCContext` uses the default db when no override is given
+  - Biome auto-format: `bunx biome check --write <file>` is faster than manual fixes
+---
