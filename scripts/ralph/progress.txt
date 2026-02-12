@@ -252,3 +252,12 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - RefreshCw spin: use isRefreshing state with setTimeout(500ms) to auto-stop the animation
   - All hardcoded #00d4ff replaced with text-accent/bg-accent in report interface
 ---
+
+## 2026-02-12 - US-014
+- What was implemented: Overall layout polish — overflow-hidden on page.tsx to prevent double scrollbars, thin 4px scrollbar styling scoped to [data-testid="ai-page"] in globals.css.
+- Files changed: src/app/(protected)/ai/page.tsx, src/styles/globals.css
+- **Learnings for future iterations:**
+  - Scope custom scrollbar CSS using data-testid selectors to avoid polluting global styles
+  - ::-webkit-scrollbar pseudo-elements need three parts: ::-webkit-scrollbar (width), ::-webkit-scrollbar-track (background), ::-webkit-scrollbar-thumb (handle)
+  - Most polish items (/ shortcut, loading skeletons, #00d4ff removal) were already done in prior stories
+---

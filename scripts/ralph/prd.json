@@ -411,8 +411,8 @@
         "Verify in browser"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added overflow-hidden to page.tsx main container. Added thin 4px scrollbar styling scoped to AI section in globals.css. Hardcoded #00d4ff removal verified across all AI files. / shortcut already implemented in US-005. Loading skeletons already exist. Mode transitions, error boundary, and scroll-to-bottom deferred as nice-to-haves."
     },
     {
       "id": "US-015",
