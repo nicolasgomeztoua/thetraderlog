@@ -1,22 +1,3 @@
 # Ralph Progress Log
-Started: AI UI Redesign
-Branch: ralph/ai-ui-redesign
+Started: Thu Feb 12 12:52:05 WET 2026
 ---
-
-## Codebase Patterns
-- Use Drizzle ORM for all database operations
-- All constants go in src/lib/constants/ (never hardcode)
-- Terminal design: monospace fonts, chartreuse accent (#d4ff00), ice blue (#00d4ff) for AI
-- Protected routes use tRPC protectedProcedure
-- P&L stored as decimal strings, parse with parseFloat()
-- All timestamps use withTimezone: true
-- ID generators in src/lib/shared/id.ts use `ids.entityName()` format
-- Existing AI components in src/app/(protected)/ai/_components/
-- Existing AI router in src/server/api/routers/ai.ts
-- Existing AI tools in src/lib/ai/tools/
-- Existing AI constants in src/lib/constants/ai.ts
-- MessageRenderer component handles markdown + chart rendering
-- react-markdown v10 with remark-gfm and rehype-highlight
-- Shadcn UI components in src/components/ui/
-- Tailwind CSS v4 with Terminal design system
-- Biome for linting/formatting (bun run check)
