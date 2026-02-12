@@ -725,8 +725,12 @@
 		animation: none;
 		opacity: 1;
 	}
-	.animate-fade-in-up {
-		animation: none;
+	.animate-fade-in-up,
+	.animate-shimmer,
+	.animate-fade-out,
+	.animate-slide-out-left,
+	.animate-shake {
+		animation-duration: 0.01ms !important;
 	}
 }
 
@@ -746,6 +750,64 @@
 	content: "▌";
 	animation: blink 1s step-end infinite;
 	color: var(--primary);
+}
+
+/* Shimmer animation (loading skeletons, progress bars) */
+@keyframes shimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+.animate-shimmer {
+	animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Fade out animation */
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+.animate-fade-out {
+	animation: fade-out 100ms ease-in forwards;
+}
+
+/* Slide out left animation (delete, dismiss) */
+@keyframes slide-out-left {
+	to {
+		transform: translateX(-20px);
+		opacity: 0;
+	}
+}
+
+.animate-slide-out-left {
+	animation: slide-out-left 200ms ease-in forwards;
+}
+
+/* Shake animation (validation error) */
+@keyframes shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	25% {
+		transform: translateX(-4px);
+	}
+	75% {
+		transform: translateX(4px);
+	}
+}
+
+.animate-shake {
+	animation: shake 200ms ease-in-out;
 }
 
 /* Glitch effect on hover */
