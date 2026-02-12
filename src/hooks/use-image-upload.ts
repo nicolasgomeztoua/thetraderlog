@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { ERR_VALIDATION_IMAGES_ONLY } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 
 interface UseImageUploadOptions {
@@ -38,7 +39,7 @@ export function useImageUpload({
 		async (file: File): Promise<string | null> => {
 			// Validate file is an image
 			if (!file.type.startsWith("image/")) {
-				toast.error("Only image files are allowed");
+				toast.error(ERR_VALIDATION_IMAGES_ONLY);
 				return null;
 			}
 

@@ -1,6 +1,11 @@
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
+	ERR_ACCESS_DENIED,
+	ERR_S3_DOWNLOADS_NOT_CONFIGURED,
+	ERR_S3_NOT_CONFIGURED,
+} from "@/lib/constants/errors";
+import {
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
@@ -24,9 +29,7 @@ export const storageRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (!isS3Configured()) {
-				throw new Error(
-					"File uploads are not configured. S3 settings are missing.",
-				);
+				throw new Error(ERR_S3_NOT_CONFIGURED);
 			}
 
 			// Generate a unique key for the file
@@ -55,15 +58,13 @@ export const storageRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (!isS3Configured()) {
-				throw new Error(
-					"File downloads are not configured. S3 settings are missing.",
-				);
+				throw new Error(ERR_S3_DOWNLOADS_NOT_CONFIGURED);
 			}
 
 			// Verify the key belongs to this user (starts with images/{userId}/)
 			const expectedPrefix = `images/${ctx.user.id}/`;
 			if (!input.key.startsWith(expectedPrefix)) {
-				throw new Error("Access denied");
+				throw new Error(ERR_ACCESS_DENIED);
 			}
 
 			// Generate presigned GET URL (valid for 1 hour)

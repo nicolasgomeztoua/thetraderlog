@@ -41,8 +41,16 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
-import { useImportProgress } from "@/hooks/use-import-progress";
+import { useImportProgressContext } from "@/contexts/import-progress-context";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+	ERR_CSV_AUTOPARSE_FAILED,
+	ERR_CSV_HEADERS_AND_DATA,
+	ERR_CSV_MISSING_HEADERS,
+	ERR_IMPORT_FAILED,
+	ERR_VALIDATION_CSV_UPLOAD,
+	ERR_VALIDATION_SELECT_ACCOUNT,
+} from "@/lib/constants/errors";
 import type { ParsedTrade, TradingPlatform } from "@/lib/trades";
 import { getParser, TRADING_PLATFORMS } from "@/lib/trades";
 import { api } from "@/trpc/react";
@@ -123,20 +131,9 @@ export default function ImportPage() {
 
 	const [importing, setImporting] = useState(false);
 	const [importedCount, setImportedCount] = useState(0);
-	const [processingTradeIds, setProcessingTradeIds] = useState<string[] | null>(
-		null,
-	);
 
+	const { startTracking } = useImportProgressContext();
 	const batchImport = api.trades.batchImport.useMutation();
-
-	// Track MAE/MFE processing progress
-	useImportProgress({
-		tradeIds: processingTradeIds,
-		onComplete: () => {
-			// Optionally invalidate trade queries to refresh data
-			setProcessingTradeIds(null);
-		},
-	});
 
 	const selectedImportAccount = accounts.find(
 		(a) => a.id === selectedImportAccountId,
@@ -150,13 +147,13 @@ export default function ImportPage() {
 		(text: string) => {
 			const lines = text.trim().split("\n");
 			if (lines.length < 2) {
-				toast.error("CSV file must have headers and at least one data row");
+				toast.error(ERR_CSV_HEADERS_AND_DATA);
 				return;
 			}
 
 			const headerLine = lines[0];
 			if (!headerLine) {
-				toast.error("CSV file must have headers");
+				toast.error(ERR_CSV_MISSING_HEADERS);
 				return;
 			}
 			const parsedHeaders = headerLine
@@ -192,7 +189,7 @@ export default function ImportPage() {
 						setParseErrors(
 							result.errors.map((e) => `Row ${e.row}: ${e.message}`),
 						);
-						toast.error("Auto-parse failed. Please map columns manually.");
+						toast.error(ERR_CSV_AUTOPARSE_FAILED);
 						setStep("mapping");
 					}
 				});
@@ -226,7 +223,7 @@ export default function ImportPage() {
 			if (!file) return;
 
 			if (!file.name.endsWith(".csv")) {
-				toast.error("Please upload a CSV file");
+				toast.error(ERR_VALIDATION_CSV_UPLOAD);
 				return;
 			}
 
@@ -247,7 +244,7 @@ export default function ImportPage() {
 			if (!file) return;
 
 			if (!file.name.endsWith(".csv")) {
-				toast.error("Please upload a CSV file");
+				toast.error(ERR_VALIDATION_CSV_UPLOAD);
 				return;
 			}
 
@@ -303,7 +300,7 @@ export default function ImportPage() {
 
 	const handleImport = async () => {
 		if (!selectedImportAccountId) {
-			toast.error("Please select an account");
+			toast.error(ERR_VALIDATION_SELECT_ACCOUNT);
 			return;
 		}
 
@@ -387,8 +384,7 @@ export default function ImportPage() {
 				result.processingCount > 0 &&
 				result.tradeIds
 			) {
-				// Filter to only closed trades that will be processed
-				setProcessingTradeIds(result.tradeIds);
+				startTracking(result.tradeIds);
 				toast.success(
 					`Imported ${result.imported} trades. Processing market data in background...`,
 				);
@@ -399,7 +395,7 @@ export default function ImportPage() {
 			setStep("complete");
 		} catch (error) {
 			console.error("Failed to import trades:", error);
-			toast.error("Failed to import trades. Please try again.");
+			toast.error(ERR_IMPORT_FAILED);
 		} finally {
 			setImporting(false);
 		}

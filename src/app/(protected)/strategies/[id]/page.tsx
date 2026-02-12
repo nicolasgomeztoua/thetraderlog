@@ -33,7 +33,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+	ERR_STRATEGY_DELETE_FAILED,
+	ERR_STRATEGY_DUPLICATE_UI_FAILED,
+	ERR_STRATEGY_UPDATE_FAILED,
+} from "@/lib/constants/errors";
 import { cn } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 export default function StrategyDetailPage() {
@@ -66,7 +72,7 @@ export default function StrategyDetailPage() {
 			utils.strategies.getTradeRuleChecks.invalidate();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to update strategy");
+			toast.error(getErrorMessage(error, ERR_STRATEGY_UPDATE_FAILED));
 		},
 	});
 
@@ -77,7 +83,7 @@ export default function StrategyDetailPage() {
 			router.push("/strategies");
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete strategy");
+			toast.error(getErrorMessage(error, ERR_STRATEGY_DELETE_FAILED));
 		},
 	});
 
@@ -89,7 +95,7 @@ export default function StrategyDetailPage() {
 			router.push(`/strategies/${newStrategy.id}`);
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to duplicate strategy");
+			toast.error(getErrorMessage(error, ERR_STRATEGY_DUPLICATE_UI_FAILED));
 		},
 	});
 

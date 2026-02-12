@@ -2,6 +2,18 @@ import { and, asc, eq, gte, isNotNull, isNull, lt, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
+	ERR_ATTACHMENT_CREATE_FAILED,
+	ERR_ATTACHMENT_NOT_FOUND,
+	ERR_CHECKLIST_AUTO_CALCULATED,
+	ERR_JOURNAL_CREATE_FAILED,
+	ERR_JOURNAL_FIND_OR_CREATE_FAILED,
+	ERR_JOURNAL_NOT_FOUND,
+	ERR_S3_NOT_CONFIGURED,
+	ERR_TEMPLATE_CREATE_FAILED,
+	ERR_TEMPLATE_NOT_FOUND,
+	errTemplateNotOwned,
+} from "@/lib/constants/errors";
+import {
 	getDateStringInTimezone,
 	getDayBoundsInTimezone,
 	getUTCDateString,
@@ -70,7 +82,7 @@ async function findOrCreateJournal(
 	});
 
 	if (!journal) {
-		throw new Error("Failed to find or create journal");
+		throw new Error(ERR_JOURNAL_FIND_OR_CREATE_FAILED);
 	}
 
 	return journal;
@@ -157,7 +169,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				.returning();
 
 			if (!created) {
-				throw new Error("Failed to create journal");
+				throw new Error(ERR_JOURNAL_CREATE_FAILED);
 			}
 
 			return created;
@@ -448,7 +460,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				.returning();
 
 			if (!created) {
-				throw new Error("Failed to create template");
+				throw new Error(ERR_TEMPLATE_CREATE_FAILED);
 			}
 
 			return created;
@@ -474,7 +486,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			});
 
 			if (!existing) {
-				throw new Error("Template not found");
+				throw new Error(ERR_TEMPLATE_NOT_FOUND);
 			}
 
 			const updateData: Partial<{
@@ -516,7 +528,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			});
 
 			if (!existing) {
-				throw new Error("Template not found");
+				throw new Error(ERR_TEMPLATE_NOT_FOUND);
 			}
 
 			await ctx.db
@@ -550,7 +562,7 @@ export const dailyJournalRouter = createTRPCRouter({
 
 			for (const id of templateIds) {
 				if (!ownedIds.has(id)) {
-					throw new Error(`Template ${id} not found or not owned by user`);
+					throw new Error(errTemplateNotOwned(id));
 				}
 			}
 
@@ -632,7 +644,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			});
 
 			if (!template) {
-				throw new Error("Template not found");
+				throw new Error(ERR_TEMPLATE_NOT_FOUND);
 			}
 
 			// Find or create journal for this date (handles race conditions)
@@ -704,7 +716,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			// Only allow toggling specific forced items (not auto-calculated ones)
 			const allowedForcedItems = ["forced-pre-market"];
 			if (!allowedForcedItems.includes(input.itemId)) {
-				throw new Error("Cannot toggle this item - it is auto-calculated");
+				throw new Error(ERR_CHECKLIST_AUTO_CALCULATED);
 			}
 
 			// Find or create journal for this date
@@ -782,7 +794,7 @@ export const dailyJournalRouter = createTRPCRouter({
 
 			for (const id of templateIds) {
 				if (!ownedIds.has(id)) {
-					throw new Error(`Template ${id} not found or not owned by user`);
+					throw new Error(errTemplateNotOwned(id));
 				}
 			}
 
@@ -857,9 +869,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (!isS3Configured()) {
-				throw new Error(
-					"File uploads are not configured. S3 settings are missing.",
-				);
+				throw new Error(ERR_S3_NOT_CONFIGURED);
 			}
 
 			const normalizedDate = normalizeDate(new Date(input.date));
@@ -893,9 +903,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (!isS3Configured()) {
-				throw new Error(
-					"File uploads are not configured. S3 settings are missing.",
-				);
+				throw new Error(ERR_S3_NOT_CONFIGURED);
 			}
 
 			// Verify user owns the journal
@@ -907,7 +915,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			});
 
 			if (!journal) {
-				throw new Error("Journal not found");
+				throw new Error(ERR_JOURNAL_NOT_FOUND);
 			}
 
 			// Store the key, not the presigned URL - URLs will be generated on-demand
@@ -926,7 +934,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				.returning();
 
 			if (!attachment) {
-				throw new Error("Failed to create attachment");
+				throw new Error(ERR_ATTACHMENT_CREATE_FAILED);
 			}
 
 			// Generate presigned URL for immediate use (e.g., inserting into editor)
@@ -1365,12 +1373,12 @@ export const dailyJournalRouter = createTRPCRouter({
 			});
 
 			if (!attachment) {
-				throw new Error("Attachment not found");
+				throw new Error(ERR_ATTACHMENT_NOT_FOUND);
 			}
 
 			// Verify user owns the journal that contains this attachment
 			if (attachment.journal.userId !== ctx.user.id) {
-				throw new Error("Attachment not found");
+				throw new Error(ERR_ATTACHMENT_NOT_FOUND);
 			}
 
 			// Delete from S3 if configured

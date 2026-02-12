@@ -1,6 +1,12 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import {
+	ERR_TAG_NAME_EXISTS,
+	ERR_TAG_NOT_FOUND,
+	ERR_TRADE_NOT_FOUND,
+	ERR_TRADES_BULK_NOT_FOUND,
+} from "@/lib/constants/errors";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { tags, trades, tradeTags } from "@/server/db/schema";
 
@@ -46,7 +52,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!tag) {
-				throw new Error("Tag not found");
+				throw new Error(ERR_TAG_NOT_FOUND);
 			}
 
 			return tag;
@@ -67,7 +73,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (existing) {
-				throw new Error("Tag with this name already exists");
+				throw new Error(ERR_TAG_NAME_EXISTS);
 			}
 
 			const [tag] = await ctx.db
@@ -97,7 +103,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!existing) {
-				throw new Error("Tag not found");
+				throw new Error(ERR_TAG_NOT_FOUND);
 			}
 
 			// Check if new name conflicts with another tag
@@ -106,7 +112,7 @@ export const tagsRouter = createTRPCRouter({
 					where: and(eq(tags.userId, ctx.user.id), eq(tags.name, input.name)),
 				});
 				if (nameConflict) {
-					throw new Error("Tag with this name already exists");
+					throw new Error(ERR_TAG_NAME_EXISTS);
 				}
 			}
 
@@ -131,7 +137,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!existing) {
-				throw new Error("Tag not found");
+				throw new Error(ERR_TAG_NOT_FOUND);
 			}
 
 			// This will also delete from trade_tags due to cascade
@@ -158,7 +164,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Verify tag ownership
@@ -167,7 +173,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!tag) {
-				throw new Error("Tag not found");
+				throw new Error(ERR_TAG_NOT_FOUND);
 			}
 
 			// Check if already exists
@@ -208,7 +214,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			await ctx.db
@@ -238,7 +244,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!tag) {
-				throw new Error("Tag not found");
+				throw new Error(ERR_TAG_NOT_FOUND);
 			}
 
 			// Verify all trades belong to user
@@ -253,7 +259,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (userTrades.length !== input.tradeIds.length) {
-				throw new Error("Some trades not found or don't belong to you");
+				throw new Error(ERR_TRADES_BULK_NOT_FOUND);
 			}
 
 			// Get existing trade-tag relationships
@@ -299,7 +305,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!tag) {
-				throw new Error("Tag not found");
+				throw new Error(ERR_TAG_NOT_FOUND);
 			}
 
 			await ctx.db.delete(tradeTags).where(
@@ -331,7 +337,7 @@ export const tagsRouter = createTRPCRouter({
 			});
 
 			if (!tag) {
-				throw new Error("Tag not found");
+				throw new Error(ERR_TAG_NOT_FOUND);
 			}
 
 			return tag.tradeTags.map((tt) => tt.trade);

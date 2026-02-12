@@ -79,7 +79,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
 import { useTradeSort } from "@/hooks/use-trade-sort";
+import {
+	ERR_RATING_UPDATE_FAILED,
+	ERR_STRATEGY_UPDATE_FAILED,
+	ERR_TRADE_DELETE_FAILED,
+	ERR_TRADE_RESTORE_FAILED,
+	ERR_TRADES_DELETE_FAILED,
+	ERR_TRASH_EMPTY_FAILED,
+} from "@/lib/constants/errors";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import { api } from "@/trpc/react";
 
@@ -211,7 +220,7 @@ export default function JournalPage() {
 			setSelectedTrades(new Set());
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete trade");
+			toast.error(getErrorMessage(error, ERR_TRADE_DELETE_FAILED));
 		},
 	});
 
@@ -223,7 +232,7 @@ export default function JournalPage() {
 			setSelectedTrades(new Set());
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete trades");
+			toast.error(getErrorMessage(error, ERR_TRADES_DELETE_FAILED));
 		},
 	});
 
@@ -234,7 +243,7 @@ export default function JournalPage() {
 			utils.trades.getDeleted.invalidate();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to restore trade");
+			toast.error(getErrorMessage(error, ERR_TRADE_RESTORE_FAILED));
 		},
 	});
 
@@ -244,7 +253,7 @@ export default function JournalPage() {
 			utils.trades.getDeleted.invalidate();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete trade");
+			toast.error(getErrorMessage(error, ERR_TRADE_DELETE_FAILED));
 		},
 	});
 
@@ -255,14 +264,14 @@ export default function JournalPage() {
 			utils.trades.getDeleted.invalidate();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to empty trash");
+			toast.error(getErrorMessage(error, ERR_TRASH_EMPTY_FAILED));
 		},
 	});
 
 	// Rating mutation (raw, called by debounced handler)
 	const updateRatingMutation = api.trades.updateRating.useMutation({
 		onError: () => {
-			toast.error("Failed to update rating");
+			toast.error(ERR_RATING_UPDATE_FAILED);
 		},
 	});
 
@@ -306,7 +315,7 @@ export default function JournalPage() {
 			clearOptimisticUpdates();
 		},
 		onError: () => {
-			toast.error("Failed to update strategy");
+			toast.error(ERR_STRATEGY_UPDATE_FAILED);
 		},
 	});
 

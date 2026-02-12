@@ -3,80 +3,14 @@
 // =============================================================================
 
 /**
- * AI model definition used in model selector dropdowns
- */
-export type AiModel = {
-	id: string;
-	name: string;
-	provider: string;
-	description: string;
-	mode: "chat" | "report" | "both";
-};
-
-/**
- * Default model for chat mode (fast, cheap)
+ * Default AI model used for chat mode
  */
 export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2";
 
 /**
- * Default model for report mode (deeper analysis)
+ * Default AI model used for report generation
  */
-export const DEFAULT_REPORT_MODEL = "z-ai/glm-5-20260211";
-
-/**
- * Available AI models for the model selector
- */
-export const AI_MODELS: AiModel[] = [
-	{
-		id: "moonshotai/kimi-k2",
-		name: "Kimi K2",
-		provider: "Moonshot",
-		description: "Fast and cost-effective for quick questions",
-		mode: "chat",
-	},
-	{
-		id: "moonshotai/kimi-k2.5",
-		name: "Kimi K2.5",
-		provider: "Moonshot",
-		description: "Upgraded K2 with stronger reasoning",
-		mode: "both",
-	},
-	{
-		id: "z-ai/glm-5-20260211",
-		name: "GLM-5",
-		provider: "Zhipu AI",
-		description: "745B MoE model — deep analytical reasoning",
-		mode: "report",
-	},
-	{
-		id: "z-ai/glm-4.7",
-		name: "GLM-4.7",
-		provider: "Zhipu AI",
-		description: "Strong coding and multi-step reasoning",
-		mode: "both",
-	},
-	{
-		id: "openai/gpt-4.1-mini",
-		name: "GPT-4.1 Mini",
-		provider: "OpenAI",
-		description: "Balanced speed and quality for chat",
-		mode: "chat",
-	},
-	{
-		id: "anthropic/claude-sonnet-4",
-		name: "Claude Sonnet 4",
-		provider: "Anthropic",
-		description: "Strong analytical reasoning for deep reports",
-		mode: "both",
-	},
-	{
-		id: "google/gemini-2.5-pro",
-		name: "Gemini 2.5 Pro",
-		provider: "Google",
-		description: "Strong reasoning with large context window",
-		mode: "report",
-	},
-];
+export const DEFAULT_REPORT_MODEL = "z-ai/glm-5";
 
 // =============================================================================
 // AI MODE OPTIONS

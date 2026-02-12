@@ -18,6 +18,7 @@ import {
 	findDrawdownPeriods,
 	parsePnl,
 } from "@/lib/analytics";
+import { ERR_PRESET_NOT_FOUND } from "@/lib/constants/errors";
 import {
 	getDateStringInTimezone,
 	getDayOfWeekInTimezone,
@@ -3454,7 +3455,7 @@ export const analyticsRouter = createTRPCRouter({
 				.limit(1);
 
 			if (!existing[0]) {
-				throw new Error("Preset not found or access denied");
+				throw new Error(ERR_PRESET_NOT_FOUND);
 			}
 
 			const updateData: Record<string, unknown> = {};
@@ -3499,7 +3500,7 @@ export const analyticsRouter = createTRPCRouter({
 				.returning();
 
 			if (!deleted) {
-				throw new Error("Preset not found or access denied");
+				throw new Error(ERR_PRESET_NOT_FOUND);
 			}
 
 			return { success: true };
@@ -3537,7 +3538,7 @@ export const analyticsRouter = createTRPCRouter({
 					.returning();
 
 				if (!updated) {
-					throw new Error("Preset not found or access denied");
+					throw new Error(ERR_PRESET_NOT_FOUND);
 				}
 
 				return updated;

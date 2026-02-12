@@ -7,27 +7,22 @@ import { expect, test } from "@playwright/test";
  * Auth state is pre-loaded from global.setup.ts via storageState config.
  */
 test.describe("AI Chat Mode", () => {
-	test("loads AI page with mode switcher visible", async ({ page }) => {
+	test("loads AI page with mode selector visible", async ({ page }) => {
 		await page.goto("/ai");
 
 		// Verify page loads
-		const heading = page.getByTestId("ai-heading");
-		await expect(heading).toBeVisible({ timeout: 15000 });
-		await expect(heading).toHaveText("AI Insights");
+		const aiPage = page.getByTestId("ai-page");
+		await expect(aiPage).toBeVisible({ timeout: 15000 });
 
 		// Verify mode selector is visible
 		const modeSelector = page.getByTestId("ai-mode-selector");
 		await expect(modeSelector).toBeVisible();
-
-		// Verify model selector is visible
-		const modelSelector = page.getByTestId("ai-model-selector");
-		await expect(modelSelector).toBeVisible();
 	});
 
 	test("defaults to Chat mode with chat interface", async ({ page }) => {
 		await page.goto("/ai");
 
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 
@@ -43,15 +38,14 @@ test.describe("AI Chat Mode", () => {
 	test("can switch between Chat and Report modes", async ({ page }) => {
 		await page.goto("/ai");
 
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 
 		// Start in chat mode
 		await expect(page.getByTestId("ai-chat-interface")).toBeVisible();
 
-		// Click mode selector to switch to Report
-		await page.getByTestId("ai-mode-selector").click();
+		// Click Report button in segmented control
 		await page.getByTestId("ai-mode-option-report").click();
 
 		// Report interface should now be visible
@@ -59,7 +53,6 @@ test.describe("AI Chat Mode", () => {
 		await expect(page.getByTestId("ai-chat-interface")).not.toBeVisible();
 
 		// Switch back to Chat
-		await page.getByTestId("ai-mode-selector").click();
 		await page.getByTestId("ai-mode-option-chat").click();
 
 		// Chat interface should be visible again
@@ -70,7 +63,7 @@ test.describe("AI Chat Mode", () => {
 	test("displays empty state with suggested queries", async ({ page }) => {
 		await page.goto("/ai");
 
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 
@@ -82,36 +75,36 @@ test.describe("AI Chat Mode", () => {
 		const suggestedQueries = page.getByTestId("chat-suggested-queries");
 		await expect(suggestedQueries).toBeVisible();
 
-		// There should be multiple suggested query buttons
+		// There should be exactly 4 suggested query buttons
 		const queryButtons = page.getByTestId("chat-suggested-query");
 		const count = await queryButtons.count();
-		expect(count).toBeGreaterThanOrEqual(4);
+		expect(count).toBe(4);
 	});
 
-	test("suggested queries populate the input field", async ({ page }) => {
+	test("suggested queries send immediately on click", async ({ page }) => {
 		await page.goto("/ai");
 
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 
 		// Wait for empty state
 		await expect(page.getByTestId("chat-empty-state")).toBeVisible();
 
-		// Click the first suggested query
+		// Click the first suggested query - should send immediately (empty state disappears)
 		const firstQuery = page.getByTestId("chat-suggested-query").first();
-		const queryText = await firstQuery.textContent();
 		await firstQuery.click();
 
-		// Input should now contain the query text
-		const input = page.getByTestId("chat-input");
-		await expect(input).toHaveValue(queryText ?? "");
+		// Empty state should disappear since the message was sent
+		await expect(page.getByTestId("chat-empty-state")).not.toBeVisible({
+			timeout: 5000,
+		});
 	});
 
 	test("displays chat input form with send button", async ({ page }) => {
 		await page.goto("/ai");
 
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 
@@ -133,7 +126,7 @@ test.describe("AI Chat Mode", () => {
 	test("send button enables when input has text", async ({ page }) => {
 		await page.goto("/ai");
 
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 
@@ -159,7 +152,7 @@ test.describe("AI Chat Mode", () => {
 	test("displays conversation sidebar with new button", async ({ page }) => {
 		await page.goto("/ai");
 
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 

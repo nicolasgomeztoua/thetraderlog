@@ -15,7 +15,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useOptimisticState } from "@/hooks/use-debounced-mutation";
+import {
+	ERR_TAG_ADD_FAILED,
+	ERR_TAG_CREATE_FAILED,
+	ERR_TAG_REMOVE_FAILED,
+} from "@/lib/constants/errors";
 import { PRESET_COLORS } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 function getRandomColor() {
@@ -47,13 +53,13 @@ export function TagSelector({
 		onError: (error, variables) => {
 			// Rollback optimistic update
 			onTagRemoved?.(variables.tagId);
-			toast.error(error.message || "Failed to add tag");
+			toast.error(getErrorMessage(error, ERR_TAG_ADD_FAILED));
 		},
 	});
 
 	const removeTag = api.tags.removeFromTrade.useMutation({
 		onError: (error) => {
-			toast.error(error.message || "Failed to remove tag");
+			toast.error(getErrorMessage(error, ERR_TAG_REMOVE_FAILED));
 		},
 	});
 
@@ -72,7 +78,7 @@ export function TagSelector({
 			setNewTagName("");
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to create tag");
+			toast.error(getErrorMessage(error, ERR_TAG_CREATE_FAILED));
 		},
 	});
 
@@ -207,7 +213,7 @@ export function TradeTags({ tradeId, tags, maxDisplay = 2 }: TradeTagsProps) {
 			if (context?.tagId) {
 				clearOptimisticUpdates();
 			}
-			toast.error(error.message || "Failed to remove tag");
+			toast.error(getErrorMessage(error, ERR_TAG_REMOVE_FAILED));
 		},
 	});
 

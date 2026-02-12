@@ -1,9 +1,45 @@
 "use client";
 
+import { Check, Copy } from "lucide-react";
 import Image from "next/image";
-import { memo } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+function CodeBlockWrapper({ children }: { children: React.ReactNode }) {
+	const [copied, setCopied] = useState(false);
+	const preRef = useRef<HTMLPreElement>(null);
+
+	const handleCopy = useCallback(async () => {
+		const text = preRef.current?.textContent ?? "";
+		await navigator.clipboard.writeText(text);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	}, []);
+
+	return (
+		<div className="group/code relative mb-2">
+			<pre
+				className="overflow-x-auto rounded border border-border bg-[#0a0a0a] p-3 font-mono text-xs leading-relaxed"
+				data-testid="message-code-block"
+				ref={preRef}
+			>
+				{children}
+			</pre>
+			<button
+				className="absolute top-2 right-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/code:opacity-100"
+				onClick={() => void handleCopy()}
+				type="button"
+			>
+				{copied ? (
+					<Check className="size-3 text-profit" />
+				) : (
+					<Copy className="size-3" />
+				)}
+			</button>
+		</div>
+	);
+}
 
 const markdownComponents: Components = {
 	h1: ({ children }) => (
@@ -81,14 +117,7 @@ const markdownComponents: Components = {
 			</code>
 		);
 	},
-	pre: ({ children }) => (
-		<pre
-			className="mb-2 overflow-x-auto rounded border border-border bg-[#0a0a0a] p-3 font-mono text-xs leading-relaxed"
-			data-testid="message-code-block"
-		>
-			{children}
-		</pre>
-	),
+	pre: ({ children }) => <CodeBlockWrapper>{children}</CodeBlockWrapper>,
 	table: ({ children }) => (
 		<div className="mb-2 overflow-x-auto" data-testid="message-table">
 			<table className="w-full border-collapse font-mono text-xs">

@@ -58,6 +58,20 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
 import {
+	ERR_ACCOUNT_CONVERT_FAILED,
+	ERR_ACCOUNT_CREATE_FAILED,
+	ERR_ACCOUNT_DELETE_FAILED,
+	ERR_ACCOUNT_SET_DEFAULT_FAILED,
+	ERR_ACCOUNT_UPDATE_FAILED,
+	ERR_CHALLENGE_MARK_FAILED,
+	ERR_GROUP_CREATE_FAILED,
+	ERR_GROUP_DELETE_FAILED,
+	ERR_GROUP_UPDATE_FAILED,
+	ERR_SETTINGS_SAVE_FAILED,
+	ERR_VALIDATION_ACCOUNT_NAME_REQUIRED,
+	ERR_VALIDATION_GROUP_NAME_REQUIRED,
+} from "@/lib/constants/errors";
+import {
 	ACCOUNT_TYPE_COLORS,
 	cn,
 	formatDateInTimezone,
@@ -68,6 +82,7 @@ import {
 	PRESET_COLORS,
 	utcHourToLocalHour,
 } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
 
@@ -273,7 +288,7 @@ export function SettingsContent() {
 			}
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to create account");
+			toast.error(getErrorMessage(error, ERR_ACCOUNT_CREATE_FAILED));
 		},
 	});
 
@@ -287,7 +302,7 @@ export function SettingsContent() {
 			refetchAccounts();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to update account");
+			toast.error(getErrorMessage(error, ERR_ACCOUNT_UPDATE_FAILED));
 		},
 	});
 
@@ -298,7 +313,7 @@ export function SettingsContent() {
 			refetchAccounts();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete account");
+			toast.error(getErrorMessage(error, ERR_ACCOUNT_DELETE_FAILED));
 		},
 	});
 
@@ -309,7 +324,7 @@ export function SettingsContent() {
 			refetchAccounts();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to set default account");
+			toast.error(getErrorMessage(error, ERR_ACCOUNT_SET_DEFAULT_FAILED));
 		},
 	});
 
@@ -322,7 +337,7 @@ export function SettingsContent() {
 			refetchAccounts();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to convert account");
+			toast.error(getErrorMessage(error, ERR_ACCOUNT_CONVERT_FAILED));
 		},
 	});
 
@@ -333,7 +348,7 @@ export function SettingsContent() {
 			refetchAccounts();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to mark challenge as failed");
+			toast.error(getErrorMessage(error, ERR_CHALLENGE_MARK_FAILED));
 		},
 	});
 
@@ -346,7 +361,7 @@ export function SettingsContent() {
 			refetchGroups();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to create group");
+			toast.error(getErrorMessage(error, ERR_GROUP_CREATE_FAILED));
 		},
 	});
 
@@ -359,7 +374,7 @@ export function SettingsContent() {
 			refetchGroups();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to update group");
+			toast.error(getErrorMessage(error, ERR_GROUP_UPDATE_FAILED));
 		},
 	});
 
@@ -370,7 +385,7 @@ export function SettingsContent() {
 			refetchAccountsList();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete group");
+			toast.error(getErrorMessage(error, ERR_GROUP_DELETE_FAILED));
 		},
 	});
 
@@ -416,7 +431,7 @@ export function SettingsContent() {
 			toast.success("Settings saved");
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to save settings");
+			toast.error(getErrorMessage(error, ERR_SETTINGS_SAVE_FAILED));
 		},
 	});
 
@@ -526,7 +541,7 @@ export function SettingsContent() {
 
 	const handleAccountSubmit = () => {
 		if (!accountForm.name.trim()) {
-			toast.error("Account name is required");
+			toast.error(ERR_VALIDATION_ACCOUNT_NAME_REQUIRED);
 			return;
 		}
 
@@ -584,7 +599,7 @@ export function SettingsContent() {
 
 	const handleGroupSubmit = () => {
 		if (!groupForm.name.trim()) {
-			toast.error("Group name is required");
+			toast.error(ERR_VALIDATION_GROUP_NAME_REQUIRED);
 			return;
 		}
 

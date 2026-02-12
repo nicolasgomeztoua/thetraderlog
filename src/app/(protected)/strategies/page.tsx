@@ -17,6 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+	ERR_STRATEGY_DELETE_FAILED,
+	ERR_STRATEGY_DUPLICATE_UI_FAILED,
+} from "@/lib/constants/errors";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 // =============================================================================
@@ -48,7 +53,7 @@ export default function StrategiesPage() {
 			setStrategyToDelete(null);
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete strategy");
+			toast.error(getErrorMessage(error, ERR_STRATEGY_DELETE_FAILED));
 		},
 	});
 
@@ -61,7 +66,7 @@ export default function StrategiesPage() {
 			router.push(`/strategies/${newStrategy.id}`);
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to duplicate strategy");
+			toast.error(getErrorMessage(error, ERR_STRATEGY_DUPLICATE_UI_FAILED));
 		},
 	});
 

@@ -14,6 +14,16 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
+import {
+	ERR_ATTACHMENT_CREATE_FAILED,
+	ERR_ATTACHMENT_NOT_FOUND,
+	ERR_DELETED_TRADE_NOT_FOUND,
+	ERR_EXECUTION_NOT_FOUND,
+	ERR_MAEMFE_CALCULATE_FAILED,
+	ERR_S3_NOT_CONFIGURED,
+	ERR_TRADE_NOT_FOUND,
+	ERR_TRADES_BULK_NOT_FOUND,
+} from "@/lib/constants/errors";
 import type { SortField } from "@/lib/constants/trade-log";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 import {
@@ -612,7 +622,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Transform S3 keys in notes and attachments to presigned URLs
@@ -874,7 +884,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Check if trade is being closed (status changing to 'closed')
@@ -918,7 +928,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			const fees = parseFloat(input.fees ?? "0");
@@ -974,7 +984,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Soft delete by setting deletedAt timestamp
@@ -1002,7 +1012,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (existingTrades.length !== input.ids.length) {
-				throw new Error("Some trades not found or don't belong to you");
+				throw new Error(ERR_TRADES_BULK_NOT_FOUND);
 			}
 
 			// Soft delete all
@@ -1035,7 +1045,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Deleted trade not found");
+				throw new Error(ERR_DELETED_TRADE_NOT_FOUND);
 			}
 
 			await ctx.db
@@ -1055,7 +1065,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			await ctx.db.delete(trades).where(eq(trades.id, input.id));
@@ -1184,7 +1194,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			const executions = await ctx.db.query.tradeExecutions.findMany({
@@ -1209,7 +1219,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Use user-provided PnL for exits
@@ -1281,7 +1291,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!execution || execution.trade.userId !== ctx.user.id) {
-				throw new Error("Execution not found");
+				throw new Error(ERR_EXECUTION_NOT_FOUND);
 			}
 
 			await ctx.db
@@ -1334,7 +1344,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			const [updated] = await ctx.db
@@ -1367,7 +1377,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			const [updated] = await ctx.db
@@ -1400,7 +1410,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (existingTrades.length !== input.ids.length) {
-				throw new Error("Some trades not found or don't belong to you");
+				throw new Error(ERR_TRADES_BULK_NOT_FOUND);
 			}
 
 			await ctx.db
@@ -1433,7 +1443,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			const [updated] = await ctx.db
@@ -1459,7 +1469,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!existingTrade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			const [updated] = await ctx.db
@@ -1492,7 +1502,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (existingTrades.length !== input.ids.length) {
-				throw new Error("Some trades not found or don't belong to you");
+				throw new Error(ERR_TRADES_BULK_NOT_FOUND);
 			}
 
 			await ctx.db
@@ -1556,7 +1566,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Use the shared service for calculation
@@ -1565,7 +1575,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!result.success && result.message !== "Already processed") {
-				throw new Error(result.message ?? "Failed to calculate MAE/MFE");
+				throw new Error(result.message ?? ERR_MAEMFE_CALCULATE_FAILED);
 			}
 
 			return {
@@ -1735,9 +1745,7 @@ export const tradesRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (!isS3Configured()) {
-				throw new Error(
-					"File uploads are not configured. S3 settings are missing.",
-				);
+				throw new Error(ERR_S3_NOT_CONFIGURED);
 			}
 
 			// Verify user owns the trade
@@ -1749,7 +1757,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Generate a unique key for the file
@@ -1780,9 +1788,7 @@ export const tradesRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (!isS3Configured()) {
-				throw new Error(
-					"File uploads are not configured. S3 settings are missing.",
-				);
+				throw new Error(ERR_S3_NOT_CONFIGURED);
 			}
 
 			// Verify user owns the trade
@@ -1794,7 +1800,7 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Store the key, not the presigned URL - URLs will be generated on-demand
@@ -1813,7 +1819,7 @@ export const tradesRouter = createTRPCRouter({
 				.returning();
 
 			if (!attachment) {
-				throw new Error("Failed to create attachment");
+				throw new Error(ERR_ATTACHMENT_CREATE_FAILED);
 			}
 
 			// Generate presigned URL for immediate use (e.g., inserting into editor)
@@ -1841,12 +1847,12 @@ export const tradesRouter = createTRPCRouter({
 			});
 
 			if (!attachment) {
-				throw new Error("Attachment not found");
+				throw new Error(ERR_ATTACHMENT_NOT_FOUND);
 			}
 
 			// Verify user owns the trade that contains this attachment
 			if (attachment.trade.userId !== ctx.user.id) {
-				throw new Error("Attachment not found");
+				throw new Error(ERR_ATTACHMENT_NOT_FOUND);
 			}
 
 			// Delete from S3 if configured

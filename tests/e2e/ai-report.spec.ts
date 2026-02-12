@@ -12,12 +12,11 @@ test.describe("AI Report Mode", () => {
 		await page.goto("/ai");
 
 		// Wait for page to load
-		await expect(page.getByTestId("ai-heading")).toBeVisible({
+		await expect(page.getByTestId("ai-page")).toBeVisible({
 			timeout: 15000,
 		});
 
-		// Switch to Report mode
-		await page.getByTestId("ai-mode-selector").click();
+		// Switch to Report mode via segmented control button
 		await page.getByTestId("ai-mode-option-report").click();
 
 		// Verify report interface is visible

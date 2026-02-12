@@ -6,6 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ERR_TRADE_NO_STRATEGY } from "@/lib/constants/errors";
 import {
 	createTestCaller,
 	getTestDb,
@@ -975,7 +976,7 @@ describe("strategy-evaluation", () => {
 
 			await expect(
 				caller.strategies.evaluateTradeRules({ tradeId: trade?.id ?? "" }),
-			).rejects.toThrow("Trade has no strategy assigned");
+			).rejects.toThrow(ERR_TRADE_NO_STRATEGY);
 		});
 	});
 

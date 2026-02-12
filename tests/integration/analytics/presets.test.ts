@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ERR_PRESET_NOT_FOUND } from "@/lib/constants/errors";
 import {
 	createTestCaller,
 	setupTrader,
@@ -445,7 +446,7 @@ describe("Analytics Filter Presets", () => {
 					id: created?.id ?? "",
 					name: "Hacked Name",
 				}),
-			).rejects.toThrow("Preset not found or access denied");
+			).rejects.toThrow(ERR_PRESET_NOT_FOUND);
 		});
 
 		it("should preserve fields not being updated", async () => {
@@ -495,7 +496,7 @@ describe("Analytics Filter Presets", () => {
 				caller.analytics.deleteFilterPreset({
 					id: "non-existent-id",
 				}),
-			).rejects.toThrow("Preset not found or access denied");
+			).rejects.toThrow(ERR_PRESET_NOT_FOUND);
 		});
 
 		it("should not allow deleting another user's preset", async () => {
@@ -511,7 +512,7 @@ describe("Analytics Filter Presets", () => {
 				otherCaller.analytics.deleteFilterPreset({
 					id: created?.id ?? "",
 				}),
-			).rejects.toThrow("Preset not found or access denied");
+			).rejects.toThrow(ERR_PRESET_NOT_FOUND);
 
 			// Verify it still exists for original user
 			const presets = await caller.analytics.getFilterPresets();
@@ -622,7 +623,7 @@ describe("Analytics Filter Presets", () => {
 				caller.analytics.setDefaultPreset({
 					id: "non-existent-preset-id",
 				}),
-			).rejects.toThrow("Preset not found or access denied");
+			).rejects.toThrow(ERR_PRESET_NOT_FOUND);
 		});
 
 		it("should not allow setting another user's preset as default", async () => {
@@ -638,7 +639,7 @@ describe("Analytics Filter Presets", () => {
 				otherCaller.analytics.setDefaultPreset({
 					id: created?.id ?? "",
 				}),
-			).rejects.toThrow("Preset not found or access denied");
+			).rejects.toThrow(ERR_PRESET_NOT_FOUND);
 		});
 
 		it("should handle setting already-default preset as default", async () => {

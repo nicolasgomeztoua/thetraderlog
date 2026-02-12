@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useImagePreloader } from "@/hooks/use-image-preloader";
 import { useTiptapImageHandlers } from "@/hooks/use-tiptap-image-handlers";
+import { ERR_UPLOAD_FAILED } from "@/lib/constants/errors";
 import { cn } from "@/lib/shared";
 import { transformHtmlToS3Keys } from "@/lib/storage/s3-utils";
 import { api } from "@/trpc/react";
@@ -274,7 +275,7 @@ export function DailyJournalPreview({
 				return attachment.url;
 			} catch (error) {
 				console.error("Image upload failed:", error);
-				toast.error("Upload failed", { id: toastId });
+				toast.error(ERR_UPLOAD_FAILED, { id: toastId });
 				return null;
 			}
 		},

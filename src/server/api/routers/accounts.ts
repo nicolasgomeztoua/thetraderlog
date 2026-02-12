@@ -2,6 +2,12 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import {
+	ERR_ACCOUNT_NOT_CHALLENGE,
+	ERR_ACCOUNT_NOT_FOUND,
+	ERR_CHALLENGE_ACCOUNT_NOT_FOUND,
+	ERR_GROUP_NOT_FOUND,
+} from "@/lib/constants/errors";
+import {
 	accountTypeEnum,
 	drawdownTypeEnum,
 	payoutFrequencyEnum,
@@ -139,7 +145,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!account) {
-				throw new Error("Account not found");
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
 			return account;
@@ -154,7 +160,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!account) {
-				throw new Error("Account not found");
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
 			// If this is a funded account, get its linked challenge
@@ -236,7 +242,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!existingAccount) {
-				throw new Error("Account not found");
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
 			// If setting as default, unset other defaults first
@@ -282,11 +288,11 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!challengeAccount) {
-				throw new Error("Challenge account not found");
+				throw new Error(ERR_CHALLENGE_ACCOUNT_NOT_FOUND);
 			}
 
 			if (challengeAccount.accountType !== "prop_challenge") {
-				throw new Error("Account is not a prop challenge account");
+				throw new Error(ERR_ACCOUNT_NOT_CHALLENGE);
 			}
 
 			// Mark the challenge as passed
@@ -337,11 +343,11 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!account) {
-				throw new Error("Account not found");
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
 			if (account.accountType !== "prop_challenge") {
-				throw new Error("Account is not a prop challenge account");
+				throw new Error(ERR_ACCOUNT_NOT_CHALLENGE);
 			}
 
 			const [updated] = await ctx.db
@@ -363,7 +369,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!existingAccount) {
-				throw new Error("Account not found");
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
 			// Unset all defaults for this user
@@ -391,7 +397,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!existingAccount) {
-				throw new Error("Account not found");
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
 			// Check if there are trades associated with this account
@@ -439,7 +445,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!account) {
-				throw new Error("Account not found");
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
 			// Get all closed trades for this account
@@ -506,7 +512,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!group) {
-				throw new Error("Group not found");
+				throw new Error(ERR_GROUP_NOT_FOUND);
 			}
 
 			return group;
@@ -542,7 +548,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!existingGroup) {
-				throw new Error("Group not found");
+				throw new Error(ERR_GROUP_NOT_FOUND);
 			}
 
 			const [updated] = await ctx.db
@@ -566,7 +572,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!existingGroup) {
-				throw new Error("Group not found");
+				throw new Error(ERR_GROUP_NOT_FOUND);
 			}
 
 			// Remove group assignment from accounts (don't delete the accounts)
@@ -596,7 +602,7 @@ export const accountsRouter = createTRPCRouter({
 			});
 
 			if (!group) {
-				throw new Error("Group not found");
+				throw new Error(ERR_GROUP_NOT_FOUND);
 			}
 
 			const accountIds = group.accounts.map((a) => a.id);

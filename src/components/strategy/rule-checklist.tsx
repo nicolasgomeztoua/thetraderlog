@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOptimisticState } from "@/hooks/use-debounced-mutation";
+import { ERR_RULE_UPDATE_FAILED } from "@/lib/constants/errors";
 import { cn } from "@/lib/shared";
 import type { AutoEvaluationResult, RuleType } from "@/lib/strategy";
 import { api } from "@/trpc/react";
@@ -127,7 +128,7 @@ export function RuleChecklist({
 		onError: (_error, variables) => {
 			// Only revert on actual error
 			clearOptimisticUpdate(variables.ruleId);
-			toast.error("Failed to update rule");
+			toast.error(ERR_RULE_UPDATE_FAILED);
 		},
 		// No onSettled - we don't refetch or clear optimistic state
 		// The optimistic state IS correct, backend just persists quietly

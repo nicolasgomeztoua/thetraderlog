@@ -1,6 +1,11 @@
+import { eq } from "drizzle-orm";
 import type { ToolDefinition } from "@/lib/ai/client";
 import { createCaller } from "@/server/api/root";
 import { createTRPCContext } from "@/server/api/trpc";
+import type { db as DbInstance } from "@/server/db";
+import { users } from "@/server/db/schema";
+
+type Db = typeof DbInstance;
 
 // =============================================================================
 // ALLOWED ENDPOINTS
@@ -98,6 +103,7 @@ export async function executeCallAnalytics(
 	router: string,
 	endpoint: string,
 	input?: Record<string, unknown>,
+	db?: Db,
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
 	// Validate router
 	if (router !== "analytics" && router !== "trades") {
@@ -122,8 +128,28 @@ export async function executeCallAnalytics(
 	}
 
 	try {
+		// Look up the user by internal ID to get their clerkId for the tRPC context.
+		// The userId parameter is an internal ID (e.g. "usr_abc"), but the auth middleware
+		// looks up users by clerkId. We also pass the full user object to skip the lookup.
+		const { db: defaultDb } = await import("@/server/db");
+		const resolvedDb = db ?? defaultDb;
+
+		const user = await resolvedDb.query.users.findFirst({
+			where: eq(users.id, userId),
+		});
+
+		if (!user) {
+			return {
+				success: false,
+				error: "User not found — cannot call analytics endpoint.",
+			};
+		}
+
 		// Create a server-side tRPC caller with the user's context
-		const ctx = await createTRPCContext({ headers: new Headers() }, { userId });
+		const ctx = await createTRPCContext(
+			{ headers: new Headers() },
+			{ userId: user.clerkId, user, db: resolvedDb },
+		);
 		const caller = createCaller(ctx);
 
 		let result: unknown;

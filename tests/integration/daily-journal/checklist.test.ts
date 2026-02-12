@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ERR_TEMPLATE_NOT_FOUND } from "@/lib/constants/errors";
 import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
@@ -126,7 +127,7 @@ describe("dailyJournal router - checklist operations", () => {
 					id: "ct-nonexistent",
 					text: "Should fail",
 				}),
-			).rejects.toThrow("Template not found");
+			).rejects.toThrow(ERR_TEMPLATE_NOT_FOUND);
 		});
 
 		it("should reject delete for non-existent template", async () => {
@@ -134,7 +135,7 @@ describe("dailyJournal router - checklist operations", () => {
 				caller.dailyJournal.deleteTemplate({
 					id: "ct-nonexistent",
 				}),
-			).rejects.toThrow("Template not found");
+			).rejects.toThrow(ERR_TEMPLATE_NOT_FOUND);
 		});
 	});
 
@@ -305,7 +306,7 @@ describe("dailyJournal router - checklist operations", () => {
 					date: "2024-07-01",
 					templateId: templateForChecks.id, // User 1's template
 				}),
-			).rejects.toThrow("Template not found");
+			).rejects.toThrow(ERR_TEMPLATE_NOT_FOUND);
 		});
 
 		it("should reject bulk update with non-owned template", async () => {

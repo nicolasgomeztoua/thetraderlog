@@ -19,7 +19,15 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAccount } from "@/contexts/account-context";
+import {
+	ERR_TRADE_CREATE_FAILED,
+	ERR_VALIDATION_ACCOUNT_REQUIRED,
+	ERR_VALIDATION_EXIT_DETAILS,
+	ERR_VALIDATION_PNL_REQUIRED,
+	ERR_VALIDATION_REQUIRED_FIELDS,
+} from "@/lib/constants/errors";
 import { FOREX_SYMBOLS, FUTURES_SYMBOLS } from "@/lib/market-data";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 const SETUP_TYPES = [
@@ -93,7 +101,7 @@ export default function NewTradePage() {
 			router.push("/journal");
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to create trade");
+			toast.error(getErrorMessage(error, ERR_TRADE_CREATE_FAILED));
 		},
 	});
 
@@ -101,22 +109,22 @@ export default function NewTradePage() {
 		e.preventDefault();
 
 		if (!accountId) {
-			toast.error("Please select a trading account");
+			toast.error(ERR_VALIDATION_ACCOUNT_REQUIRED);
 			return;
 		}
 
 		if (!symbol || !entryPrice || !entryDate || !entryTime || !quantity) {
-			toast.error("Please fill in all required fields");
+			toast.error(ERR_VALIDATION_REQUIRED_FIELDS);
 			return;
 		}
 
 		if (!isStillOpen && (!exitPrice || !exitDate || !exitTime)) {
-			toast.error("Please provide exit details or mark trade as still open");
+			toast.error(ERR_VALIDATION_EXIT_DETAILS);
 			return;
 		}
 
 		if (!isStillOpen && !realizedPnl) {
-			toast.error("Please enter the realized P&L for this trade");
+			toast.error(ERR_VALIDATION_PNL_REQUIRED);
 			return;
 		}
 

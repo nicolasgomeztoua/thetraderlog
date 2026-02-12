@@ -12,6 +12,21 @@ import { generateReportPdf } from "@/lib/ai/report-pdf";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
 import { MAX_TOOL_ROUNDS_REPORT } from "@/lib/constants/ai";
+import {
+	ERR_AI_CONNECTION,
+	ERR_AI_CONTENT_FILTER,
+	ERR_AI_CONTEXT_LENGTH,
+	ERR_AI_GENERIC,
+	ERR_AI_NO_DATA,
+	ERR_AI_NOT_FOUND,
+	ERR_AI_OWNERSHIP,
+	ERR_AI_PDF_FAILED,
+	ERR_AI_QUOTA,
+	ERR_AI_RATE_LIMIT,
+	ERR_AI_REPORT_FALLBACK,
+	ERR_AI_TIMEOUT,
+	ERR_AI_UNAVAILABLE,
+} from "@/lib/constants/errors";
 import { db } from "@/server/db";
 import {
 	aiConversations,
@@ -23,6 +38,67 @@ import {
 // =============================================================================
 // HELPERS
 // =============================================================================
+
+/**
+ * Map internal errors to user-friendly messages.
+ * Technical details are logged server-side by Trigger.dev — only show
+ * actionable, non-technical text to the user.
+ */
+function getUserFriendlyErrorMessage(error: unknown): string {
+	const raw =
+		error instanceof Error ? error.message : String(error ?? "Unknown error");
+	const lower = raw.toLowerCase();
+
+	// Rate limiting / quota
+	if (lower.includes("rate limit") || lower.includes("429"))
+		return ERR_AI_RATE_LIMIT;
+
+	if (
+		lower.includes("quota") ||
+		lower.includes("insufficient_quota") ||
+		lower.includes("billing")
+	)
+		return ERR_AI_QUOTA;
+
+	// Model / API availability
+	if (lower.includes("timeout") || lower.includes("timed out"))
+		return ERR_AI_TIMEOUT;
+
+	if (
+		lower.includes("503") ||
+		lower.includes("502") ||
+		lower.includes("service unavailable") ||
+		lower.includes("bad gateway")
+	)
+		return ERR_AI_UNAVAILABLE;
+
+	if (lower.includes("connection") || lower.includes("econnrefused"))
+		return ERR_AI_CONNECTION;
+
+	// Content / safety filters
+	if (lower.includes("content_filter") || lower.includes("content_policy"))
+		return ERR_AI_CONTENT_FILTER;
+
+	// Token / context length
+	if (lower.includes("context_length") || lower.includes("maximum context"))
+		return ERR_AI_CONTEXT_LENGTH;
+
+	// PDF generation
+	if (lower.includes("pdf")) return ERR_AI_PDF_FAILED;
+
+	// Auth / ownership (should be rare for real users)
+	if (lower.includes("ownership") || lower.includes("does not belong"))
+		return ERR_AI_OWNERSHIP;
+
+	if (lower.includes("not found")) return ERR_AI_NOT_FOUND;
+
+	// No trade data
+	if (lower.includes("no trades") || lower.includes("no data"))
+		return ERR_AI_NO_DATA;
+
+	// Fallback — generic but friendly
+	return ERR_AI_GENERIC;
+}
 
 /**
  * Extract chart image URLs from tool call results in the message history.
@@ -129,6 +205,10 @@ async function generateAndUploadPdf(
  */
 export const generateAiReport = task({
 	id: "generate-ai-report",
+	// AI report generation involves multi-turn LLM tool-calling (up to 20 rounds),
+	// SQL queries, Python sandbox execution, PDF generation, and email delivery.
+	// 5 min global default is insufficient — allow up to 15 minutes.
+	maxDuration: 900,
 	queue: {
 		concurrencyLimit: 5,
 	},
@@ -395,6 +475,7 @@ export const generateAiReport = task({
 				.set({
 					status: "failed",
 					completedAt: new Date(),
+					errorMessage: getUserFriendlyErrorMessage(error),
 				})
 				.where(eq(aiReports.id, payload.reportId));
 
@@ -409,8 +490,7 @@ export const generateAiReport = task({
 			await db.insert(aiMessages).values({
 				conversationId: payload.conversationId,
 				role: "assistant",
-				content:
-					"Report generation failed. Please try again or contact support if the issue persists.",
+				content: ERR_AI_REPORT_FALLBACK,
 			});
 
 			throw error;

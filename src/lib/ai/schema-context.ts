@@ -365,13 +365,15 @@ const SCHEMA_CONTEXT = `
 
 ### Important Data Notes
 
-- **P&L values** (realized_pnl, net_pnl, fees, etc.) are stored as decimal strings. Always use parseFloat() for numeric operations.
+- **P&L values** (realized_pnl, net_pnl, fees, etc.) are stored as decimal strings. Always use CAST(column AS NUMERIC) for SQL aggregation.
 - **All timestamps** use "with timezone" — stored in UTC.
 - **Soft deletes**: trades have a deleted_at column. Always filter with \`deleted_at IS NULL\` unless you want to include deleted trades.
-- **User scoping**: All queries MUST filter by user_id. Never return data from other users.
+- **User scoping**: All queries use user-scoped CTE aliases (user_trades, user_accounts, etc.) that automatically filter to the current user. NEVER use raw table names like \`trade\` or \`account\` — always use \`user_trades\`, \`user_accounts\`, etc.
 - **Breakeven threshold**: User-configurable via user_settings.breakeven_threshold (default $3). Trades with |net_pnl| <= threshold are considered breakeven.
 
 ## Example SQL Queries
+
+**IMPORTANT**: Always use the user-scoped CTE aliases (user_trades, user_accounts, etc.) — NEVER raw table names. You do NOT need WHERE user_id clauses; the CTEs already filter to the current user.
 
 ### P&L by Day of Week
 \`\`\`sql
@@ -380,8 +382,8 @@ SELECT
   COUNT(*) AS trades,
   SUM(CAST(net_pnl AS NUMERIC)) AS total_pnl,
   AVG(CAST(net_pnl AS NUMERIC)) AS avg_pnl
-FROM trade
-WHERE user_id = $1 AND deleted_at IS NULL AND status = 'closed'
+FROM user_trades
+WHERE deleted_at IS NULL AND status = 'closed'
 GROUP BY day_of_week
 ORDER BY day_of_week;
 \`\`\`
@@ -395,8 +397,8 @@ SELECT
   AVG(CAST(net_pnl AS NUMERIC)) AS avg_pnl,
   SUM(CASE WHEN CAST(net_pnl AS NUMERIC) > 0 THEN 1 ELSE 0 END) AS wins,
   SUM(CASE WHEN CAST(net_pnl AS NUMERIC) < 0 THEN 1 ELSE 0 END) AS losses
-FROM trade
-WHERE user_id = $1 AND deleted_at IS NULL AND status = 'closed'
+FROM user_trades
+WHERE deleted_at IS NULL AND status = 'closed'
 GROUP BY symbol
 ORDER BY total_pnl DESC;
 \`\`\`
@@ -404,10 +406,10 @@ ORDER BY total_pnl DESC;
 ### Trades with Tags
 \`\`\`sql
 SELECT t.*, array_agg(tg.name) AS tag_names
-FROM trade t
-LEFT JOIN trade_tag tt ON t.id = tt.trade_id
-LEFT JOIN tag tg ON tt.tag_id = tg.id
-WHERE t.user_id = $1 AND t.deleted_at IS NULL
+FROM user_trades t
+LEFT JOIN user_trade_tags tt ON t.id = tt.trade_id
+LEFT JOIN user_tags tg ON tt.tag_id = tg.id
+WHERE t.deleted_at IS NULL
 GROUP BY t.id
 ORDER BY t.entry_time DESC
 LIMIT 50;
@@ -424,9 +426,9 @@ SELECT
     1
   ) AS win_rate,
   SUM(CAST(t.net_pnl AS NUMERIC)) AS total_pnl
-FROM trade t
-JOIN strategy s ON t.strategy_id = s.id
-WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.status = 'closed'
+FROM user_trades t
+JOIN user_strategies s ON t.strategy_id = s.id
+WHERE t.deleted_at IS NULL AND t.status = 'closed'
 GROUP BY s.name
 ORDER BY total_pnl DESC;
 \`\`\`
@@ -436,8 +438,8 @@ ORDER BY total_pnl DESC;
 SELECT
   id, symbol, entry_time, exit_time, CAST(net_pnl AS NUMERIC) AS pnl,
   SUM(CAST(net_pnl AS NUMERIC)) OVER (ORDER BY exit_time) AS cumulative_pnl
-FROM trade
-WHERE user_id = $1 AND deleted_at IS NULL AND status = 'closed'
+FROM user_trades
+WHERE deleted_at IS NULL AND status = 'closed'
 ORDER BY exit_time;
 \`\`\`
 
@@ -450,8 +452,8 @@ SELECT
   AVG(CAST(net_pnl AS NUMERIC)) AS avg_pnl,
   SUM(CASE WHEN CAST(net_pnl AS NUMERIC) > 0 THEN 1 ELSE 0 END) AS wins,
   SUM(CASE WHEN CAST(net_pnl AS NUMERIC) < 0 THEN 1 ELSE 0 END) AS losses
-FROM trade
-WHERE user_id = $1 AND deleted_at IS NULL AND status = 'closed'
+FROM user_trades
+WHERE deleted_at IS NULL AND status = 'closed'
 GROUP BY month
 ORDER BY month DESC;
 \`\`\`
@@ -462,8 +464,8 @@ SELECT
   EXTRACT(EPOCH FROM (exit_time - entry_time)) / 60 AS holding_minutes,
   CAST(net_pnl AS NUMERIC) AS pnl,
   symbol, direction
-FROM trade
-WHERE user_id = $1 AND deleted_at IS NULL AND status = 'closed'
+FROM user_trades
+WHERE deleted_at IS NULL AND status = 'closed'
   AND exit_time IS NOT NULL
 ORDER BY holding_minutes;
 \`\`\`
@@ -480,8 +482,8 @@ SELECT
     THEN CAST(t.net_pnl AS NUMERIC) / NULLIF(ABS(CAST(t.entry_price AS NUMERIC) - CAST(t.stop_loss AS NUMERIC)) * CAST(t.quantity AS NUMERIC), 0)
     ELSE NULL
   END AS r_multiple
-FROM trade t
-WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.status = 'closed'
+FROM user_trades t
+WHERE t.deleted_at IS NULL AND t.status = 'closed'
   AND t.stop_loss IS NOT NULL
 ORDER BY r_multiple DESC;
 \`\`\`

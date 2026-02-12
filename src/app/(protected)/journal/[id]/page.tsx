@@ -46,7 +46,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTimezone } from "@/hooks/use-timezone";
+import {
+	ERR_RATING_UPDATE_FAILED,
+	ERR_REVIEW_UPDATE_FAILED,
+	ERR_TRADE_CLOSE_FAILED,
+	ERR_TRADE_DELETE_FAILED,
+	ERR_TRADE_UPDATE_FAILED,
+	ERR_VALIDATION_PNL_REQUIRED_SHORT,
+} from "@/lib/constants/errors";
 import { cn, formatDate } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { calculateAllStats } from "@/lib/trades";
 import { api } from "@/trpc/react";
 
@@ -168,13 +177,13 @@ export default function TradeDetailPage() {
 			if (context?.previousTrade) {
 				utils.trades.getById.setData({ id: tradeId }, context.previousTrade);
 			}
-			toast.error(error.message || "Failed to update");
+			toast.error(getErrorMessage(error, ERR_TRADE_UPDATE_FAILED));
 		},
 	});
 
 	const updateRatingMutation = api.trades.updateRating.useMutation({
 		onError: () => {
-			toast.error("Failed to update rating");
+			toast.error(ERR_RATING_UPDATE_FAILED);
 		},
 	});
 
@@ -203,7 +212,7 @@ export default function TradeDetailPage() {
 			if (context?.previousTrade) {
 				utils.trades.getById.setData({ id: tradeId }, context.previousTrade);
 			}
-			toast.error("Failed to update review status");
+			toast.error(ERR_REVIEW_UPDATE_FAILED);
 		},
 	});
 
@@ -215,7 +224,7 @@ export default function TradeDetailPage() {
 			utils.trades.getAll.invalidate();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to close trade");
+			toast.error(getErrorMessage(error, ERR_TRADE_CLOSE_FAILED));
 		},
 	});
 
@@ -227,7 +236,7 @@ export default function TradeDetailPage() {
 			router.push("/journal");
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete trade");
+			toast.error(getErrorMessage(error, ERR_TRADE_DELETE_FAILED));
 		},
 	});
 
@@ -244,7 +253,7 @@ export default function TradeDetailPage() {
 
 	const handleCloseTrade = () => {
 		if (!closeData.realizedPnl) {
-			toast.error("Please enter the realized P&L");
+			toast.error(ERR_VALIDATION_PNL_REQUIRED_SHORT);
 			return;
 		}
 		const exitTime = new Date(

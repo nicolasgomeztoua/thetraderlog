@@ -1,4 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+	ERR_ACCOUNT_NOT_CHALLENGE,
+	ERR_ACCOUNT_NOT_FOUND,
+	ERR_GROUP_NOT_FOUND,
+} from "@/lib/constants/errors";
 import type { User } from "@/server/db/schema";
 import {
 	createTestAccount,
@@ -178,7 +183,7 @@ describe("accounts router", () => {
 		it("should throw error for non-existent account", async () => {
 			await expect(
 				caller.accounts.getById({ id: "non-existent-id" }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 		});
 
 		it("should throw error for account owned by another user", async () => {
@@ -191,7 +196,7 @@ describe("accounts router", () => {
 			// Try to access it with original user's caller
 			await expect(
 				caller.accounts.getById({ id: otherAccount.id }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 		});
 	});
 
@@ -247,7 +252,7 @@ describe("accounts router", () => {
 		it("should throw error when updating non-existent account", async () => {
 			await expect(
 				caller.accounts.update({ id: "non-existent-id", name: "Test" }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 		});
 	});
 
@@ -284,7 +289,7 @@ describe("accounts router", () => {
 			// Verify it's gone
 			await expect(
 				caller.accounts.getById({ id: toDelete?.id ?? "" }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 		});
 
 		it("should unassign trades when deleting account", async () => {
@@ -408,7 +413,7 @@ describe("accounts router", () => {
 					name: "Should Fail",
 					initialBalance: "10000",
 				}),
-			).rejects.toThrow("Account is not a prop challenge account");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_CHALLENGE);
 		});
 
 		it("should throw error when marking non-challenge as failed", async () => {
@@ -417,7 +422,7 @@ describe("accounts router", () => {
 
 			await expect(
 				caller.accounts.markChallengeFailed({ id: liveAccount?.id ?? "" }),
-			).rejects.toThrow("Account is not a prop challenge account");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_CHALLENGE);
 		});
 	});
 
@@ -469,7 +474,7 @@ describe("accounts router", () => {
 		it("should throw error for non-existent account", async () => {
 			await expect(
 				caller.accounts.getStats({ id: "non-existent-id" }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 		});
 	});
 
@@ -526,7 +531,7 @@ describe("accounts router", () => {
 			it("should throw error for non-existent group", async () => {
 				await expect(
 					caller.accounts.getGroupById({ id: "non-existent-id" }),
-				).rejects.toThrow("Group not found");
+				).rejects.toThrow(ERR_GROUP_NOT_FOUND);
 			});
 		});
 
@@ -570,7 +575,7 @@ describe("accounts router", () => {
 				// Verify it's deleted
 				await expect(
 					caller.accounts.getGroupById({ id: toDelete?.id ?? "" }),
-				).rejects.toThrow("Group not found");
+				).rejects.toThrow(ERR_GROUP_NOT_FOUND);
 			});
 		});
 	});
@@ -588,15 +593,15 @@ describe("accounts router", () => {
 
 			await expect(
 				caller.accounts.getById({ id: otherAccount.id }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 
 			await expect(
 				caller.accounts.update({ id: otherAccount.id, name: "Hacked" }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 
 			await expect(
 				caller.accounts.delete({ id: otherAccount.id }),
-			).rejects.toThrow("Account not found");
+			).rejects.toThrow(ERR_ACCOUNT_NOT_FOUND);
 		});
 
 		it("should not allow accessing another user's group", async () => {
@@ -609,18 +614,18 @@ describe("accounts router", () => {
 
 			await expect(
 				caller.accounts.getGroupById({ id: otherGroup?.id ?? "" }),
-			).rejects.toThrow("Group not found");
+			).rejects.toThrow(ERR_GROUP_NOT_FOUND);
 
 			await expect(
 				caller.accounts.updateGroup({
 					id: otherGroup?.id ?? "",
 					name: "Hacked Group",
 				}),
-			).rejects.toThrow("Group not found");
+			).rejects.toThrow(ERR_GROUP_NOT_FOUND);
 
 			await expect(
 				caller.accounts.deleteGroup({ id: otherGroup?.id ?? "" }),
-			).rejects.toThrow("Group not found");
+			).rejects.toThrow(ERR_GROUP_NOT_FOUND);
 		});
 	});
 });
