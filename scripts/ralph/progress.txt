@@ -139,3 +139,11 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - Both normal completion and fallback (max rounds) paths need progress updates — don't forget the fallback path
   - The updateProgress helper uses a fire-and-forget pattern with empty catch — this ensures pipeline never blocks on progress tracking
 ---
+
+## 2026-02-12 - US-010C
+- What was implemented: Added 4 new progress columns to getReportStatus query: progressStage, currentRound, totalToolCalls, chartsGenerated.
+- Files changed: src/server/api/routers/ai.ts
+- **Learnings for future iterations:**
+  - getReportStatus uses columns: {} selection pattern — just add the column name with true value
+  - Polling interval is already 5s in the frontend (report-interface.tsx)
+---

@@ -90,8 +90,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added progressStage, currentRound, totalToolCalls, chartsGenerated to getReportStatus columns selection. Polling interval unchanged at 5s."
     },
     {
       "id": "US-010D",
