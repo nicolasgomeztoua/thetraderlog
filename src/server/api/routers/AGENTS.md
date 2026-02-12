@@ -55,11 +55,11 @@ const trades = await ctx.db.query.trades.findMany({
 
 ### Drizzle returning() can be undefined
 **Problem:** TypeScript error when using `const [created] = await db.insert().returning()`
-**Solution:** Always guard with `if (!created) throw new Error("Failed to create...")`
+**Solution:** Always guard with `if (!created) throw new Error(ERR_*_CREATE_FAILED)` using constants from `@/lib/constants/errors`
 
 ### Validate Child Ownership Through Parent
 **When:** Deleting/updating a child record (attachment, check, etc.)
-**How:** Query child with `{ with: { parent: true } }`, then check `child.parent.userId === ctx.user.id`. Use same error message for "not found" and "not authorized" to avoid leaking information.
+**How:** Query child with `{ with: { parent: true } }`, then check `child.parent.userId === ctx.user.id`. Use the same error constant (e.g. `ERR_ATTACHMENT_NOT_FOUND`) for both "not found" and "not authorized" to avoid leaking information. Import from `@/lib/constants/errors`.
 
 ### Image Upload Pattern (S3 Keys vs Presigned URLs)
 **Problem:** Presigned URLs expire after ~1 hour. Storing them in the database causes broken images.

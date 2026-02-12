@@ -135,7 +135,7 @@ const mutation = api.entity.toggle.useMutation({
   onError: (_err, variables) => {
     // Only revert on actual error
     clearUpdate(variables.id);
-    toast.error("Failed to update");
+    toast.error(ERR_TRADE_UPDATE_FAILED); // import from "@/lib/constants/errors"
   },
   // NO onSettled - don't refetch, don't clear optimistic state
   // The frontend is authoritative, backend syncs quietly
