@@ -730,7 +730,8 @@
 	.animate-fade-out,
 	.animate-slide-out-left,
 	.animate-shake {
-		animation-duration: 0.01ms !important;
+		animation: none;
+		opacity: 1;
 	}
 }
 

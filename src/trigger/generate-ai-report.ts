@@ -113,10 +113,7 @@ async function updateProgress(
 	},
 ): Promise<void> {
 	try {
-		await db
-			.update(aiReports)
-			.set(updates)
-			.where(eq(aiReports.id, reportId));
+		await db.update(aiReports).set(updates).where(eq(aiReports.id, reportId));
 	} catch {
 		// Progress updates are fire-and-forget — never block the pipeline
 	}

@@ -41,8 +41,7 @@ const SUGGESTED_QUERY_CARDS: {
 		title: "Session breakdown",
 		description: "Which trading sessions are most profitable?",
 		query:
-			SUGGESTED_CHAT_QUERIES[1] ??
-			"Which trading session is most profitable?",
+			SUGGESTED_CHAT_QUERIES[1] ?? "Which trading session is most profitable?",
 	},
 	{
 		icon: Database,
@@ -56,8 +55,7 @@ const SUGGESTED_QUERY_CARDS: {
 		icon: Zap,
 		title: "Overtrading detection",
 		description: "Am I taking too many trades on losing days?",
-		query:
-			SUGGESTED_CHAT_QUERIES[3] ?? "Am I overtrading on losing days?",
+		query: SUGGESTED_CHAT_QUERIES[3] ?? "Am I overtrading on losing days?",
 	},
 ];
 
@@ -200,7 +198,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 
 				{/* Chat Content */}
 				<ScrollArea className="flex-1" ref={scrollRef}>
-					<div className="mx-auto max-w-3xl px-4 py-4">
+					<div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
 						{isConversationLoading && activeConversationId ? (
 							<div className="space-y-3 sm:space-y-4">
 								<div className="flex justify-start">
@@ -284,19 +282,17 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 												className="group rounded border border-white/5 bg-white/[0.02] p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/[0.02]"
 												data-testid="chat-suggested-query"
 												key={card.title}
-												onClick={() =>
-													void handleSend(card.query)
-												}
+												onClick={() => void handleSend(card.query)}
 												type="button"
 											>
 												<div className="flex items-start gap-2.5">
 													<Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
 													<div className="min-w-0 flex-1">
 														<div className="flex items-center justify-between">
-															<span className="font-mono text-xs text-foreground">
+															<span className="font-mono text-foreground text-xs">
 																{card.title}
 															</span>
-															<ArrowRight className="h-3 w-3 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+															<ArrowRight className="-translate-x-1 h-3 w-3 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
 														</div>
 														<p className="mt-0.5 font-mono text-[10px] text-muted-foreground/60">
 															{card.description}
@@ -321,7 +317,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 								</p>
 							</div>
 						) : (
-							<div className="space-y-3 sm:space-y-4">
+							<div className="space-y-4 sm:space-y-5">
 								{messages.map((message) => (
 									<ChatMessage key={message.id} message={message} />
 								))}
