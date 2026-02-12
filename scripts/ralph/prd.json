@@ -156,8 +156,8 @@
         "Verify in browser"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "User messages with $ prefix + left border. AI messages in cards with → prefix + accent color. Bouncing dots loading. Copy button in card footer with Copied feedback. Pending at opacity-70. Message spacing space-y-4/5. Max container px-4 sm:px-6. animate-fade-in-up on all messages. Replaced all hardcoded #00d4ff with text-accent/bg-accent. Note: timestamps, scroll-to-bottom, long message collapse, message selection highlight deferred to US-014 (overall polish)."
     },
     {
       "id": "US-003",

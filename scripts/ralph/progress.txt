@@ -166,3 +166,13 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - For animation-delay on staggered elements, use inline style={{ animationDelay: "Nms" }} rather than custom classes when each element has a unique delay
   - bg-white/[0.02] is the Tailwind v4 way to do very subtle white backgrounds (2% opacity)
 ---
+
+## 2026-02-12 - US-002
+- What was implemented: Redesigned chat messages — user with left border + $ prefix, AI in subtle cards with → prefix + accent. Bouncing dots loading. Copy button in card footer. Pending at opacity-70. animate-fade-in-up. Removed all hardcoded #00d4ff from chat-message.tsx.
+- Files changed: src/app/(protected)/ai/_components/chat-message.tsx, src/app/(protected)/ai/_components/chat-interface.tsx, src/styles/globals.css
+- **Learnings for future iterations:**
+  - Biome `useSortedClasses` rule auto-fixes class ordering. Run `bunx biome check --write` after manual edits.
+  - Don't use `!important` in CSS — Biome's `noImportantStyles` rule rejects it. Use `animation: none` instead of `animation-duration: 0.01ms !important` for reduced motion.
+  - Removed Tooltip/TooltipProvider from chat-message.tsx — copy button now shows text label directly. Simpler and fewer deps.
+  - The existing Loader2 spinner was replaced with 3 bouncing dots for the thinking state — matches terminal aesthetic better.
+---
