@@ -1,15 +1,33 @@
 "use client";
 
+import { Menu } from "lucide-react";
+
 type AiMode = "chat" | "report";
 
 interface ModelSelectorProps {
 	mode: AiMode;
 	onModeChange: (mode: AiMode) => void;
+	onMenuClick?: () => void;
 }
 
-export function ModelSelector({ mode, onModeChange }: ModelSelectorProps) {
+export function ModelSelector({
+	mode,
+	onModeChange,
+	onMenuClick,
+}: ModelSelectorProps) {
 	return (
-		<div className="flex items-center border-border border-b px-3 py-2">
+		<div className="flex items-center gap-2 border-border border-b px-3 py-2">
+			{/* Mobile hamburger */}
+			{onMenuClick && (
+				<button
+					className="rounded p-2 text-muted-foreground transition-colors hover:bg-white/5 sm:hidden"
+					data-testid="chat-mobile-menu-button"
+					onClick={onMenuClick}
+					type="button"
+				>
+					<Menu className="h-4 w-4" />
+				</button>
+			)}
 			{/* Mode Toggle */}
 			<div
 				className="flex gap-1 rounded border border-border bg-secondary p-0.5"

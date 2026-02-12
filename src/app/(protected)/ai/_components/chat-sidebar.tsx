@@ -25,6 +25,8 @@ interface ChatSidebarProps {
 	conversations: Conversation[];
 	activeId: string | null;
 	isLoading?: boolean;
+	/** When true, renders without hidden sm:flex (used inside mobile Sheet) */
+	isMobile?: boolean;
 	onSelect: (id: string) => void;
 	onNew: () => void;
 	onDelete: (id: string) => void;
@@ -77,6 +79,7 @@ export function ChatSidebar({
 	conversations,
 	activeId,
 	isLoading,
+	isMobile,
 	onSelect,
 	onNew,
 	onDelete,
@@ -88,7 +91,11 @@ export function ChatSidebar({
 
 	return (
 		<div
-			className="hidden w-64 flex-col rounded border border-border bg-card sm:flex"
+			className={
+				isMobile
+					? "flex h-full w-full flex-col bg-card"
+					: "hidden w-64 flex-col rounded border border-border bg-card sm:flex"
+			}
 			data-testid="chat-sidebar"
 		>
 			{/* Header */}

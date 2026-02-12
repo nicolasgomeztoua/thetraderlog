@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
 import { api } from "@/trpc/react";
@@ -86,6 +87,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const [input, setInput] = useState("");
 	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 	const [lastSentAt, setLastSentAt] = useState<number>(0);
+	const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const greeting = useMemo(() => {
@@ -197,10 +199,36 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				}}
 			/>
 
+			{/* Mobile Sidebar Drawer */}
+			<Sheet onOpenChange={setMobileDrawerOpen} open={mobileDrawerOpen}>
+				<SheetContent className="w-72 border-white/10 bg-card p-0" side="left">
+					<ChatSidebar
+						activeId={activeConversationId}
+						conversations={conversations?.items ?? []}
+						isLoading={isConversationsLoading}
+						isMobile
+						onDelete={(id) => deleteConversation.mutate({ conversationId: id })}
+						onNew={() => {
+							handleNewConversation();
+							setMobileDrawerOpen(false);
+						}}
+						onSelect={(id) => {
+							setActiveConversationId(id);
+							setLastSentAt(0);
+							setTimeout(() => setMobileDrawerOpen(false), 100);
+						}}
+					/>
+				</SheetContent>
+			</Sheet>
+
 			{/* Main Chat Area */}
 			<div className="flex flex-1 flex-col overflow-hidden rounded border border-border bg-card">
 				{/* Model Selector replaces terminal header */}
-				<ModelSelector mode={mode} onModeChange={onModeChange} />
+				<ModelSelector
+					mode={mode}
+					onMenuClick={() => setMobileDrawerOpen(true)}
+					onModeChange={onModeChange}
+				/>
 
 				{/* Chat Content */}
 				<ScrollArea className="flex-1" ref={scrollRef}>
