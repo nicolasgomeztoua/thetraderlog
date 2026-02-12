@@ -122,3 +122,11 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - cursor-blink is a pseudo-element class (.cursor-blink::after), not a standard animation class. The typewriter story (US-004) should use this class directly on a span.
   - prefers-reduced-motion: using `animation-duration: 0.01ms !important` instead of `animation: none` for new classes, to allow animation-fill-mode: forwards to still apply final state.
 ---
+
+## 2026-02-12 - US-010A
+- What was implemented: Added 4 new columns to aiReports table: progressStage, currentRound, totalToolCalls, chartsGenerated. Ran db:push.
+- Files changed: src/server/db/schema.ts
+- **Learnings for future iterations:**
+  - progressStage is a free-text column (not enum) — values are: queued, building_context, analyzing, generating_pdf, uploading, complete, failed
+  - The NOTICE about truncated FK identifier is expected (per AGENTS.md) — safe to ignore
+---
