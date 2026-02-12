@@ -130,3 +130,12 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - progressStage is a free-text column (not enum) — values are: queued, building_context, analyzing, generating_pdf, uploading, complete, failed
   - The NOTICE about truncated FK identifier is expected (per AGENTS.md) — safe to ignore
 ---
+
+## 2026-02-12 - US-010B
+- What was implemented: Added updateProgress helper and 7 progress emission points in generate-ai-report.ts task. Covers building_context, analyzing, per-round, generating_pdf, uploading, complete, and failed stages.
+- Files changed: src/trigger/generate-ai-report.ts
+- **Learnings for future iterations:**
+  - generateAndUploadPdf is a helper that handles both PDF generation and S3 upload + email. The uploading progress is emitted inside this function after generateReportPdf returns.
+  - Both normal completion and fallback (max rounds) paths need progress updates — don't forget the fallback path
+  - The updateProgress helper uses a fire-and-forget pattern with empty catch — this ensures pipeline never blocks on progress tracking
+---

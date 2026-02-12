@@ -75,8 +75,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added updateProgress helper (fire-and-forget with try/catch). Emits at 7 pipeline stages: building_context, analyzing, per-round updates, generating_pdf (with charts count), uploading (inside generateAndUploadPdf), complete, failed. Both normal and fallback completion paths covered."
     },
     {
       "id": "US-010C",
