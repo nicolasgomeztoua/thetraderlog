@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { FileText, Menu, MessageSquare } from "lucide-react";
 
 type AiMode = "chat" | "report";
 
@@ -16,7 +16,7 @@ export function ModelSelector({
 	onMenuClick,
 }: ModelSelectorProps) {
 	return (
-		<div className="flex items-center gap-2 border-border border-b px-3 py-2">
+		<div className="flex items-center gap-2 border-white/5 border-b px-3 py-2 sm:px-4">
 			{/* Mobile hamburger */}
 			{onMenuClick && (
 				<button
@@ -28,34 +28,37 @@ export function ModelSelector({
 					<Menu className="h-4 w-4" />
 				</button>
 			)}
+
 			{/* Mode Toggle */}
 			<div
-				className="flex gap-1 rounded border border-border bg-secondary p-0.5"
+				className="flex rounded border border-white/10 bg-white/[0.01] p-0.5"
 				data-testid="ai-mode-selector"
 			>
 				<button
-					className={`rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+					className={`flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
 						mode === "chat"
 							? "bg-primary/10 text-primary"
-							: "text-muted-foreground hover:text-foreground"
+							: "text-muted-foreground hover:bg-white/[0.02] hover:text-foreground"
 					}`}
 					data-testid="ai-mode-option-chat"
 					onClick={() => onModeChange("chat")}
 					type="button"
 				>
+					<MessageSquare className="h-3 w-3" />
 					Chat
 				</button>
 				<button
-					className={`rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+					className={`flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
 						mode === "report"
 							? "bg-primary/10 text-primary"
-							: "text-muted-foreground hover:text-foreground"
+							: "text-muted-foreground hover:bg-white/[0.02] hover:text-foreground"
 					}`}
 					data-testid="ai-mode-option-report"
 					onClick={() => onModeChange("report")}
 					type="button"
 				>
-					Report
+					<FileText className="h-3 w-3" />
+					Reports
 				</button>
 			</div>
 		</div>
