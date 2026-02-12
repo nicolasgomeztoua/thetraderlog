@@ -342,8 +342,8 @@
         "Verify in browser"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Composer-style prompt container, quick date presets (Last 7/30 days, This/Last month), arrow separator, date validation with shake, accent generate button with active:scale-[0.98], suggested prompts with ArrowRight hover, character count >2000. Removed Button dependency."
     },
     {
       "id": "US-011",
@@ -365,8 +365,8 @@
         "Verify in browser"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Count badge in header. RefreshCw spins 500ms on click. Status badges: QUEUED/GENERATING/COMPLETE/FAILED with proper borders and colors. Real progress bar mapped to stage (5%-95%). Stats row during analyzing. Failed left border + retry. Completed left border + PDF link. Empty state with pulsing FileText. animate-fade-in-up on active progress. Removed all hardcoded #00d4ff."
     },
     {
       "id": "US-012",
@@ -386,8 +386,8 @@
         "Verify in browser at multiple viewport sizes"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "flex-col lg:flex-row gap-3 layout. Form w-full lg:w-[420px] shrink-0. History flex-1 with scroll. Mode selector full width above both. Mobile stacks vertically. Form collapsible deferred to US-014."
     },
     {
       "id": "US-014",

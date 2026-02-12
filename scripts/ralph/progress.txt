@@ -240,3 +240,15 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - Removed all hardcoded #00d4ff from links — now uses text-accent
   - marker:text-accent/50 on ordered lists colors the list numbers
 ---
+
+## 2026-02-12 - US-010/011/012
+- What was implemented: Complete report interface redesign — form section, history panel, and responsive layout all in one pass since they share the same file.
+- Files changed: src/app/(protected)/ai/_components/report-interface.tsx
+- **Learnings for future iterations:**
+  - QUICK_DATE_PRESETS helper uses getDatePreset() to compute start/end dates. "This month" uses days=0, "Last month" uses days=-1.
+  - getProgressWidth maps pipeline stages to 0-100%. analyzing stage scales linearly with currentRound/totalRounds between 20-70%.
+  - Removed Button shadcn dependency — using native button elements with custom Tailwind classes is simpler and matches design system better
+  - Date validation clears on any date input change to avoid stale error messages
+  - RefreshCw spin: use isRefreshing state with setTimeout(500ms) to auto-stop the animation
+  - All hardcoded #00d4ff replaced with text-accent/bg-accent in report interface
+---
