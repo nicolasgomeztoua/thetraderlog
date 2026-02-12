@@ -587,6 +587,7 @@ export const aiReports = createTable(
 		pdfKey: text("pdf_key"),
 		tokensUsed: integer("tokens_used").notNull().default(0),
 		triggerTaskId: text("trigger_task_id"),
+		errorMessage: text("error_message"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),

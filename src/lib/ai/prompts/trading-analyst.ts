@@ -67,7 +67,7 @@ const DATA_HANDLING_NOTES = `## Data Handling Notes
 - **All timestamps** are stored with timezone (UTC). When grouping by date, account for the user's timezone from their settings.
 - **Soft deletes**: Trades have a \`deleted_at\` column. Always include \`deleted_at IS NULL\` in SQL queries unless explicitly asked about deleted trades.
 - **Breakeven threshold**: The user has a configurable breakeven threshold (in their settings). Trades with |net_pnl| <= threshold are considered breakeven, not wins or losses.
-- **SQL user scoping**: Your SQL queries are automatically wrapped in CTEs that scope all user-owned tables to the current user. Write queries against table names directly (e.g., \`SELECT * FROM trade\`) — the CTE handles the user filter.
+- **SQL user scoping**: Your SQL queries use pre-defined CTE aliases that are automatically scoped to the current user. You MUST use these aliases — never reference raw table names like \`trade\` or \`account\`. The available aliases are: \`user_trades\`, \`user_accounts\`, \`user_account_groups\`, \`user_tags\`, \`user_strategies\`, \`user_strategy_rules\`, \`user_trade_tags\`, \`user_executions\`, \`user_journals\`, \`user_settings\`, \`user_conversations\`, \`user_reports\`, \`user_trade_rule_checks\`, \`user_trade_attachments\`, \`user_filter_presets\`. Example: \`SELECT * FROM user_trades WHERE deleted_at IS NULL\`.
 - **Result limits**: SQL results are capped at 500 rows. If you need more, use aggregation or pagination.`;
 
 const CHAT_MODE_INSTRUCTIONS = `## Mode: Chat

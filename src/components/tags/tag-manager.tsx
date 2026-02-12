@@ -15,7 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	ERR_TAG_CREATE_FAILED,
+	ERR_TAG_DELETE_FAILED,
+	ERR_TAG_UPDATE_FAILED,
+} from "@/lib/constants/errors";
 import { PRESET_COLORS } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 export function TagManager() {
@@ -40,7 +46,7 @@ export function TagManager() {
 			refetch();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to create tag");
+			toast.error(getErrorMessage(error, ERR_TAG_CREATE_FAILED));
 		},
 	});
 
@@ -52,7 +58,7 @@ export function TagManager() {
 			refetch();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to update tag");
+			toast.error(getErrorMessage(error, ERR_TAG_UPDATE_FAILED));
 		},
 	});
 
@@ -62,7 +68,7 @@ export function TagManager() {
 			refetch();
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to delete tag");
+			toast.error(getErrorMessage(error, ERR_TAG_DELETE_FAILED));
 		},
 	});
 

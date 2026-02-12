@@ -15,6 +15,17 @@ import {
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
 	MAX_TOOL_ROUNDS_CHAT,
 } from "@/lib/constants/ai";
+import {
+	ERR_CONVERSATION_CREATE_FAILED,
+	ERR_CONVERSATION_NOT_FOUND,
+	ERR_MESSAGE_LIMIT_REACHED,
+	ERR_MESSAGE_SAVE_FAILED,
+	ERR_REPORT_CONVERSATION_CREATE_FAILED,
+	ERR_REPORT_CONVERSATION_NOT_FOUND,
+	ERR_REPORT_CREATE_FAILED,
+	ERR_REPORT_NOT_FOUND,
+	ERR_REPORT_ONLY_FAILED_RETRY,
+} from "@/lib/constants/errors";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
 import { generateAiReport } from "@/trigger/generate-ai-report";
@@ -31,7 +42,6 @@ export const aiRouter = createTRPCRouter({
 		.input(
 			z.object({
 				mode: z.enum(["chat", "report"]),
-				model: z.string().optional(),
 				initialPrompt: z.string().optional(),
 			}),
 		)
@@ -41,14 +51,14 @@ export const aiRouter = createTRPCRouter({
 				.values({
 					userId: ctx.user.id,
 					mode: input.mode,
-					model: input.model ?? DEFAULT_CHAT_MODEL,
+					model: DEFAULT_CHAT_MODEL,
 					initialPrompt: input.initialPrompt ?? null,
 					status: "active",
 				})
 				.returning();
 
 			if (!conversation) {
-				throw new Error("Failed to create conversation");
+				throw new Error(ERR_CONVERSATION_CREATE_FAILED);
 			}
 
 			return conversation;
@@ -75,7 +85,7 @@ export const aiRouter = createTRPCRouter({
 			});
 
 			if (!conversation) {
-				throw new Error("Conversation not found");
+				throw new Error(ERR_CONVERSATION_NOT_FOUND);
 			}
 
 			// Check message limit
@@ -84,9 +94,7 @@ export const aiRouter = createTRPCRouter({
 			});
 
 			if (existingMessages.length >= MAX_CHAT_MESSAGES_PER_CONVERSATION) {
-				throw new Error(
-					`Message limit reached (${MAX_CHAT_MESSAGES_PER_CONVERSATION}). Please start a new conversation.`,
-				);
+				throw new Error(ERR_MESSAGE_LIMIT_REACHED);
 			}
 
 			// Save user message
@@ -100,7 +108,7 @@ export const aiRouter = createTRPCRouter({
 				.returning();
 
 			if (!userMessage) {
-				throw new Error("Failed to save user message");
+				throw new Error(ERR_MESSAGE_SAVE_FAILED);
 			}
 
 			// Build system prompt with schema + user context
@@ -264,7 +272,7 @@ export const aiRouter = createTRPCRouter({
 			});
 
 			if (!conversation) {
-				throw new Error("Conversation not found");
+				throw new Error(ERR_CONVERSATION_NOT_FOUND);
 			}
 
 			return conversation;
@@ -278,11 +286,15 @@ export const aiRouter = createTRPCRouter({
 			z.object({
 				limit: z.number().min(1).max(100).default(20),
 				cursor: z.string().optional(),
+				mode: z.enum(["chat", "report"]).default("chat"),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
 			const conversations = await ctx.db.query.aiConversations.findMany({
-				where: eq(aiConversations.userId, ctx.user.id),
+				where: and(
+					eq(aiConversations.userId, ctx.user.id),
+					eq(aiConversations.mode, input.mode),
+				),
 				orderBy: [desc(aiConversations.createdAt)],
 				limit: input.limit + 1,
 			});
@@ -314,7 +326,7 @@ export const aiRouter = createTRPCRouter({
 			});
 
 			if (!conversation) {
-				throw new Error("Conversation not found");
+				throw new Error(ERR_CONVERSATION_NOT_FOUND);
 			}
 
 			await ctx.db
@@ -337,14 +349,13 @@ export const aiRouter = createTRPCRouter({
 		.input(
 			z.object({
 				prompt: z.string().min(1).max(10_000),
-				model: z.string().optional(),
 				title: z.string().max(200).optional(),
 				dateRangeStart: z.string().datetime().optional(),
 				dateRangeEnd: z.string().datetime().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const model = input.model ?? DEFAULT_REPORT_MODEL;
+			const model = DEFAULT_REPORT_MODEL;
 			const title =
 				input.title ??
 				(input.prompt.length > 100
@@ -371,7 +382,7 @@ export const aiRouter = createTRPCRouter({
 				.returning();
 
 			if (!conversation) {
-				throw new Error("Failed to create report conversation");
+				throw new Error(ERR_REPORT_CONVERSATION_CREATE_FAILED);
 			}
 
 			// Save initial prompt as first user message
@@ -395,7 +406,7 @@ export const aiRouter = createTRPCRouter({
 				.returning();
 
 			if (!report) {
-				throw new Error("Failed to create report");
+				throw new Error(ERR_REPORT_CREATE_FAILED);
 			}
 
 			// Trigger Trigger.dev background task
@@ -441,7 +452,7 @@ export const aiRouter = createTRPCRouter({
 			});
 
 			if (!report) {
-				throw new Error("Report not found");
+				throw new Error(ERR_REPORT_NOT_FOUND);
 			}
 
 			return report;
@@ -493,13 +504,81 @@ export const aiRouter = createTRPCRouter({
 					pdfUrl: true,
 					tokensUsed: true,
 					completedAt: true,
+					errorMessage: true,
 				},
 			});
 
 			if (!report) {
-				throw new Error("Report not found");
+				throw new Error(ERR_REPORT_NOT_FOUND);
 			}
 
 			return report;
+		}),
+
+	/**
+	 * Retry a failed report — resets state and re-triggers generation.
+	 */
+	retryReport: protectedProcedure
+		.input(z.object({ reportId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.id, input.reportId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+			});
+
+			if (!report) {
+				throw new Error(ERR_REPORT_NOT_FOUND);
+			}
+
+			if (report.status !== "failed") {
+				throw new Error(ERR_REPORT_ONLY_FAILED_RETRY);
+			}
+
+			// Fetch conversation for date range fields
+			const conversation = await ctx.db.query.aiConversations.findFirst({
+				where: eq(aiConversations.id, report.conversationId),
+			});
+
+			if (!conversation) {
+				throw new Error(ERR_REPORT_CONVERSATION_NOT_FOUND);
+			}
+
+			// Reset report state
+			await ctx.db
+				.update(aiReports)
+				.set({
+					status: "queued",
+					errorMessage: null,
+					completedAt: null,
+					triggerTaskId: null,
+				})
+				.where(eq(aiReports.id, report.id));
+
+			// Reset conversation status
+			await ctx.db
+				.update(aiConversations)
+				.set({ status: "generating" })
+				.where(eq(aiConversations.id, report.conversationId));
+
+			// Re-trigger background task
+			const handle = await generateAiReport.trigger({
+				reportId: report.id,
+				userId: ctx.user.id,
+				conversationId: report.conversationId,
+				prompt: report.prompt,
+				model: report.model,
+				dateRangeStart: conversation.dateRangeStart?.toISOString(),
+				dateRangeEnd: conversation.dateRangeEnd?.toISOString(),
+			});
+
+			// Store new task ID
+			await ctx.db
+				.update(aiReports)
+				.set({ triggerTaskId: handle.id })
+				.where(eq(aiReports.id, report.id));
+
+			return { ...report, status: "queued" as const, triggerTaskId: handle.id };
 		}),
 });

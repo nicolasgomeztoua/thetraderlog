@@ -6,6 +6,11 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { DEFAULT_CHAT_MODEL } from "@/lib/constants/ai";
+import {
+	ERR_CONVERSATION_NOT_FOUND,
+	ERR_REPORT_NOT_FOUND,
+} from "@/lib/constants/errors";
 import {
 	createTestCaller,
 	createTestUser,
@@ -104,13 +109,12 @@ describe("ai router", () => {
 		it("should create a conversation in report mode", async () => {
 			const conversation = await caller.ai.createConversation({
 				mode: "report",
-				model: "anthropic/claude-sonnet-4",
 				initialPrompt: "Analyze my trading performance",
 			});
 
 			expect(conversation).toBeDefined();
 			expect(conversation.mode).toBe("report");
-			expect(conversation.model).toBe("anthropic/claude-sonnet-4");
+			expect(conversation.model).toBe(DEFAULT_CHAT_MODEL);
 			expect(conversation.initialPrompt).toBe("Analyze my trading performance");
 		});
 
@@ -193,7 +197,7 @@ describe("ai router", () => {
 					conversationId: conversation.id,
 					content: "Trying to access someone else's chat",
 				}),
-			).rejects.toThrow("Conversation not found");
+			).rejects.toThrow(ERR_CONVERSATION_NOT_FOUND);
 		});
 	});
 
@@ -234,7 +238,7 @@ describe("ai router", () => {
 				otherCaller.ai.getConversation({
 					conversationId: conversation.id,
 				}),
-			).rejects.toThrow("Conversation not found");
+			).rejects.toThrow(ERR_CONVERSATION_NOT_FOUND);
 		});
 	});
 
@@ -304,7 +308,7 @@ describe("ai router", () => {
 				caller.ai.getConversation({
 					conversationId: conversation.id,
 				}),
-			).rejects.toThrow("Conversation not found");
+			).rejects.toThrow(ERR_CONVERSATION_NOT_FOUND);
 		});
 
 		it("should reject deleting another user's conversation", async () => {
@@ -316,7 +320,7 @@ describe("ai router", () => {
 				otherCaller.ai.deleteConversation({
 					conversationId: conversation.id,
 				}),
-			).rejects.toThrow("Conversation not found");
+			).rejects.toThrow(ERR_CONVERSATION_NOT_FOUND);
 		});
 	});
 
@@ -344,7 +348,7 @@ describe("ai router", () => {
 				prompt: "Generate a report",
 			});
 
-			expect(result.model).toBe("anthropic/claude-sonnet-4");
+			expect(result.model).toBe(DEFAULT_CHAT_MODEL);
 		});
 
 		it("should use custom title when provided", async () => {
@@ -398,7 +402,7 @@ describe("ai router", () => {
 
 			await expect(
 				otherCaller.ai.getReport({ reportId: created.id }),
-			).rejects.toThrow("Report not found");
+			).rejects.toThrow(ERR_REPORT_NOT_FOUND);
 		});
 	});
 
@@ -426,7 +430,7 @@ describe("ai router", () => {
 
 			await expect(
 				otherCaller.ai.getReportStatus({ reportId: created.id }),
-			).rejects.toThrow("Report not found");
+			).rejects.toThrow(ERR_REPORT_NOT_FOUND);
 		});
 	});
 

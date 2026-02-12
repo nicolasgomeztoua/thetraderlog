@@ -6,6 +6,13 @@ import type { ScalingRules } from "@/components/strategy/scaling-config";
 import type { TrailingRules } from "@/components/strategy/trailing-config";
 import { calculateAggregateStats } from "@/lib/analytics";
 import {
+	ERR_STRATEGY_CREATE_FAILED,
+	ERR_STRATEGY_DUPLICATE_FAILED,
+	ERR_STRATEGY_NOT_FOUND,
+	ERR_TRADE_NO_STRATEGY,
+	ERR_TRADE_NOT_FOUND,
+} from "@/lib/constants/errors";
+import {
 	buildEvaluationContext,
 	calculateMfeInR,
 	evaluateAutoCondition,
@@ -325,7 +332,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!strategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			return {
@@ -363,7 +370,7 @@ export const strategiesRouter = createTRPCRouter({
 				.returning();
 
 			if (!newStrategy) {
-				throw new Error("Failed to create strategy");
+				throw new Error(ERR_STRATEGY_CREATE_FAILED);
 			}
 
 			// Create manual rules if provided
@@ -410,7 +417,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!existingStrategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Prepare update data
@@ -532,7 +539,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!existingStrategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Hard delete the strategy and cascade to rules
@@ -564,7 +571,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!original) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Create new strategy
@@ -585,7 +592,7 @@ export const strategiesRouter = createTRPCRouter({
 				.returning();
 
 			if (!newStrategy) {
-				throw new Error("Failed to duplicate strategy");
+				throw new Error(ERR_STRATEGY_DUPLICATE_FAILED);
 			}
 
 			// Duplicate rules (preserving all properties including generated rule metadata)
@@ -621,7 +628,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!strategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Get user's breakeven threshold
@@ -670,7 +677,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!strategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Get all trades with this strategy
@@ -755,7 +762,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Build the values to set
@@ -814,7 +821,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			// Delete existing checks for this trade
@@ -860,7 +867,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			if (!trade.strategy) {
@@ -1086,7 +1093,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!strategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Parse JSON configs
@@ -1203,7 +1210,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!existingStrategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Update only risk parameters
@@ -1258,7 +1265,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!existingStrategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Update only scaling rules
@@ -1310,7 +1317,7 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!existingStrategy) {
-				throw new Error("Strategy not found");
+				throw new Error(ERR_STRATEGY_NOT_FOUND);
 			}
 
 			// Update only trailing rules
@@ -1366,11 +1373,11 @@ export const strategiesRouter = createTRPCRouter({
 			});
 
 			if (!trade) {
-				throw new Error("Trade not found");
+				throw new Error(ERR_TRADE_NOT_FOUND);
 			}
 
 			if (!trade.strategy) {
-				throw new Error("Trade has no strategy assigned");
+				throw new Error(ERR_TRADE_NO_STRATEGY);
 			}
 
 			// Filter to rules that should be auto-evaluated (not manual)

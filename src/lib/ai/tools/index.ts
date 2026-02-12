@@ -71,7 +71,13 @@ export async function executeTool(
 				};
 			}
 			const input = (args.input as Record<string, unknown>) ?? undefined;
-			return executeCallAnalytics(context.userId, router, endpoint, input);
+			return executeCallAnalytics(
+				context.userId,
+				router,
+				endpoint,
+				input,
+				context.db,
+			);
 		}
 
 		case "get_market_data": {

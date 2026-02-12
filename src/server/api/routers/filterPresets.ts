@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { ERR_FILTER_PRESET_NOT_FOUND } from "@/lib/constants/errors";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { filterPresets } from "@/server/db/schema";
 
@@ -26,7 +27,7 @@ export const filterPresetsRouter = createTRPCRouter({
 			});
 
 			if (!preset) {
-				throw new Error("Filter preset not found");
+				throw new Error(ERR_FILTER_PRESET_NOT_FOUND);
 			}
 
 			return preset;
@@ -71,7 +72,7 @@ export const filterPresetsRouter = createTRPCRouter({
 			});
 
 			if (!existing) {
-				throw new Error("Filter preset not found");
+				throw new Error(ERR_FILTER_PRESET_NOT_FOUND);
 			}
 
 			const [updated] = await ctx.db
@@ -98,7 +99,7 @@ export const filterPresetsRouter = createTRPCRouter({
 			});
 
 			if (!existing) {
-				throw new Error("Filter preset not found");
+				throw new Error(ERR_FILTER_PRESET_NOT_FOUND);
 			}
 
 			await ctx.db.delete(filterPresets).where(eq(filterPresets.id, input.id));

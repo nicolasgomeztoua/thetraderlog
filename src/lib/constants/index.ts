@@ -1,7 +1,5 @@
 export {
-	AI_MODELS,
 	AI_MODES,
-	type AiModel,
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
@@ -19,6 +17,7 @@ export {
 	REVIEW_OPTIONS,
 	TRADING_SESSIONS,
 } from "./analytics";
+export * from "./errors";
 export {
 	DEFAULT_TRADE_SORT,
 	NON_SORTABLE_COLUMNS,

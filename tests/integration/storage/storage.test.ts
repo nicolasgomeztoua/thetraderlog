@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ERR_S3_NOT_CONFIGURED } from "@/lib/constants/errors";
 import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
@@ -103,7 +104,7 @@ describe("storage router", () => {
 					size: 1024,
 					context: "trade-notes",
 				}),
-			).rejects.toThrow("File uploads are not configured");
+			).rejects.toThrow(ERR_S3_NOT_CONFIGURED);
 		});
 
 		it("should accept various valid contexts", async () => {
@@ -119,7 +120,7 @@ describe("storage router", () => {
 						size: 500,
 						context,
 					}),
-				).rejects.toThrow("File uploads are not configured");
+				).rejects.toThrow(ERR_S3_NOT_CONFIGURED);
 			}
 		});
 
@@ -135,7 +136,7 @@ describe("storage router", () => {
 						size: 1024,
 						context: "trade-notes",
 					}),
-				).rejects.toThrow("File uploads are not configured");
+				).rejects.toThrow(ERR_S3_NOT_CONFIGURED);
 			}
 		});
 	});

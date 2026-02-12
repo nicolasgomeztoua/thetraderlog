@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import type { StrategyFormData } from "@/components/strategy";
 import { StrategyForm } from "@/components/strategy";
 import { Button } from "@/components/ui/button";
+import { ERR_STRATEGY_CREATE_FAILED } from "@/lib/constants/errors";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 export default function NewStrategyPage() {
@@ -20,7 +22,7 @@ export default function NewStrategyPage() {
 			router.push(`/strategies/${newStrategy.id}`);
 		},
 		onError: (error) => {
-			toast.error(error.message || "Failed to create strategy");
+			toast.error(getErrorMessage(error, ERR_STRATEGY_CREATE_FAILED));
 		},
 	});
 

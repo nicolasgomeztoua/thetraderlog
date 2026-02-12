@@ -3,8 +3,10 @@ import { env } from "@/env";
 // Re-export pure utility functions that don't require Bun
 export { extractS3KeysFromHtml, transformHtmlToS3Keys } from "./s3-utils";
 
-// Declare Bun global for TypeScript - only available in Bun runtime
-declare const Bun: unknown | undefined;
+// Bun global is accessed via globalThis.Bun at runtime — no import needed
+declare global {
+	var Bun: Record<string, unknown> | undefined;
+}
 
 /**
  * S3-compatible storage client for file uploads.
@@ -30,7 +32,7 @@ interface BunS3Client {
 
 // Check if running in Bun
 function isBunRuntime(): boolean {
-	return typeof Bun !== "undefined";
+	return typeof globalThis.Bun !== "undefined";
 }
 
 // Check if S3 is configured
@@ -70,16 +72,22 @@ export function getS3Client(): BunS3Client {
 	}
 
 	if (!s3Client) {
-		// Dynamic import from Bun - we know we're in Bun runtime at this point
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const { S3Client } = require("bun");
-		s3Client = new S3Client({
+		// Access Bun's S3Client via the global — no import needed, invisible to esbuild
+		const BunGlobal = globalThis.Bun as
+			| { S3Client: new (config: Record<string, unknown>) => BunS3Client }
+			| undefined;
+		if (!BunGlobal?.S3Client) {
+			throw new Error(
+				"Bun.S3Client not available. Ensure this runs in Bun 1.2+ runtime.",
+			);
+		}
+		s3Client = new BunGlobal.S3Client({
 			endpoint: env.S3_ENDPOINT,
 			region: env.S3_REGION ?? "auto",
 			accessKeyId: env.S3_ACCESS_KEY_ID,
 			secretAccessKey: env.S3_SECRET_ACCESS_KEY,
 			bucket: env.S3_BUCKET,
-		}) as BunS3Client;
+		});
 	}
 
 	return s3Client as BunS3Client;

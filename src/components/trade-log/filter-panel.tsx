@@ -31,6 +31,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { DAY_LABELS } from "@/lib/constants";
+import { ERR_PRESET_LOAD_FAILED } from "@/lib/constants/errors";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -141,7 +142,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 			onChange(parsed);
 			toast.success("Preset loaded");
 		} catch {
-			toast.error("Failed to load preset");
+			toast.error(ERR_PRESET_LOAD_FAILED);
 		}
 	};
 

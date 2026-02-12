@@ -137,5 +137,14 @@ export function getPnLColorClass(
 	return "text-breakeven";
 }
 
+/**
+ * Safely extract an error message from an unknown catch value.
+ */
+export function getErrorMessage(error: unknown, fallback: string): string {
+	if (error instanceof Error) return error.message;
+	if (typeof error === "string") return error;
+	return fallback;
+}
+
 // NOTE: calculateWinRate and calculateProfitFactor have been moved to
 // @/lib/stats-calculations.ts for consistency with aggregate stats
