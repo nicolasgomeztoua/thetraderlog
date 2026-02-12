@@ -45,6 +45,54 @@ function getUniqueToolNames(toolCalls: ParsedToolCall[]): string[] {
 }
 
 // =============================================================================
+// TOOL BADGES COMPONENT
+// =============================================================================
+
+const MAX_VISIBLE_TOOLS = 3;
+
+function ToolBadges({ toolNames }: { toolNames: string[] }) {
+	const [expanded, setExpanded] = useState(false);
+
+	const visibleTools =
+		expanded || toolNames.length <= MAX_VISIBLE_TOOLS
+			? toolNames
+			: toolNames.slice(0, MAX_VISIBLE_TOOLS);
+	const overflowCount = toolNames.length - MAX_VISIBLE_TOOLS;
+
+	return (
+		<div
+			className="mb-3 flex flex-wrap gap-1.5"
+			data-testid="chat-tool-indicators"
+		>
+			{visibleTools.map((name) => {
+				const tool = TOOL_LABELS[name];
+				const Icon = tool?.icon ?? Zap;
+				return (
+					<span
+						className="inline-flex items-center gap-1.5 rounded border border-accent/20 bg-accent/5 px-2 py-0.5 font-mono text-[10px] text-accent uppercase tracking-wider"
+						data-testid={`chat-tool-badge-${name}`}
+						key={name}
+					>
+						<Check className="h-2.5 w-2.5 text-accent/50" />
+						<Icon className="h-3 w-3" />
+						{tool?.label ?? name}
+					</span>
+				);
+			})}
+			{!expanded && overflowCount > 0 && (
+				<button
+					className="inline-flex items-center rounded border border-accent/20 bg-accent/5 px-2 py-0.5 font-mono text-[10px] text-accent/70 uppercase tracking-wider transition-colors hover:text-accent"
+					onClick={() => setExpanded(true)}
+					type="button"
+				>
+					+{overflowCount} more
+				</button>
+			)}
+		</div>
+	);
+}
+
+// =============================================================================
 // CHAT MESSAGE
 // =============================================================================
 
@@ -97,27 +145,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 					{"\u2192"}
 				</span>
 				<div className="min-w-0 flex-1 rounded border border-white/5 bg-white/[0.01] p-3 sm:p-4">
-					{toolNames.length > 0 && (
-						<div
-							className="mb-3 flex flex-wrap gap-1.5"
-							data-testid="chat-tool-indicators"
-						>
-							{toolNames.map((name) => {
-								const tool = TOOL_LABELS[name];
-								const Icon = tool?.icon ?? Zap;
-								return (
-									<span
-										className="inline-flex items-center gap-1 rounded border border-accent/20 bg-accent/5 px-1.5 py-0.5 font-mono text-[10px] text-accent"
-										data-testid={`chat-tool-badge-${name}`}
-										key={name}
-									>
-										<Icon className="size-2.5" />
-										{tool?.label ?? name}
-									</span>
-								);
-							})}
-						</div>
-					)}
+					{toolNames.length > 0 && <ToolBadges toolNames={toolNames} />}
 					<MessageRenderer content={message.content} />
 					{/* Copy button in card footer */}
 					<div className="mt-3 flex justify-end border-white/5 border-t pt-2 opacity-0 transition-opacity group-hover:opacity-100">
