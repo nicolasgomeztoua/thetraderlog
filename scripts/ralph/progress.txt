@@ -231,3 +231,12 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - ModelSelector is used by both ChatInterface and ReportInterface — keep onMenuClick optional
   - Active report count badge on Reports tab is deferred to US-011 when report history is built
 ---
+
+## 2026-02-12 - US-009
+- What was implemented: Polished message renderer — code block header with language label + copy, tables with alternating rows + hover, links with text-accent + ExternalLink icon, blockquotes with accent bg, inline code bg-white/5.
+- Files changed: src/app/(protected)/ai/_components/message-renderer.tsx
+- **Learnings for future iterations:**
+  - Accessing children.props in ReactMarkdown's pre component requires type narrowing: check typeof children === "object" && "props" in children, then cast props as {className?: string}
+  - Removed all hardcoded #00d4ff from links — now uses text-accent
+  - marker:text-accent/50 on ordered lists colors the list numbers
+---

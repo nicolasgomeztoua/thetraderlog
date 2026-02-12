@@ -318,8 +318,8 @@
         "Verify in browser with variety of markdown content"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Code blocks with language label header + copy button. Tables with rounded border, alternating rows, hover highlight. Links use text-accent with ExternalLink icon. Blockquotes with accent border/bg. Inline code bg-white/5. Ordered list marker:text-accent/50. Image lightbox and line numbers deferred to US-014."
     },
     {
       "id": "US-010",
