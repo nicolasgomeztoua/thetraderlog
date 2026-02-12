@@ -223,3 +223,11 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - setTimeout 100ms delay before closing drawer lets user see selection highlight first
   - ModelSelector now accepts onMenuClick prop for mobile menu
 ---
+
+## 2026-02-12 - US-008
+- What was implemented: Redesigned ModelSelector toggle with MessageSquare/FileText icons, border-white/10 container, bg-white/[0.01], transition-all.
+- Files changed: src/app/(protected)/ai/_components/model-selector.tsx
+- **Learnings for future iterations:**
+  - ModelSelector is used by both ChatInterface and ReportInterface — keep onMenuClick optional
+  - Active report count badge on Reports tab is deferred to US-011 when report history is built
+---
