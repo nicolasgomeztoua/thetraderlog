@@ -4,6 +4,7 @@ import { Download, FileText, Loader2, RefreshCw, Send } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
 import { api } from "@/trpc/react";
 import { ModelSelector } from "./model-selector";
@@ -30,10 +31,8 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const utils = api.useUtils();
 
 	// Fetch reports
-	const { data: reports } = api.ai.listReports.useQuery(
-		{ limit: 20 },
-		{ refetchOnWindowFocus: true },
-	);
+	const { data: reports, isLoading: isReportsLoading } =
+		api.ai.listReports.useQuery({ limit: 20 }, { refetchOnWindowFocus: true });
 
 	// Find the first active report (queued or generating) to poll
 	const activeReportId = useMemo(() => {
@@ -265,6 +264,31 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 										</p>
 									</div>
 								)}
+							{isReportsLoading && (
+								<>
+									<div className="mb-2 rounded border border-border bg-secondary/50 p-3">
+										<Skeleton className="h-4 w-3/4" />
+										<div className="mt-2 flex items-center gap-2">
+											<Skeleton className="h-3 w-16" />
+											<Skeleton className="h-3 w-20" />
+										</div>
+									</div>
+									<div className="mb-2 rounded border border-border bg-secondary/50 p-3">
+										<Skeleton className="h-4 w-1/2" />
+										<div className="mt-2 flex items-center gap-2">
+											<Skeleton className="h-3 w-16" />
+											<Skeleton className="h-3 w-20" />
+										</div>
+									</div>
+									<div className="mb-2 rounded border border-border bg-secondary/50 p-3">
+										<Skeleton className="h-4 w-2/3" />
+										<div className="mt-2 flex items-center gap-2">
+											<Skeleton className="h-3 w-16" />
+											<Skeleton className="h-3 w-20" />
+										</div>
+									</div>
+								</>
+							)}
 							{reports?.items.map((report) => {
 								// Use polled status for the active report
 								const reportStatus =
@@ -357,20 +381,21 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 									</div>
 								);
 							})}
-							{(!reports?.items || reports.items.length === 0) && (
-								<div
-									className="flex flex-col items-center justify-center py-12 text-center"
-									data-testid="report-empty-state"
-								>
-									<FileText className="mb-3 size-8 text-muted-foreground/50" />
-									<p className="font-mono text-muted-foreground text-xs">
-										No reports generated yet
-									</p>
-									<p className="mt-1 font-mono text-[10px] text-muted-foreground/60">
-										Use the form to request a deep analysis report
-									</p>
-								</div>
-							)}
+							{!isReportsLoading &&
+								(!reports?.items || reports.items.length === 0) && (
+									<div
+										className="flex flex-col items-center justify-center py-12 text-center"
+										data-testid="report-empty-state"
+									>
+										<FileText className="mb-3 size-8 text-muted-foreground/50" />
+										<p className="font-mono text-muted-foreground text-xs">
+											No reports generated yet
+										</p>
+										<p className="mt-1 font-mono text-[10px] text-muted-foreground/60">
+											Use the form to request a deep analysis report
+										</p>
+									</div>
+								)}
 						</div>
 					</ScrollArea>
 				</div>

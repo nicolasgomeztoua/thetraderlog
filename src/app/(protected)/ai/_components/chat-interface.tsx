@@ -3,6 +3,7 @@
 import { Brain } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
 import { api } from "@/trpc/react";
 import { ChatInput } from "./chat-input";
@@ -33,15 +34,17 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const utils = api.useUtils();
 
 	// Fetch conversations
-	const { data: conversations } = api.ai.listConversations.useQuery({
-		limit: 20,
-	});
+	const { data: conversations, isLoading: isConversationsLoading } =
+		api.ai.listConversations.useQuery({
+			limit: 20,
+		});
 
 	// Fetch active conversation messages
-	const { data: conversation } = api.ai.getConversation.useQuery(
-		{ conversationId: activeConversationId ?? "" },
-		{ enabled: !!activeConversationId },
-	);
+	const { data: conversation, isLoading: isConversationLoading } =
+		api.ai.getConversation.useQuery(
+			{ conversationId: activeConversationId ?? "" },
+			{ enabled: !!activeConversationId },
+		);
 
 	// Mutations
 	const createConversation = api.ai.createConversation.useMutation({
@@ -120,6 +123,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			<ChatSidebar
 				activeId={activeConversationId}
 				conversations={conversations?.items ?? []}
+				isLoading={isConversationsLoading}
 				onDelete={(id) => deleteConversation.mutate({ conversationId: id })}
 				onNew={handleNewConversation}
 				onSelect={setActiveConversationId}
@@ -133,7 +137,30 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				{/* Chat Content */}
 				<ScrollArea className="flex-1" ref={scrollRef}>
 					<div className="mx-auto max-w-3xl px-4 py-4">
-						{messages.length === 0 && !activeConversationId ? (
+						{isConversationLoading && activeConversationId ? (
+							<div className="space-y-3 sm:space-y-4">
+								<div className="flex justify-start">
+									<div className="max-w-[80%] space-y-2 rounded bg-secondary p-3">
+										<Skeleton className="h-3 w-48" />
+										<Skeleton className="h-3 w-64" />
+										<Skeleton className="h-3 w-40" />
+									</div>
+								</div>
+								<div className="flex justify-end">
+									<div className="max-w-[80%] space-y-2 rounded bg-primary/10 p-3">
+										<Skeleton className="h-3 w-48" />
+										<Skeleton className="h-3 w-32" />
+									</div>
+								</div>
+								<div className="flex justify-start">
+									<div className="max-w-[80%] space-y-2 rounded bg-secondary p-3">
+										<Skeleton className="h-3 w-48" />
+										<Skeleton className="h-3 w-64" />
+										<Skeleton className="h-3 w-40" />
+									</div>
+								</div>
+							</div>
+						) : messages.length === 0 && !activeConversationId ? (
 							<div
 								className="flex h-full min-h-[400px] flex-col items-center justify-center px-2 text-center"
 								data-testid="chat-empty-state"
