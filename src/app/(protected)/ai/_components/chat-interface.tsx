@@ -352,7 +352,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				<div className="border-border border-t px-4 py-3">
 					<div className="mx-auto max-w-3xl">
 						<ChatInput
-							disabled={isLoading}
+							isLoading={isLoading}
 							onChange={setInput}
 							onSubmit={() => void handleSend()}
 							value={input}
