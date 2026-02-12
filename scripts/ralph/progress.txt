@@ -1,3 +1,113 @@
 # Ralph Progress Log
 Started: Thu Feb 12 12:52:05 WET 2026
 ---
+
+## Codebase Patterns
+- Sheet (shadcn) is already installed at src/components/ui/sheet.tsx — no need to install for mobile drawer
+- Tooltip is available at src/components/ui/tooltip.tsx — already used in chat-message.tsx
+- ScrollArea is available at src/components/ui/scroll-area.tsx — used by chat-interface, chat-sidebar, report-interface
+- Skeleton is available at src/components/ui/skeleton.tsx — used for loading states
+- Button is available at src/components/ui/button.tsx — standard button component
+- Dialog is available at src/components/ui/dialog.tsx — for modals
+- `animate-blink` class used in chat-message.tsx but NOT defined in globals.css — cursor-blink is defined via `.cursor-blink::after` pseudo-element only
+- Hardcoded #00d4ff appears in: chat-message.tsx (tool badges, loading), report-interface.tsx (progress, status, focus borders), message-renderer.tsx (links). These should become text-accent / bg-accent CSS variables.
+- SUGGESTED_CHAT_QUERIES and SUGGESTED_REPORT_PROMPTS are in src/lib/constants/ai.ts
+- useMobile hook available at src/hooks/use-mobile.ts for responsive breakpoints
+- Pre-existing Biome errors: 1) archive JSON formatting, 2) role="button" in chat-sidebar.tsx (a11y)
+
+## 2026-02-12 - US-000
+- **What was implemented:** Comprehensive audit of all AI section components and shared utilities
+- **Files examined (no changes):**
+  - src/app/(protected)/ai/page.tsx — top-level page, toggles between ChatInterface and ReportInterface
+  - src/app/(protected)/ai/_components/chat-interface.tsx — main chat container with sidebar, messages, input
+  - src/app/(protected)/ai/_components/chat-input.tsx — textarea + send button
+  - src/app/(protected)/ai/_components/chat-message.tsx — message display, tool badges, loading indicator, pending message
+  - src/app/(protected)/ai/_components/chat-sidebar.tsx — conversation list with CRUD
+  - src/app/(protected)/ai/_components/message-renderer.tsx — markdown rendering (react-markdown + remark-gfm)
+  - src/app/(protected)/ai/_components/model-selector.tsx — chat/report mode toggle
+  - src/app/(protected)/ai/_components/report-interface.tsx — report form + history list
+  - src/lib/constants/ai.ts — AI models, modes, limits, suggested queries/prompts
+  - src/styles/globals.css — all existing keyframes and animation utilities
+  - src/components/ui/ — all available shadcn components
+  - src/hooks/ — all available shared hooks
+
+### AI Components Catalog
+
+| Component | File | Props | Styling Notes |
+|-----------|------|-------|---------------|
+| ChatInterface | chat-interface.tsx | mode, onModeChange | Uses ScrollArea, integrates sidebar+messages+input |
+| ChatInput | chat-input.tsx | value, onChange, onSubmit, disabled | Textarea with auto-resize, Send button |
+| ChatMessage | chat-message.tsx | message: {id, role, content, toolCalls?} | $ prefix for user, → for AI, tool badges, copy button |
+| ChatLoadingIndicator | chat-message.tsx | none | Loader2 spinner + "Analyzing trades_" with animate-blink |
+| ChatPendingMessage | chat-message.tsx | content: string | User message at text-primary/60 opacity |
+| ChatSidebar | chat-sidebar.tsx | conversations, activeId, isLoading, onSelect, onNew, onDelete | w-56, hidden on mobile (sm:flex) |
+| ModelSelector | model-selector.tsx | mode, onModeChange | Chat/Report toggle buttons |
+| MessageRenderer | message-renderer.tsx | content: string | ReactMarkdown with custom components, memoized |
+| ReportInterface | report-interface.tsx | mode, onModeChange | Form + history panel, polls active report status |
+
+### Available Shadcn UI Components
+
+Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resizable, label, sonner, tooltip, alert, avatar, dialog, sidebar, table, separator, dropdown-menu, select, textarea, form, badge, button, calendar, card, checkbox, input, skeleton, switch
+
+**Key for redesign:** Sheet (mobile drawer), Tooltip (hover hints), ScrollArea (scrollable panels), Skeleton (loading), Badge (status pills), Dialog (lightbox)
+
+### Existing Animation Keyframes (globals.css)
+
+| Keyframe | Duration | Usage |
+|----------|----------|-------|
+| rotate-border | 4s linear infinite | Rotating gradient borders |
+| ticker | 30s linear infinite | Marquee ticker scroll |
+| pulse-dot | 2s ease-in-out infinite | Pulsing status dots |
+| fade-in-up | 0.3s ease-out | Page entrance animations |
+| fade-in-up-subtle | 0.25s ease-out | Subtle section entrance |
+| blink | 1s step-end infinite | Cursor blink (used as .cursor-blink::after) |
+| glitch | 0.3s cubic-bezier | Hover glitch effect |
+| count-up | same as fade-in-up | Stats counter animation |
+| marquee | 25s linear infinite | Logo scrolling |
+| image-enter | 0.3s ease-out | Tiptap image load animation |
+
+**Utility classes available:** .animate-fade-in-up, .stagger-children (1-12 delays), .stagger-sections (1-8 delays), .cursor-blink, .pulse-dot, .glitch-hover, .animate-marquee, .terminal-card, .focus-ring
+
+**prefers-reduced-motion:** Already handled for .stagger-children, .stagger-sections, .animate-fade-in-up
+
+### Missing Animations (needed by PRD)
+
+| Animation | Keyframe | Utility Class | Status |
+|-----------|----------|---------------|--------|
+| shimmer | shimmer (translateX) | .animate-shimmer | MISSING — US-013 |
+| fade-out | fade-out (opacity 1→0) | .animate-fade-out | MISSING — US-013 |
+| slide-out-left | slide-out-left | .animate-slide-out-left | MISSING — US-013 |
+| shake | shake (translateX ±4px) | .animate-shake | MISSING — US-013 |
+| cursor-blink for typewriter | Already exists | .cursor-blink | EXISTS (verify for typewriter cursor) |
+
+### Shared Hooks Available
+
+| Hook | File | Purpose |
+|------|------|---------|
+| useMobile | use-mobile.ts | Responsive breakpoint detection |
+| useTimezone | use-timezone.ts | User timezone preferences |
+| useInfiniteScroll | use-infinite-scroll.ts | Infinite scroll pagination |
+| useImageUpload | use-image-upload.ts | Image upload to S3 |
+| useDebouncedMutation | use-debounced-mutation.ts | Debounced tRPC mutations |
+| useImportProgress | use-import-progress.ts | Import progress tracking |
+| useTradingContext | use-trading-context.ts | Active account context |
+
+### Issues to Fix During Redesign
+
+1. **Hardcoded #00d4ff** — appears in chat-message.tsx, report-interface.tsx, message-renderer.tsx. Should use text-accent/bg-accent CSS variables.
+2. **No mobile sidebar** — ChatSidebar uses `hidden sm:flex`, needs Sheet drawer for mobile (US-007)
+3. **Fake progress bar** — report-interface.tsx uses hardcoded 15%/60% widths. Needs real pipeline data (US-010A-D)
+4. **No typewriter effect** — AI messages render instantly (US-004)
+5. **Basic empty state** — chat uses simple Brain icon + text, needs richer branded welcome (US-001)
+6. **No message animations** — messages appear without transitions (US-002)
+7. **No mode transition animation** — chat/report switches are instant (US-014)
+8. **animate-blink used but not defined** — chat-message.tsx uses `animate-blink` class but globals.css only defines `.cursor-blink::after` with blink keyframe
+
+- **Learnings for future iterations:**
+  - Sheet component is already installed — don't waste time installing it
+  - animate-blink is used in chat but NOT as a Tailwind class — it's a custom `.cursor-blink::after` pattern. New bounce dots (US-002) need a different approach using Tailwind's built-in animate-bounce with stagger delays
+  - The existing stagger-children pattern in globals.css can be reused for empty state card entrance animations
+  - All suggested queries/prompts come from src/lib/constants/ai.ts — never hardcode
+  - The message-renderer.tsx uses react-markdown with remark-gfm — custom components for each HTML element
+  - Pre-existing Biome errors won't block us as they're in unrelated files (archive JSON + a11y in sidebar)
+---
