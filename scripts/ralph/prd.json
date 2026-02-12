@@ -438,8 +438,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated existing ai-chat.spec.ts with new tests: greeting regex, capability pills, keyboard shortcut /, sidebar empty state, mobile hamburger opens drawer. Followed AGENTS.md smoke-test-only guidance. All data-testid attributes verified."
     },
     {
       "id": "US-016",
@@ -465,8 +465,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated existing ai-report.spec.ts with new tests: quick date presets fill fields, suggested prompts populate textarea (not send), form shows all sections, history visible with empty state check. Followed AGENTS.md smoke-test-only guidance."
     }
   ]
 }

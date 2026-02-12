@@ -261,3 +261,15 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - ::-webkit-scrollbar pseudo-elements need three parts: ::-webkit-scrollbar (width), ::-webkit-scrollbar-track (background), ::-webkit-scrollbar-thumb (handle)
   - Most polish items (/ shortcut, loading skeletons, #00d4ff removal) were already done in prior stories
 ---
+
+## 2026-02-12 - US-015/016
+- What was implemented: Updated E2E tests for both chat and report interfaces. Added new smoke tests for redesigned elements.
+- Files changed: tests/e2e/ai-chat.spec.ts, tests/e2e/ai-report.spec.ts
+- **New chat tests:** greeting regex (Good morning/afternoon/evening), capability pills visibility, / keyboard shortcut focuses input, sidebar empty state, mobile hamburger opens drawer
+- **New report tests:** quick date presets fill date fields, suggested prompts populate textarea (not send), form shows all sections, history visible with empty state check
+- **Learnings for future iterations:**
+  - Follow AGENTS.md: E2E tests are smoke tests only. Don't test styling details, validation states, or specific UI element appearances.
+  - Mobile viewport testing: use page.setViewportSize({ width: 375, height: 812 }) before navigation
+  - For Sheet/drawer content, use .nth(1) to get the second instance of a testid (first is desktop, second is mobile drawer)
+  - Use graceful skip pattern: check count of elements, only assert if present, otherwise pass
+---
