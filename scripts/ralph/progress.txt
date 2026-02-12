@@ -110,4 +110,15 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - All suggested queries/prompts come from src/lib/constants/ai.ts — never hardcode
   - The message-renderer.tsx uses react-markdown with remark-gfm — custom components for each HTML element
   - Pre-existing Biome errors won't block us as they're in unrelated files (archive JSON + a11y in sidebar)
+- New animation utilities available: .animate-shimmer, .animate-fade-out, .animate-slide-out-left, .animate-shake
+- All new animations respect prefers-reduced-motion (duration: 0.01ms)
+---
+
+## 2026-02-12 - US-013
+- What was implemented: Added shimmer, fade-out, slide-out-left, shake keyframes and utility classes to globals.css. Updated prefers-reduced-motion to cover all new animations.
+- Files changed: src/styles/globals.css
+- **Learnings for future iterations:**
+  - Existing fade-in-up uses translateY(20px), not 8px as PRD specifies. Kept as-is since 20px is the established project standard. Individual stories can adjust with inline styles if needed.
+  - cursor-blink is a pseudo-element class (.cursor-blink::after), not a standard animation class. The typewriter story (US-004) should use this class directly on a span.
+  - prefers-reduced-motion: using `animation-duration: 0.01ms !important` instead of `animation: none` for new classes, to allow animation-fill-mode: forwards to still apply final state.
 ---

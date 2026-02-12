@@ -36,8 +36,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added shimmer, fade-out, slide-out-left, shake keyframes and utility classes. Kept existing fade-in-up (translateY 20px) as-is. Updated prefers-reduced-motion to cover all new classes. Verified cursor-blink works for typewriter."
     },
     {
       "id": "US-010A",
