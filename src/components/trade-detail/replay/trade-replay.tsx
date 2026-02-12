@@ -1,7 +1,9 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useMemo } from "react";
+import { TradingChartSkeleton } from "@/components/trade-detail/trading-chart-skeleton";
 import { aggregateBars } from "@/lib/market-data";
 import {
 	type ChartInterval,
@@ -12,9 +14,13 @@ import {
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
 import { useReplayPreferencesStore } from "@/stores/replay-preferences-store";
 import { api } from "@/trpc/react";
-import { ReplayChart } from "./replay-chart";
 import { ReplayControls } from "./replay-controls";
 import { type ReplayExecution, useReplayEngine } from "./use-replay-engine";
+
+const ReplayChart = dynamic(
+	() => import("./replay-chart").then((m) => m.ReplayChart),
+	{ ssr: false, loading: () => <TradingChartSkeleton /> },
+);
 
 // =============================================================================
 // TYPES
