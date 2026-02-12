@@ -1,0 +1,162 @@
+// =============================================================================
+// AI MODEL CONFIGURATION
+// =============================================================================
+
+/**
+ * AI model definition used in model selector dropdowns
+ */
+export type AiModel = {
+	id: string;
+	name: string;
+	provider: string;
+	description: string;
+	mode: "chat" | "report" | "both";
+};
+
+/**
+ * Default model for chat mode (fast, cheap)
+ */
+export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2";
+
+/**
+ * Default model for report mode (deeper analysis)
+ */
+export const DEFAULT_REPORT_MODEL = "z-ai/glm-5-20260211";
+
+/**
+ * Available AI models for the model selector
+ */
+export const AI_MODELS: AiModel[] = [
+	{
+		id: "moonshotai/kimi-k2",
+		name: "Kimi K2",
+		provider: "Moonshot",
+		description: "Fast and cost-effective for quick questions",
+		mode: "chat",
+	},
+	{
+		id: "moonshotai/kimi-k2.5",
+		name: "Kimi K2.5",
+		provider: "Moonshot",
+		description: "Upgraded K2 with stronger reasoning",
+		mode: "both",
+	},
+	{
+		id: "z-ai/glm-5-20260211",
+		name: "GLM-5",
+		provider: "Zhipu AI",
+		description: "745B MoE model — deep analytical reasoning",
+		mode: "report",
+	},
+	{
+		id: "z-ai/glm-4.7",
+		name: "GLM-4.7",
+		provider: "Zhipu AI",
+		description: "Strong coding and multi-step reasoning",
+		mode: "both",
+	},
+	{
+		id: "openai/gpt-4.1-mini",
+		name: "GPT-4.1 Mini",
+		provider: "OpenAI",
+		description: "Balanced speed and quality for chat",
+		mode: "chat",
+	},
+	{
+		id: "anthropic/claude-sonnet-4",
+		name: "Claude Sonnet 4",
+		provider: "Anthropic",
+		description: "Strong analytical reasoning for deep reports",
+		mode: "both",
+	},
+	{
+		id: "google/gemini-2.5-pro",
+		name: "Gemini 2.5 Pro",
+		provider: "Google",
+		description: "Strong reasoning with large context window",
+		mode: "report",
+	},
+];
+
+// =============================================================================
+// AI MODE OPTIONS
+// =============================================================================
+
+/**
+ * AI mode options for the mode switcher
+ */
+export const AI_MODES = [
+	{
+		value: "chat" as const,
+		label: "Chat",
+		description: "Ask quick questions about your trading data",
+	},
+	{
+		value: "report" as const,
+		label: "Report",
+		description: "Generate deep analysis reports with charts",
+	},
+] as const;
+
+// =============================================================================
+// LIMITS
+// =============================================================================
+
+/**
+ * Maximum messages allowed per conversation
+ */
+export const MAX_CHAT_MESSAGES_PER_CONVERSATION = 50;
+
+/**
+ * Maximum tokens for a single report generation run
+ */
+export const MAX_REPORT_TOKENS = 100_000;
+
+/**
+ * Maximum tool-calling rounds per chat message
+ */
+export const MAX_TOOL_ROUNDS_CHAT = 10;
+
+/**
+ * Maximum tool-calling rounds per report generation (more than chat)
+ */
+export const MAX_TOOL_ROUNDS_REPORT = 20;
+
+/**
+ * Maximum rows returned from AI SQL queries
+ */
+export const MAX_SQL_QUERY_ROWS = 500;
+
+/**
+ * Maximum OHLC bars returned from market data tool
+ */
+export const MAX_MARKET_DATA_BARS = 1000;
+
+// =============================================================================
+// SUGGESTED QUERIES & PROMPTS
+// =============================================================================
+
+/**
+ * Suggested queries for empty chat conversations
+ */
+export const SUGGESTED_CHAT_QUERIES = [
+	"What's my win rate this month compared to last month?",
+	"Which trading session is most profitable for me?",
+	"Show me my best and worst performing symbols",
+	"Am I overtrading on losing days?",
+	"What's my average R-multiple on winning trades?",
+	"Do I perform better on specific days of the week?",
+	"How has my equity curve trended over the last 90 days?",
+	"What's my risk of ruin based on current performance?",
+] as const;
+
+/**
+ * Suggested prompts for report mode
+ */
+export const SUGGESTED_REPORT_PROMPTS = [
+	"Generate a comprehensive monthly performance review with equity curve analysis, win rate trends, and behavioral pattern insights",
+	"Analyze my risk management across all accounts — compare position sizing, R-multiples, and drawdown patterns",
+	"Create a detailed session-by-session breakdown showing where I'm leaving money on the table and where I'm most disciplined",
+	"Build a strategy comparison report showing which setups have the best expectancy and which I should stop trading",
+	"Analyze my revenge trading and overtrading patterns — show the data behind my worst days and what triggers them",
+] as const;

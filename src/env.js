@@ -25,6 +25,12 @@ export const env = createEnv({
 		S3_BUCKET: z.string(),
 		// Public URL for S3 objects (optional - for embedding images in HTML)
 		S3_PUBLIC_URL: z.string().url().optional(),
+		// OpenRouter API key for AI chat/reports
+		OPENROUTER_API_KEY: z.string().min(1),
+		// Daytona API key for Python sandbox execution (optional — only needed for run_python tool)
+		DAYTONA_API_KEY: z.string().min(1).optional(),
+		// Resend API key for transactional emails (optional — only needed for report email delivery)
+		RESEND_API_KEY: z.string().min(1).optional(),
 	},
 
 	/**
@@ -66,6 +72,9 @@ export const env = createEnv({
 		S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
 		S3_BUCKET: process.env.S3_BUCKET,
 		S3_PUBLIC_URL: process.env.S3_PUBLIC_URL,
+		OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+		DAYTONA_API_KEY: process.env.DAYTONA_API_KEY,
+		RESEND_API_KEY: process.env.RESEND_API_KEY,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

@@ -1,426 +1,144 @@
 "use client";
 
-import { Brain, Key, Loader2, Send, Settings, Sparkles } from "lucide-react";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatCurrency, formatPercent } from "@/lib/shared";
-import { api } from "@/trpc/react";
+import { Brain, FileText, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	AI_MODELS,
+	AI_MODES,
+	DEFAULT_CHAT_MODEL,
+	DEFAULT_REPORT_MODEL,
+} from "@/lib/constants/ai";
+import { ChatInterface } from "./_components/chat-interface";
+import { ReportInterface } from "./_components/report-interface";
 
-interface Message {
-	id: string;
-	role: "user" | "assistant";
-	content: string;
-	timestamp: Date;
-}
+type AiMode = "chat" | "report";
 
-const EXAMPLE_QUERIES = [
-	"Are my breakevens optimal?",
-	"What's my best trading time?",
-	"Which setups win most?",
-	"How often do I cut winners?",
-	"What's my avg R:R?",
-	"Performance by symbol",
-];
+export default function AIPage() {
+	const [mode, setMode] = useState<AiMode>("chat");
+	const [model, setModel] = useState<string>(DEFAULT_CHAT_MODEL);
 
-export default function AIInsightsPage() {
-	const [messages, setMessages] = useState<Message[]>([]);
-	const [input, setInput] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
-	const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
-	const scrollRef = useRef<HTMLDivElement>(null);
-
-	const { data: stats } = api.trades.getStats.useQuery();
-	const { data: trades } = api.trades.getAll.useQuery({
-		status: "closed",
-		limit: 100,
-	});
-
-	// Scroll to bottom when new messages arrive
-	useEffect(() => {
-		if (scrollRef.current) {
-			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-		}
-	}, []);
-
-	// Check if user has API key configured (placeholder - would check settings)
-	useEffect(() => {
-		// For now, assume no key is set
-		setHasApiKey(false);
-	}, []);
-
-	const generateLocalInsight = (query: string): string => {
-		if (!stats || !trades?.items) {
-			return "I don't have enough trade data to analyze. Start logging some trades first!";
-		}
-
-		const lowerQuery = query.toLowerCase();
-		const closedTrades = trades.items.filter((t) => t.netPnl);
-
-		// Win rate analysis
-		if (lowerQuery.includes("win rate") || lowerQuery.includes("winning")) {
-			return (
-				`Based on ${stats.totalTrades} closed trades:\n\n` +
-				`**Win Rate:** ${formatPercent(stats.winRate, 1).replace("+", "")}\n` +
-				`- Wins: ${stats.wins}\n` +
-				`- Losses: ${stats.losses}\n` +
-				`- Breakeven: ${stats.breakevens}\n\n` +
-				`**Insight:** ${
-					stats.winRate >= 50
-						? "Your win rate is above 50%, which is a solid foundation. Focus on improving your risk-reward ratio to maximize profits."
-						: "Your win rate is below 50%, but that's not necessarily bad if your winners are larger than your losers. Focus on letting winners run and cutting losers quickly."
-				}`
-			);
-		}
-
-		// Breakeven analysis
-		if (lowerQuery.includes("breakeven") || lowerQuery.includes("break even")) {
-			const beRate = (stats.breakevens / Math.max(stats.totalTrades, 1)) * 100;
-			return (
-				`**Breakeven Analysis:**\n\n` +
-				`Out of ${stats.totalTrades} trades, ${
-					stats.breakevens
-				} ended at breakeven (${beRate.toFixed(1)}%).\n\n` +
-				`**Insight:** ${
-					beRate > 10
-						? "You're moving to breakeven frequently. Consider if you're cutting winners too early. Analyze if those breakeven trades would have hit your original targets."
-						: "Your breakeven rate is reasonable. You're letting your trades play out."
-				}`
-			);
-		}
-
-		// Setup analysis
-		if (lowerQuery.includes("setup") || lowerQuery.includes("strategy")) {
-			const setupStats: Record<
-				string,
-				{ wins: number; losses: number; pnl: number }
-			> = {};
-			closedTrades.forEach((t) => {
-				const setup = t.setupType || "Unclassified";
-				if (!setupStats[setup]) {
-					setupStats[setup] = { wins: 0, losses: 0, pnl: 0 };
-				}
-				const pnl = parseFloat(t.netPnl ?? "0");
-				setupStats[setup].pnl += pnl;
-				if (pnl > 0) setupStats[setup].wins++;
-				else if (pnl < 0) setupStats[setup].losses++;
-			});
-
-			const setupSummary = Object.entries(setupStats)
-				.map(([setup, data]) => {
-					const total = data.wins + data.losses;
-					const wr = total > 0 ? ((data.wins / total) * 100).toFixed(1) : "0";
-					return `- **${setup}:** ${wr}% win rate, ${formatCurrency(
-						data.pnl,
-					)} P&L`;
-				})
-				.join("\n");
-
-			return (
-				`**Setup Performance:**\n\n${setupSummary}\n\n` +
-				`**Insight:** Focus on your highest win rate setups and consider reducing position size or eliminating underperforming setups.`
-			);
-		}
-
-		// Symbol analysis
-		if (lowerQuery.includes("symbol") || lowerQuery.includes("instrument")) {
-			const symbolStats: Record<
-				string,
-				{ wins: number; losses: number; pnl: number }
-			> = {};
-			closedTrades.forEach((t) => {
-				const symbol = t.symbol;
-				if (!symbolStats[symbol]) {
-					symbolStats[symbol] = { wins: 0, losses: 0, pnl: 0 };
-				}
-				const pnl = parseFloat(t.netPnl ?? "0");
-				symbolStats[symbol].pnl += pnl;
-				if (pnl > 0) symbolStats[symbol].wins++;
-				else if (pnl < 0) symbolStats[symbol].losses++;
-			});
-
-			const symbolSummary = Object.entries(symbolStats)
-				.sort((a, b) => b[1].pnl - a[1].pnl)
-				.map(([symbol, data]) => {
-					const total = data.wins + data.losses;
-					const wr = total > 0 ? ((data.wins / total) * 100).toFixed(1) : "0";
-					return `- **${symbol}:** ${wr}% win rate, ${formatCurrency(
-						data.pnl,
-					)} P&L`;
-				})
-				.join("\n");
-
-			return (
-				`**Performance by Symbol:**\n\n${symbolSummary}\n\n` +
-				`**Insight:** Focus on your best performing symbols. Consider if you understand certain markets better than others.`
-			);
-		}
-
-		// Profit factor analysis
-		if (
-			lowerQuery.includes("profit factor") ||
-			lowerQuery.includes("r:r") ||
-			lowerQuery.includes("risk")
-		) {
-			return (
-				`**Risk Analysis:**\n\n` +
-				`- Profit Factor: ${
-					stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)
-				}\n` +
-				`- Average Win: ${formatCurrency(stats.avgWin)}\n` +
-				`- Average Loss: ${formatCurrency(stats.avgLoss)}\n` +
-				`- Avg R:R: ${
-					stats.avgLoss > 0 ? (stats.avgWin / stats.avgLoss).toFixed(2) : "N/A"
-				}\n\n` +
-				`**Insight:** ${
-					stats.profitFactor >= 1.5
-						? "Your profit factor is healthy. You're managing risk well."
-						: "Consider improving your risk-reward ratio by letting winners run longer or cutting losses quicker."
-				}`
-			);
-		}
-
-		// Default response
-		return (
-			`**Quick Stats:**\n\n` +
-			`- Total P&L: ${formatCurrency(stats.totalPnl)}\n` +
-			`- Win Rate: ${formatPercent(stats.winRate, 1).replace("+", "")}\n` +
-			`- Profit Factor: ${
-				stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)
-			}\n` +
-			`- Total Trades: ${stats.totalTrades}\n\n` +
-			`Try asking about specific aspects like "What's my win rate?", "Which setups work best?", or "Show me performance by symbol".`
-		);
+	const handleModeChange = (newMode: AiMode) => {
+		setMode(newMode);
+		// Reset model to default for the new mode
+		setModel(newMode === "chat" ? DEFAULT_CHAT_MODEL : DEFAULT_REPORT_MODEL);
 	};
 
-	const handleSend = async () => {
-		if (!input.trim()) return;
-
-		const userMessage: Message = {
-			id: Date.now().toString(),
-			role: "user",
-			content: input.trim(),
-			timestamp: new Date(),
-		};
-
-		setMessages((prev) => [...prev, userMessage]);
-		setInput("");
-		setIsLoading(true);
-
-		// Simulate AI response (in production, this would call your AI endpoint)
-		setTimeout(() => {
-			const response = generateLocalInsight(userMessage.content);
-			const assistantMessage: Message = {
-				id: (Date.now() + 1).toString(),
-				role: "assistant",
-				content: response,
-				timestamp: new Date(),
-			};
-			setMessages((prev) => [...prev, assistantMessage]);
-			setIsLoading(false);
-		}, 1000);
-	};
+	// Filter models available for the current mode
+	const availableModels = AI_MODELS.filter(
+		(m) => m.mode === mode || m.mode === "both",
+	);
 
 	return (
-		<div className="flex h-[calc(100vh-8rem)] flex-col space-y-4 sm:space-y-6">
+		<div
+			className="flex h-[calc(100vh-8rem)] flex-col space-y-4"
+			data-testid="ai-page"
+		>
 			{/* Header */}
-			<div className="flex items-center justify-between gap-3">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div className="min-w-0 flex-1">
 					<span className="mb-2 block font-mono text-primary text-xs uppercase tracking-wider">
 						Analysis
 					</span>
-					<h1 className="font-bold text-2xl tracking-tight sm:text-3xl">
+					<h1
+						className="font-bold text-2xl tracking-tight sm:text-3xl"
+						data-testid="ai-heading"
+					>
 						AI Insights
 					</h1>
 					<p className="mt-1 hidden font-mono text-muted-foreground text-sm sm:block">
-						Ask questions about your trading performance
+						{mode === "chat"
+							? "Ask questions about your trading performance"
+							: "Generate deep analysis reports with charts"}
 					</p>
 				</div>
-				<Button
-					asChild
-					className="min-h-[44px] font-mono text-xs uppercase tracking-wider"
-					variant="outline"
-				>
-					<Link href="/settings">
-						<Key className="h-3.5 w-3.5 sm:mr-2" />
-						<span className="hidden sm:inline">API Keys</span>
-					</Link>
-				</Button>
-			</div>
 
-			{/* API Key Notice */}
-			{hasApiKey === false && (
-				<div className="flex flex-col gap-3 rounded border border-primary/30 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-					<div className="flex items-center gap-3">
-						<Sparkles className="h-5 w-5 shrink-0 text-primary" />
-						<div className="min-w-0">
-							<p className="font-medium font-mono text-xs uppercase tracking-wider">
-								Using Local Analysis
-							</p>
-							<p className="hidden font-mono text-[10px] text-muted-foreground sm:block">
-								Add your AI API key in settings for more advanced insights
-							</p>
-						</div>
-					</div>
-					<Button
-						asChild
-						className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
-						size="sm"
-						variant="outline"
+				{/* Controls */}
+				<div className="flex items-center gap-2 sm:gap-3">
+					{/* Mode Switcher */}
+					<Select
+						onValueChange={(v) => handleModeChange(v as AiMode)}
+						value={mode}
 					>
-						<Link href="/settings">
-							<Settings className="mr-2 h-3.5 w-3.5" />
-							Settings
-						</Link>
-					</Button>
-				</div>
-			)}
-
-			{/* Terminal Chat Container */}
-			<div className="flex flex-1 flex-col overflow-hidden rounded border border-border bg-card">
-				{/* Terminal header */}
-				<div className="flex items-center justify-between border-border border-b bg-secondary px-3 py-2 sm:px-4">
-					<div className="flex items-center gap-1.5 sm:gap-2">
-						<div className="h-2 w-2 rounded-full bg-loss/60 sm:h-2.5 sm:w-2.5" />
-						<div className="h-2 w-2 rounded-full bg-breakeven/60 sm:h-2.5 sm:w-2.5" />
-						<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
-					</div>
-					<span className="hidden font-mono text-[10px] text-muted-foreground sm:block">
-						ai-insights-terminal
-					</span>
-					<div className="hidden w-14 sm:block" />
-				</div>
-
-				{/* Chat Content */}
-				<ScrollArea className="flex-1 p-3 sm:p-4" ref={scrollRef}>
-					{messages.length === 0 ? (
-						<div className="flex h-full flex-col items-center justify-center px-2 text-center">
-							<div className="mb-4 flex h-12 w-12 items-center justify-center rounded border border-border bg-secondary sm:h-16 sm:w-16">
-								<Brain className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
+						<SelectTrigger
+							className="font-mono text-xs uppercase tracking-wider"
+							data-testid="ai-mode-selector"
+						>
+							<div className="flex items-center gap-2">
+								{mode === "chat" ? (
+									<MessageSquare className="size-3.5" />
+								) : (
+									<FileText className="size-3.5" />
+								)}
+								<SelectValue />
 							</div>
-							<h2 className="mb-2 font-semibold text-lg sm:text-xl">
-								Query your trading data
-							</h2>
-							<p className="mb-4 max-w-md font-mono text-muted-foreground text-xs sm:mb-6">
-								I can analyze your trades and provide insights on win rates,
-								setups, timing, and more.
-							</p>
-							<div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
-								{EXAMPLE_QUERIES.map((query) => (
-									<button
-										className="min-h-[36px] rounded border border-border bg-secondary px-2.5 py-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary sm:min-h-0 sm:px-3"
-										key={query}
-										onClick={() => setInput(query)}
-										type="button"
-									>
-										{query}
-									</button>
-								))}
-							</div>
-						</div>
-					) : (
-						<div className="space-y-3 sm:space-y-4">
-							{messages.map((message) => (
-								<div className="flex gap-2 sm:gap-3" key={message.id}>
-									{/* Command prompt character */}
-									<span className="mt-0.5 font-mono text-muted-foreground text-xs sm:text-sm">
-										{message.role === "user" ? "$" : "→"}
-									</span>
-									<div className="min-w-0 flex-1">
-										{message.role === "assistant" ? (
-											<div className="break-words font-mono text-muted-foreground text-xs sm:text-sm">
-												{message.content.split("\n").map((line) => {
-													if (line.startsWith("**") && line.includes(":**")) {
-														const [title] = line.split(":**");
-														return (
-															<p
-																className="mt-3 font-semibold text-foreground first:mt-0"
-																key={`heading-${line}`}
-															>
-																{title?.replace(/\*\*/g, "") ?? ""}:
-															</p>
-														);
-													}
-													if (line.startsWith("- **")) {
-														return (
-															<p className="ml-2" key={`bold-${line}`}>
-																{line.replace(/\*\*/g, "")}
-															</p>
-														);
-													}
-													if (line.startsWith("- ")) {
-														return (
-															<p
-																className="ml-4 text-muted-foreground"
-																key={`bullet-${line}`}
-															>
-																{line}
-															</p>
-														);
-													}
-													return line ? (
-														<p key={`text-${line}`}>{line}</p>
-													) : (
-														<br key={`br-${message.id}-${Math.random()}`} />
-													);
-												})}
-											</div>
+						</SelectTrigger>
+						<SelectContent>
+							{AI_MODES.map((m) => (
+								<SelectItem
+									className="font-mono text-xs"
+									data-testid={`ai-mode-option-${m.value}`}
+									key={m.value}
+									value={m.value}
+								>
+									<span className="flex items-center gap-2">
+										{m.value === "chat" ? (
+											<MessageSquare className="size-3.5" />
 										) : (
-											<p className="break-words font-mono text-primary text-xs sm:text-sm">
-												{message.content}
-											</p>
+											<FileText className="size-3.5" />
 										)}
-									</div>
-								</div>
-							))}
-							{isLoading && (
-								<div className="flex gap-2 sm:gap-3">
-									<span className="mt-0.5 font-mono text-muted-foreground text-xs sm:text-sm">
-										→
+										{m.label}
 									</span>
-									<div className="flex items-center gap-2">
-										<Loader2 className="h-3 w-3 animate-spin text-muted-foreground sm:h-3.5 sm:w-3.5" />
-										<span className="font-mono text-muted-foreground text-xs sm:text-sm">
-											Analyzing trades<span className="animate-blink">_</span>
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+
+					{/* Model Selector */}
+					<Select onValueChange={setModel} value={model}>
+						<SelectTrigger
+							className="max-w-[180px] font-mono text-xs"
+							data-testid="ai-model-selector"
+						>
+							<div className="flex items-center gap-2">
+								<Brain className="size-3.5 shrink-0 text-[#00d4ff]" />
+								<SelectValue />
+							</div>
+						</SelectTrigger>
+						<SelectContent>
+							{availableModels.map((m) => (
+								<SelectItem
+									className="font-mono text-xs"
+									data-testid={`ai-model-option-${m.id.replace("/", "-")}`}
+									key={m.id}
+									value={m.id}
+								>
+									<div className="flex flex-col">
+										<span>{m.name}</span>
+										<span className="text-[10px] text-muted-foreground">
+											{m.provider} · {m.description}
 										</span>
 									</div>
-								</div>
-							)}
-						</div>
-					)}
-				</ScrollArea>
-
-				{/* Input */}
-				<div className="border-border border-t bg-secondary p-3 sm:p-4">
-					<form
-						className="flex gap-2 sm:gap-3"
-						onSubmit={(e) => {
-							e.preventDefault();
-							handleSend();
-						}}
-					>
-						<span className="mt-2.5 font-mono text-muted-foreground text-xs sm:mt-2 sm:text-sm">
-							$
-						</span>
-						<Input
-							className="min-h-[44px] flex-1 border-border bg-transparent font-mono text-sm"
-							disabled={isLoading}
-							onChange={(e) => setInput(e.target.value)}
-							placeholder="Enter query..."
-							value={input}
-						/>
-						<Button
-							className="min-h-[44px] min-w-[44px] font-mono text-xs uppercase tracking-wider"
-							disabled={isLoading || !input.trim()}
-							size="sm"
-							type="submit"
-						>
-							<Send className="h-3.5 w-3.5" />
-						</Button>
-					</form>
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</div>
+			</div>
+
+			{/* Content Area */}
+			<div className="min-h-0 flex-1">
+				{mode === "chat" ? (
+					<ChatInterface data-testid="ai-chat-interface" model={model} />
+				) : (
+					<ReportInterface data-testid="ai-report-interface" model={model} />
+				)}
 			</div>
 		</div>
 	);

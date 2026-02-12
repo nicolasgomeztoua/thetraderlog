@@ -28,4 +28,5 @@ export const ids = {
 	journalAttachment: () => createId("ja"),
 	attachment: () => createId("at"),
 	tradeAttachment: () => createId("ta"),
+	aiReport: () => createId("ar"),
 };
