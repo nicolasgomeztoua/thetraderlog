@@ -203,3 +203,13 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - The / shortcut listener checks document.activeElement to avoid capturing when input already focused
   - transition-[height] duration-150 on textarea handles smooth paste expansion
 ---
+
+## 2026-02-12 - US-006
+- What was implemented: Redesigned ChatSidebar with w-64, date grouping, Plus icon button with Tooltip, empty state with MessageSquare, active border highlight, proper button elements for a11y.
+- Files changed: src/app/(protected)/ai/_components/chat-sidebar.tsx
+- **Learnings for future iterations:**
+  - Biome's useSemanticElements rule rejects role="button" on div — convert to actual button elements
+  - Nested interactive elements (delete button inside conversation button) require span with role="button" + biome-ignore
+  - Date grouping uses getDateGroup helper comparing against today/yesterday/weekAgo dates
+  - Conversation Drizzle query returns createdAt from the table, no schema changes needed
+---

@@ -249,8 +249,8 @@
         "Verify in browser"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Width w-64, date group headers (Today/Yesterday/Previous 7 Days/Older), icon-only Plus button with Tooltip, empty state with MessageSquare + text, active conversation border highlight bg-primary/5, delete with hover:bg-loss/10. Converted conversation items to button elements for a11y. Sticky date group headers."
     },
     {
       "id": "US-007",
