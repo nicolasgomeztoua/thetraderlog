@@ -6,7 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { DEFAULT_CHAT_MODEL } from "@/lib/constants/ai";
+import { DEFAULT_CHAT_MODEL, DEFAULT_REPORT_MODEL } from "@/lib/constants/ai";
 import {
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_REPORT_NOT_FOUND,
@@ -348,7 +348,7 @@ describe("ai router", () => {
 				prompt: "Generate a report",
 			});
 
-			expect(result.model).toBe(DEFAULT_CHAT_MODEL);
+			expect(result.model).toBe(DEFAULT_REPORT_MODEL);
 		});
 
 		it("should use custom title when provided", async () => {

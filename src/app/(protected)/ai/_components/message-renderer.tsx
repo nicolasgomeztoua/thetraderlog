@@ -149,11 +149,7 @@ const markdownComponents: Components = {
 	pre: ({ children }) => {
 		// Extract language from child code element's className
 		let language: string | undefined;
-		if (
-			children &&
-			typeof children === "object" &&
-			"props" in children
-		) {
+		if (children && typeof children === "object" && "props" in children) {
 			const childClassName =
 				(children.props as { className?: string })?.className ?? "";
 			const match = /language-(\w+)/.exec(childClassName);
