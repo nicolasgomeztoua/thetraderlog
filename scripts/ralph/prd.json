@@ -106,8 +106,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added 2 new tests to existing getReportStatus describe block in tests/integration/ai.test.ts: default values test and response shape test. Both pass. Pre-existing test failure in startReport (wrong model constant) is unrelated."
     },
     {
       "id": "US-001",

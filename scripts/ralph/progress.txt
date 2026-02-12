@@ -147,3 +147,12 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - getReportStatus uses columns: {} selection pattern — just add the column name with true value
   - Polling interval is already 5s in the frontend (report-interface.tsx)
 ---
+
+## 2026-02-12 - US-010D
+- What was implemented: Added 2 integration tests for report progress fields in existing ai.test.ts: default values test and response shape test.
+- Files changed: tests/integration/ai.test.ts
+- **Learnings for future iterations:**
+  - Pre-existing test failure: "should use default report model when none specified" expects DEFAULT_CHAT_MODEL but startReport uses DEFAULT_REPORT_MODEL. Not related to our changes.
+  - Tests use startReport which creates a report in "queued" state — perfect for testing defaults
+  - Add tests to existing describe blocks rather than creating new test files when possible
+---
