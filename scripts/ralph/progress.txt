@@ -20,3 +20,37 @@ Branch: ralph/ai-ui-redesign
 - Shadcn UI components in src/components/ui/
 - Tailwind CSS v4 with Terminal design system
 - Biome for linting/formatting (bun run check)
+- next.config.js uses tabs for indentation (Biome enforces)
+- Pre-existing Biome errors: prd.ai-analytics.archive.json format, chat-sidebar.tsx useSemanticElements
+- Dynamic imports: use next/dynamic with { ssr: false, loading: () => <ChartSkeleton /> } for heavy chart libs
+- ChartSkeleton component available at src/components/analytics/chart-skeleton.tsx for chart loading states
+
+## 2026-02-12 - US-001
+- Implemented: Added lucide-react to experimental.optimizePackageImports in next.config.js
+- Files changed: next.config.js
+- **Learnings for future iterations:**
+  - next.config.js uses tab indentation, not spaces (Biome will reject spaces)
+  - There are 2 pre-existing Biome errors (archive JSON formatting, chat-sidebar lint) — don't try to fix these
+  - lucide-react is imported in 103 files — optimizePackageImports ensures tree-shaking at build time
+---
+
+## 2026-02-12 - US-002
+- Implemented: Dynamic import AG Charts components with next/dynamic and ChartSkeleton loading
+- Files changed: src/components/analytics/chart-skeleton.tsx (new), src/components/analytics/index.ts, src/app/(protected)/analytics/page.tsx
+- **Learnings for future iterations:**
+  - Analytics barrel file (src/components/analytics/index.ts) re-exports all chart components — dynamic imports should bypass the barrel and import directly from the component file
+  - AG Charts is used in 7 separate component files (EquityCurve, MonthlyChart, RMultipleChart, SymbolDistributionChart, SymbolTrendChart, PositionSizeChart, MonteCarloChart) plus 3 inline charts in page.tsx
+  - page.tsx still has direct `import { AgCharts }` for its inline WinLossChart, PnLDistributionChart, CumulativePnLChart — these are in the Overview tab (default visible) so they're not code-split
+  - next/dynamic with `ssr: false` requires the component to be in a "use client" file
+  - Biome auto-formats `.then()` chains on dynamic imports — let Biome fix these rather than fighting the formatter
+---
+
+## 2026-02-12 - US-003
+- Implemented: Dynamic import TipTap editor with next/dynamic and EditorSkeleton loading
+- Files changed: src/components/daily-journal/editor-skeleton.tsx (new), src/components/daily-journal/index.ts, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - When using next/dynamic, all static imports must come before the `const X = dynamic(...)` declaration — Biome will reject mixed imports/non-imports
+  - JournalEditor has many TipTap extensions (StarterKit, Image, Link, Placeholder, TaskList, TaskItem, SlashCommand) — dynamic import keeps all of these out of the initial bundle
+  - JournalEditor already has `immediatelyRender: false` set on useEditor which prevents SSR hydration issues — this is a prerequisite for ssr: false dynamic imports
+  - EditorSkeleton matches the editor layout: toolbar skeleton + content area with text line skeletons + status indicator placeholder
+---

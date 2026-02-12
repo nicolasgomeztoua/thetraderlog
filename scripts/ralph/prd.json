@@ -16,8 +16,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added lucide-react to experimental.optimizePackageImports in next.config.js. Build confirms experiment is active. Bundle optimization applied across 103 files importing from lucide-react."
     },
     {
       "id": "US-002",
@@ -36,8 +36,8 @@
         "Verify in browser"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created ChartSkeleton component in src/components/analytics/chart-skeleton.tsx. Wrapped EquityCurve, MonthlyChart, RMultipleChart, SymbolDistributionChart, SymbolTrendChart, and PositionSizeChart with next/dynamic and { ssr: false, loading: ChartSkeleton }. Components are now code-split from the main analytics page bundle."
     },
     {
       "id": "US-003",
@@ -54,8 +54,8 @@
         "Verify in browser"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created EditorSkeleton component in src/components/daily-journal/editor-skeleton.tsx matching the editor layout (toolbar + content area + status indicator). Wrapped JournalEditor with next/dynamic and { ssr: false, loading: EditorSkeleton } in the daily-journal page. TipTap editor and all its extensions are now code-split from the main page bundle."
     },
     {
       "id": "US-004",

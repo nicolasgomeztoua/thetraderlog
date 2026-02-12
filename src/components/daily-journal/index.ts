@@ -5,6 +5,7 @@ export { ChecklistSettings } from "./checklist-settings";
 export { DailyChecklist } from "./daily-checklist";
 export { DailyJournalPreview } from "./daily-journal-preview";
 export { DateNavigation } from "./date-navigation";
+export { EditorSkeleton } from "./editor-skeleton";
 export { EditorToolbar } from "./editor-toolbar";
 export { JournalEditor } from "./journal-editor";
 export { TradesSummary } from "./trades-summary";
