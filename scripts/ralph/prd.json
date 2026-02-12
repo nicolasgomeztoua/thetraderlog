@@ -129,8 +129,8 @@
         "Verify in browser"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Brain icon with Sparkles in accent circle. Added time-aware greeting with Clerk firstName. 4 capability pills. 4 polished query cards with icons, descriptions, ArrowRight hover. Keyboard shortcut hint. Animation delays via inline style. 2-col grid responsive."
     },
     {
       "id": "US-002",

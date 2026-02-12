@@ -156,3 +156,13 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - Tests use startReport which creates a report in "queued" state — perfect for testing defaults
   - Add tests to existing describe blocks rather than creating new test files when possible
 ---
+
+## 2026-02-12 - US-001
+- What was implemented: Redesigned chat empty state with Sparkles icon, time-aware greeting (Clerk firstName), capability pills, polished suggested query cards with icons and ArrowRight hover, keyboard shortcut hint.
+- Files changed: src/app/(protected)/ai/_components/chat-interface.tsx
+- **Learnings for future iterations:**
+  - useUser() from @clerk/nextjs gives access to user.firstName for personalization
+  - SUGGESTED_CHAT_QUERIES is a readonly array — indexing returns string | undefined. Use nullish coalescing with fallback strings.
+  - For animation-delay on staggered elements, use inline style={{ animationDelay: "Nms" }} rather than custom classes when each element has a unique delay
+  - bg-white/[0.02] is the Tailwind v4 way to do very subtle white backgrounds (2% opacity)
+---
