@@ -2,6 +2,7 @@
 
 import { BarChart3, Check, Code2, Copy, Database, Zap } from "lucide-react";
 import { useCallback, useState } from "react";
+import { useTypewriter } from "../_hooks/use-typewriter";
 import { MessageRenderer } from "./message-renderer";
 
 // =============================================================================
@@ -103,10 +104,26 @@ interface ChatMessageProps {
 		content: string;
 		toolCalls?: string | null;
 	};
+	/** Whether this is the latest AI message in the conversation */
+	isLatest?: boolean;
+	/** Whether messages were loaded from history (skip typewriter) */
+	isFromHistory?: boolean;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({
+	message,
+	isLatest = false,
+	isFromHistory = false,
+}: ChatMessageProps) {
 	const [copied, setCopied] = useState(false);
+
+	// Typewriter only for the latest assistant message that isn't from history
+	const enableTypewriter =
+		message.role === "assistant" && isLatest && !isFromHistory;
+	const { displayedText, isComplete, skip } = useTypewriter({
+		text: message.content,
+		enabled: enableTypewriter,
+	});
 
 	const toolCalls =
 		message.role === "assistant"
@@ -138,35 +155,49 @@ export function ChatMessage({ message }: ChatMessageProps) {
 	}
 
 	// Assistant message
+	const renderedContent = enableTypewriter ? displayedText : message.content;
+
 	return (
 		<div className="animate-fade-in-up">
 			<div className="group flex gap-2 sm:gap-3">
 				<span className="mt-0.5 font-mono text-accent text-xs sm:text-sm">
 					{"\u2192"}
 				</span>
-				<div className="min-w-0 flex-1 rounded border border-white/5 bg-white/[0.01] p-3 sm:p-4">
+				{/* biome-ignore lint/a11y/useKeyWithClickEvents: click to skip typewriter */}
+				{/* biome-ignore lint/a11y/noStaticElementInteractions: click to skip typewriter */}
+				<div
+					className="min-w-0 flex-1 rounded border border-white/5 bg-white/[0.01] p-3 sm:p-4"
+					onClick={enableTypewriter && !isComplete ? skip : undefined}
+				>
 					{toolNames.length > 0 && <ToolBadges toolNames={toolNames} />}
-					<MessageRenderer content={message.content} />
-					{/* Copy button in card footer */}
-					<div className="mt-3 flex justify-end border-white/5 border-t pt-2 opacity-0 transition-opacity group-hover:opacity-100">
-						<button
-							className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-							onClick={() => void handleCopy()}
-							type="button"
-						>
-							{copied ? (
-								<>
-									<Check className="size-3 text-profit" />
-									<span className="text-profit">Copied</span>
-								</>
-							) : (
-								<>
-									<Copy className="size-3" />
-									<span>Copy</span>
-								</>
-							)}
-						</button>
+					<div className="relative">
+						<MessageRenderer content={renderedContent} />
+						{enableTypewriter && !isComplete && (
+							<span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 cursor-blink bg-accent" />
+						)}
 					</div>
+					{/* Copy button in card footer — only show when typing is complete */}
+					{(!enableTypewriter || isComplete) && (
+						<div className="mt-3 flex justify-end border-white/5 border-t pt-2 opacity-0 transition-opacity group-hover:opacity-100">
+							<button
+								className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+								onClick={() => void handleCopy()}
+								type="button"
+							>
+								{copied ? (
+									<>
+										<Check className="size-3 text-profit" />
+										<span className="text-profit">Copied</span>
+									</>
+								) : (
+									<>
+										<Copy className="size-3" />
+										<span>Copy</span>
+									</>
+								)}
+							</button>
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

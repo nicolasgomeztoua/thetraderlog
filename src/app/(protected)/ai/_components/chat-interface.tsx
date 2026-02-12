@@ -85,6 +85,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	>(null);
 	const [input, setInput] = useState("");
 	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+	const [lastSentAt, setLastSentAt] = useState<number>(0);
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const greeting = useMemo(() => {
@@ -153,6 +154,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 
 			setInput("");
 			setPendingMessage(text);
+			setLastSentAt(Date.now());
 
 			// Create conversation if needed
 			let conversationId = activeConversationId;
@@ -174,6 +176,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const handleNewConversation = () => {
 		setActiveConversationId(null);
 		setPendingMessage(null);
+		setLastSentAt(0);
 	};
 
 	const messages = conversation?.messages ?? [];
@@ -188,7 +191,10 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				isLoading={isConversationsLoading}
 				onDelete={(id) => deleteConversation.mutate({ conversationId: id })}
 				onNew={handleNewConversation}
-				onSelect={setActiveConversationId}
+				onSelect={(id) => {
+					setActiveConversationId(id);
+					setLastSentAt(0);
+				}}
 			/>
 
 			{/* Main Chat Area */}
@@ -318,9 +324,21 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 							</div>
 						) : (
 							<div className="space-y-4 sm:space-y-5">
-								{messages.map((message) => (
-									<ChatMessage key={message.id} message={message} />
-								))}
+								{messages.map((message, index) => {
+									const isLastAssistant =
+										message.role === "assistant" &&
+										index === messages.length - 1;
+									// Messages are "from history" if loaded without a recent send action
+									const isFromHistory = lastSentAt === 0;
+									return (
+										<ChatMessage
+											isFromHistory={isFromHistory}
+											isLatest={isLastAssistant}
+											key={message.id}
+											message={message}
+										/>
+									);
+								})}
 								{pendingMessage && (
 									<ChatPendingMessage content={pendingMessage} />
 								)}
