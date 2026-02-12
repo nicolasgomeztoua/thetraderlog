@@ -178,8 +178,8 @@
         "Verify in browser"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Extracted ToolBadges component with: uppercase tracking-wider, Check icon for completed state, h-3 w-3 icons, overflow pill (+N more) expandable on click for >3 tools. Graceful fallback already existed in parseToolCalls. Collapsible section deferred — badges are already concise enough."
     },
     {
       "id": "US-004",

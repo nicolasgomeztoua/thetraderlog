@@ -176,3 +176,11 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - Removed Tooltip/TooltipProvider from chat-message.tsx — copy button now shows text label directly. Simpler and fewer deps.
   - The existing Loader2 spinner was replaced with 3 bouncing dots for the thinking state — matches terminal aesthetic better.
 ---
+
+## 2026-02-12 - US-003
+- What was implemented: Extracted ToolBadges component with overflow handling, Check icon for completed state, uppercase tracking-wider styling.
+- Files changed: src/app/(protected)/ai/_components/chat-message.tsx
+- **Learnings for future iterations:**
+  - Tool badges are always "completed" state since they're stored after AI response. Running state only relevant during streaming.
+  - MAX_VISIBLE_TOOLS = 3 with "+N more" expandable button handles overflow cleanly.
+---
