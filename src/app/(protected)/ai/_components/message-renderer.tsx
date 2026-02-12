@@ -1,12 +1,22 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import { memo, useCallback, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-function CodeBlockWrapper({ children }: { children: React.ReactNode }) {
+// =============================================================================
+// CODE BLOCK
+// =============================================================================
+
+function CodeBlockWrapper({
+	children,
+	language,
+}: {
+	children: React.ReactNode;
+	language?: string;
+}) {
 	const [copied, setCopied] = useState(false);
 	const preRef = useRef<HTMLPreElement>(null);
 
@@ -18,28 +28,47 @@ function CodeBlockWrapper({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	return (
-		<div className="group/code relative mb-2">
+		<div
+			className="mb-3 overflow-hidden rounded border border-white/5 bg-[#0a0a0a]"
+			data-testid="message-code-block"
+		>
+			{/* Header bar */}
+			<div className="flex items-center justify-between border-white/5 border-b bg-white/[0.02] px-3 py-1.5">
+				<span className="font-mono text-[10px] text-muted-foreground/50 uppercase">
+					{language ?? "code"}
+				</span>
+				<button
+					className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+					onClick={() => void handleCopy()}
+					type="button"
+				>
+					{copied ? (
+						<>
+							<Check className="size-3 text-profit" />
+							<span className="text-profit">Copied</span>
+						</>
+					) : (
+						<>
+							<Copy className="size-3" />
+							<span>Copy</span>
+						</>
+					)}
+				</button>
+			</div>
+			{/* Code content */}
 			<pre
-				className="overflow-x-auto rounded border border-border bg-[#0a0a0a] p-3 font-mono text-xs leading-relaxed"
-				data-testid="message-code-block"
+				className="overflow-x-auto p-3 font-mono text-xs leading-relaxed"
 				ref={preRef}
 			>
 				{children}
 			</pre>
-			<button
-				className="absolute top-2 right-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/code:opacity-100"
-				onClick={() => void handleCopy()}
-				type="button"
-			>
-				{copied ? (
-					<Check className="size-3 text-profit" />
-				) : (
-					<Copy className="size-3" />
-				)}
-			</button>
 		</div>
 	);
 }
+
+// =============================================================================
+// MARKDOWN COMPONENTS
+// =============================================================================
 
 const markdownComponents: Components = {
 	h1: ({ children }) => (
@@ -77,7 +106,7 @@ const markdownComponents: Components = {
 		</p>
 	),
 	strong: ({ children }) => (
-		<strong className="font-semibold text-foreground">{children}</strong>
+		<strong className="font-medium text-foreground">{children}</strong>
 	),
 	em: ({ children }) => (
 		<em className="text-muted-foreground italic">{children}</em>
@@ -92,7 +121,7 @@ const markdownComponents: Components = {
 	),
 	ol: ({ children }) => (
 		<ol
-			className="mb-2 ml-4 list-decimal space-y-0.5 font-mono text-muted-foreground text-xs sm:text-sm"
+			className="mb-2 ml-4 list-decimal space-y-0.5 font-mono text-muted-foreground text-xs marker:text-accent/50 sm:text-sm"
 			data-testid="message-list-ordered"
 		>
 			{children}
@@ -110,49 +139,76 @@ const markdownComponents: Components = {
 		}
 		return (
 			<code
-				className="rounded bg-secondary px-1 py-0.5 font-mono text-primary text-xs"
+				className="rounded border border-white/5 bg-white/5 px-1.5 py-0.5 font-mono text-primary text-xs"
 				{...props}
 			>
 				{children}
 			</code>
 		);
 	},
-	pre: ({ children }) => <CodeBlockWrapper>{children}</CodeBlockWrapper>,
+	pre: ({ children }) => {
+		// Extract language from child code element's className
+		let language: string | undefined;
+		if (
+			children &&
+			typeof children === "object" &&
+			"props" in children
+		) {
+			const childClassName =
+				(children.props as { className?: string })?.className ?? "";
+			const match = /language-(\w+)/.exec(childClassName);
+			language = match?.[1];
+		}
+
+		return <CodeBlockWrapper language={language}>{children}</CodeBlockWrapper>;
+	},
 	table: ({ children }) => (
-		<div className="mb-2 overflow-x-auto" data-testid="message-table">
+		<div
+			className="relative mb-3 overflow-x-auto rounded border border-white/5"
+			data-testid="message-table"
+		>
 			<table className="w-full border-collapse font-mono text-xs">
 				{children}
 			</table>
 		</div>
 	),
 	thead: ({ children }) => (
-		<thead className="border-border border-b bg-secondary/50">{children}</thead>
+		<thead className="border-white/5 border-b bg-white/[0.02]">
+			{children}
+		</thead>
 	),
 	tbody: ({ children }) => <tbody>{children}</tbody>,
 	tr: ({ children }) => (
-		<tr className="border-border border-b last:border-b-0">{children}</tr>
+		<tr className="border-white/[0.02] border-b transition-colors last:border-b-0 even:bg-white/[0.01] hover:bg-white/[0.03]">
+			{children}
+		</tr>
 	),
 	th: ({ children }) => (
-		<th className="px-2 py-1.5 text-left font-semibold text-foreground text-xs uppercase tracking-wider">
+		<th className="px-3 py-2 text-left font-mono font-semibold text-[10px] text-foreground uppercase tracking-wider">
 			{children}
 		</th>
 	),
 	td: ({ children }) => (
-		<td className="px-2 py-1.5 text-muted-foreground">{children}</td>
+		<td className="px-3 py-2 text-muted-foreground">{children}</td>
 	),
-	a: ({ href, children }) => (
-		<a
-			className="text-[#00d4ff] underline underline-offset-2 hover:text-[#00d4ff]/80"
-			href={href}
-			rel="noopener noreferrer"
-			target="_blank"
-		>
-			{children}
-		</a>
-	),
-	hr: () => <hr className="my-3 border-border" />,
+	a: ({ href, children }) => {
+		const isExternal =
+			href?.startsWith("http://") || href?.startsWith("https://");
+		return (
+			<a
+				className="inline-flex items-center gap-0.5 text-accent underline underline-offset-2 hover:text-accent/80"
+				href={href}
+				rel="noopener noreferrer"
+				target="_blank"
+			>
+				{children}
+				{isExternal && <ExternalLink className="inline h-2.5 w-2.5" />}
+			</a>
+		);
+	},
+	hr: () => <hr className="my-3 border-white/5" />,
 	blockquote: ({ children }) => (
-		<blockquote className="mb-2 border-primary/50 border-l-2 pl-3 font-mono text-muted-foreground text-xs italic sm:text-sm">
+		<blockquote className="mb-3 rounded-r border-accent/30 border-l-2 bg-accent/[0.02] py-2 pr-2 pl-3 font-mono text-muted-foreground text-xs sm:text-sm">
 			{children}
 		</blockquote>
 	),
@@ -160,7 +216,7 @@ const markdownComponents: Components = {
 		if (!src || typeof src !== "string") return null;
 		return (
 			<span
-				className="my-2 block overflow-hidden rounded border border-border"
+				className="my-2 block overflow-hidden rounded border border-white/5"
 				data-testid="message-chart-image"
 			>
 				<Image
@@ -175,6 +231,10 @@ const markdownComponents: Components = {
 		);
 	},
 };
+
+// =============================================================================
+// MESSAGE RENDERER
+// =============================================================================
 
 interface MessageRendererProps {
 	content: string;
