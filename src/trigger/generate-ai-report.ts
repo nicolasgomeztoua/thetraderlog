@@ -101,6 +101,28 @@ function getUserFriendlyErrorMessage(error: unknown): string {
 }
 
 /**
+ * Fire-and-forget progress update. Never blocks the pipeline.
+ */
+async function updateProgress(
+	reportId: string,
+	updates: {
+		progressStage?: string;
+		currentRound?: number;
+		totalToolCalls?: number;
+		chartsGenerated?: number;
+	},
+): Promise<void> {
+	try {
+		await db
+			.update(aiReports)
+			.set(updates)
+			.where(eq(aiReports.id, reportId));
+	} catch {
+		// Progress updates are fire-and-forget — never block the pipeline
+	}
+}
+
+/**
  * Extract chart image URLs from tool call results in the message history.
  * Charts are produced by run_python tool and stored in the result's data.images array.
  */
@@ -170,6 +192,9 @@ async function generateAndUploadPdf(
 	});
 
 	if (result) {
+		// Emit progress: uploading
+		await updateProgress(reportId, { progressStage: "uploading" });
+
 		await db
 			.update(aiReports)
 			.set({ pdfUrl: result.pdfUrl, pdfKey: result.pdfKey })
@@ -253,6 +278,11 @@ export const generateAiReport = task({
 				);
 			}
 
+			// Emit progress: building context
+			await updateProgress(payload.reportId, {
+				progressStage: "building_context",
+			});
+
 			// Update report status to generating
 			await db
 				.update(aiReports)
@@ -309,6 +339,12 @@ export const generateAiReport = task({
 			let totalTokensUsed = 0;
 			const allToolCalls: ToolCall[] = [];
 
+			// Emit progress: analyzing starts
+			await updateProgress(payload.reportId, {
+				progressStage: "analyzing",
+				currentRound: 0,
+			});
+
 			for (let round = 0; round < MAX_TOOL_ROUNDS_REPORT; round++) {
 				const response = await chatCompletion({
 					model: payload.model,
@@ -342,6 +378,13 @@ export const generateAiReport = task({
 							allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
 					});
 
+					// Emit progress: generating PDF
+					const charts = extractChartUrls(chatMessages);
+					await updateProgress(payload.reportId, {
+						progressStage: "generating_pdf",
+						chartsGenerated: charts.length,
+					});
+
 					// Generate PDF from report content
 					const reportRecord = await db.query.aiReports.findFirst({
 						where: eq(aiReports.id, payload.reportId),
@@ -364,6 +407,7 @@ export const generateAiReport = task({
 						.update(aiReports)
 						.set({
 							status: "complete",
+							progressStage: "complete",
 							tokensUsed: totalTokensUsed,
 							completedAt: new Date(),
 						})
@@ -413,6 +457,12 @@ export const generateAiReport = task({
 						tool_call_id: toolCall.id,
 					});
 				}
+
+				// Emit progress after each round
+				await updateProgress(payload.reportId, {
+					currentRound: round + 1,
+					totalToolCalls: allToolCalls.length,
+				});
 			}
 
 			// If we exhausted tool rounds, save fallback and mark complete
@@ -427,6 +477,13 @@ export const generateAiReport = task({
 				tokensUsed: totalTokensUsed,
 				toolCalls:
 					allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
+			});
+
+			// Emit progress: generating PDF (fallback path)
+			const fallbackCharts = extractChartUrls(chatMessages);
+			await updateProgress(payload.reportId, {
+				progressStage: "generating_pdf",
+				chartsGenerated: fallbackCharts.length,
 			});
 
 			// Generate PDF from fallback content
@@ -451,6 +508,7 @@ export const generateAiReport = task({
 				.update(aiReports)
 				.set({
 					status: "complete",
+					progressStage: "complete",
 					tokensUsed: totalTokensUsed,
 					completedAt: new Date(),
 				})
@@ -474,6 +532,7 @@ export const generateAiReport = task({
 				.update(aiReports)
 				.set({
 					status: "failed",
+					progressStage: "failed",
 					completedAt: new Date(),
 					errorMessage: getUserFriendlyErrorMessage(error),
 				})
