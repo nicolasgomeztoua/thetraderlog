@@ -194,3 +194,12 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - Biome has both `useKeyWithClickEvents` and `noStaticElementInteractions` rules — both need suppression for click-to-skip on a div
   - The cursor-blink class is a pseudo-element (.cursor-blink::after) but we use it directly on a span with bg-accent for the block cursor
 ---
+
+## 2026-02-12 - US-005
+- What was implemented: Redesigned ChatInput as composer-style container. Focus border transition, animate-pulse shimmer during loading, send/stop button crossfade, Cmd/Ctrl+Enter, auto-focus, global / shortcut, keyboard hints, character count.
+- Files changed: src/app/(protected)/ai/_components/chat-input.tsx, src/app/(protected)/ai/_components/chat-interface.tsx
+- **Learnings for future iterations:**
+  - ChatInput props expanded: added isLoading and onStop. Replaced disabled prop with isLoading for send/stop toggle.
+  - The / shortcut listener checks document.activeElement to avoid capturing when input already focused
+  - transition-[height] duration-150 on textarea handles smooth paste expansion
+---
