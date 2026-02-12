@@ -213,3 +213,13 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - Date grouping uses getDateGroup helper comparing against today/yesterday/weekAgo dates
   - Conversation Drizzle query returns createdAt from the table, no schema changes needed
 ---
+
+## 2026-02-12 - US-007
+- What was implemented: Mobile sidebar drawer using Sheet component from left side. Hamburger button in ModelSelector header (sm:hidden). ChatSidebar reused with isMobile prop.
+- Files changed: src/app/(protected)/ai/_components/chat-interface.tsx, src/app/(protected)/ai/_components/chat-sidebar.tsx, src/app/(protected)/ai/_components/model-selector.tsx
+- **Learnings for future iterations:**
+  - Sheet component accepts side="left" prop for left drawer
+  - ChatSidebar isMobile prop removes hidden sm:flex and border/rounded to fill Sheet content
+  - setTimeout 100ms delay before closing drawer lets user see selection highlight first
+  - ModelSelector now accepts onMenuClick prop for mobile menu
+---

@@ -271,8 +271,8 @@
         "Verify in browser at mobile viewport widths"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Sheet from left with w-72, hamburger button in ModelSelector (sm:hidden), ChatSidebar reused with isMobile prop. Selection closes drawer with 100ms delay. New conversation closes immediately."
     },
     {
       "id": "US-008",
