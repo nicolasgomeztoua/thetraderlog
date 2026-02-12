@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
+import { ERR_VALIDATION_DATE_RANGE } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 import { ModelSelector } from "./model-selector";
 
@@ -167,7 +168,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 
 		// Date validation
 		if (dateRangeStart && dateRangeEnd && dateRangeEnd < dateRangeStart) {
-			setDateError("End date must be after start date");
+			setDateError(ERR_VALIDATION_DATE_RANGE);
 			return;
 		}
 		setDateError("");
