@@ -407,10 +407,12 @@ grep -rn "export function\|export const" src/lib/utils.ts
 **Acceptance Criteria**:
 - [ ] **Desktop layout**: Side-by-side: form on left, history on right. `flex gap-3 lg:gap-4 h-full`
 - [ ] **Tablet layout** (md breakpoint): Same side-by-side but form narrows to `w-[340px]`
-- [ ] **Mobile layout** (below lg): Stack vertically — form on top (full width), history below with `max-h-[50vh]` overflow scroll
+- [ ] **Mobile layout** (below lg): Stack vertically — form on top (full width, collapsible after first report is submitted), history below takes remaining space. Form collapses to a single "New Report" bar that expands on click — avoids the form dominating mobile viewport permanently.
 - [ ] **Overall container**: `flex flex-col lg:flex-row gap-3 h-full overflow-hidden`
 - [ ] **History panel**: `flex-1 flex flex-col overflow-hidden` with scroll on the report list
 - [ ] **Bottom fade on scrollable areas**: `pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-card to-transparent`
+- [ ] **Resize handle** (desktop only): A subtle drag handle between form and history panels: `w-1 cursor-col-resize hover:bg-accent/10 active:bg-accent/20 transition-all` — allows users to adjust the split. Store preference in localStorage. Optional — only if implementation stays simple.
+- [ ] **Report complete notification**: When a report finishes generating while user is on the Chat tab (not Reports), the Reports toggle badge pulses briefly and the count updates to signal completion. No intrusive toast needed.
 - [ ] Mode selector header remains full width above both panels
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
@@ -423,11 +425,14 @@ grep -rn "export function\|export const" src/lib/utils.ts
 **Description**: As a developer, I want shared animation keyframes and utility classes for the redesign so that animations are consistent and reusable.
 
 **Acceptance Criteria**:
-- [ ] Add `shimmer` keyframe to `globals.css`: slides a highlight from left to right (for progress bars)
-- [ ] Add `fade-in-up` keyframe if not already present: opacity 0→1, translateY 8→0px, 300ms ease-out
-- [ ] Add `animate-fade-in-up` utility class
-- [ ] Add `animate-shimmer` utility class
+- [ ] Add `shimmer` keyframe to `globals.css`: slides a highlight from left to right (for progress bars). `@keyframes shimmer { 0% { transform: translateX(-100%) } 100% { transform: translateX(100%) } }`
+- [ ] Add `fade-in-up` keyframe if not already present: `@keyframes fade-in-up { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }` — 300ms ease-out
+- [ ] Add `fade-out` keyframe for sequential mode transitions: `@keyframes fade-out { from { opacity: 1 } to { opacity: 0 } }` — 100ms ease-in
+- [ ] Add `slide-out-left` keyframe for delete animations: `@keyframes slide-out-left { to { transform: translateX(-20px); opacity: 0 } }` — 200ms ease-in
+- [ ] Add `shake` keyframe for validation errors: `@keyframes shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-4px) } 75% { transform: translateX(4px) } }` — 200ms
+- [ ] Add `animate-fade-in-up`, `animate-shimmer`, `animate-fade-out`, `animate-slide-out-left`, `animate-shake` utility classes
 - [ ] Verify existing `cursor-blink` keyframe works for typewriter cursor
+- [ ] All animations respect `@media (prefers-reduced-motion: reduce)` — set `animation-duration: 0.01ms` and `transition-duration: 0.01ms` for reduced motion users
 - [ ] Keep animations minimal — only the ones actually used in this redesign
 - [ ] Typecheck passes (`bun run check`)
 - [ ] Build passes (`bun run build`)
@@ -471,14 +476,21 @@ grep -rn "export function\|export const" src/lib/utils.ts
 - [ ] Test file: `tests/e2e/ai-chat.spec.ts`
 - [ ] All new UI elements have `data-testid` attributes
 - [ ] Tests:
-  - Empty state renders with welcome message, capability pills, and suggested query cards
-  - Clicking a suggested query populates the input
-  - Sidebar renders on desktop, hidden on mobile
+  - Empty state renders with time-aware greeting, capability pills, and suggested query cards
+  - Clicking a suggested query populates the input and shows arrow indicator on hover
+  - Sidebar renders on desktop with date group headers (Today, Yesterday, etc.), hidden on mobile
+  - Sidebar shows conversation preview text and message count
   - Mobile drawer opens/closes on menu button click
-  - Selecting a conversation from sidebar loads messages
-  - Mode toggle switches between Chat and Reports
-  - Chat input accepts text and shows send button enabled
-  - Message layout: user messages have `$` prefix, AI messages in cards with `→` prefix
+  - Selecting a conversation from sidebar loads messages and auto-focuses input
+  - Mode toggle switches between Chat and Reports with sliding active indicator
+  - Chat input accepts text, shows send button enabled, Shift+Enter creates newline
+  - Input placeholder rotates on empty state (verify text changes)
+  - Stop button appears when loading, send button when idle
+  - Message layout: user messages have `$` prefix with left border, AI messages in cards with `→` prefix
+  - Scroll-to-bottom button appears when scrolled up, disappears at bottom
+  - Copy button appears on hover of AI message card, shows "Copied" feedback
+  - Keyboard shortcut `/` focuses the input
+  - Long AI messages show "Show more" collapse toggle
 - [ ] All tests pass (`bun run test:e2e`)
 - [ ] Typecheck passes (`bun run check`)
 
@@ -492,13 +504,20 @@ grep -rn "export function\|export const" src/lib/utils.ts
 - [ ] Test file: `tests/e2e/ai-reports.spec.ts`
 - [ ] All new UI elements have `data-testid` attributes
 - [ ] Tests:
-  - Report form renders with prompt textarea, date inputs, and generate button
-  - Date validation: end date before start date shows error
-  - Clicking suggested prompt fills the textarea
-  - Report history panel renders with report cards
-  - Status badges display correctly (complete/generating/failed/queued)
-  - Layout is responsive: side-by-side on desktop, stacked on mobile
+  - Report form renders with prompt textarea, date inputs, quick date presets, and generate button
+  - Quick date presets fill in date fields correctly (Last 7 days, Last 30 days, This month, Last month)
+  - Date validation: end date before start date shows error with shake animation
+  - Clicking suggested prompt fills the textarea (not sends)
+  - Prompt character count appears when typing > 500 chars
+  - Report history panel renders with report cards, count badge in header
+  - Status badges display correctly (complete/generating/failed/queued) with correct colors
+  - Completed reports show token usage and time-to-complete
+  - Completed reports show PDF download button
+  - Failed reports show error text and retry button
+  - Layout is responsive: side-by-side on desktop, stacked on mobile with collapsible form
   - Generate button disabled when prompt is empty
+  - Refresh button spins icon briefly when clicked
+  - Active report count badge appears on Reports mode toggle when reports are generating
 - [ ] All tests pass (`bun run test:e2e`)
 - [ ] Typecheck passes (`bun run check`)
 

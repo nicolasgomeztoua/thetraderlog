@@ -67,6 +67,9 @@ User (Clerk-synced)
 - All shared constants belong in `src/lib/constants/` (create domain-specific files)
 - Examples: trading sessions, day labels, hour ranges, filter options, preset values
 - Export as named constants with clear naming: `TRADING_SESSIONS`, `DAY_LABELS`, `QUICK_DATE_PRESETS`
+- **Error messages** live in `src/lib/constants/errors.ts` — never hardcode error strings
+- Use `ERR_` prefix for static messages, `err` prefix for dynamic template functions
+- Frontend catch blocks: use `getErrorMessage(error, ERR_FALLBACK)` from `@/lib/shared/utils`
 - This ensures single source of truth and easy updates across the codebase
 
 ### Database
