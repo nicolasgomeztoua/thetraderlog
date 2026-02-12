@@ -72,8 +72,8 @@
         "Verify in browser"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created TradingChartSkeleton component in src/components/trade-detail/trading-chart-skeleton.tsx. Wrapped TradingViewChart with next/dynamic in content-panel.tsx and ReplayChart with next/dynamic in trade-replay.tsx. Both use { ssr: false, loading: TradingChartSkeleton }. Lightweight-charts library is now code-split from the main trade detail page bundle."
     },
     {
       "id": "US-005",
@@ -90,8 +90,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added getBatchByDates procedure to dailyJournal router. Accepts array of date strings, normalizes to midnight UTC, queries using inArray for efficient single-query batch fetch. Uses protectedProcedure for auth and filters by ctx.user.id for ownership validation. Returns empty array for empty input."
     },
     {
       "id": "US-006",
@@ -108,8 +108,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/daily-journal-batch.test.ts with 11 tests covering: empty dates array, dates with no entries, batch fetch of multiple dates, partial matches, single date fetch, full ISO string handling, date normalization to midnight UTC, user ownership isolation (cannot see other users' entries), unauthenticated request rejection, and read-only behavior (does not auto-create journals). All tests pass."
     },
     {
       "id": "US-007",
@@ -126,8 +126,8 @@
         "Verify in browser"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced 3 separate getByDate useQuery hooks with a single getBatchByDates call. Uses useMemo to extract date strings from adjacency data, passes to batch endpoint, and builds a Map lookup by date for efficient content matching. Used getUTCDateString utility for safe UTC midnight date extraction. Single network request instead of 3."
     },
     {
       "id": "US-008",
@@ -144,8 +144,8 @@
         "Verify in browser"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created DashboardSkeleton component in src/app/(protected)/dashboard/dashboard-skeleton.tsx matching the CommandCenterGrid layout with WidgetCardSkeleton cards (terminal chrome header with traffic light dots + skeleton content). Created loading.tsx using Next.js convention to automatically wrap the dashboard page in a Suspense boundary. Grid matches 9-widget layout: TodayPerformance (md), JournalStatus (sm), PnLCalendar (lg), AnalyticsSnapshot (sm), JournalStreak (sm), StrategiesSnapshot (sm), RuleCompliance (sm), TradesSnapshot (sm), JournalExcerpts (wide)."
     },
     {
       "id": "US-009",
@@ -162,8 +162,8 @@
         "Verify in browser"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created AnalyticsSkeleton component in src/app/(protected)/analytics/analytics-skeleton.tsx with ChartTerminalSkeleton helper matching the ChartTerminal component styling (terminal chrome header with traffic light dots). Skeleton replicates the analytics page structure: header with export button, query bar, tab bar (5 tabs), and Overview tab content (8 metric cards in 4-column grid + 3 chart terminals). Created loading.tsx using Next.js convention to automatically wrap the analytics page in a Suspense boundary."
     },
     {
       "id": "US-010",
@@ -180,8 +180,8 @@
         "Verify in browser"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created JournalSkeleton component in src/app/(protected)/journal/journal-skeleton.tsx with TradeRowSkeleton helper. Skeleton replicates the journal page structure: header (Trading Journal label + Trades heading + account info), tab bar (All Trades / Trash), search bar, filter panel (desktop), and table with header row + 8 skeleton trade rows. Created loading.tsx using Next.js convention to automatically wrap the journal page in a Suspense boundary."
     },
     {
       "id": "US-011",
@@ -197,8 +197,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Refactored analyzePriceAction to fire tradeBars and postExitBars fetches in parallel using Promise.all. Both time ranges are known upfront from input params. When exitTime/exitPrice are provided, postExitBars fetch starts immediately alongside tradeBars instead of waiting sequentially. Null postExitBarsFetch is handled gracefully in the Promise.all. No functional regression — same return shape and error handling."
     },
     {
       "id": "US-012",
@@ -215,8 +215,8 @@
         "Verify in browser"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added content-visibility: auto with contain-intrinsic-size: 12px 102px to week column divs in calendar-heatmap.tsx. Week columns (not individual cells) are the optimal target since the calendar scrolls horizontally — off-screen weeks on the left/right can be skipped by the browser. Dimensions: 12px width (cell size) × 102px height (7 cells × 12px + 6 gaps × 3px). Build passes."
     },
     {
       "id": "US-013",
@@ -233,8 +233,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added SCHEMA_VERSION constant (starting at 1), version field to PersistedState, and migrateState() function that handles version upgrades. getItem now runs migration on load and gracefully resets corrupted data with console.warn. setItem stamps SCHEMA_VERSION on every write. Existing users' filters (v0, no version field) migrate seamlessly to v1."
     },
     {
       "id": "US-014",
@@ -251,8 +251,8 @@
         "Verify in browser"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed biome-ignore comment and useEffect with synthetic dependencies. Replaced with a scrollToBottom callback (useCallback + ref) called directly in handleSend (when user sends message) and sendMessage.onSuccess (when response arrives). Removed unused useEffect import and messageCount variable. No linting warnings in the file."
     }
   ]
 }
