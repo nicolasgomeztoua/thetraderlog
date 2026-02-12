@@ -246,6 +246,10 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 									<div
 										className="flex flex-col gap-[3px]"
 										key={`week-${firstDayKey}`}
+										style={{
+											contentVisibility: "auto",
+											containIntrinsicSize: "12px 102px",
+										}}
 									>
 										{week.map((dateStr) => {
 											// Use date string directly to match backend format

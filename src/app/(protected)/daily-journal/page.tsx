@@ -1,13 +1,14 @@
 "use client";
 
 import { CheckCircleIcon, Loader2Icon, MenuIcon, PlayIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
-import { JournalEditor } from "@/components/daily-journal/journal-editor";
+import { EditorSkeleton } from "@/components/daily-journal/editor-skeleton";
 import { TradesSummary } from "@/components/daily-journal/trades-summary";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,17 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { toDateString } from "@/lib/shared";
 import { api } from "@/trpc/react";
+
+const JournalEditor = dynamic(
+	() =>
+		import("@/components/daily-journal/journal-editor").then(
+			(mod) => mod.JournalEditor,
+		),
+	{
+		ssr: false,
+		loading: () => <EditorSkeleton />,
+	},
+);
 
 // =============================================================================
 // LOCAL STORAGE KEY

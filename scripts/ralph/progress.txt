@@ -20,3 +20,155 @@ Branch: ralph/ai-ui-redesign
 - Shadcn UI components in src/components/ui/
 - Tailwind CSS v4 with Terminal design system
 - Biome for linting/formatting (bun run check)
+- next.config.js uses tabs for indentation (Biome enforces)
+- Pre-existing Biome errors: prd.ai-analytics.archive.json format, chat-sidebar.tsx useSemanticElements
+- Dynamic imports: use next/dynamic with { ssr: false, loading: () => <ChartSkeleton /> } for heavy chart libs
+- ChartSkeleton component available at src/components/analytics/chart-skeleton.tsx for chart loading states
+- TradingChartSkeleton component available at src/components/trade-detail/trading-chart-skeleton.tsx for trade chart loading states
+- lightweight-charts used in 2 components: tradingview-chart.tsx and replay/replay-chart.tsx (plus type-only import in candle-aggregation.ts)
+- Suspense boundaries: use Next.js loading.tsx convention (creates automatic Suspense wrapper) — skeleton components don't need "use client"
+- DashboardSkeleton at src/app/(protected)/dashboard/dashboard-skeleton.tsx — replicates terminal chrome widget cards
+
+## 2026-02-12 - US-001
+- Implemented: Added lucide-react to experimental.optimizePackageImports in next.config.js
+- Files changed: next.config.js
+- **Learnings for future iterations:**
+  - next.config.js uses tab indentation, not spaces (Biome will reject spaces)
+  - There are 2 pre-existing Biome errors (archive JSON formatting, chat-sidebar lint) — don't try to fix these
+  - lucide-react is imported in 103 files — optimizePackageImports ensures tree-shaking at build time
+---
+
+## 2026-02-12 - US-002
+- Implemented: Dynamic import AG Charts components with next/dynamic and ChartSkeleton loading
+- Files changed: src/components/analytics/chart-skeleton.tsx (new), src/components/analytics/index.ts, src/app/(protected)/analytics/page.tsx
+- **Learnings for future iterations:**
+  - Analytics barrel file (src/components/analytics/index.ts) re-exports all chart components — dynamic imports should bypass the barrel and import directly from the component file
+  - AG Charts is used in 7 separate component files (EquityCurve, MonthlyChart, RMultipleChart, SymbolDistributionChart, SymbolTrendChart, PositionSizeChart, MonteCarloChart) plus 3 inline charts in page.tsx
+  - page.tsx still has direct `import { AgCharts }` for its inline WinLossChart, PnLDistributionChart, CumulativePnLChart — these are in the Overview tab (default visible) so they're not code-split
+  - next/dynamic with `ssr: false` requires the component to be in a "use client" file
+  - Biome auto-formats `.then()` chains on dynamic imports — let Biome fix these rather than fighting the formatter
+---
+
+## 2026-02-12 - US-003
+- Implemented: Dynamic import TipTap editor with next/dynamic and EditorSkeleton loading
+- Files changed: src/components/daily-journal/editor-skeleton.tsx (new), src/components/daily-journal/index.ts, src/app/(protected)/daily-journal/page.tsx
+- **Learnings for future iterations:**
+  - When using next/dynamic, all static imports must come before the `const X = dynamic(...)` declaration — Biome will reject mixed imports/non-imports
+  - JournalEditor has many TipTap extensions (StarterKit, Image, Link, Placeholder, TaskList, TaskItem, SlashCommand) — dynamic import keeps all of these out of the initial bundle
+  - JournalEditor already has `immediatelyRender: false` set on useEditor which prevents SSR hydration issues — this is a prerequisite for ssr: false dynamic imports
+  - EditorSkeleton matches the editor layout: toolbar skeleton + content area with text line skeletons + status indicator placeholder
+---
+
+## 2026-02-12 - US-004
+- Implemented: Dynamic import lightweight-charts components (TradingViewChart and ReplayChart) with next/dynamic and TradingChartSkeleton loading
+- Files changed: src/components/trade-detail/trading-chart-skeleton.tsx (new), src/components/trade-detail/content-panel.tsx, src/components/trade-detail/replay/trade-replay.tsx
+- **Learnings for future iterations:**
+  - content-panel.tsx doesn't have "use client" but is used inside a client component tree (journal/[id]/page.tsx) — dynamic imports still work because the parent is a client component
+  - Biome requires `next/dynamic` import to come before `@/` imports (third-party before aliased paths)
+  - Biome wants `.then()` on the same line as `import()` for dynamic imports (not on a separate line)
+  - TradingViewChart is only used in content-panel.tsx; ReplayChart is only used in trade-replay.tsx — both are tab-based (Chart tab, Replay tab) so users won't see the chart load unless they navigate to that tab
+  - candle-aggregation.ts has a type-only import from lightweight-charts (UTCTimestamp) — this doesn't contribute to bundle size so no dynamic import needed
+---
+
+## 2026-02-12 - US-005
+- Implemented: Added getBatchByDates procedure to dailyJournal router for batch-fetching journal entries by specific dates
+- Files changed: src/server/api/routers/dailyJournal.ts
+- **Learnings for future iterations:**
+  - Drizzle's `inArray` from `drizzle-orm` enables efficient batch queries — use it when fetching by a known set of values
+  - dailyJournal router already has a `normalizeDate` helper that normalizes to midnight UTC — reuse it for consistency
+  - The JournalExcerptsWidget currently makes 3 separate getByDate calls (lines 80-91 in journal-excerpts-widget.tsx) — US-007 will replace these with getBatchByDates
+  - getByDate auto-creates journals via findOrCreateJournal, but getBatchByDates intentionally does NOT auto-create — it only returns existing entries (more appropriate for a read-only batch fetch)
+---
+
+## 2026-02-12 - US-006
+- Implemented: Integration tests for getBatchByDates endpoint (11 tests)
+- Files changed: tests/integration/daily-journal-batch.test.ts (new)
+- **Learnings for future iterations:**
+  - getBatchByDates doesn't need Account import since it only works with journals (no trade data) — Biome will flag unused imports
+  - Biome auto-formats single-line `.toBe()` calls when the string fits — don't manually break these into multi-line
+  - Pre-existing test failure in ai.test.ts (model name mismatch) is unrelated to this branch's work
+  - When testing date normalization, two ISO strings with different times on the same day will produce the same result due to midnight UTC normalization
+  - For user isolation tests, setupTrader() creates a new unique user each time — use separate callers to verify cross-user isolation
+---
+
+## 2026-02-12 - US-007
+- Implemented: Replaced 3 separate getByDate hooks with single getBatchByDates call in JournalExcerptsWidget
+- Files changed: src/components/dashboard/widgets/journal-excerpts-widget.tsx
+- **Learnings for future iterations:**
+  - When converting batch API results to a lookup Map, use `getUTCDateString()` from `@/lib/shared` for UTC midnight dates — never use inline `toISOString().split("T")[0]` (AGENTS.md warns about this)
+  - getBatchByDates returns raw journal objects (no presigned URL transforms) — fine for excerpts since getExcerpt() strips HTML tags anyway
+  - Biome prefers single-line const assignments when they fit — don't break `const isLoading = ...` across lines unnecessarily
+  - When replacing multiple useQuery hooks with a single batch hook, the `enabled` flag should check `batchDates.length > 0` to prevent unnecessary empty requests
+  - useMemo for extracting date strings from adjacency data prevents unnecessary re-renders of the batch query
+---
+
+## 2026-02-12 - US-008
+- Implemented: DashboardSkeleton component and loading.tsx for Suspense boundary on dashboard page
+- Files changed: src/app/(protected)/dashboard/dashboard-skeleton.tsx (new), src/app/(protected)/dashboard/loading.tsx (new)
+- **Learnings for future iterations:**
+  - Next.js `loading.tsx` convention automatically wraps the page in a `<Suspense>` boundary — no need to manually wrap in the page component
+  - The loading.tsx file doesn't need "use client" since it only imports a server-compatible skeleton component (no hooks, no interactivity)
+  - DashboardWidget has terminal chrome styling (traffic light dots + muted header) — skeleton cards should replicate this for visual consistency
+  - The CommandCenterGrid uses `auto-rows-fr` with specific col/row spans per widget size — the skeleton grid must match these exact spans
+  - Skeleton components don't need "use client" if they only use the Skeleton UI primitive (which itself has no client-side logic)
+---
+
+## 2026-02-12 - US-009
+- Implemented: AnalyticsSkeleton component and loading.tsx for Suspense boundary on analytics page
+- Files changed: src/app/(protected)/analytics/analytics-skeleton.tsx (new), src/app/(protected)/analytics/loading.tsx (new)
+- **Learnings for future iterations:**
+  - Analytics page has ChartTerminal wrappers (terminal chrome + title/description header + content) — skeleton should replicate this structure, not just bare skeleton boxes
+  - The analytics page uses a tab bar with 5 tabs but only the default "Overview" tab content needs skeleton representation (other tabs won't be visible until user clicks)
+  - Biome auto-formats inline type annotations on function params to multi-line when they have multiple properties — let it format rather than fighting it
+  - AnalyticsSkeleton at src/app/(protected)/analytics/analytics-skeleton.tsx for reference
+---
+
+## 2026-02-12 - US-010
+- Implemented: JournalSkeleton component and loading.tsx for Suspense boundary on journal page
+- Files changed: src/app/(protected)/journal/journal-skeleton.tsx (new), src/app/(protected)/journal/loading.tsx (new)
+- **Learnings for future iterations:**
+  - Journal page is "use client" with heavy client-side state (filters, search, sort, selection, optimistic updates) — the loading.tsx Suspense boundary shows during navigation before the JS bundle loads
+  - The journal page has two views (mobile cards, desktop table) but the skeleton only needs to represent the desktop table since the skeleton is a quick flash during navigation
+  - TradeRowSkeleton helper replicates the table row layout: checkbox + symbol + side + entry + exit + size + P&L + result + rating + reviewed + actions
+  - JournalSkeleton at src/app/(protected)/journal/journal-skeleton.tsx for reference
+---
+
+## 2026-02-12 - US-011
+- Implemented: Parallelized tradeBars and postExitBars fetches in analyzePriceAction using Promise.all
+- Files changed: src/server/api/routers/marketData.ts
+- **Learnings for future iterations:**
+  - analyzePriceAction makes two getOHLCForTimeRange calls: one for trade bars (entryTime→exitTime) and one for post-exit bars (exitTime→exitTime+24h) — both time ranges are derived solely from input params, so they can be parallelized
+  - When using Promise.all with a conditionally-null promise, the result type is `T | null` — check for null before accessing
+  - Use an IIFE `(() => { ... })()` to compute intermediate values (like postExitEnd) inline when building the promise array
+  - The post-exit fetch is only needed when `exitTime && exitPrice` are provided (trade is closed)
+---
+
+## 2026-02-12 - US-012
+- Implemented: Added content-visibility: auto with contain-intrinsic-size to week column divs in calendar-heatmap.tsx
+- Files changed: src/components/analytics/calendar-heatmap.tsx
+- **Learnings for future iterations:**
+  - content-visibility: auto is best applied to the **week column** divs (not individual 12px cells) — the calendar scrolls horizontally so off-screen weeks are the units that benefit from rendering skip
+  - contain-intrinsic-size must match the actual dimensions: width = cell size (12px), height = 7 cells × 12px + 6 gaps × 3px = 102px
+  - Use inline `style` prop for CSS properties not supported by Tailwind (content-visibility, contain-intrinsic-size)
+  - Pre-existing Biome error in chat-sidebar.tsx (useSemanticElements) is not from this branch
+---
+
+## 2026-02-12 - US-013
+- Implemented: Added localStorage schema versioning to analytics-filter-store with SCHEMA_VERSION constant, version field in PersistedState, and migrateState() function
+- Files changed: src/stores/analytics-filter-store.ts
+- **Learnings for future iterations:**
+  - Zustand persist middleware's custom storage handlers (getItem/setItem) are the right place to add versioning — version goes in the persisted state object alongside filters and activePresetId
+  - migrateState() function pattern: check current version, apply incremental migrations (v0→v1, v1→v2, etc.), return migrated state
+  - For corrupted localStorage data, catch JSON.parse errors, log a console.warn with the store name, remove the corrupted item, and return null (Zustand will use defaults)
+  - PersistedState.version is optional (`version?: number`) so pre-existing data without a version field is treated as v0
+  - The v0→v1 migration requires no structural changes — it just stamps the version number (future migrations can add/rename/remove fields)
+---
+
+## 2026-02-12 - US-014
+- Implemented: Removed biome-ignore in chat-interface.tsx by replacing useEffect scroll trigger with direct scrollToBottom callback calls
+- Files changed: src/app/(protected)/ai/_components/chat-interface.tsx
+- **Learnings for future iterations:**
+  - When a useEffect uses dependencies only as "triggers" (not read inside the effect body), replace with a callback called at the trigger points — this satisfies Biome's useExhaustiveDependencies without suppression
+  - scrollToBottom pattern: useCallback with ref access, called in mutation onSuccess and in the action handler (handleSend) — two call sites cover "user sends message" and "response arrives"
+  - Biome auto-formats long dependency arrays to multi-line — always write them multi-line to avoid formatting-only diffs
+---

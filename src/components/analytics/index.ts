@@ -1,6 +1,7 @@
 export { AnalyticsQueryBar } from "./analytics-query-bar";
 export { BehavioralMetrics } from "./behavioral-metrics";
 export { CalendarHeatmap } from "./calendar-heatmap";
+export { ChartSkeleton } from "./chart-skeleton";
 export { DayOfWeekChart } from "./day-of-week-chart";
 export { DrawdownTable } from "./drawdown-table";
 export { EquityCurve } from "./equity-curve";

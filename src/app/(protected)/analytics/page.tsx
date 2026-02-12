@@ -25,6 +25,7 @@ interface CumulativePnLChartData {
 }
 
 import { AgCharts } from "ag-charts-react";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	AnalyticsQueryBar,
@@ -32,7 +33,6 @@ import {
 	CalendarHeatmap,
 	DayOfWeekChart,
 	DrawdownTable,
-	EquityCurve,
 	ExportButton,
 	HoldingTimeChart,
 	HourHeatmap,
@@ -40,21 +40,63 @@ import {
 	ManagePresetsDialog,
 	METRIC_TOOLTIPS,
 	MetricCard,
-	MonthlyChart,
 	OvertradingChart,
-	PositionSizeChart,
 	RevengeTradingPanel,
 	RiskGauge,
 	RiskRewardPanel,
-	RMultipleChart,
 	SessionChart,
 	StreakChart,
-	SymbolDistributionChart,
 	SymbolTable,
-	SymbolTrendChart,
 } from "@/components/analytics";
+import { ChartSkeleton } from "@/components/analytics/chart-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Dynamic imports for AG Charts components (code-split for bundle optimization)
+const EquityCurve = dynamic(
+	() =>
+		import("@/components/analytics/equity-curve").then((m) => m.EquityCurve),
+	{ ssr: false, loading: () => <ChartSkeleton /> },
+);
+
+const MonthlyChart = dynamic(
+	() =>
+		import("@/components/analytics/monthly-chart").then((m) => m.MonthlyChart),
+	{ ssr: false, loading: () => <ChartSkeleton /> },
+);
+
+const RMultipleChart = dynamic(
+	() =>
+		import("@/components/analytics/r-multiple-chart").then(
+			(m) => m.RMultipleChart,
+		),
+	{ ssr: false, loading: () => <ChartSkeleton /> },
+);
+
+const SymbolDistributionChart = dynamic(
+	() =>
+		import("@/components/analytics/symbol-distribution-chart").then(
+			(m) => m.SymbolDistributionChart,
+		),
+	{ ssr: false, loading: () => <ChartSkeleton height={280} /> },
+);
+
+const SymbolTrendChart = dynamic(
+	() =>
+		import("@/components/analytics/symbol-trend-chart").then(
+			(m) => m.SymbolTrendChart,
+		),
+	{ ssr: false, loading: () => <ChartSkeleton /> },
+);
+
+const PositionSizeChart = dynamic(
+	() =>
+		import("@/components/analytics/position-size-chart").then(
+			(m) => m.PositionSizeChart,
+		),
+	{ ssr: false, loading: () => <ChartSkeleton /> },
+);
+
 import { useAccount } from "@/contexts/account-context";
 import { useTimezone } from "@/hooks/use-timezone";
 import {

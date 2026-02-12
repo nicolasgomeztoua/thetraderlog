@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic";
 import { DailyJournalPreview } from "@/components/daily-journal/daily-journal-preview";
 import { TradeTags } from "@/components/tags/tag-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,7 +7,12 @@ import type { TradeForContentPanel } from "@/types";
 import { TradeReplay } from "./replay";
 import { RunningPnlTab } from "./running-pnl-tab";
 import { TradeNoteEditor } from "./trade-note-editor";
-import { TradingViewChart } from "./tradingview-chart";
+import { TradingChartSkeleton } from "./trading-chart-skeleton";
+
+const TradingViewChart = dynamic(
+	() => import("./tradingview-chart").then((m) => m.TradingViewChart),
+	{ ssr: false, loading: () => <TradingChartSkeleton /> },
+);
 
 // =============================================================================
 // TYPES

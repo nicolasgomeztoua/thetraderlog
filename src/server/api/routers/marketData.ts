@@ -88,13 +88,35 @@ export const marketDataRouter = createTRPCRouter({
 				const entryTime = new Date(input.entryTime);
 				const exitTime = input.exitTime ? new Date(input.exitTime) : new Date();
 
-				// Fetch bars during the trade using cached service
-				const { bars: tradeBars, dataQuality } = await getOHLCForTimeRange(
+				// Build parallel fetch promises — both time ranges are known upfront
+				const tradeBarsFetch = getOHLCForTimeRange(
 					input.symbol,
-					"1h", // 1-hour bars for analysis
+					"1h",
 					entryTime,
 					exitTime,
 				);
+
+				const postExitBarsFetch =
+					input.exitTime && input.exitPrice
+						? (() => {
+								const postExitEnd = new Date(input.exitTime);
+								postExitEnd.setHours(postExitEnd.getHours() + 24);
+								return getOHLCForTimeRange(
+									input.symbol,
+									"1h",
+									new Date(input.exitTime),
+									postExitEnd,
+								);
+							})()
+						: null;
+
+				// Fetch trade bars and post-exit bars in parallel
+				const [tradeResult, postExitResult] = await Promise.all([
+					tradeBarsFetch,
+					postExitBarsFetch,
+				]);
+
+				const { bars: tradeBars, dataQuality } = tradeResult;
 
 				if (tradeBars.length === 0) {
 					return {
@@ -137,19 +159,10 @@ export const marketDataRouter = createTRPCRouter({
 					}
 				}
 
-				// Fetch post-exit data for recovery analysis (if trade is closed)
+				// Process post-exit data for recovery analysis
 				let postExitAnalysis = null;
-				if (input.exitTime && input.exitPrice) {
-					const postExitEnd = new Date(input.exitTime);
-					postExitEnd.setHours(postExitEnd.getHours() + 24);
-
-					const { bars: postExitBars } = await getOHLCForTimeRange(
-						input.symbol,
-						"1h",
-						new Date(input.exitTime),
-						postExitEnd,
-					);
-
+				if (postExitResult && input.exitPrice) {
+					const { bars: postExitBars } = postExitResult;
 					if (postExitBars.length > 0) {
 						postExitAnalysis = analyzePostExit(
 							postExitBars,

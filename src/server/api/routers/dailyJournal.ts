@@ -1,4 +1,14 @@
-import { and, asc, eq, gte, isNotNull, isNull, lt, lte } from "drizzle-orm";
+import {
+	and,
+	asc,
+	eq,
+	gte,
+	inArray,
+	isNotNull,
+	isNull,
+	lt,
+	lte,
+} from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
@@ -290,6 +300,32 @@ export const dailyJournalRouter = createTRPCRouter({
 				createdAt: journal.createdAt,
 				updatedAt: journal.updatedAt,
 			}));
+		}),
+
+	// Get multiple journals by specific dates (batch fetch for dashboard widgets)
+	getBatchByDates: protectedProcedure
+		.input(
+			z.object({
+				dates: z.array(z.string()), // Array of ISO date strings (YYYY-MM-DD or full ISO)
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			if (input.dates.length === 0) {
+				return [];
+			}
+
+			const normalizedDates = input.dates.map((d) =>
+				normalizeDate(new Date(d)),
+			);
+
+			const journals = await ctx.db.query.dailyJournals.findMany({
+				where: and(
+					eq(dailyJournals.userId, ctx.user.id),
+					inArray(dailyJournals.date, normalizedDates),
+				),
+			});
+
+			return journals;
 		}),
 
 	// Get journal with trades for a specific date

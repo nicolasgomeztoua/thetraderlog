@@ -1,7 +1,7 @@
 "use client";
 
 import { Brain } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
@@ -30,6 +30,12 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const [input, setInput] = useState("");
 	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const scrollToBottom = useCallback(() => {
+		if (scrollRef.current) {
+			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+		}
+	}, []);
 
 	const utils = api.useUtils();
 
@@ -61,6 +67,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				conversationId: activeConversationId ?? "",
 			});
 			void utils.ai.listConversations.invalidate();
+			scrollToBottom();
 		},
 		onError: () => {
 			setPendingMessage(null);
@@ -74,16 +81,6 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 		},
 	});
 
-	const messageCount = conversation?.messages?.length ?? 0;
-
-	// Auto-scroll to bottom on new messages or when pending message changes
-	// biome-ignore lint/correctness/useExhaustiveDependencies: messageCount and pendingMessage trigger scroll on new messages
-	useEffect(() => {
-		if (scrollRef.current) {
-			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-		}
-	}, [messageCount, pendingMessage]);
-
 	const handleSend = useCallback(
 		async (content?: string) => {
 			const text = (content ?? input).trim();
@@ -91,6 +88,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 
 			setInput("");
 			setPendingMessage(text);
+			scrollToBottom();
 
 			// Create conversation if needed
 			let conversationId = activeConversationId;
@@ -106,7 +104,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				content: text,
 			});
 		},
-		[input, activeConversationId, createConversation, sendMessage],
+		[
+			input,
+			activeConversationId,
+			createConversation,
+			sendMessage,
+			scrollToBottom,
+		],
 	);
 
 	const handleNewConversation = () => {

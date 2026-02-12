@@ -8,6 +8,7 @@ import {
 	cn,
 	formatCurrency,
 	getLastNDaysRange,
+	getUTCDateString,
 	toDateString,
 } from "@/lib/shared";
 import { api } from "@/trpc/react";
@@ -74,41 +75,38 @@ export function JournalExcerptsWidget() {
 			.slice(0, 3);
 	}, [adjacencyData]);
 
-	// Fetch actual journal content for these dates using getRange
-	// Note: getRange returns content in query but strips it in the return
-	// So we'll fetch getByDate for each - this is acceptable for just 3 entries
-	const date1Query = api.dailyJournal.getByDate.useQuery(
-		{ date: recentJournalDates[0]?.date ?? "" },
-		{ enabled: recentJournalDates.length >= 1, staleTime: 60000 },
-	);
-	const date2Query = api.dailyJournal.getByDate.useQuery(
-		{ date: recentJournalDates[1]?.date ?? "" },
-		{ enabled: recentJournalDates.length >= 2, staleTime: 60000 },
-	);
-	const date3Query = api.dailyJournal.getByDate.useQuery(
-		{ date: recentJournalDates[2]?.date ?? "" },
-		{ enabled: recentJournalDates.length >= 3, staleTime: 60000 },
+	// Fetch journal content for these dates using a single batch request
+	const batchDates = useMemo(
+		() => recentJournalDates.map((d) => d.date),
+		[recentJournalDates],
 	);
 
-	const isLoading =
-		adjacencyLoading ||
-		(recentJournalDates.length >= 1 && date1Query.isLoading) ||
-		(recentJournalDates.length >= 2 && date2Query.isLoading) ||
-		(recentJournalDates.length >= 3 && date3Query.isLoading);
+	const { data: batchJournals, isLoading: batchLoading } =
+		api.dailyJournal.getBatchByDates.useQuery(
+			{ dates: batchDates },
+			{ enabled: batchDates.length > 0, staleTime: 60000 },
+		);
+
+	const isLoading = adjacencyLoading || (batchDates.length > 0 && batchLoading);
 
 	// Combine adjacency data with journal content
 	const excerpts: JournalExcerpt[] = useMemo(() => {
+		if (!batchJournals) return [];
+
+		// Build a lookup map by normalized date string (UTC midnight → YYYY-MM-DD)
+		const journalByDate = new Map<string, string | null>();
+		for (const journal of batchJournals) {
+			const dateStr = getUTCDateString(journal.date);
+			journalByDate.set(dateStr, journal.content);
+		}
+
 		const result: JournalExcerpt[] = [];
-		const queries = [date1Query, date2Query, date3Query];
-
-		for (let i = 0; i < recentJournalDates.length; i++) {
-			const dayData = recentJournalDates[i];
-			const journalData = queries[i]?.data;
-
-			if (dayData && journalData) {
+		for (const dayData of recentJournalDates) {
+			const content = journalByDate.get(dayData.date);
+			if (content !== undefined) {
 				result.push({
 					date: dayData.date,
-					excerpt: getExcerpt(journalData.content, 100),
+					excerpt: getExcerpt(content, 100),
 					pnl: dayData.pnl,
 					tradeCount: dayData.tradeCount,
 				});
@@ -116,15 +114,7 @@ export function JournalExcerptsWidget() {
 		}
 
 		return result;
-	}, [
-		recentJournalDates,
-		date1Query.data,
-		date2Query.data,
-		date3Query.data,
-		date3Query,
-		date1Query,
-		date2Query,
-	]);
+	}, [recentJournalDates, batchJournals]);
 
 	return (
 		<DashboardWidget
