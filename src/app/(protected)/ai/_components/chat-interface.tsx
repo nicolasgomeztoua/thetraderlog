@@ -1,7 +1,15 @@
 "use client";
 
-import { Brain } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useUser } from "@clerk/nextjs";
+import {
+	ArrowRight,
+	BarChart3,
+	Database,
+	Sparkles,
+	TrendingUp,
+	Zap,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
@@ -15,8 +23,57 @@ import {
 import { ChatSidebar } from "./chat-sidebar";
 import { ModelSelector } from "./model-selector";
 
-// Show first 4 suggested queries in a 2x2 grid
-const DISPLAY_QUERIES = SUGGESTED_CHAT_QUERIES.slice(0, 4);
+// Suggested queries for the empty state — mapped from SUGGESTED_CHAT_QUERIES
+const SUGGESTED_QUERY_CARDS: {
+	icon: typeof TrendingUp;
+	title: string;
+	description: string;
+	query: string;
+}[] = [
+	{
+		icon: TrendingUp,
+		title: "Win rate analysis",
+		description: "Compare my performance across different time periods",
+		query: SUGGESTED_CHAT_QUERIES[0] ?? "What's my win rate this month?",
+	},
+	{
+		icon: BarChart3,
+		title: "Session breakdown",
+		description: "Which trading sessions are most profitable?",
+		query:
+			SUGGESTED_CHAT_QUERIES[1] ??
+			"Which trading session is most profitable?",
+	},
+	{
+		icon: Database,
+		title: "Symbol performance",
+		description: "Show my best and worst performing instruments",
+		query:
+			SUGGESTED_CHAT_QUERIES[2] ??
+			"Show me my best and worst performing symbols",
+	},
+	{
+		icon: Zap,
+		title: "Overtrading detection",
+		description: "Am I taking too many trades on losing days?",
+		query:
+			SUGGESTED_CHAT_QUERIES[3] ?? "Am I overtrading on losing days?",
+	},
+];
+
+const CAPABILITY_PILLS = [
+	"SQL Queries",
+	"Pattern Analysis",
+	"Market Data",
+	"Chart Generation",
+];
+
+function getTimeGreeting(): string {
+	const hour = new Date().getHours();
+	if (hour < 12) return "Good morning";
+	if (hour < 18) return "Good afternoon";
+	return "Good evening";
+}
 
 interface ChatInterfaceProps {
 	mode: "chat" | "report";
@@ -24,12 +81,19 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
+	const { user } = useUser();
 	const [activeConversationId, setActiveConversationId] = useState<
 		string | null
 	>(null);
 	const [input, setInput] = useState("");
 	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const greeting = useMemo(() => {
+		const timeGreeting = getTimeGreeting();
+		const name = user?.firstName;
+		return name ? `${timeGreeting}, ${name}` : timeGreeting;
+	}, [user?.firstName]);
 
 	const utils = api.useUtils();
 
@@ -165,32 +229,96 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 								className="flex h-full min-h-[400px] flex-col items-center justify-center px-2 text-center"
 								data-testid="chat-empty-state"
 							>
-								<div className="mb-4 flex h-12 w-12 items-center justify-center rounded border border-border bg-secondary sm:h-16 sm:w-16">
-									<Brain className="h-6 w-6 text-[#00d4ff] sm:h-8 sm:w-8" />
+								{/* Icon */}
+								<div
+									className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-accent/20 bg-accent/5 sm:h-14 sm:w-14"
+									style={{ animationDelay: "0ms" }}
+								>
+									<Sparkles className="h-5 w-5 text-accent sm:h-6 sm:w-6" />
 								</div>
-								<h2 className="mb-2 font-semibold text-lg sm:text-xl">
-									Query your trading data
+
+								{/* Time-aware greeting */}
+								<h2
+									className="mb-1.5 font-bold text-foreground text-xl tracking-tight sm:text-2xl"
+									data-testid="chat-empty-greeting"
+									style={{ animationDelay: "100ms" }}
+								>
+									{greeting}
 								</h2>
-								<p className="mb-4 max-w-md font-mono text-muted-foreground text-xs sm:mb-6">
-									I can analyze your trades and provide insights on win rates,
-									setups, timing, and more using real-time queries.
+
+								{/* Subtitle */}
+								<p
+									className="mb-4 max-w-md font-mono text-muted-foreground text-sm"
+									style={{ animationDelay: "100ms" }}
+								>
+									Ask questions about your trades, analyze patterns, and get
+									insights
 								</p>
+
+								{/* Capability pills */}
+								<div
+									className="mb-6 flex flex-wrap justify-center gap-2"
+									data-testid="chat-capability-pills"
+									style={{ animationDelay: "200ms" }}
+								>
+									{CAPABILITY_PILLS.map((pill) => (
+										<span
+											className="rounded border border-white/10 bg-white/[0.02] px-2.5 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider"
+											key={pill}
+										>
+											{pill}
+										</span>
+									))}
+								</div>
+
+								{/* Suggested query cards */}
 								<div
 									className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2"
 									data-testid="chat-suggested-queries"
+									style={{ animationDelay: "300ms" }}
 								>
-									{DISPLAY_QUERIES.map((query) => (
-										<button
-											className="rounded border border-border bg-secondary p-3 text-left font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
-											data-testid="chat-suggested-query"
-											key={query}
-											onClick={() => void handleSend(query)}
-											type="button"
-										>
-											{query}
-										</button>
-									))}
+									{SUGGESTED_QUERY_CARDS.map((card) => {
+										const Icon = card.icon;
+										return (
+											<button
+												className="group rounded border border-white/5 bg-white/[0.02] p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/[0.02]"
+												data-testid="chat-suggested-query"
+												key={card.title}
+												onClick={() =>
+													void handleSend(card.query)
+												}
+												type="button"
+											>
+												<div className="flex items-start gap-2.5">
+													<Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+													<div className="min-w-0 flex-1">
+														<div className="flex items-center justify-between">
+															<span className="font-mono text-xs text-foreground">
+																{card.title}
+															</span>
+															<ArrowRight className="h-3 w-3 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+														</div>
+														<p className="mt-0.5 font-mono text-[10px] text-muted-foreground/60">
+															{card.description}
+														</p>
+													</div>
+												</div>
+											</button>
+										);
+									})}
 								</div>
+
+								{/* Keyboard shortcut hint */}
+								<p
+									className="mt-4 font-mono text-[10px] text-muted-foreground/30"
+									style={{ animationDelay: "300ms" }}
+								>
+									Press{" "}
+									<kbd className="rounded border border-white/10 bg-white/5 px-1 py-0.5">
+										/
+									</kbd>{" "}
+									to focus input
+								</p>
 							</div>
 						) : (
 							<div className="space-y-3 sm:space-y-4">
