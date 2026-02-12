@@ -64,10 +64,13 @@ interface AnalyticsFilterStore {
 
 // =============================================================================
 // PERSISTENCE CONFIGURATION
-// Custom serialization for Date objects
+// Custom serialization for Date objects with schema versioning
 // =============================================================================
 
+const SCHEMA_VERSION = 1;
+
 interface PersistedState {
+	version?: number;
 	filters: {
 		symbols: string[];
 		dateRange: { start: string | null; end: string | null };
@@ -82,6 +85,32 @@ interface PersistedState {
 		reviewed: ReviewedFilter;
 	};
 	activePresetId: string | null;
+}
+
+/**
+ * Migrate persisted state from one schema version to another.
+ * Add cases here when SCHEMA_VERSION is bumped.
+ */
+function migrateState(state: PersistedState): PersistedState {
+	const version = state.version ?? 0;
+
+	// Already current
+	if (version >= SCHEMA_VERSION) {
+		return state;
+	}
+
+	let migrated = { ...state };
+
+	// Migration from v0 (no version field) to v1:
+	// No structural changes needed — just tag with version
+	if (version < 1) {
+		migrated = { ...migrated, version: 1 };
+	}
+
+	// Future migrations go here:
+	// if (version < 2) { migrated = { ...migrated, newField: defaultValue, version: 2 }; }
+
+	return migrated;
 }
 
 // =============================================================================
@@ -408,36 +437,45 @@ export const useAnalyticsFilterStore = create<AnalyticsFilterStore>()(
 						const parsed = JSON.parse(str) as { state: PersistedState };
 						const { state } = parsed;
 
+						// Migrate from older schema versions
+						const migrated = migrateState(state);
+
 						// Convert date strings back to Date objects
 						return {
 							...parsed,
 							state: {
-								...state,
+								...migrated,
 								filters: {
-									...state.filters,
+									...migrated.filters,
 									dateRange: {
-										start: state.filters.dateRange.start
-											? new Date(state.filters.dateRange.start)
+										start: migrated.filters.dateRange.start
+											? new Date(migrated.filters.dateRange.start)
 											: null,
-										end: state.filters.dateRange.end
-											? new Date(state.filters.dateRange.end)
+										end: migrated.filters.dateRange.end
+											? new Date(migrated.filters.dateRange.end)
 											: null,
 									},
 								},
-								activePresetId: state.activePresetId ?? null,
+								activePresetId: migrated.activePresetId ?? null,
 							},
 						};
 					} catch {
+						// Corrupted data — clear and return null to reset to defaults
+						console.warn(
+							`[analytics-filter-store] Corrupted localStorage data for "${name}", resetting to defaults`,
+						);
+						localStorage.removeItem(name);
 						return null;
 					}
 				},
 				setItem: (name, value) => {
 					const state = value.state as AnalyticsFilterStore;
 
-					// Convert Date objects to ISO strings for storage
+					// Convert Date objects to ISO strings for storage with schema version
 					const serialized = {
 						...value,
 						state: {
+							version: SCHEMA_VERSION,
 							filters: {
 								...state.filters,
 								dateRange: {
