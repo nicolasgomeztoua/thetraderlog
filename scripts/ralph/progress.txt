@@ -184,3 +184,13 @@ Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resi
   - Tool badges are always "completed" state since they're stored after AI response. Running state only relevant during streaming.
   - MAX_VISIBLE_TOOLS = 3 with "+N more" expandable button handles overflow cleanly.
 ---
+
+## 2026-02-12 - US-004
+- What was implemented: Created useTypewriter hook with adaptive speed (4ms first 50 chars, 8ms base), instant code block rendering, 50ms markdown heading pauses, Escape/click to skip. Integrated into ChatMessage with isLatest/isFromHistory props. Blinking cursor via cursor-blink class.
+- Files changed: src/app/(protected)/ai/_hooks/use-typewriter.ts (new), src/app/(protected)/ai/_components/chat-message.tsx, src/app/(protected)/ai/_components/chat-interface.tsx
+- **Learnings for future iterations:**
+  - useTypewriter hook returns { displayedText, isComplete, skip } — pass displayedText to MessageRenderer instead of raw content
+  - Track "isFromHistory" via a lastSentAt timestamp: 0 means loaded from history, >0 means user just sent a message. Reset to 0 on conversation switch/new conversation.
+  - Biome has both `useKeyWithClickEvents` and `noStaticElementInteractions` rules — both need suppression for click-to-skip on a div
+  - The cursor-blink class is a pseudo-element (.cursor-blink::after) but we use it directly on a span with bg-accent for the block cursor
+---

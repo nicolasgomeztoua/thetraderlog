@@ -199,8 +199,8 @@
         "Verify in browser"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created useTypewriter hook with adaptive speed, code block instant rendering, markdown heading pauses, Escape/click to skip. Integrated into ChatMessage with isLatest/isFromHistory props. History loads instantly, only latest AI message gets typewriter. Blinking cursor via cursor-blink class."
     },
     {
       "id": "US-005",
