@@ -20,9 +20,9 @@ const CALLOUT_STYLES: Record<
 		titleColor: "text-blue-400",
 	},
 	tip: {
-		border: "border-[#00ff88]/30",
+		border: "border-profit/30",
 		icon: "\u2713",
-		titleColor: "text-[#00ff88]",
+		titleColor: "text-profit",
 	},
 	warning: {
 		border: "border-yellow-500/30",
@@ -30,9 +30,9 @@ const CALLOUT_STYLES: Record<
 		titleColor: "text-yellow-400",
 	},
 	important: {
-		border: "border-[#ff3b3b]/30",
+		border: "border-loss/30",
 		icon: "\u2217",
-		titleColor: "text-[#ff3b3b]",
+		titleColor: "text-loss",
 	},
 };
 

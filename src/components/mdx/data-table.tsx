@@ -79,9 +79,9 @@ export function DataTable({ dataRef, caption }: DataTableProps) {
 											pnlCol &&
 												numeric &&
 												(value > 0
-													? "text-[#00ff88]"
+													? "text-profit"
 													: value < 0
-														? "text-[#ff3b3b]"
+														? "text-loss"
 														: "text-muted-foreground"),
 										)}
 										key={col}
