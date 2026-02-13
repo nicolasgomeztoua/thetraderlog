@@ -10,7 +10,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
@@ -141,13 +141,35 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 
 	const messageCount = conversation?.messages?.length ?? 0;
 
-	// Auto-scroll to bottom on new messages or when pending message changes
-	// biome-ignore lint/correctness/useExhaustiveDependencies: messageCount and pendingMessage trigger scroll on new messages
+	// Auto-scroll as content grows (typewriter animation, new messages, loading indicator)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-attach observer when conversation changes
 	useEffect(() => {
-		if (scrollRef.current) {
-			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-		}
-	}, [messageCount, pendingMessage]);
+		const container = scrollRef.current;
+		if (!container) return;
+		const content = container.firstElementChild;
+		if (!content) return;
+
+		const observer = new ResizeObserver(() => {
+			const { scrollTop, scrollHeight, clientHeight } = container;
+			const isNearBottom = scrollHeight - scrollTop - clientHeight < 80;
+			if (isNearBottom) {
+				container.scrollTop = scrollHeight;
+			}
+		});
+
+		observer.observe(content);
+		return () => observer.disconnect();
+	}, [activeConversationId]);
+
+	// Immediate scroll when new messages arrive
+	// biome-ignore lint/correctness/useExhaustiveDependencies: messageCount triggers scroll on new messages
+	useEffect(() => {
+		requestAnimationFrame(() => {
+			if (scrollRef.current) {
+				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+			}
+		});
+	}, [messageCount]);
 
 	const handleSend = useCallback(
 		async (content?: string) => {
@@ -231,7 +253,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				/>
 
 				{/* Chat Content */}
-				<ScrollArea className="flex-1" ref={scrollRef}>
+				<div className="min-h-0 flex-1 overflow-y-auto" ref={scrollRef}>
 					<div className="mx-auto max-w-3xl px-4 py-4 sm:px-6">
 						{isConversationLoading && activeConversationId ? (
 							<div className="space-y-3 sm:space-y-4">
@@ -374,7 +396,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 							</div>
 						)}
 					</div>
-				</ScrollArea>
+				</div>
 
 				{/* Input */}
 				<div className="border-border border-t px-4 py-3">

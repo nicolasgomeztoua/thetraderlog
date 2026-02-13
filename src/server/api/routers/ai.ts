@@ -509,6 +509,7 @@ export const aiRouter = createTRPCRouter({
 					currentRound: true,
 					totalToolCalls: true,
 					chartsGenerated: true,
+					progressDetail: true,
 				},
 			});
 

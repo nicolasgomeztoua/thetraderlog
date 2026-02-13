@@ -51,8 +51,10 @@ const THEME = {
 } as const;
 
 const FONTS = {
+	body: "Helvetica",
+	bodyBold: "Helvetica-Bold",
+	bodyOblique: "Helvetica-Oblique",
 	mono: "Courier",
-	monoOblique: "Courier-Oblique",
 	monoBold: "Courier-Bold",
 } as const;
 
@@ -64,7 +66,7 @@ const styles = StyleSheet.create({
 	page: {
 		backgroundColor: THEME.bg,
 		padding: 40,
-		fontFamily: FONTS.mono,
+		fontFamily: FONTS.body,
 		fontSize: 9,
 		color: THEME.text,
 	},
@@ -76,14 +78,14 @@ const styles = StyleSheet.create({
 	},
 	headerTitle: {
 		fontSize: 18,
-		fontFamily: FONTS.monoBold,
+		fontFamily: FONTS.bodyBold,
 		color: THEME.accent,
 		marginBottom: 8,
 	},
 	headerSubtitle: {
 		fontSize: 8,
 		color: THEME.textMuted,
-		letterSpacing: 1,
+		letterSpacing: 0.5,
 	},
 	headerMeta: {
 		fontSize: 8,
@@ -92,21 +94,21 @@ const styles = StyleSheet.create({
 	},
 	h1: {
 		fontSize: 16,
-		fontFamily: FONTS.monoBold,
+		fontFamily: FONTS.bodyBold,
 		color: THEME.accent,
 		marginTop: 20,
 		marginBottom: 8,
 	},
 	h2: {
 		fontSize: 13,
-		fontFamily: FONTS.monoBold,
+		fontFamily: FONTS.bodyBold,
 		color: THEME.accentAi,
 		marginTop: 16,
 		marginBottom: 6,
 	},
 	h3: {
 		fontSize: 11,
-		fontFamily: FONTS.monoBold,
+		fontFamily: FONTS.bodyBold,
 		color: THEME.white,
 		marginTop: 12,
 		marginBottom: 4,
@@ -118,10 +120,10 @@ const styles = StyleSheet.create({
 		color: THEME.text,
 	},
 	bold: {
-		fontFamily: FONTS.monoBold,
+		fontFamily: FONTS.bodyBold,
 	},
 	italic: {
-		fontFamily: FONTS.monoOblique,
+		fontFamily: FONTS.bodyOblique,
 	},
 	listItem: {
 		fontSize: 9,
@@ -136,6 +138,7 @@ const styles = StyleSheet.create({
 		borderColor: THEME.border,
 		padding: 10,
 		marginVertical: 8,
+		fontFamily: FONTS.mono,
 		fontSize: 8,
 		lineHeight: 1.5,
 		color: THEME.accentAi,
@@ -164,7 +167,7 @@ const styles = StyleSheet.create({
 	},
 	codeAppendixTitle: {
 		fontSize: 11,
-		fontFamily: FONTS.monoBold,
+		fontFamily: FONTS.bodyBold,
 		color: THEME.accentAi,
 		marginTop: 20,
 		marginBottom: 8,
@@ -212,10 +215,79 @@ const styles = StyleSheet.create({
 		flex: 1,
 		padding: 4,
 		fontSize: 8,
-		fontFamily: FONTS.monoBold,
+		fontFamily: FONTS.bodyBold,
 		color: THEME.accent,
 	},
+	inlineImage: {
+		marginVertical: 8,
+		maxWidth: "100%",
+		objectFit: "contain" as const,
+	},
+	inlineImageCaption: {
+		fontSize: 7,
+		color: THEME.textMuted,
+		marginBottom: 8,
+	},
 });
+
+// =============================================================================
+// MARKDOWN SANITIZER (strip LaTeX artifacts)
+// =============================================================================
+
+/**
+ * Strip LaTeX math notation and artifacts from AI-generated markdown,
+ * while preserving currency values like $1,234.56.
+ */
+export function sanitizeMarkdown(md: string): string {
+	let result = md;
+
+	// 1. Strip $$...$$ display math blocks → keep inner content
+	result = result.replace(/\$\$([\s\S]*?)\$\$/g, (_match, inner: string) =>
+		inner.trim(),
+	);
+
+	// 2. Strip $...$ inline math but preserve currency ($123, $1,234.56)
+	//    Currency guard: if char after opening $ is a digit, it's currency — leave it
+	result = result.replace(
+		/\$([^$]+?)\$/g,
+		(_match: string, inner: string, offset: number) => {
+			// Check if this looks like currency: $<digit>
+			if (/^\d/.test(inner)) {
+				return _match; // preserve currency like $1,234
+			}
+			// Check if preceded by - (negative currency like -$500)
+			if (offset > 0 && result[offset - 1] === "-" && /^\d/.test(inner)) {
+				return _match;
+			}
+			return inner.trim();
+		},
+	);
+
+	// 3. Remove standalone $ lines (just a $ on its own line)
+	result = result.replace(/^\$\s*$/gm, "");
+
+	// 4. Convert common LaTeX commands
+	result = result.replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "($1 / $2)");
+	result = result.replace(/\\text\{([^}]*)\}/g, "$1");
+	result = result.replace(/\\times/g, "x");
+	result = result.replace(/\\cdot/g, "·");
+	result = result.replace(/\\pm/g, "±");
+	result = result.replace(/\\leq/g, "≤");
+	result = result.replace(/\\geq/g, "≥");
+	result = result.replace(/\\neq/g, "≠");
+	result = result.replace(/\\approx/g, "≈");
+	result = result.replace(/\\infty/g, "∞");
+	result = result.replace(/\\sum/g, "Σ");
+	result = result.replace(/\\sqrt\{([^}]*)\}/g, "√($1)");
+
+	// 5. Strip remaining \command LaTeX → just the command word
+	result = result.replace(/\\([a-zA-Z]+)/g, "$1");
+
+	// 6. Clean up empty lines left behind
+	result = result.replace(/\n{3,}/g, "\n\n");
+
+	return result;
+}
 
 // =============================================================================
 // MARKDOWN → PDF ELEMENT PARSER
@@ -230,8 +302,10 @@ interface PdfElement {
 		| "list-item"
 		| "code-block"
 		| "hr"
-		| "table";
+		| "table"
+		| "image";
 	content: string;
+	url?: string;
 	rows?: string[][];
 }
 
@@ -340,6 +414,17 @@ function parseMarkdownToElements(markdown: string): PdfElement[] {
 			continue;
 		}
 
+		// Images ![alt](url)
+		const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+		if (imageMatch) {
+			elements.push({
+				type: "image",
+				content: imageMatch[1] ?? "",
+				url: imageMatch[2],
+			});
+			continue;
+		}
+
 		// Regular paragraph
 		elements.push({ type: "paragraph", content: line });
 	}
@@ -431,7 +516,7 @@ function renderInlineText(text: string): React.ReactElement[] {
 
 function ReportDocument(props: ReportPdfParams): React.ReactElement {
 	const { title, content, charts, codeArtifacts, dateRange } = props;
-	const elements = parseMarkdownToElements(content);
+	const elements = parseMarkdownToElements(sanitizeMarkdown(content));
 	const generatedAt = new Date().toISOString();
 
 	const dateRangeStr =
@@ -511,6 +596,22 @@ function ReportDocument(props: ReportPdfParams): React.ReactElement {
 							key: `el-${idx}`,
 							style: styles.hr,
 						});
+					case "image":
+						return React.createElement(
+							View,
+							{ key: `el-${idx}`, wrap: false },
+							React.createElement(Image, {
+								src: el.url ?? "",
+								style: styles.inlineImage,
+							}),
+							el.content
+								? React.createElement(
+										Text,
+										{ style: styles.inlineImageCaption },
+										el.content,
+									)
+								: null,
+						);
 					case "table":
 						return renderTable(el.rows ?? [], idx);
 					default:
@@ -640,7 +741,13 @@ export async function generateReportPdf(
 		return null;
 	}
 
-	const key = `reports/${randomUUID()}.pdf`;
+	const slug = params.title
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "")
+		.slice(0, 60);
+	const shortId = randomUUID().slice(0, 8);
+	const key = `reports/${slug}-${shortId}.pdf`;
 	const client = getS3Client();
 
 	const uploadUrl = client.presign(key, { method: "PUT", expiresIn: 300 });

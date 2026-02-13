@@ -110,6 +110,7 @@ async function updateProgress(
 		currentRound?: number;
 		totalToolCalls?: number;
 		chartsGenerated?: number;
+		progressDetail?: string;
 	},
 ): Promise<void> {
 	try {
@@ -229,13 +230,54 @@ export const generateAiReport = task({
 	id: "generate-ai-report",
 	// AI report generation involves multi-turn LLM tool-calling (up to 20 rounds),
 	// SQL queries, Python sandbox execution, PDF generation, and email delivery.
-	// 5 min global default is insufficient — allow up to 15 minutes.
-	maxDuration: 900,
+	// 5 min global default is insufficient — allow up to 30 minutes.
+	maxDuration: 1800,
 	queue: {
 		concurrencyLimit: 5,
 	},
 	retry: {
 		maxAttempts: 1,
+	},
+	onFailure: async ({ payload, error }) => {
+		// This hook runs in a separate execution even when the task is killed
+		// by MAX_DURATION_EXCEEDED, ensuring the report never stays stuck in "generating".
+		try {
+			const errorString =
+				error instanceof Error ? error.message : String(error ?? "");
+
+			const isTimeout =
+				errorString.includes("MAX_DURATION") ||
+				errorString.includes("maxDuration") ||
+				errorString.includes("compute time");
+
+			const errorMessage = isTimeout
+				? ERR_AI_TIMEOUT
+				: getUserFriendlyErrorMessage(error);
+
+			await db
+				.update(aiReports)
+				.set({
+					status: "failed",
+					progressStage: "failed",
+					completedAt: new Date(),
+					errorMessage,
+				})
+				.where(eq(aiReports.id, payload.reportId));
+
+			await db
+				.update(aiConversations)
+				.set({ status: "failed" })
+				.where(eq(aiConversations.id, payload.conversationId));
+
+			await db.insert(aiMessages).values({
+				conversationId: payload.conversationId,
+				role: "assistant",
+				content: ERR_AI_REPORT_FALLBACK,
+			});
+		} catch {
+			// Last-resort: if even the failure handler fails, there's nothing more we can do.
+			// Trigger.dev will still log the original error.
+		}
 	},
 	run: async (payload: {
 		reportId: string;
@@ -335,6 +377,7 @@ export const generateAiReport = task({
 			// Tool-calling loop
 			let totalTokensUsed = 0;
 			const allToolCalls: ToolCall[] = [];
+			const contentParts: string[] = [];
 
 			// Emit progress: analyzing starts
 			await updateProgress(payload.reportId, {
@@ -362,7 +405,10 @@ export const generateAiReport = task({
 					!assistantMessage.tool_calls ||
 					assistantMessage.tool_calls.length === 0
 				) {
-					const finalContent = assistantMessage.content ?? "";
+					if (assistantMessage.content) {
+						contentParts.push(assistantMessage.content);
+					}
+					const finalContent = contentParts.join("\n\n");
 
 					// Save assistant message to conversation
 					await db.insert(aiMessages).values({
@@ -434,8 +480,14 @@ export const generateAiReport = task({
 					tool_calls: assistantMessage.tool_calls,
 				});
 
+				if (assistantMessage.content) {
+					contentParts.push(assistantMessage.content);
+				}
+
 				// Execute each tool call and add results
+				let lastToolName = "";
 				for (const toolCall of assistantMessage.tool_calls) {
+					lastToolName = toolCall.function.name;
 					let args: Record<string, unknown>;
 					try {
 						args = JSON.parse(toolCall.function.arguments);
@@ -455,16 +507,19 @@ export const generateAiReport = task({
 					});
 				}
 
-				// Emit progress after each round
+				// Emit progress after each round with the last tool name
 				await updateProgress(payload.reportId, {
 					currentRound: round + 1,
 					totalToolCalls: allToolCalls.length,
+					progressDetail: lastToolName,
 				});
 			}
 
 			// If we exhausted tool rounds, save fallback and mark complete
-			const fallbackContent =
-				"The report analysis reached the maximum number of tool-calling rounds. The results above represent the analysis completed within the allowed iterations.";
+			const accumulatedContent = contentParts.join("\n\n");
+			const fallbackContent = accumulatedContent
+				? `${accumulatedContent}\n\n---\n\n*Note: This report reached the maximum analysis rounds. Results above represent the completed analysis.*`
+				: "The report analysis reached the maximum number of tool-calling rounds.";
 
 			await db.insert(aiMessages).values({
 				conversationId: payload.conversationId,

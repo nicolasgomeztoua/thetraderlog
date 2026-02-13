@@ -592,6 +592,7 @@ export const aiReports = createTable(
 		currentRound: integer("current_round").default(0),
 		totalToolCalls: integer("total_tool_calls").default(0),
 		chartsGenerated: integer("charts_generated").default(0),
+		progressDetail: text("progress_detail"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),

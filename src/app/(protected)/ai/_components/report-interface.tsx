@@ -8,7 +8,7 @@ import {
 	RefreshCw,
 	Send,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
@@ -35,13 +35,20 @@ const QUICK_DATE_PRESETS = [
 const CHAR_WARN_THRESHOLD = 2000;
 
 const PROGRESS_STAGE_LABELS: Record<string, string> = {
-	queued: "Queued",
-	building_context: "Building context",
-	analyzing: "Analyzing",
-	generating_pdf: "Generating PDF",
-	uploading: "Uploading",
+	queued: "Waiting in queue...",
+	building_context: "Loading your trading profile...",
+	analyzing: "Analyzing your data...",
+	generating_pdf: "Compiling report...",
+	uploading: "Finalizing...",
 	complete: "Complete",
 	failed: "Failed",
+};
+
+const TOOL_DETAIL_LABELS: Record<string, string> = {
+	run_query: "Querying your trades...",
+	call_analytics: "Crunching the numbers...",
+	get_market_data: "Fetching market data...",
+	run_python: "Generating visualizations...",
 };
 
 function getProgressWidth(
@@ -115,38 +122,20 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 
 	// Fetch reports
 	const { data: reports, isLoading: isReportsLoading } =
-		api.ai.listReports.useQuery({ limit: 20 }, { refetchOnWindowFocus: true });
-
-	// Find the first active report
-	const activeReportId = useMemo(() => {
-		if (!reports?.items) return null;
-		const active = reports.items.find(
-			(r) => r.status === "queued" || r.status === "generating",
+		api.ai.listReports.useQuery(
+			{ limit: 20 },
+			{
+				refetchOnWindowFocus: true,
+				refetchInterval: (query) => {
+					const items = query.state.data?.items;
+					if (!items) return false;
+					const hasActive = items.some(
+						(r) => r.status === "queued" || r.status === "generating",
+					);
+					return hasActive ? 5000 : false;
+				},
+			},
 		);
-		return active?.id ?? null;
-	}, [reports?.items]);
-
-	// Poll active report status
-	const { data: activeReportStatus } = api.ai.getReportStatus.useQuery(
-		{ reportId: activeReportId ?? "" },
-		{
-			enabled: !!activeReportId,
-			refetchInterval: 5000,
-			refetchOnWindowFocus: true,
-		},
-	);
-
-	// When status changes to complete/failed, refresh
-	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on status change
-	useEffect(() => {
-		if (
-			activeReportStatus &&
-			(activeReportStatus.status === "complete" ||
-				activeReportStatus.status === "failed")
-		) {
-			void utils.ai.listReports.invalidate();
-		}
-	}, [activeReportStatus?.status]);
 
 	// Mutations
 	const startReport = api.ai.startReport.useMutation({
@@ -375,69 +364,6 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 
 					<ScrollArea className="flex-1">
 						<div className="p-2 sm:p-3">
-							{/* Active Report Progress */}
-							{activeReportId &&
-								activeReportStatus &&
-								(activeReportStatus.status === "queued" ||
-									activeReportStatus.status === "generating") && (
-									<div
-										className="mb-3 animate-fade-in-up rounded border border-accent/20 bg-accent/5 p-3"
-										data-testid="report-active-progress"
-									>
-										<div className="flex items-center gap-2">
-											<Loader2 className="size-3.5 animate-spin text-accent" />
-											<span className="font-mono text-accent text-xs">
-												{PROGRESS_STAGE_LABELS[
-													activeReportStatus.progressStage ?? "queued"
-												] ?? "Processing"}
-												{activeReportStatus.progressStage === "analyzing" &&
-													activeReportStatus.currentRound != null &&
-													activeReportStatus.currentRound > 0 &&
-													` round ${activeReportStatus.currentRound.toString()}`}
-												{activeReportStatus.progressStage ===
-													"generating_pdf" &&
-													activeReportStatus.chartsGenerated != null &&
-													activeReportStatus.chartsGenerated > 0 &&
-													` — ${activeReportStatus.chartsGenerated.toString()} charts`}
-											</span>
-										</div>
-										{/* Real progress bar */}
-										<div className="mt-2 h-1 overflow-hidden rounded-full bg-accent/10">
-											<div
-												className="h-full rounded-full bg-accent/50 transition-all duration-700"
-												style={{
-													width: `${getProgressWidth(activeReportStatus.progressStage, activeReportStatus.currentRound, 20).toString()}%`,
-												}}
-											/>
-										</div>
-										{/* Stats row */}
-										{activeReportStatus.progressStage === "analyzing" && (
-											<div className="mt-1.5 flex gap-3 font-mono text-[10px] text-muted-foreground/50">
-												{activeReportStatus.currentRound != null &&
-													activeReportStatus.currentRound > 0 && (
-														<span>
-															Round {activeReportStatus.currentRound.toString()}
-														</span>
-													)}
-												{activeReportStatus.totalToolCalls != null &&
-													activeReportStatus.totalToolCalls > 0 && (
-														<span>
-															{activeReportStatus.totalToolCalls.toString()}{" "}
-															tool calls
-														</span>
-													)}
-												{activeReportStatus.chartsGenerated != null &&
-													activeReportStatus.chartsGenerated > 0 && (
-														<span>
-															{activeReportStatus.chartsGenerated.toString()}{" "}
-															charts
-														</span>
-													)}
-											</div>
-										)}
-									</div>
-								)}
-
 							{/* Loading skeletons */}
 							{isReportsLoading &&
 								Array.from({ length: 3 }).map((_, i) => (
@@ -455,31 +381,22 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 
 							{/* Report list */}
 							{reports?.items.map((report) => {
-								const reportStatus =
-									report.id === activeReportId && activeReportStatus
-										? activeReportStatus.status
-										: report.status;
-								const reportPdfUrl =
-									report.id === activeReportId && activeReportStatus
-										? activeReportStatus.pdfUrl
-										: report.pdfUrl;
-								const reportErrorMessage =
-									report.id === activeReportId && activeReportStatus
-										? activeReportStatus.errorMessage
-										: report.errorMessage;
-
-								const isFailed = reportStatus === "failed";
-								const isComplete = reportStatus === "complete";
+								const isActive =
+									report.status === "queued" || report.status === "generating";
+								const isFailed = report.status === "failed";
+								const isComplete = report.status === "complete";
 
 								return (
 									<div
 										className={`mb-2 rounded border p-3 transition-colors last:mb-0 hover:border-white/10 ${
-											isFailed
-												? "border-loss/20 border-l-2"
-												: isComplete
-													? "border-profit/20 border-white/5 border-l-2"
-													: "border-white/5"
-										} bg-white/[0.01]`}
+											isActive
+												? "border-accent/20 bg-accent/5"
+												: isFailed
+													? "border-loss/20 border-l-2 bg-white/[0.01]"
+													: isComplete
+														? "border-profit/20 border-white/5 border-l-2 bg-white/[0.01]"
+														: "border-white/5 bg-white/[0.01]"
+										}`}
 										data-testid={`report-item-${report.id}`}
 										key={report.id}
 									>
@@ -491,20 +408,20 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 												<div className="mt-1 flex items-center gap-2">
 													<span
 														className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
-															reportStatus === "queued"
+															report.status === "queued"
 																? "border-white/10 text-muted-foreground"
-																: reportStatus === "generating"
+																: report.status === "generating"
 																	? "animate-pulse border-accent/20 text-accent"
-																	: reportStatus === "complete"
+																	: report.status === "complete"
 																		? "border-profit/20 text-profit"
 																		: "border-loss/20 text-loss"
 														}`}
 														data-testid={`report-status-${report.id}`}
 													>
-														{reportStatus === "generating" && (
+														{report.status === "generating" && (
 															<Loader2 className="mr-1 inline size-2.5 animate-spin" />
 														)}
-														{(reportStatus ?? "queued").toUpperCase()}
+														{(report.status ?? "queued").toUpperCase()}
 													</span>
 													{report.createdAt && (
 														<span className="font-mono text-[10px] text-muted-foreground/50">
@@ -513,11 +430,11 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 													)}
 												</div>
 											</div>
-											{isComplete && reportPdfUrl && (
+											{isComplete && report.pdfUrl && (
 												<a
 													className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[10px] text-foreground transition-colors hover:border-primary/30 hover:text-primary"
 													data-testid={`report-download-${report.id}`}
-													href={reportPdfUrl}
+													href={report.pdfUrl}
 													rel="noopener noreferrer"
 													target="_blank"
 												>
@@ -526,10 +443,63 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 												</a>
 											)}
 										</div>
+
+										{/* Inline progress for active reports */}
+										{isActive && (
+											<div className="mt-2">
+												<div className="flex items-center gap-2">
+													<Loader2 className="size-3 animate-spin text-accent" />
+													<span className="font-mono text-[11px] text-accent">
+														{report.progressStage === "analyzing" &&
+														report.progressDetail
+															? (TOOL_DETAIL_LABELS[report.progressDetail] ??
+																"Analyzing your data...")
+															: (PROGRESS_STAGE_LABELS[
+																	report.progressStage ?? "queued"
+																] ?? "Processing")}
+														{report.progressStage === "generating_pdf" &&
+															report.chartsGenerated != null &&
+															report.chartsGenerated > 0 &&
+															` — ${report.chartsGenerated.toString()} charts`}
+													</span>
+												</div>
+												<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-accent/10">
+													<div
+														className="h-full rounded-full bg-accent/50 transition-all duration-700"
+														style={{
+															width: `${getProgressWidth(report.progressStage, report.currentRound, 20).toString()}%`,
+														}}
+													/>
+												</div>
+												{report.progressStage === "analyzing" && (
+													<div className="mt-1.5 flex gap-3 font-mono text-[10px] text-muted-foreground/50">
+														{report.currentRound != null &&
+															report.currentRound > 0 && (
+																<span>
+																	Round {report.currentRound.toString()}
+																</span>
+															)}
+														{report.totalToolCalls != null &&
+															report.totalToolCalls > 0 && (
+																<span>
+																	{report.totalToolCalls.toString()} tool calls
+																</span>
+															)}
+														{report.chartsGenerated != null &&
+															report.chartsGenerated > 0 && (
+																<span>
+																	{report.chartsGenerated.toString()} charts
+																</span>
+															)}
+													</div>
+												)}
+											</div>
+										)}
+
 										{isFailed && (
 											<div className="mt-2 flex items-start justify-between gap-2">
 												<p className="min-w-0 flex-1 font-mono text-[10px] text-loss/80">
-													{reportErrorMessage ??
+													{report.errorMessage ??
 														"Something went wrong. Please try again."}
 												</p>
 												<button
