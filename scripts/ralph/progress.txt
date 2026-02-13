@@ -302,3 +302,39 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - S3 upload logic was self-contained in report-pdf.ts — no shared S3 utils needed cleanup
   - AGENTS.md files should be updated when the architecture they describe changes
 ---
+
+## 2026-02-13 - US-015 E2E Tests for Report Viewer Page
+- Updated tests/e2e/report-viewer.spec.ts with 3 additional MDX component tests
+- Added tests:
+  - MetricCard/MetricGrid render verification (checks for mdx-metric-grid testid)
+  - Callout component styling validation (checks border-l-2 class for left border indicator)
+  - DataTable row rendering (checks for mdx-data-table testid and tr elements)
+- All 3 tests are best-effort: verify components if present in report content, skip silently if not
+- Total test count: 13 tests across 3 describe blocks (Not Found, Unauthenticated, Authenticated)
+- Existing tests already covered: page structure, title/metadata, back button navigation, MDX headings, action buttons, PDF download, ToC responsive, 404, auth redirect
+- All data-testid attributes were already in place from US-010 (MDX components), US-011 (viewer page), US-012 (PDF button)
+- Files changed: tests/e2e/report-viewer.spec.ts
+- **Learnings for future iterations:**
+  - MDX component E2E tests depend on AI-generated content — use best-effort pattern (check count > 0, skip if absent)
+  - Biome requires compact function signatures — single-parameter destructuring goes on one line: `async ({ page }, testInfo) =>`
+  - data-testid attributes on MDX components (mdx-callout-{type}, mdx-data-table, mdx-metric-grid) enable reliable E2E selection
+---
+
+## 2026-02-13 - US-016 E2E Tests for Updated Report Interface
+- Created tests/e2e/report-interface-update.spec.ts with 6 tests across 3 describe blocks
+- Test coverage:
+  - View Report Flow (2 tests): completed reports show View Report button not Download PDF, View Report navigates to /ai/reports/[reportId]
+  - Progress Stages (3 tests): no "Compiling report"/"Finalizing" labels present, progress bar renders without PDF-related stages, status labels are valid (QUEUED/GENERATING/COMPLETE/FAILED only)
+  - Unauthenticated (1 test): redirects to sign-in
+- Added data-testid attributes to report-interface.tsx:
+  - `report-progress-${report.id}` on progress container
+  - `report-progress-stage-${report.id}` on progress stage label
+  - `report-progress-bar-${report.id}` on progress bar container
+- Helper function navigateToReportInterface() shared across tests for DRY navigation
+- Files changed: src/app/(protected)/ai/_components/report-interface.tsx, tests/e2e/report-interface-update.spec.ts (new)
+- **Learnings for future iterations:**
+  - Edit tool in Claude Code struggles with tab-indented files — use python3 string replace for reliable edits in tab-indented TSX
+  - Biome auto-fix (`--write`) handles multi-line→single-line formatting for compact expressions
+  - Progress-related data-testid attributes use dynamic report.id suffix to support multiple active reports simultaneously
+  - E2E tests for progress stages are best-effort since active reports may not be present — tests pass gracefully when no active reports exist
+---
