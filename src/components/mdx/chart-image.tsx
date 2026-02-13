@@ -13,7 +13,7 @@ export function ChartImage({ src, alt = "Chart", caption }: ChartImageProps) {
 
 	return (
 		<>
-			<figure className="my-4">
+			<figure className="my-4" data-testid="mdx-chart-image">
 				<button
 					className="w-full cursor-zoom-in rounded border border-white/5 bg-white/[0.02] p-2 transition-colors hover:border-white/10"
 					onClick={() => setIsOpen(true)}

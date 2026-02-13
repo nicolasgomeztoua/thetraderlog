@@ -33,7 +33,10 @@ export function DataTable({ dataRef, caption }: DataTableProps) {
 	const columns = Object.keys(firstRow);
 
 	return (
-		<div className="my-4 overflow-x-auto rounded border border-white/5">
+		<div
+			className="my-4 overflow-x-auto rounded border border-white/5"
+			data-testid="mdx-data-table"
+		>
 			{caption && (
 				<div className="border-white/5 border-b bg-white/[0.02] px-3 py-1.5">
 					<p className="font-mono text-[10px] text-muted-foreground uppercase">

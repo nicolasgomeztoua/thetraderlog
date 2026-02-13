@@ -45,6 +45,7 @@ export function Callout({ type = "note", title, children }: CalloutProps) {
 				"my-4 rounded border-l-2 bg-white/[0.02] px-4 py-3",
 				styles.border,
 			)}
+			data-testid={`mdx-callout-${type}`}
 		>
 			<div className="flex items-start gap-2">
 				<span

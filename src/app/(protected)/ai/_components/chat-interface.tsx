@@ -194,12 +194,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				content: text,
 			});
 		},
-		[
-			input,
-			activeConversationId,
-			createConversation,
-			sendMessage,
-		],
+		[input, activeConversationId, createConversation, sendMessage],
 	);
 
 	const handleNewConversation = () => {

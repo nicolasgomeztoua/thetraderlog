@@ -1,258 +1,258 @@
 {
-  "project": "EdgeJournal",
-  "branchName": "nicolasgomeztoua/cancun",
-  "description": "Performance optimization based on Vercel React best practices audit: bundle size reduction, waterfall elimination, and rendering improvements",
-  "userStories": [
-    {
-      "id": "US-001",
-      "title": "Configure optimizePackageImports for lucide-react",
-      "description": "As a user, I want faster page loads so that the app feels snappy and responsive.",
-      "acceptanceCriteria": [
-        "Add lucide-react to experimental.optimizePackageImports in next.config.ts",
-        "Verify build succeeds with the new configuration",
-        "Bundle size reduced (lucide-react no longer loads entire icon library)",
-        "All icons still render correctly throughout the app",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 1,
-      "passes": true,
-      "notes": "Added lucide-react to experimental.optimizePackageImports in next.config.js. Build confirms experiment is active. Bundle optimization applied across 103 files importing from lucide-react."
-    },
-    {
-      "id": "US-002",
-      "title": "Dynamic import AG Charts components",
-      "description": "As a user viewing analytics, I want the page shell to load quickly so that I can see the UI structure before charts render.",
-      "acceptanceCriteria": [
-        "Create ChartSkeleton component in src/components/analytics/chart-skeleton.tsx with Terminal design styling",
-        "Wrap EquityCurve component with next/dynamic and { ssr: false, loading: ChartSkeleton }",
-        "Wrap MonthlyChart component with next/dynamic and { ssr: false, loading: ChartSkeleton }",
-        "Wrap RMultipleChart component with next/dynamic and { ssr: false, loading: ChartSkeleton }",
-        "Wrap all other AG Charts components in analytics/ with next/dynamic",
-        "Charts load when their container is visible",
-        "No visual regression - charts display correctly after loading",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": "Created ChartSkeleton component in src/components/analytics/chart-skeleton.tsx. Wrapped EquityCurve, MonthlyChart, RMultipleChart, SymbolDistributionChart, SymbolTrendChart, and PositionSizeChart with next/dynamic and { ssr: false, loading: ChartSkeleton }. Components are now code-split from the main analytics page bundle."
-    },
-    {
-      "id": "US-003",
-      "title": "Dynamic import TipTap editor",
-      "description": "As a user viewing the daily journal, I want the page to load quickly so that I can see my entries before the editor initializes.",
-      "acceptanceCriteria": [
-        "Create EditorSkeleton component in src/components/daily-journal/editor-skeleton.tsx matching editor dimensions",
-        "Wrap JournalEditor in next/dynamic with { ssr: false, loading: EditorSkeleton }",
-        "Update daily-journal page to use the dynamically imported editor",
-        "Editor initializes without flicker after skeleton",
-        "All editor features work correctly after load (formatting, images, etc.)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Created EditorSkeleton component in src/components/daily-journal/editor-skeleton.tsx matching the editor layout (toolbar + content area + status indicator). Wrapped JournalEditor with next/dynamic and { ssr: false, loading: EditorSkeleton } in the daily-journal page. TipTap editor and all its extensions are now code-split from the main page bundle."
-    },
-    {
-      "id": "US-004",
-      "title": "Dynamic import Lightweight-charts",
-      "description": "As a user viewing trade details, I want the trade info to load quickly so that I can see trade data before charts render.",
-      "acceptanceCriteria": [
-        "Create TradingChartSkeleton component in src/components/trade-detail/trading-chart-skeleton.tsx",
-        "Wrap TradingViewChart in next/dynamic with { ssr: false, loading: TradingChartSkeleton }",
-        "Wrap ReplayChart in next/dynamic with { ssr: false, loading: TradingChartSkeleton }",
-        "Charts load when user navigates to chart tab or replay section",
-        "No visual regression - charts display correctly after loading",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "Created TradingChartSkeleton component in src/components/trade-detail/trading-chart-skeleton.tsx. Wrapped TradingViewChart with next/dynamic in content-panel.tsx and ReplayChart with next/dynamic in trade-replay.tsx. Both use { ssr: false, loading: TradingChartSkeleton }. Lightweight-charts library is now code-split from the main trade detail page bundle."
-    },
-    {
-      "id": "US-005",
-      "title": "Create getBatchByDates endpoint for daily journal",
-      "description": "As a developer, I want a batch endpoint for fetching multiple journal dates so that the dashboard can make a single request instead of multiple sequential ones.",
-      "acceptanceCriteria": [
-        "Add getBatchByDates procedure to src/server/api/routers/dailyJournal.ts",
-        "Accepts array of date strings and accountId",
-        "Returns array of journal entries matching the requested dates",
-        "Uses protectedProcedure for authentication",
-        "Validates user ownership of requested entries",
-        "Efficient single database query using inArray",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Added getBatchByDates procedure to dailyJournal router. Accepts array of date strings, normalizes to midnight UTC, queries using inArray for efficient single-query batch fetch. Uses protectedProcedure for auth and filters by ctx.user.id for ownership validation. Returns empty array for empty input."
-    },
-    {
-      "id": "US-006",
-      "title": "Integration tests for getBatchByDates endpoint",
-      "description": "As a developer, I want integration tests for the batch journal endpoint so that we can verify it works correctly.",
-      "acceptanceCriteria": [
-        "Add tests to tests/integration/daily-journal.test.ts or create new file",
-        "Test returns correct entries for multiple dates",
-        "Test returns empty array for dates with no entries",
-        "Test validates user ownership (cannot fetch other users' entries)",
-        "Test handles empty dates array gracefully",
-        "Uses setupTrader() fixture",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Created tests/integration/daily-journal-batch.test.ts with 11 tests covering: empty dates array, dates with no entries, batch fetch of multiple dates, partial matches, single date fetch, full ISO string handling, date normalization to midnight UTC, user ownership isolation (cannot see other users' entries), unauthenticated request rejection, and read-only behavior (does not auto-create journals). All tests pass."
-    },
-    {
-      "id": "US-007",
-      "title": "Update JournalExcerptsWidget to use batch endpoint",
-      "description": "As a user viewing the dashboard, I want journal excerpts to load with a single request so that the widget loads faster.",
-      "acceptanceCriteria": [
-        "Update JournalExcerptsWidget to use getBatchByDates instead of 3 separate getByDate calls",
-        "Pass array of [today, yesterday, dayBeforeYesterday] dates",
-        "Transform batch response to match existing UI expectations",
-        "Single network request visible in DevTools instead of 3",
-        "No visual regression - widget displays same content",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Replaced 3 separate getByDate useQuery hooks with a single getBatchByDates call. Uses useMemo to extract date strings from adjacency data, passes to batch endpoint, and builds a Map lookup by date for efficient content matching. Used getUTCDateString utility for safe UTC midnight date extraction. Single network request instead of 3."
-    },
-    {
-      "id": "US-008",
-      "title": "Add Suspense boundary to dashboard page",
-      "description": "As a user navigating to the dashboard, I want to see a loading skeleton immediately so that the page feels responsive.",
-      "acceptanceCriteria": [
-        "Create DashboardSkeleton component in src/app/(protected)/dashboard/dashboard-skeleton.tsx",
-        "Skeleton matches dashboard grid layout with placeholder cards",
-        "Uses Terminal design system (bg-card, border-white/5, animate-pulse)",
-        "Wrap dashboard content in Suspense with DashboardSkeleton fallback",
-        "Progressive loading visible when navigating to dashboard",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Created DashboardSkeleton component in src/app/(protected)/dashboard/dashboard-skeleton.tsx matching the CommandCenterGrid layout with WidgetCardSkeleton cards (terminal chrome header with traffic light dots + skeleton content). Created loading.tsx using Next.js convention to automatically wrap the dashboard page in a Suspense boundary. Grid matches 9-widget layout: TodayPerformance (md), JournalStatus (sm), PnLCalendar (lg), AnalyticsSnapshot (sm), JournalStreak (sm), StrategiesSnapshot (sm), RuleCompliance (sm), TradesSnapshot (sm), JournalExcerpts (wide)."
-    },
-    {
-      "id": "US-009",
-      "title": "Add Suspense boundary to analytics page",
-      "description": "As a user navigating to analytics, I want to see a loading skeleton immediately so that I know the page is loading.",
-      "acceptanceCriteria": [
-        "Create AnalyticsSkeleton component in src/app/(protected)/analytics/analytics-skeleton.tsx",
-        "Skeleton matches analytics layout with tab structure and chart placeholders",
-        "Uses Terminal design system styling",
-        "Wrap analytics content in Suspense with AnalyticsSkeleton fallback",
-        "Progressive loading visible when navigating to analytics",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Created AnalyticsSkeleton component in src/app/(protected)/analytics/analytics-skeleton.tsx with ChartTerminalSkeleton helper matching the ChartTerminal component styling (terminal chrome header with traffic light dots). Skeleton replicates the analytics page structure: header with export button, query bar, tab bar (5 tabs), and Overview tab content (8 metric cards in 4-column grid + 3 chart terminals). Created loading.tsx using Next.js convention to automatically wrap the analytics page in a Suspense boundary."
-    },
-    {
-      "id": "US-010",
-      "title": "Add Suspense boundary to journal page",
-      "description": "As a user navigating to the journal, I want to see a loading skeleton immediately so that the page feels responsive.",
-      "acceptanceCriteria": [
-        "Create JournalSkeleton component in src/app/(protected)/journal/journal-skeleton.tsx",
-        "Skeleton matches journal layout with table/list placeholder rows",
-        "Uses Terminal design system styling",
-        "Wrap journal content in Suspense with JournalSkeleton fallback",
-        "Progressive loading visible when navigating to journal",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Created JournalSkeleton component in src/app/(protected)/journal/journal-skeleton.tsx with TradeRowSkeleton helper. Skeleton replicates the journal page structure: header (Trading Journal label + Trades heading + account info), tab bar (All Trades / Trash), search bar, filter panel (desktop), and table with header row + 8 skeleton trade rows. Created loading.tsx using Next.js convention to automatically wrap the journal page in a Suspense boundary."
-    },
-    {
-      "id": "US-011",
-      "title": "Parallelize marketData fetches with Promise.all",
-      "description": "As a user viewing trade replay, I want chart data to load faster so that I can start reviewing trades sooner.",
-      "acceptanceCriteria": [
-        "In src/server/api/routers/marketData.ts, identify sequential await calls for tradeBars and postExitBars",
-        "Refactor to use Promise.all when both time ranges are known upfront",
-        "Ensure error handling works correctly with parallel fetches",
-        "Data fetch time reduced (verify with console.time or similar)",
-        "No functional regression - charts display correct data",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": "Refactored analyzePriceAction to fire tradeBars and postExitBars fetches in parallel using Promise.all. Both time ranges are known upfront from input params. When exitTime/exitPrice are provided, postExitBars fetch starts immediately alongside tradeBars instead of waiting sequentially. Null postExitBarsFetch is handled gracefully in the Promise.all. No functional regression — same return shape and error handling."
-    },
-    {
-      "id": "US-012",
-      "title": "Add content-visibility to calendar heatmap",
-      "description": "As a user viewing the analytics calendar, I want faster initial render so that the page loads quickly.",
-      "acceptanceCriteria": [
-        "Add content-visibility: auto to day cells in src/components/analytics/calendar-heatmap.tsx",
-        "Add contain-intrinsic-size with appropriate dimensions for each cell",
-        "Verify no layout shift when cells render",
-        "Test scrolling performance is smooth",
-        "Calendar renders correctly with all days visible",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": "Added content-visibility: auto with contain-intrinsic-size: 12px 102px to week column divs in calendar-heatmap.tsx. Week columns (not individual cells) are the optimal target since the calendar scrolls horizontally — off-screen weeks on the left/right can be skipped by the browser. Dimensions: 12px width (cell size) × 102px height (7 cells × 12px + 6 gaps × 3px). Build passes."
-    },
-    {
-      "id": "US-013",
-      "title": "Add localStorage schema versioning to analytics-filter-store",
-      "description": "As a returning user, I want my saved filter presets to migrate gracefully when the app updates so that I don't lose my settings.",
-      "acceptanceCriteria": [
-        "Add SCHEMA_VERSION constant (start at 1) to src/stores/analytics-filter-store.ts",
-        "Include version field in persisted localStorage data",
-        "Add migration function that handles version upgrades",
-        "Clear/reset corrupted data gracefully with console warning",
-        "Test by manually editing localStorage to simulate old version",
-        "Existing users' filters continue to work after update",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": "Added SCHEMA_VERSION constant (starting at 1), version field to PersistedState, and migrateState() function that handles version upgrades. getItem now runs migration on load and gracefully resets corrupted data with console.warn. setItem stamps SCHEMA_VERSION on every write. Existing users' filters (v0, no version field) migrate seamlessly to v1."
-    },
-    {
-      "id": "US-014",
-      "title": "Fix biome-ignore in chat-interface scroll effect",
-      "description": "As a developer, I want proper effect dependencies so that we maintain code quality and prevent stale closure bugs.",
-      "acceptanceCriteria": [
-        "Review the useEffect with biome-ignore in src/app/(protected)/ai/_components/chat-interface.tsx",
-        "Refactor to use ref-based scroll approach instead of effect with suppressed dependencies",
-        "Remove the biome-ignore comment",
-        "Scroll behavior works correctly (auto-scrolls on new messages)",
-        "No linting warnings in the file",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": "Removed biome-ignore comment and useEffect with synthetic dependencies. Replaced with a scrollToBottom callback (useCallback + ref) called directly in handleSend (when user sends message) and sendMessage.onSuccess (when response arrives). Removed unused useEffect import and messageCount variable. No linting warnings in the file."
-    }
-  ]
+	"project": "EdgeJournal",
+	"branchName": "nicolasgomeztoua/cancun",
+	"description": "Performance optimization based on Vercel React best practices audit: bundle size reduction, waterfall elimination, and rendering improvements",
+	"userStories": [
+		{
+			"id": "US-001",
+			"title": "Configure optimizePackageImports for lucide-react",
+			"description": "As a user, I want faster page loads so that the app feels snappy and responsive.",
+			"acceptanceCriteria": [
+				"Add lucide-react to experimental.optimizePackageImports in next.config.ts",
+				"Verify build succeeds with the new configuration",
+				"Bundle size reduced (lucide-react no longer loads entire icon library)",
+				"All icons still render correctly throughout the app",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 1,
+			"passes": true,
+			"notes": "Added lucide-react to experimental.optimizePackageImports in next.config.js. Build confirms experiment is active. Bundle optimization applied across 103 files importing from lucide-react."
+		},
+		{
+			"id": "US-002",
+			"title": "Dynamic import AG Charts components",
+			"description": "As a user viewing analytics, I want the page shell to load quickly so that I can see the UI structure before charts render.",
+			"acceptanceCriteria": [
+				"Create ChartSkeleton component in src/components/analytics/chart-skeleton.tsx with Terminal design styling",
+				"Wrap EquityCurve component with next/dynamic and { ssr: false, loading: ChartSkeleton }",
+				"Wrap MonthlyChart component with next/dynamic and { ssr: false, loading: ChartSkeleton }",
+				"Wrap RMultipleChart component with next/dynamic and { ssr: false, loading: ChartSkeleton }",
+				"Wrap all other AG Charts components in analytics/ with next/dynamic",
+				"Charts load when their container is visible",
+				"No visual regression - charts display correctly after loading",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 2,
+			"passes": true,
+			"notes": "Created ChartSkeleton component in src/components/analytics/chart-skeleton.tsx. Wrapped EquityCurve, MonthlyChart, RMultipleChart, SymbolDistributionChart, SymbolTrendChart, and PositionSizeChart with next/dynamic and { ssr: false, loading: ChartSkeleton }. Components are now code-split from the main analytics page bundle."
+		},
+		{
+			"id": "US-003",
+			"title": "Dynamic import TipTap editor",
+			"description": "As a user viewing the daily journal, I want the page to load quickly so that I can see my entries before the editor initializes.",
+			"acceptanceCriteria": [
+				"Create EditorSkeleton component in src/components/daily-journal/editor-skeleton.tsx matching editor dimensions",
+				"Wrap JournalEditor in next/dynamic with { ssr: false, loading: EditorSkeleton }",
+				"Update daily-journal page to use the dynamically imported editor",
+				"Editor initializes without flicker after skeleton",
+				"All editor features work correctly after load (formatting, images, etc.)",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 3,
+			"passes": true,
+			"notes": "Created EditorSkeleton component in src/components/daily-journal/editor-skeleton.tsx matching the editor layout (toolbar + content area + status indicator). Wrapped JournalEditor with next/dynamic and { ssr: false, loading: EditorSkeleton } in the daily-journal page. TipTap editor and all its extensions are now code-split from the main page bundle."
+		},
+		{
+			"id": "US-004",
+			"title": "Dynamic import Lightweight-charts",
+			"description": "As a user viewing trade details, I want the trade info to load quickly so that I can see trade data before charts render.",
+			"acceptanceCriteria": [
+				"Create TradingChartSkeleton component in src/components/trade-detail/trading-chart-skeleton.tsx",
+				"Wrap TradingViewChart in next/dynamic with { ssr: false, loading: TradingChartSkeleton }",
+				"Wrap ReplayChart in next/dynamic with { ssr: false, loading: TradingChartSkeleton }",
+				"Charts load when user navigates to chart tab or replay section",
+				"No visual regression - charts display correctly after loading",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 4,
+			"passes": true,
+			"notes": "Created TradingChartSkeleton component in src/components/trade-detail/trading-chart-skeleton.tsx. Wrapped TradingViewChart with next/dynamic in content-panel.tsx and ReplayChart with next/dynamic in trade-replay.tsx. Both use { ssr: false, loading: TradingChartSkeleton }. Lightweight-charts library is now code-split from the main trade detail page bundle."
+		},
+		{
+			"id": "US-005",
+			"title": "Create getBatchByDates endpoint for daily journal",
+			"description": "As a developer, I want a batch endpoint for fetching multiple journal dates so that the dashboard can make a single request instead of multiple sequential ones.",
+			"acceptanceCriteria": [
+				"Add getBatchByDates procedure to src/server/api/routers/dailyJournal.ts",
+				"Accepts array of date strings and accountId",
+				"Returns array of journal entries matching the requested dates",
+				"Uses protectedProcedure for authentication",
+				"Validates user ownership of requested entries",
+				"Efficient single database query using inArray",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 5,
+			"passes": true,
+			"notes": "Added getBatchByDates procedure to dailyJournal router. Accepts array of date strings, normalizes to midnight UTC, queries using inArray for efficient single-query batch fetch. Uses protectedProcedure for auth and filters by ctx.user.id for ownership validation. Returns empty array for empty input."
+		},
+		{
+			"id": "US-006",
+			"title": "Integration tests for getBatchByDates endpoint",
+			"description": "As a developer, I want integration tests for the batch journal endpoint so that we can verify it works correctly.",
+			"acceptanceCriteria": [
+				"Add tests to tests/integration/daily-journal.test.ts or create new file",
+				"Test returns correct entries for multiple dates",
+				"Test returns empty array for dates with no entries",
+				"Test validates user ownership (cannot fetch other users' entries)",
+				"Test handles empty dates array gracefully",
+				"Uses setupTrader() fixture",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 6,
+			"passes": true,
+			"notes": "Created tests/integration/daily-journal-batch.test.ts with 11 tests covering: empty dates array, dates with no entries, batch fetch of multiple dates, partial matches, single date fetch, full ISO string handling, date normalization to midnight UTC, user ownership isolation (cannot see other users' entries), unauthenticated request rejection, and read-only behavior (does not auto-create journals). All tests pass."
+		},
+		{
+			"id": "US-007",
+			"title": "Update JournalExcerptsWidget to use batch endpoint",
+			"description": "As a user viewing the dashboard, I want journal excerpts to load with a single request so that the widget loads faster.",
+			"acceptanceCriteria": [
+				"Update JournalExcerptsWidget to use getBatchByDates instead of 3 separate getByDate calls",
+				"Pass array of [today, yesterday, dayBeforeYesterday] dates",
+				"Transform batch response to match existing UI expectations",
+				"Single network request visible in DevTools instead of 3",
+				"No visual regression - widget displays same content",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 7,
+			"passes": true,
+			"notes": "Replaced 3 separate getByDate useQuery hooks with a single getBatchByDates call. Uses useMemo to extract date strings from adjacency data, passes to batch endpoint, and builds a Map lookup by date for efficient content matching. Used getUTCDateString utility for safe UTC midnight date extraction. Single network request instead of 3."
+		},
+		{
+			"id": "US-008",
+			"title": "Add Suspense boundary to dashboard page",
+			"description": "As a user navigating to the dashboard, I want to see a loading skeleton immediately so that the page feels responsive.",
+			"acceptanceCriteria": [
+				"Create DashboardSkeleton component in src/app/(protected)/dashboard/dashboard-skeleton.tsx",
+				"Skeleton matches dashboard grid layout with placeholder cards",
+				"Uses Terminal design system (bg-card, border-white/5, animate-pulse)",
+				"Wrap dashboard content in Suspense with DashboardSkeleton fallback",
+				"Progressive loading visible when navigating to dashboard",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 8,
+			"passes": true,
+			"notes": "Created DashboardSkeleton component in src/app/(protected)/dashboard/dashboard-skeleton.tsx matching the CommandCenterGrid layout with WidgetCardSkeleton cards (terminal chrome header with traffic light dots + skeleton content). Created loading.tsx using Next.js convention to automatically wrap the dashboard page in a Suspense boundary. Grid matches 9-widget layout: TodayPerformance (md), JournalStatus (sm), PnLCalendar (lg), AnalyticsSnapshot (sm), JournalStreak (sm), StrategiesSnapshot (sm), RuleCompliance (sm), TradesSnapshot (sm), JournalExcerpts (wide)."
+		},
+		{
+			"id": "US-009",
+			"title": "Add Suspense boundary to analytics page",
+			"description": "As a user navigating to analytics, I want to see a loading skeleton immediately so that I know the page is loading.",
+			"acceptanceCriteria": [
+				"Create AnalyticsSkeleton component in src/app/(protected)/analytics/analytics-skeleton.tsx",
+				"Skeleton matches analytics layout with tab structure and chart placeholders",
+				"Uses Terminal design system styling",
+				"Wrap analytics content in Suspense with AnalyticsSkeleton fallback",
+				"Progressive loading visible when navigating to analytics",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 9,
+			"passes": true,
+			"notes": "Created AnalyticsSkeleton component in src/app/(protected)/analytics/analytics-skeleton.tsx with ChartTerminalSkeleton helper matching the ChartTerminal component styling (terminal chrome header with traffic light dots). Skeleton replicates the analytics page structure: header with export button, query bar, tab bar (5 tabs), and Overview tab content (8 metric cards in 4-column grid + 3 chart terminals). Created loading.tsx using Next.js convention to automatically wrap the analytics page in a Suspense boundary."
+		},
+		{
+			"id": "US-010",
+			"title": "Add Suspense boundary to journal page",
+			"description": "As a user navigating to the journal, I want to see a loading skeleton immediately so that the page feels responsive.",
+			"acceptanceCriteria": [
+				"Create JournalSkeleton component in src/app/(protected)/journal/journal-skeleton.tsx",
+				"Skeleton matches journal layout with table/list placeholder rows",
+				"Uses Terminal design system styling",
+				"Wrap journal content in Suspense with JournalSkeleton fallback",
+				"Progressive loading visible when navigating to journal",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 10,
+			"passes": true,
+			"notes": "Created JournalSkeleton component in src/app/(protected)/journal/journal-skeleton.tsx with TradeRowSkeleton helper. Skeleton replicates the journal page structure: header (Trading Journal label + Trades heading + account info), tab bar (All Trades / Trash), search bar, filter panel (desktop), and table with header row + 8 skeleton trade rows. Created loading.tsx using Next.js convention to automatically wrap the journal page in a Suspense boundary."
+		},
+		{
+			"id": "US-011",
+			"title": "Parallelize marketData fetches with Promise.all",
+			"description": "As a user viewing trade replay, I want chart data to load faster so that I can start reviewing trades sooner.",
+			"acceptanceCriteria": [
+				"In src/server/api/routers/marketData.ts, identify sequential await calls for tradeBars and postExitBars",
+				"Refactor to use Promise.all when both time ranges are known upfront",
+				"Ensure error handling works correctly with parallel fetches",
+				"Data fetch time reduced (verify with console.time or similar)",
+				"No functional regression - charts display correct data",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 11,
+			"passes": true,
+			"notes": "Refactored analyzePriceAction to fire tradeBars and postExitBars fetches in parallel using Promise.all. Both time ranges are known upfront from input params. When exitTime/exitPrice are provided, postExitBars fetch starts immediately alongside tradeBars instead of waiting sequentially. Null postExitBarsFetch is handled gracefully in the Promise.all. No functional regression — same return shape and error handling."
+		},
+		{
+			"id": "US-012",
+			"title": "Add content-visibility to calendar heatmap",
+			"description": "As a user viewing the analytics calendar, I want faster initial render so that the page loads quickly.",
+			"acceptanceCriteria": [
+				"Add content-visibility: auto to day cells in src/components/analytics/calendar-heatmap.tsx",
+				"Add contain-intrinsic-size with appropriate dimensions for each cell",
+				"Verify no layout shift when cells render",
+				"Test scrolling performance is smooth",
+				"Calendar renders correctly with all days visible",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 12,
+			"passes": true,
+			"notes": "Added content-visibility: auto with contain-intrinsic-size: 12px 102px to week column divs in calendar-heatmap.tsx. Week columns (not individual cells) are the optimal target since the calendar scrolls horizontally — off-screen weeks on the left/right can be skipped by the browser. Dimensions: 12px width (cell size) × 102px height (7 cells × 12px + 6 gaps × 3px). Build passes."
+		},
+		{
+			"id": "US-013",
+			"title": "Add localStorage schema versioning to analytics-filter-store",
+			"description": "As a returning user, I want my saved filter presets to migrate gracefully when the app updates so that I don't lose my settings.",
+			"acceptanceCriteria": [
+				"Add SCHEMA_VERSION constant (start at 1) to src/stores/analytics-filter-store.ts",
+				"Include version field in persisted localStorage data",
+				"Add migration function that handles version upgrades",
+				"Clear/reset corrupted data gracefully with console warning",
+				"Test by manually editing localStorage to simulate old version",
+				"Existing users' filters continue to work after update",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 13,
+			"passes": true,
+			"notes": "Added SCHEMA_VERSION constant (starting at 1), version field to PersistedState, and migrateState() function that handles version upgrades. getItem now runs migration on load and gracefully resets corrupted data with console.warn. setItem stamps SCHEMA_VERSION on every write. Existing users' filters (v0, no version field) migrate seamlessly to v1."
+		},
+		{
+			"id": "US-014",
+			"title": "Fix biome-ignore in chat-interface scroll effect",
+			"description": "As a developer, I want proper effect dependencies so that we maintain code quality and prevent stale closure bugs.",
+			"acceptanceCriteria": [
+				"Review the useEffect with biome-ignore in src/app/(protected)/ai/_components/chat-interface.tsx",
+				"Refactor to use ref-based scroll approach instead of effect with suppressed dependencies",
+				"Remove the biome-ignore comment",
+				"Scroll behavior works correctly (auto-scrolls on new messages)",
+				"No linting warnings in the file",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 14,
+			"passes": true,
+			"notes": "Removed biome-ignore comment and useEffect with synthetic dependencies. Replaced with a scrollToBottom callback (useCallback + ref) called directly in handleSend (when user sends message) and sendMessage.onSuccess (when response arrives). Removed unused useEffect import and messageCount variable. No linting warnings in the file."
+		}
+	]
 }
