@@ -108,3 +108,32 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - sendReportEmail still uses downloadUrl param name even though it's now a viewer URL — will be cleaned up in US-009 when React Email replaces the template
   - Biome requires compact ternaries — don't split across 3 lines
 ---
+
+## 2026-02-13 - US-005 Update tRPC Endpoints
+- Added getReportContent query to ai.ts: returns id, title, content, dataArtifacts, status, createdAt, completedAt, model, tokensUsed, chartsGenerated, prompt
+- Validates user ownership via eq(aiReports.userId, ctx.user.id), throws ERR_REPORT_NOT_FOUND if not found/not owned
+- Updated listReports to map reports with hasContent boolean flag (content != null && content.length > 0)
+- getReport and getReportStatus already correct — pdfUrl/pdfKey columns removed in US-001, content/dataArtifacts auto-included via findFirst without column selection
+- Files changed: src/server/api/routers/ai.ts
+- **Learnings for future iterations:**
+  - Drizzle findFirst without `columns` option returns ALL columns — no need to explicitly add new columns to existing queries that don't use column selection
+  - getReportStatus uses explicit `columns` selection — new columns must be explicitly added there if needed
+  - hasContent flag uses != null check (not !== null) to handle both null and undefined
+---
+
+## 2026-02-13 - US-006 Integration Tests for Report Viewer Endpoints
+- Created tests/integration/report-viewer.test.ts with 10 tests across 3 describe blocks
+- Test coverage:
+  - getReportContent: returns content+dataArtifacts for completed report, response shape validation, null content for queued report, 404 for non-existent report, ownership rejection
+  - listReports hasContent: true for reports with content, false for reports without
+  - getReport content: includes content field, no pdfUrl/pdfKey fields, includes dataArtifacts
+- Used createTestUser (not setupTrader) since report tests only need users, not accounts/trades
+- Created helper function createCompletedReport() that uses startReport + direct DB update to simulate completed reports with content and dataArtifacts
+- Mocked same dependencies as ai.test.ts: OpenRouter client, context builders, Trigger.dev task
+- Files changed: tests/integration/report-viewer.test.ts (new)
+- **Learnings for future iterations:**
+  - To test report endpoints with content, you need to startReport() first (creates the conversation + report) then update the report directly via DB to set content, dataArtifacts, status: "complete"
+  - Biome enforces single-line imports when there's only one import — don't use multi-line for single imports
+  - Biome prefers single quotes for strings containing double quotes (avoids escaping)
+  - Docker/OrbStack must be running for integration tests (Testcontainers)
+---

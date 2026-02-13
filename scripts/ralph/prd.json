@@ -113,8 +113,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added getReportContent query returning id, title, content, dataArtifacts, status, createdAt, completedAt, model, tokensUsed, chartsGenerated, prompt with user ownership validation. Updated listReports to include hasContent boolean flag. getReport and getReportStatus already correct — pdfUrl/pdfKey columns were removed in US-001 schema migration."
     },
     {
       "id": "US-006",
@@ -132,8 +132,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/report-viewer.test.ts with 10 tests across 3 describe blocks: getReportContent (5 tests: content+dataArtifacts, response shape, null content for queued, 404 for non-existent, ownership rejection), listReports hasContent flag (2 tests: true for reports with content, false for reports without), getReport content field (3 tests: includes content, no pdfUrl/pdfKey, includes dataArtifacts). Uses createTestUser + direct DB update to simulate completed reports with content. Docker required for test execution (Testcontainers). Biome check and build pass."
     },
     {
       "id": "US-007",
