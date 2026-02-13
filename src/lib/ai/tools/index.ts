@@ -10,6 +10,10 @@ import {
 } from "./get-market-data";
 import { executeRunPython, runPythonToolDefinition } from "./run-python";
 import { executeRunQuery, runQueryToolDefinition } from "./run-query";
+import {
+	executeStoreReportData,
+	storeReportDataToolDefinition,
+} from "./store-report-data";
 
 type Db = typeof DbInstance;
 
@@ -18,8 +22,7 @@ type Db = typeof DbInstance;
 // =============================================================================
 
 /**
- * All AI tool definitions in OpenAI function-calling format.
- * Pass this array to the OpenRouter API as `tools` parameter.
+ * Base AI tool definitions available in all modes (chat + report).
  */
 export const AI_TOOLS: ToolDefinition[] = [
 	runQueryToolDefinition,
@@ -28,6 +31,21 @@ export const AI_TOOLS: ToolDefinition[] = [
 	runPythonToolDefinition,
 ];
 
+/**
+ * Report-only tools (store_report_data for MDX component data).
+ */
+export const AI_REPORT_TOOLS: ToolDefinition[] = [
+	...AI_TOOLS,
+	storeReportDataToolDefinition,
+];
+
+/**
+ * Get the appropriate tools array based on mode.
+ */
+export function getToolsForMode(mode: "chat" | "report"): ToolDefinition[] {
+	return mode === "report" ? AI_REPORT_TOOLS : AI_TOOLS;
+}
+
 // =============================================================================
 // TOOL EXECUTOR
 // =============================================================================
@@ -35,6 +53,7 @@ export const AI_TOOLS: ToolDefinition[] = [
 interface ToolContext {
 	userId: string;
 	db?: Db;
+	dataStore?: Map<string, unknown>;
 }
 
 /**
@@ -104,10 +123,35 @@ export async function executeTool(
 			return executeRunPython(code, dataContext);
 		}
 
+		case "store_report_data": {
+			if (!context.dataStore) {
+				return {
+					success: false,
+					error:
+						"Data store not available. store_report_data is only available in report mode.",
+				};
+			}
+			const refId = args.refId as string;
+			const description = args.description as string;
+			const data = args.data;
+			if (!refId || !description || data === undefined) {
+				return {
+					success: false,
+					error: "Missing required parameters: refId, description, data",
+				};
+			}
+			return executeStoreReportData(
+				refId,
+				description,
+				data,
+				context.dataStore,
+			);
+		}
+
 		default:
 			return {
 				success: false,
-				error: `Unknown tool "${toolName}". Available tools: run_query, call_analytics, get_market_data, run_python`,
+				error: `Unknown tool "${toolName}". Available tools: run_query, call_analytics, get_market_data, run_python, store_report_data`,
 			};
 	}
 }

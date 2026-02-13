@@ -58,3 +58,16 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - Schema column types auto-infer TypeScript types via $inferSelect/$inferInsert
   - jsonb column needs $type<> for TypeScript typing: jsonb('data_artifacts').$type<Record<string, unknown>>()
 ---
+
+## 2026-02-13 - US-002 AI Tool store_report_data
+- Created src/lib/ai/tools/store-report-data.ts with tool definition + executor
+- Updated src/lib/ai/tools/index.ts:
+  - Added AI_REPORT_TOOLS array (base tools + store_report_data)
+  - Added getToolsForMode() helper for mode-based tool selection
+  - Extended ToolContext with optional dataStore Map<string, unknown>
+  - Added store_report_data case to executeTool switch
+- **Learnings for future iterations:**
+  - Tool definitions follow OpenAI function-calling format: { type: "function", function: { name, description, parameters } }
+  - ToolContext is the shared context passed to all tool executors — extend it for new needs
+  - getToolsForMode() is the API for callers (trigger task, tRPC sendMessage) to get mode-specific tools
+---
