@@ -74,8 +74,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added MDX_COMPONENT_CATALOG const with full catalog of 8 chart components, 5 display components, 4 report-specific components. Includes data shapes, usage examples, and 2 complete multi-step flow examples. Catalog only included in report mode via conditional spread in buildSystemPrompt. Updated REPORT_MODE_INSTRUCTIONS to prioritize MDX components over run_python."
     },
     {
       "id": "US-004",
@@ -96,8 +96,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced PDF pipeline with MDX content + data artifacts storage. Created dataStore Map passed to executeTool context. Used getToolsForMode('report') for report-specific tools including store_report_data. Both completion paths (normal + fallback) save content and dataArtifacts to aiReports. Removed generateAndUploadPdf, extractChartUrls, extractCodeArtifacts. Removed generateReportPdf import. Email notification now sends viewer URL. Progress stages skip generating_pdf/uploading."
     },
     {
       "id": "US-005",

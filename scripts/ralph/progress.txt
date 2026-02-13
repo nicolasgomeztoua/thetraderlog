@@ -71,3 +71,40 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - ToolContext is the shared context passed to all tool executors — extend it for new needs
   - getToolsForMode() is the API for callers (trigger task, tRPC sendMessage) to get mode-specific tools
 ---
+
+## 2026-02-13 - US-003 AI System Prompt MDX Catalog
+- Added MDX_COMPONENT_CATALOG const to src/lib/ai/prompts/trading-analyst.ts
+- Catalog documents 17 components across 3 categories:
+  - Chart components (8): EquityCurve, MonthlyChart, SymbolDistributionChart, DayOfWeekChart, HourHeatmap, SessionChart, RMultipleChart, MonteCarloChart
+  - Display components (5): CalendarHeatmap, DrawdownTable, SymbolTable, MetricCard, MetricGrid
+  - Report-specific (4): Callout, DataTable, ChartImage (+ MetricGrid as wrapper)
+- Each component documented with: JSX usage, dataRef pattern, full data shape table
+- Includes 2 complete examples showing full flow: call_analytics → store_report_data → MDX component usage
+- Updated REPORT_MODE_INSTRUCTIONS to prioritize MDX components over run_python
+- MDX_COMPONENT_CATALOG conditionally included only in report mode via spread in buildSystemPrompt sections array
+- **Learnings for future iterations:**
+  - buildSystemPrompt uses a sections array joined with \n\n — add mode-specific sections via conditional spread
+  - RMultipleChart has a unique data shape: { buckets: [...], stats: {...} } — not a flat array
+  - MonteCarloChart takes a single result object, not an array
+  - MetricCard uses inline props (no dataRef) — tooltip is required with { what, why, benchmark }
+---
+
+## 2026-02-13 - US-004 Update Trigger.dev Task
+- Replaced PDF generation pipeline with MDX content + data artifacts storage
+- Changes to src/trigger/generate-ai-report.ts:
+  - Created dataStore Map<string, unknown> at start of task run
+  - Imported and used getToolsForMode('report') instead of AI_TOOLS for report-specific tools
+  - Passed dataStore to executeTool context so store_report_data can populate it
+  - Both normal completion and fallback paths now save content + dataArtifacts to aiReports
+  - Removed generateAndUploadPdf function and all PDF-related logic
+  - Removed extractChartUrls and extractCodeArtifacts helper functions
+  - Removed generateReportPdf import from report-pdf.ts
+  - Removed ERR_AI_PDF_FAILED from error mapping (no longer relevant)
+  - Created sendReportNotification helper (sends email with viewer URL)
+  - Progress stages now go: queued → building_context → analyzing → complete (no more generating_pdf/uploading)
+  - chartsGenerated now tracks dataStore.size (number of data artifacts)
+- **Learnings for future iterations:**
+  - dataStore Map is the bridge between store_report_data tool calls and final persistence — Object.fromEntries(dataStore) gives the JSONB-ready object
+  - sendReportEmail still uses downloadUrl param name even though it's now a viewer URL — will be cleaned up in US-009 when React Email replaces the template
+  - Biome requires compact ternaries — don't split across 3 lines
+---
