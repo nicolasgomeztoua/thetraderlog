@@ -15,6 +15,9 @@ Started: Fri Feb 13 21:03:05 WET 2026
 - MetricCard is inline props (no dataRef needed) — can pass through directly in MDX
 - React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
 - Email base layout lives at src/emails/components/base-layout.tsx — all transactional emails wrap in BaseLayout
+- MDX component library lives in src/components/mdx/ — mdxComponents map from components.tsx for next-mdx-remote
+- MDX wrappers use useReportData(dataRef) hook from provider.tsx to get data from ReportDataProvider context
+- Analytics chart components import from barrel @/components/analytics — all 11 chart wrappers available
 
 ---
 
@@ -187,4 +190,29 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - Biome enforces alphabetical ordering of imports — @/emails/report-complete comes before @/env
   - renderReportCompleteEmail is async (React Email render() returns Promise<string>) — must await it
   - React Email handles HTML escaping internally — no need for manual escapeHtml when using React components
+---
+
+## 2026-02-13 - US-010 MDX Report Component Library
+- Created src/components/mdx/ directory with 7 files:
+  - provider.tsx: ReportDataProvider context + useReportData(refId) hook
+  - chart-wrappers.tsx: 11 wrapper components (MdxEquityCurve, MdxMonthlyChart, MdxSymbolDistributionChart, MdxDayOfWeekChart, MdxHourHeatmap, MdxSessionChart, MdxRMultipleChart, MdxMonteCarloChart, MdxCalendarHeatmap, MdxDrawdownTable, MdxSymbolTable)
+  - components.tsx: mdxComponents map exporting all 17 components for next-mdx-remote
+  - metric-grid.tsx: responsive grid (grid-cols-2 sm:3 lg:4 gap-2)
+  - callout.tsx: note/tip/warning/important with Terminal-styled borders, icons, colors
+  - data-table.tsx: auto-detects numeric columns for right-alignment, P&L coloring via formatCurrency
+  - chart-image.tsx: clickable lightbox with zoom-in/zoom-out cursor states
+- MetricCard passed through directly from @/components/analytics (inline props, no dataRef needed)
+- All chart wrappers use DataFallback component for missing data: "[ComponentName: data not available]"
+- RMultipleChart wrapper handles unique { buckets, stats } data shape (not a flat array)
+- MonteCarloChart wrapper handles single result object (not an array)
+- Used `as never` type assertions in mdxComponents map to satisfy Record<string, ComponentType> typing
+- Files changed: 7 new files in src/components/mdx/
+- **Learnings for future iterations:**
+  - mdx/types module requires next-mdx-remote to be installed — use Record<string, ComponentType> until then
+  - Biome enforces sorted Tailwind classes — use its auto-fix with `--write`
+  - Biome flags `<img>` as lint/performance/noImgElement — suppress with biome-ignore for external URL images
+  - Biome prefers `<button>` over `<div role="button">` — use useSemanticElements
+  - `data[0]` in strict TS needs nullish coalescing even after length check — use `data[0] ?? {}`
+  - Analytics components import from barrel @/components/analytics — all 11 chart components available there
+  - SessionChart, HourHeatmap, CalendarHeatmap use useSettingsStore internally — MDX wrappers just pass data through, store handles timezone
 ---
