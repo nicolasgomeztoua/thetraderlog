@@ -216,3 +216,24 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - Analytics components import from barrel @/components/analytics — all 11 chart components available there
   - SessionChart, HourHeatmap, CalendarHeatmap use useSettingsStore internally — MDX wrappers just pass data through, store handles timezone
 ---
+
+## 2026-02-13 - US-011 Report Viewer Page
+- Created /ai/reports/[reportId] page with 3 files:
+  - page.tsx: Server component that fetches report via tRPC getReportContent, handles generating/failed/complete states, renders header with back button, title, model, date, action buttons
+  - _components/report-viewer-content.tsx: Client component that serializes MDX via next-mdx-remote/serialize, renders with MDXRemote client component inside ReportDataProvider, falls back to react-markdown on MDX failure
+  - _components/copy-link-button.tsx: Client component for copy-to-clipboard link functionality
+- Installed next-mdx-remote@6.0.0
+- Architecture: Server page fetches data → passes to client component → client serializes MDX on mount → renders with custom components from mdxComponents map
+- Table of Contents: extracts headings from markdown with regex, renders sticky sidebar on xl+ viewports, uses IntersectionObserver for active heading tracking
+- Error handling: MDX compile failure falls back to react-markdown, notFound() for missing reports, progress indicator for generating reports
+- Header: back link to /ai, report title, model badge, completion date, Download PDF placeholder (disabled, for US-012), Copy Link button
+- Files changed: package.json, bun.lock, 3 new page/component files
+- **Learnings for future iterations:**
+  - next-mdx-remote v6 has separate RSC (next-mdx-remote/rsc) and client (next-mdx-remote) APIs — use client API when MDX components need React context
+  - MDXRemote client requires pre-serialized source via serialize() — can't take raw MDX string directly
+  - serialize() is async and should be done client-side when components need context (can't wrap RSC MDXRemote in client context provider)
+  - Server page params in Next.js 15 are Promise — must await: `const { reportId } = await params`
+  - next-mdx-remote/serialize accepts remarkPlugins in mdxOptions — pass remark-gfm for GFM tables
+  - Biome auto-fix (`--write`) handles formatting issues like multi-line→single-line JSX
+  - notFound() from next/navigation triggers the closest not-found.tsx boundary
+---

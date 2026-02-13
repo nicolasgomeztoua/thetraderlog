@@ -241,8 +241,8 @@
         "Verify in browser"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created report viewer page at /ai/reports/[reportId] with server component page.tsx, client components for MDX rendering (report-viewer-content.tsx) and copy link (copy-link-button.tsx). Installed next-mdx-remote@6.0.0. Server page fetches report via tRPC getReportContent, handles generating/failed/complete states. Client component serializes MDX on mount via next-mdx-remote/serialize with remark-gfm, falls back to react-markdown on MDX failure. Includes ToC sidebar (xl+ only) with IntersectionObserver active heading tracking, header bar with back button/title/model/date/actions. Terminal design styling throughout. Biome check and build pass."
     },
     {
       "id": "US-012",
