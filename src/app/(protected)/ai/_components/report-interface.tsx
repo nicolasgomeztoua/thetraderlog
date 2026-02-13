@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	ArrowRight,
-	FileText,
-	Loader2,
-	RefreshCw,
-	Send,
-} from "lucide-react";
+import { ArrowRight, FileText, Loader2, RefreshCw, Send } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,8 +31,6 @@ const PROGRESS_STAGE_LABELS: Record<string, string> = {
 	queued: "Waiting in queue...",
 	building_context: "Loading your trading profile...",
 	analyzing: "Analyzing your data...",
-	generating_pdf: "Compiling report...",
-	uploading: "Finalizing...",
 	complete: "Complete",
 	failed: "Failed",
 };
@@ -62,12 +54,8 @@ function getProgressWidth(
 			return 15;
 		case "analyzing": {
 			const round = currentRound ?? 0;
-			return 20 + Math.min(round / totalRounds, 1) * 50;
+			return 20 + Math.min(round / totalRounds, 1) * 70;
 		}
-		case "generating_pdf":
-			return 80;
-		case "uploading":
-			return 95;
 		case "complete":
 			return 100;
 		default:
@@ -454,10 +442,6 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 															: (PROGRESS_STAGE_LABELS[
 																	report.progressStage ?? "queued"
 																] ?? "Processing")}
-														{report.progressStage === "generating_pdf" &&
-															report.chartsGenerated != null &&
-															report.chartsGenerated > 0 &&
-															` — ${report.chartsGenerated.toString()} charts`}
 													</span>
 												</div>
 												<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-accent/10">
