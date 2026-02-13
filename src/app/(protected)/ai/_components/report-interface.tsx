@@ -431,10 +431,16 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 
 										{/* Inline progress for active reports */}
 										{isActive && (
-											<div className="mt-2">
+											<div
+												className="mt-2"
+												data-testid={`report-progress-${report.id}`}
+											>
 												<div className="flex items-center gap-2">
 													<Loader2 className="size-3 animate-spin text-accent" />
-													<span className="font-mono text-[11px] text-accent">
+													<span
+														className="font-mono text-[11px] text-accent"
+														data-testid={`report-progress-stage-${report.id}`}
+													>
 														{report.progressStage === "analyzing" &&
 														report.progressDetail
 															? (TOOL_DETAIL_LABELS[report.progressDetail] ??
@@ -444,7 +450,10 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 																] ?? "Processing")}
 													</span>
 												</div>
-												<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-accent/10">
+												<div
+													className="mt-1.5 h-1 overflow-hidden rounded-full bg-accent/10"
+													data-testid={`report-progress-bar-${report.id}`}
+												>
 													<div
 														className="h-full rounded-full bg-accent/50 transition-all duration-700"
 														style={{
