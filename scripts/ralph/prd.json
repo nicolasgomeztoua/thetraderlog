@@ -303,8 +303,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Deleted src/lib/ai/report-pdf.ts (765 lines of @react-pdf/renderer pipeline + S3 upload logic). Uninstalled @react-pdf/renderer. Removed ERR_AI_PDF_FAILED from errors.ts. No remaining imports of generateReportPdf anywhere in codebase. Updated AGENTS.md in src/server/db/ to reflect MDX-based report system instead of PDF. generating_pdf/uploading progress stages and PDF error handling in generate-ai-report.ts were already removed in US-004/US-013. Biome check and build pass."
     },
     {
       "id": "US-015",

@@ -285,3 +285,20 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - US-001 already handled most of the View Report link migration — this story was mostly about cleaning up progress stage labels/percentages
   - Progress bar scale math: `20 + Math.min(round/totalRounds, 1) * 70` gives 20% to 90% range for analyzing stage
 ---
+
+## 2026-02-13 - US-014 Remove Old PDF Generation Code
+- Deleted src/lib/ai/report-pdf.ts (765 lines of @react-pdf/renderer pipeline + S3 upload)
+- Uninstalled @react-pdf/renderer dependency
+- Removed ERR_AI_PDF_FAILED from src/lib/constants/errors.ts
+- Updated src/server/db/AGENTS.md to reflect MDX-based report system instead of PDF references
+- Verified no remaining imports of generateReportPdf or report-pdf anywhere in src/
+- Previous stories (US-004, US-013) had already cleaned up:
+  - generateReportPdf import in generate-ai-report.ts
+  - ERR_AI_PDF_FAILED error mapping in generate-ai-report.ts
+  - generating_pdf/uploading progress stages in report-interface.tsx
+- Files changed: src/lib/ai/report-pdf.ts (deleted), package.json, bun.lock, src/lib/constants/errors.ts, src/server/db/AGENTS.md
+- **Learnings for future iterations:**
+  - When removing a feature, prior stories in the same PRD may have already cleaned up most references — always grep first to avoid no-op changes
+  - S3 upload logic was self-contained in report-pdf.ts — no shared S3 utils needed cleanup
+  - AGENTS.md files should be updated when the architecture they describe changes
+---
