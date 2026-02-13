@@ -13,6 +13,8 @@ Started: Fri Feb 13 21:03:05 WET 2026
 - New progress stages (post-MDX): queued → building_context → analyzing → complete (remove generating_pdf, uploading)
 - Schema uses createTable() helper, aiReports has pdfUrl/pdfKey columns to replace with content/dataArtifacts
 - MetricCard is inline props (no dataRef needed) — can pass through directly in MDX
+- React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
+- Email base layout lives at src/emails/components/base-layout.tsx — all transactional emails wrap in BaseLayout
 
 ---
 
@@ -136,4 +138,35 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - Biome enforces single-line imports when there's only one import — don't use multi-line for single imports
   - Biome prefers single quotes for strings containing double quotes (avoids escaping)
   - Docker/OrbStack must be running for integration tests (Testcontainers)
+---
+
+## 2026-02-13 - US-007 React Email Setup
+- Installed @react-email/components@1.0.7
+- Created src/emails/components/base-layout.tsx with Terminal-themed BaseLayout component
+- Component uses: Html, Head, Body, Container, Section, Text, Hr, Preview from @react-email/components
+- Props: { preview: string, children: React.ReactNode }
+- Styling: dark bg (#050505), monospace fonts (Courier New fallback), chartreuse header border (#d4ff00)
+- Files changed: package.json, bun.lock, src/emails/components/base-layout.tsx (new)
+- **Learnings for future iterations:**
+  - @react-email/components re-exports from individual packages (@react-email/body, @react-email/html, etc.)
+  - React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
+  - Import React types with `import type * as React from "react"` for CSSProperties (verbatimModuleSyntax requires type import)
+---
+
+## 2026-02-13 - US-008 Report Completion Email Template
+- Created src/emails/report-complete.tsx using BaseLayout wrapper
+- Component: ReportCompleteEmail with props { reportTitle, reportUrl, metadata? }
+  - Preview text: "Your AI analysis report is ready — view it now"
+  - Report title displayed in ice blue (#00d4ff) monospace inside dark card
+  - VIEW REPORT Button component with chartreuse bg (#d4ff00), dark text
+  - Subtitle: "Your report is permanently available in EdgeJournal"
+  - Optional metadata section (generationTime, chartsGenerated) in dark card
+  - Fallback link text with reportUrl in ice blue
+- Exported async renderReportCompleteEmail() that returns HTML string via render() from @react-email/components
+- Files changed: src/emails/report-complete.tsx (new)
+- **Learnings for future iterations:**
+  - Biome enforces alphabetical import ordering within named imports — use `Button, Link, render, Section, Text` not grouped by type
+  - React Email's render() is async (returns Promise<string>) — renderReportCompleteEmail must be async
+  - Button component from @react-email/components handles email-safe CTA buttons with href prop
+  - Link component from @react-email/components handles email-safe anchor links
 ---
