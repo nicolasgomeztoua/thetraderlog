@@ -122,6 +122,10 @@ async function sendReportNotification(
 	reportId: string,
 	title: string,
 	userId: string,
+	metadata?: {
+		generationTime?: string;
+		chartsGenerated?: number;
+	},
 ): Promise<void> {
 	try {
 		const user = await db.query.users.findFirst({
@@ -133,7 +137,8 @@ async function sendReportNotification(
 			await sendReportEmail({
 				to: user.email,
 				reportTitle: title,
-				downloadUrl: reportUrl,
+				reportUrl,
+				metadata,
 			});
 		}
 	} catch {
@@ -378,6 +383,7 @@ export const generateAiReport = task({
 						payload.reportId,
 						reportRecord?.title ?? payload.prompt,
 						payload.userId,
+						{ chartsGenerated: dataStore.size },
 					);
 
 					return {
@@ -480,6 +486,7 @@ export const generateAiReport = task({
 				payload.reportId,
 				reportRecord?.title ?? payload.prompt,
 				payload.userId,
+				{ chartsGenerated: dataStore.size },
 			);
 
 			return {
