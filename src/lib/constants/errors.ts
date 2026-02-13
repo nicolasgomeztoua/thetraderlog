@@ -163,8 +163,6 @@ export const ERR_AI_CONTENT_FILTER =
 	"The request was flagged by content filters. Try rephrasing your prompt.";
 export const ERR_AI_CONTEXT_LENGTH =
 	"Too much data for the AI to process at once. Try a narrower date range.";
-export const ERR_AI_PDF_FAILED =
-	"The report was generated but the PDF could not be created. Please retry.";
 export const ERR_AI_OWNERSHIP =
 	"This report could not be found. It may have been deleted.";
 export const ERR_AI_NOT_FOUND =

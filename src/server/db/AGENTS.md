@@ -12,7 +12,7 @@
 
 ### AI Schema Structure
 **When:** Working with AI entities
-**How:** aiConversations → aiMessages (one-to-many), aiConversations → aiReports (one-to-many). Conversations have mode (chat/report) and status (active/generating/complete/failed). Reports track PDF generation status separately.
+**How:** aiConversations → aiMessages (one-to-many), aiConversations → aiReports (one-to-many). Conversations have mode (chat/report) and status (active/generating/complete/failed). Reports store MDX content + dataArtifacts (JSONB).
 
 ### Adding Environment Variables
 **When:** Adding a new server-side env var (API keys, secrets)
@@ -32,4 +32,4 @@
 
 ### AI Report Status Separate from Conversation Status
 **Choice:** aiReports has its own status enum (queued/generating/complete/failed)
-**Why:** Reports have a different lifecycle than conversations — they go through PDF generation and email delivery stages
+**Why:** Reports have a different lifecycle than conversations — they go through MDX content generation and email notification stages
