@@ -170,3 +170,21 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - Button component from @react-email/components handles email-safe CTA buttons with href prop
   - Link component from @react-email/components handles email-safe anchor links
 ---
+
+## 2026-02-13 - US-009 Update Email Delivery — Use React Email Template
+- Replaced raw HTML email template in report-email.ts with React Email renderReportCompleteEmail
+- Changes to src/lib/ai/report-email.ts:
+  - Removed buildReportEmailHtml function (entire raw HTML template — 80+ lines)
+  - Removed escapeHtml helper function (no longer needed — React Email handles escaping)
+  - Added import of renderReportCompleteEmail from @/emails/report-complete
+  - Updated sendReportEmail params: downloadUrl → reportUrl, added optional metadata param
+  - Now renders HTML via await renderReportCompleteEmail({ reportTitle, reportUrl, metadata })
+- Changes to src/trigger/generate-ai-report.ts:
+  - Updated sendReportNotification helper: added optional metadata param
+  - Both call sites (normal completion + fallback) now pass { chartsGenerated: dataStore.size } metadata
+- Files changed: src/lib/ai/report-email.ts, src/trigger/generate-ai-report.ts
+- **Learnings for future iterations:**
+  - Biome enforces alphabetical ordering of imports — @/emails/report-complete comes before @/env
+  - renderReportCompleteEmail is async (React Email render() returns Promise<string>) — must await it
+  - React Email handles HTML escaping internally — no need for manual escapeHtml when using React components
+---

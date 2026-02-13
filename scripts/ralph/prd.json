@@ -190,8 +190,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced buildReportEmailHtml and escapeHtml with React Email renderReportCompleteEmail. Updated sendReportEmail params: downloadUrl → reportUrl, added optional metadata param. Updated sendReportNotification in generate-ai-report.ts to pass reportUrl and metadata { chartsGenerated }. Removed 80+ lines of raw HTML email template. Biome check and build pass."
     },
     {
       "id": "US-010",
