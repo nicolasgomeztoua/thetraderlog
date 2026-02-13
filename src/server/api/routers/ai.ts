@@ -430,7 +430,7 @@ export const aiRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Get a report by ID with full details.
+	 * Get a report by ID with full details (includes conversation + messages).
 	 */
 	getReport: protectedProcedure
 		.input(z.object({ reportId: z.string() }))
@@ -459,7 +459,41 @@ export const aiRouter = createTRPCRouter({
 		}),
 
 	/**
+	 * Get report content and data artifacts for the MDX viewer page.
+	 */
+	getReportContent: protectedProcedure
+		.input(z.object({ reportId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.id, input.reportId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+				columns: {
+					id: true,
+					title: true,
+					content: true,
+					dataArtifacts: true,
+					status: true,
+					createdAt: true,
+					completedAt: true,
+					model: true,
+					tokensUsed: true,
+					chartsGenerated: true,
+					prompt: true,
+				},
+			});
+
+			if (!report) {
+				throw new Error(ERR_REPORT_NOT_FOUND);
+			}
+
+			return report;
+		}),
+
+	/**
 	 * List user reports (most recent first), paginated.
+	 * Includes hasContent flag for UI to determine if viewer link is available.
 	 */
 	listReports: protectedProcedure
 		.input(
@@ -482,7 +516,10 @@ export const aiRouter = createTRPCRouter({
 			}
 
 			return {
-				items: reports,
+				items: reports.map((report) => ({
+					...report,
+					hasContent: report.content != null && report.content.length > 0,
+				})),
 				nextCursor,
 			};
 		}),
