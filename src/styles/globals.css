@@ -1207,3 +1207,24 @@
 	margin-top: 0.25rem;
 	margin-bottom: 0.25rem;
 }
+
+/* ============================================
+   PRINT STYLES — Report Viewer PDF/Print
+   ============================================ */
+@media print {
+	[data-testid="report-viewer-toc"],
+	[data-testid="report-viewer-actions"],
+	[data-testid="report-viewer-back"] {
+		display: none;
+	}
+
+	[data-testid="report-viewer-content"] {
+		max-width: 100%;
+		padding: 0;
+	}
+
+	body {
+		background: white;
+		color: black;
+	}
+}

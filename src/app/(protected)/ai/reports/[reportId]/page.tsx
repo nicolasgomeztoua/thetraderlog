@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { api, HydrateClient } from "@/trpc/server";
+import { DownloadPdfButton } from "./_components/download-pdf-button";
 import { ReportViewerContent } from "./_components/report-viewer-content";
 
 // =============================================================================
@@ -99,6 +100,7 @@ export default async function ReportViewerPage({
 					completedAt={report.completedAt}
 					model={report.model}
 					reportId={reportId}
+					showPdfDownload
 					status={report.status}
 					title={report.title}
 				/>
@@ -131,12 +133,14 @@ function ReportHeader({
 	completedAt,
 	reportId,
 	status,
+	showPdfDownload,
 }: {
 	title: string;
 	model?: string | null;
 	completedAt?: Date | null;
 	reportId: string;
 	status: string;
+	showPdfDownload?: boolean;
 }) {
 	return (
 		<div
@@ -193,19 +197,10 @@ function ReportHeader({
 				</div>
 			</div>
 			<div
-				className="flex shrink-0 items-center gap-2"
+				className="flex shrink-0 items-center gap-2 print:hidden"
 				data-testid="report-viewer-actions"
 			>
-				{/* PDF download button placeholder — implemented in US-012 */}
-				<button
-					className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-3 py-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-accent/30 hover:text-foreground"
-					data-testid="report-viewer-download-pdf"
-					disabled
-					type="button"
-				>
-					<FileText className="size-3" />
-					Download PDF
-				</button>
+				{showPdfDownload && <DownloadPdfButton title={title} />}
 				<CopyLinkButton reportId={reportId} />
 			</div>
 		</div>

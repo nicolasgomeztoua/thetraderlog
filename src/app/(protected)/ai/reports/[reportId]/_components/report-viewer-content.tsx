@@ -478,7 +478,7 @@ export function ReportViewerContent({
 				</article>
 
 				{/* Table of Contents sidebar — desktop xl+ only */}
-				<div className="hidden shrink-0 py-8 pr-6 xl:block">
+				<div className="hidden shrink-0 py-8 pr-6 xl:block print:hidden">
 					<TableOfContents activeId={activeId} items={headings} />
 				</div>
 			</div>
