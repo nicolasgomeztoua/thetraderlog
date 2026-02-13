@@ -284,8 +284,8 @@
         "Verify in browser"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed generating_pdf and uploading from PROGRESS_STAGE_LABELS. Removed generating_pdf and uploading cases from getProgressWidth — analyzing now scales from 20% to 90% (was 20% to 70%), then straight to complete at 100%. Removed generating_pdf chart count display from inline progress. View Report link already in place from US-001. No pdfUrl references remain. Biome check and build pass."
     },
     {
       "id": "US-014",

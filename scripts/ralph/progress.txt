@@ -9,8 +9,7 @@ Started: Fri Feb 13 21:03:05 WET 2026
 - Report mode system prompt is in REPORT_MODE_INSTRUCTIONS const in trading-analyst.ts
 - Trigger.dev task uses tool-calling loop with MAX_TOOL_ROUNDS_REPORT rounds
 - Email uses Resend API with raw HTML template — will replace with React Email
-- Report progress stages: queued → building_context → analyzing → generating_pdf → uploading → complete
-- New progress stages (post-MDX): queued → building_context → analyzing → complete (remove generating_pdf, uploading)
+- Report progress stages (post-MDX): queued → building_context → analyzing → complete
 - Schema uses createTable() helper, aiReports has pdfUrl/pdfKey columns to replace with content/dataArtifacts
 - MetricCard is inline props (no dataRef needed) — can pass through directly in MDX
 - React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
@@ -269,4 +268,20 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - Biome enforces sorted Tailwind responsive/print variant classes — xl:block before print:hidden
   - biome-ignore at @media level doesn't work for CSS properties — Biome requires per-line suppression for CSS
   - Query DOM via data-testid attribute for reliable element selection from sibling components
+---
+
+## 2026-02-13 - US-013 Update Report Interface
+- Updated report-interface.tsx to remove obsolete PDF-related progress stages
+- Changes:
+  - Removed `generating_pdf` and `uploading` from PROGRESS_STAGE_LABELS constant
+  - Removed `generating_pdf` (80%) and `uploading` (95%) cases from getProgressWidth function
+  - Updated `analyzing` stage to scale from 20% to 90% (was 20% to 70%) — fills the gap left by removed stages
+  - `complete` remains at 100%
+  - Removed `generating_pdf` chart count display from inline progress section
+  - View Report link to /ai/reports/[reportId] was already in place from US-001 schema changes
+  - No pdfUrl references remained in the component
+- Files changed: src/app/(protected)/ai/_components/report-interface.tsx
+- **Learnings for future iterations:**
+  - US-001 already handled most of the View Report link migration — this story was mostly about cleaning up progress stage labels/percentages
+  - Progress bar scale math: `20 + Math.min(round/totalRounds, 1) * 70` gives 20% to 90% range for analyzing stage
 ---
