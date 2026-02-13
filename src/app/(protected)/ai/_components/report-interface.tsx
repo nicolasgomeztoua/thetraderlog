@@ -2,7 +2,6 @@
 
 import {
 	ArrowRight,
-	Download,
 	FileText,
 	Loader2,
 	RefreshCw,
@@ -430,16 +429,14 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 													)}
 												</div>
 											</div>
-											{isComplete && report.pdfUrl && (
+											{isComplete && (
 												<a
-													className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[10px] text-foreground transition-colors hover:border-primary/30 hover:text-primary"
-													data-testid={`report-download-${report.id}`}
-													href={report.pdfUrl}
-													rel="noopener noreferrer"
-													target="_blank"
+													className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[10px] text-foreground transition-colors hover:border-accent/30 hover:text-accent"
+													data-testid={`report-view-${report.id}`}
+													href={`/ai/reports/${report.id}`}
 												>
-													<Download className="size-3" />
-													PDF
+													<ArrowRight className="size-3" />
+													View Report
 												</a>
 											)}
 										</div>

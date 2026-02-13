@@ -190,15 +190,7 @@ async function generateAndUploadPdf(
 	});
 
 	if (result) {
-		// Emit progress: uploading
-		await updateProgress(reportId, { progressStage: "uploading" });
-
-		await db
-			.update(aiReports)
-			.set({ pdfUrl: result.pdfUrl, pdfKey: result.pdfKey })
-			.where(eq(aiReports.id, reportId));
-
-		// Send email notification with download link
+		// Send email notification with viewer link
 		try {
 			const user = await db.query.users.findFirst({
 				where: eq(users.id, userId),
@@ -208,7 +200,7 @@ async function generateAndUploadPdf(
 				await sendReportEmail({
 					to: user.email,
 					reportTitle: title,
-					downloadUrl: result.pdfUrl,
+					downloadUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://edgejournal.com"}/ai/reports/${reportId}`,
 				});
 			}
 		} catch {

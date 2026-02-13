@@ -42,3 +42,19 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - AG Charts used for all complex visualizations (not Recharts or Chart.js)
   - Drizzle jsonb() column returns parsed object — no JSON.parse needed on read
 ---
+
+## 2026-02-13 - US-001 Schema Changes
+- Added content (text) and dataArtifacts (jsonb) columns to aiReports
+- Removed pdfUrl and pdfKey columns from aiReports
+- Fixed all TypeScript references to removed columns:
+  - src/server/api/routers/ai.ts: removed pdfUrl from getReportStatus select
+  - src/app/(protected)/ai/_components/report-interface.tsx: replaced PDF download with View Report link
+  - src/trigger/generate-ai-report.ts: removed pdfUrl/pdfKey set() call, updated email to use viewer URL
+  - src/lib/ai/schema-context.ts: updated column docs
+  - tests/integration/ai.test.ts: removed pdfUrl assertion
+- Applied via direct SQL (drizzle-kit push has interactive prompts incompatible with CLI)
+- **Learnings for future iterations:**
+  - drizzle-kit push prompts interactively when columns are removed+added (asks if rename) — use direct SQL for CLI automation
+  - Schema column types auto-infer TypeScript types via $inferSelect/$inferInsert
+  - jsonb column needs $type<> for TypeScript typing: jsonb('data_artifacts').$type<Record<string, unknown>>()
+---

@@ -306,8 +306,8 @@ const SCHEMA_CONTEXT = `
 | prompt | text | no | |
 | model | text | no | |
 | status | ai_report_status | no | Default: 'queued' |
-| pdf_url | text | yes | |
-| pdf_key | text | yes | |
+| content | text | yes | AI-generated MDX content |
+| data_artifacts | jsonb | yes | Component data referenced by dataRef |
 | tokens_used | integer | no | Default: 0 |
 | trigger_task_id | text | yes | |
 | created_at | timestamp with tz | no | |

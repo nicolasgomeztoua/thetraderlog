@@ -501,7 +501,6 @@ export const aiRouter = createTRPCRouter({
 				columns: {
 					id: true,
 					status: true,
-					pdfUrl: true,
 					tokensUsed: true,
 					completedAt: true,
 					errorMessage: true,

@@ -37,8 +37,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Schema updated via direct SQL (drizzle-kit push interactive prompts not compatible with CLI). Also fixed pdfUrl references in ai.ts, report-interface.tsx, generate-ai-report.ts, schema-context.ts, and tests."
     },
     {
       "id": "US-002",
