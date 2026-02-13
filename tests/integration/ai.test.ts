@@ -6,7 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { DEFAULT_CHAT_MODEL } from "@/lib/constants/ai";
+import { DEFAULT_CHAT_MODEL, DEFAULT_REPORT_MODEL } from "@/lib/constants/ai";
 import {
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_REPORT_NOT_FOUND,
@@ -348,7 +348,7 @@ describe("ai router", () => {
 				prompt: "Generate a report",
 			});
 
-			expect(result.model).toBe(DEFAULT_CHAT_MODEL);
+			expect(result.model).toBe(DEFAULT_REPORT_MODEL);
 		});
 
 		it("should use custom title when provided", async () => {
@@ -421,6 +421,36 @@ describe("ai router", () => {
 			expect(status.status).toBe("queued");
 			expect(status.pdfUrl).toBeNull();
 			expect(status.completedAt).toBeNull();
+		});
+
+		it("should return progress fields with correct defaults", async () => {
+			const created = await caller.ai.startReport({
+				prompt: "Progress defaults report",
+			});
+
+			const status = await caller.ai.getReportStatus({
+				reportId: created.id,
+			});
+
+			expect(status.progressStage).toBe("queued");
+			expect(status.currentRound).toBe(0);
+			expect(status.totalToolCalls).toBe(0);
+			expect(status.chartsGenerated).toBe(0);
+		});
+
+		it("should include progressStage in response shape", async () => {
+			const created = await caller.ai.startReport({
+				prompt: "Shape check report",
+			});
+
+			const status = await caller.ai.getReportStatus({
+				reportId: created.id,
+			});
+
+			expect(status).toHaveProperty("progressStage");
+			expect(status).toHaveProperty("currentRound");
+			expect(status).toHaveProperty("totalToolCalls");
+			expect(status).toHaveProperty("chartsGenerated");
 		});
 
 		it("should reject fetching another user's report status", async () => {

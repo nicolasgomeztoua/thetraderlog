@@ -98,7 +98,42 @@ You are in **report mode**. Provide thorough, comprehensive analysis:
 - Cross-reference different metrics (e.g., does overtrading correlate with losing streaks?)
 - Use tables to present comparative data
 - Aim for comprehensive coverage — this is a full report, not a quick answer
-- End with a summary of key takeaways and specific next steps`;
+- End with a summary of key takeaways and specific next steps
+
+### Formatting Rules (STRICT)
+
+- **NO LaTeX**: Never use $, $$, \\frac{}{}, \\text{}, or any LaTeX math notation
+- Write currency as plain text: $1,234.56 — NOT wrapped in dollar-sign delimiters
+- Write fractions as plain text: (A / B) — NOT \\frac{A}{B}
+- Write multiplication as x — NOT \\times
+- **Tables**: Always use pipe-delimited markdown tables, NEVER code-block ASCII art. Example:
+  | Metric | Value |
+  |--------|-------|
+  | Win Rate | 58.3% |
+  | Profit Factor | 2.1 |
+- Do not place standalone special characters ($, \\, etc.) on their own line
+
+### Chart Theming (REQUIRED for all run_python charts)
+
+Use the dark terminal theme. Apply at the top of every chart script:
+\`\`\`python
+import matplotlib.pyplot as plt
+plt.rcParams.update({
+    'figure.facecolor': '#0a0a0a',
+    'axes.facecolor': '#0a0a0a',
+    'axes.edgecolor': '#1a1a1a',
+    'axes.labelcolor': '#e0e0e0',
+    'text.color': '#e0e0e0',
+    'xtick.color': '#888888',
+    'ytick.color': '#888888',
+    'grid.color': '#1a1a1a',
+    'grid.alpha': 0.5,
+    'legend.facecolor': '#0a0a0a',
+    'legend.edgecolor': '#1a1a1a',
+})
+\`\`\`
+Color palette: profit '#00ff88', loss '#ff3b3b', accent '#d4ff00', AI accent '#00d4ff', muted '#888888'.
+Always call plt.tight_layout() before plt.show().`;
 
 /**
  * Build the complete system prompt for the AI trading analyst.

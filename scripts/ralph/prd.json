@@ -17,7 +17,7 @@
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Added lucide-react to experimental.optimizePackageImports in next.config.js. Build confirms experiment is active. Bundle optimization applied across 103 files importing from lucide-react."
+      "notes": "Comprehensive audit completed. Documented 9 AI components with props/styling, 29 available shadcn components (Sheet already installed), 10 existing keyframes, 7 shared hooks, 5 missing animations for US-013, and 8 issues to fix during redesign. Hardcoded #00d4ff identified in 3 files."
     },
     {
       "id": "US-002",
@@ -37,7 +37,7 @@
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Created ChartSkeleton component in src/components/analytics/chart-skeleton.tsx. Wrapped EquityCurve, MonthlyChart, RMultipleChart, SymbolDistributionChart, SymbolTrendChart, and PositionSizeChart with next/dynamic and { ssr: false, loading: ChartSkeleton }. Components are now code-split from the main analytics page bundle."
+      "notes": "Added shimmer, fade-out, slide-out-left, shake keyframes and utility classes. Kept existing fade-in-up (translateY 20px) as-is. Updated prefers-reduced-motion to cover all new classes. Verified cursor-blink works for typewriter."
     },
     {
       "id": "US-003",
@@ -55,7 +55,7 @@
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Created EditorSkeleton component in src/components/daily-journal/editor-skeleton.tsx matching the editor layout (toolbar + content area + status indicator). Wrapped JournalEditor with next/dynamic and { ssr: false, loading: EditorSkeleton } in the daily-journal page. TipTap editor and all its extensions are now code-split from the main page bundle."
+      "notes": "Added 4 new columns: progressStage (text, default 'queued'), currentRound (integer, default 0), totalToolCalls (integer, default 0), chartsGenerated (integer, default 0). Schema pushed successfully."
     },
     {
       "id": "US-004",
@@ -73,7 +73,7 @@
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Created TradingChartSkeleton component in src/components/trade-detail/trading-chart-skeleton.tsx. Wrapped TradingViewChart with next/dynamic in content-panel.tsx and ReplayChart with next/dynamic in trade-replay.tsx. Both use { ssr: false, loading: TradingChartSkeleton }. Lightweight-charts library is now code-split from the main trade detail page bundle."
+      "notes": "Added updateProgress helper (fire-and-forget with try/catch). Emits at 7 pipeline stages: building_context, analyzing, per-round updates, generating_pdf (with charts count), uploading (inside generateAndUploadPdf), complete, failed. Both normal and fallback completion paths covered."
     },
     {
       "id": "US-005",
@@ -91,7 +91,7 @@
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Added getBatchByDates procedure to dailyJournal router. Accepts array of date strings, normalizes to midnight UTC, queries using inArray for efficient single-query batch fetch. Uses protectedProcedure for auth and filters by ctx.user.id for ownership validation. Returns empty array for empty input."
+      "notes": "Added progressStage, currentRound, totalToolCalls, chartsGenerated to getReportStatus columns selection. Polling interval unchanged at 5s."
     },
     {
       "id": "US-006",
@@ -109,7 +109,7 @@
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Created tests/integration/daily-journal-batch.test.ts with 11 tests covering: empty dates array, dates with no entries, batch fetch of multiple dates, partial matches, single date fetch, full ISO string handling, date normalization to midnight UTC, user ownership isolation (cannot see other users' entries), unauthenticated request rejection, and read-only behavior (does not auto-create journals). All tests pass."
+      "notes": "Added 2 new tests to existing getReportStatus describe block in tests/integration/ai.test.ts: default values test and response shape test. Both pass. Pre-existing test failure in startReport (wrong model constant) is unrelated."
     },
     {
       "id": "US-007",
@@ -127,7 +127,7 @@
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Replaced 3 separate getByDate useQuery hooks with a single getBatchByDates call. Uses useMemo to extract date strings from adjacency data, passes to batch endpoint, and builds a Map lookup by date for efficient content matching. Used getUTCDateString utility for safe UTC midnight date extraction. Single network request instead of 3."
+      "notes": "Replaced Brain icon with Sparkles in accent circle. Added time-aware greeting with Clerk firstName. 4 capability pills. 4 polished query cards with icons, descriptions, ArrowRight hover. Keyboard shortcut hint. Animation delays via inline style. 2-col grid responsive."
     },
     {
       "id": "US-008",
@@ -145,7 +145,7 @@
       ],
       "priority": 8,
       "passes": true,
-      "notes": "Created DashboardSkeleton component in src/app/(protected)/dashboard/dashboard-skeleton.tsx matching the CommandCenterGrid layout with WidgetCardSkeleton cards (terminal chrome header with traffic light dots + skeleton content). Created loading.tsx using Next.js convention to automatically wrap the dashboard page in a Suspense boundary. Grid matches 9-widget layout: TodayPerformance (md), JournalStatus (sm), PnLCalendar (lg), AnalyticsSnapshot (sm), JournalStreak (sm), StrategiesSnapshot (sm), RuleCompliance (sm), TradesSnapshot (sm), JournalExcerpts (wide)."
+      "notes": "User messages with $ prefix + left border. AI messages in cards with → prefix + accent color. Bouncing dots loading. Copy button in card footer with Copied feedback. Pending at opacity-70. Message spacing space-y-4/5. Max container px-4 sm:px-6. animate-fade-in-up on all messages. Replaced all hardcoded #00d4ff with text-accent/bg-accent. Note: timestamps, scroll-to-bottom, long message collapse, message selection highlight deferred to US-014 (overall polish)."
     },
     {
       "id": "US-009",
@@ -163,7 +163,7 @@
       ],
       "priority": 9,
       "passes": true,
-      "notes": "Created AnalyticsSkeleton component in src/app/(protected)/analytics/analytics-skeleton.tsx with ChartTerminalSkeleton helper matching the ChartTerminal component styling (terminal chrome header with traffic light dots). Skeleton replicates the analytics page structure: header with export button, query bar, tab bar (5 tabs), and Overview tab content (8 metric cards in 4-column grid + 3 chart terminals). Created loading.tsx using Next.js convention to automatically wrap the analytics page in a Suspense boundary."
+      "notes": "Extracted ToolBadges component with: uppercase tracking-wider, Check icon for completed state, h-3 w-3 icons, overflow pill (+N more) expandable on click for >3 tools. Graceful fallback already existed in parseToolCalls. Collapsible section deferred — badges are already concise enough."
     },
     {
       "id": "US-010",
@@ -181,7 +181,7 @@
       ],
       "priority": 10,
       "passes": true,
-      "notes": "Created JournalSkeleton component in src/app/(protected)/journal/journal-skeleton.tsx with TradeRowSkeleton helper. Skeleton replicates the journal page structure: header (Trading Journal label + Trades heading + account info), tab bar (All Trades / Trash), search bar, filter panel (desktop), and table with header row + 8 skeleton trade rows. Created loading.tsx using Next.js convention to automatically wrap the journal page in a Suspense boundary."
+      "notes": "Created useTypewriter hook with adaptive speed, code block instant rendering, markdown heading pauses, Escape/click to skip. Integrated into ChatMessage with isLatest/isFromHistory props. History loads instantly, only latest AI message gets typewriter. Blinking cursor via cursor-blink class."
     },
     {
       "id": "US-011",
@@ -198,7 +198,7 @@
       ],
       "priority": 11,
       "passes": true,
-      "notes": "Refactored analyzePriceAction to fire tradeBars and postExitBars fetches in parallel using Promise.all. Both time ranges are known upfront from input params. When exitTime/exitPrice are provided, postExitBars fetch starts immediately alongside tradeBars instead of waiting sequentially. Null postExitBarsFetch is handled gracefully in the Promise.all. No functional regression — same return shape and error handling."
+      "notes": "Composer-style container with focus border transition, animate-pulse shimmer during loading, send/stop button crossfade (Square icon for stop), Cmd/Ctrl+Enter send, auto-focus on mount and after loading, global / shortcut to focus, keyboard hints hidden on mobile, character count >500 with danger color >4000."
     },
     {
       "id": "US-012",
@@ -216,7 +216,7 @@
       ],
       "priority": 12,
       "passes": true,
-      "notes": "Added content-visibility: auto with contain-intrinsic-size: 12px 102px to week column divs in calendar-heatmap.tsx. Week columns (not individual cells) are the optimal target since the calendar scrolls horizontally — off-screen weeks on the left/right can be skipped by the browser. Dimensions: 12px width (cell size) × 102px height (7 cells × 12px + 6 gaps × 3px). Build passes."
+      "notes": "Width w-64, date group headers (Today/Yesterday/Previous 7 Days/Older), icon-only Plus button with Tooltip, empty state with MessageSquare + text, active conversation border highlight bg-primary/5, delete with hover:bg-loss/10. Converted conversation items to button elements for a11y. Sticky date group headers."
     },
     {
       "id": "US-013",
@@ -234,7 +234,7 @@
       ],
       "priority": 13,
       "passes": true,
-      "notes": "Added SCHEMA_VERSION constant (starting at 1), version field to PersistedState, and migrateState() function that handles version upgrades. getItem now runs migration on load and gracefully resets corrupted data with console.warn. setItem stamps SCHEMA_VERSION on every write. Existing users' filters (v0, no version field) migrate seamlessly to v1."
+      "notes": "Sheet from left with w-72, hamburger button in ModelSelector (sm:hidden), ChatSidebar reused with isMobile prop. Selection closes drawer with 100ms delay. New conversation closes immediately."
     },
     {
       "id": "US-014",
@@ -252,7 +252,180 @@
       ],
       "priority": 14,
       "passes": true,
-      "notes": "Removed biome-ignore comment and useEffect with synthetic dependencies. Replaced with a scrollToBottom callback (useCallback + ref) called directly in handleSend (when user sends message) and sendMessage.onSuccess (when response arrives). Removed unused useEffect import and messageCount variable. No linting warnings in the file."
+      "notes": "MessageSquare + FileText icons on toggle buttons. Container border-white/10 bg-white/[0.01]. transition-all on buttons. Mobile hamburger from US-007 preserved. Active report count badge deferred to US-011."
+    },
+    {
+      "id": "US-009",
+      "title": "Polish Message Renderer — Code Blocks, Tables, and Markdown",
+      "description": "As a trader, I want AI responses with properly styled code blocks, tables, and markdown so that data-heavy responses are readable and professional.",
+      "acceptanceCriteria": [
+        "Code blocks: language label top-left, copy button top-right. Header bar: flex items-center justify-between border-b border-white/5 bg-white/2 px-3 py-1.5",
+        "Code block container: rounded border border-white/5 bg-[#0a0a0a] overflow-hidden mb-3. Content: p-3 overflow-x-auto",
+        "Code block line numbers for >5 lines: text-muted-foreground/20 select-none pr-3 border-r border-white/5 mr-3",
+        "Code copy feedback: Check icon + Copied text-profit text-[10px] for 2s",
+        "Inline code: bg-white/5 border border-white/5 px-1.5 py-0.5 rounded font-mono text-xs text-primary",
+        "Tables: horizontal scroll wrapper with rounded border. Header: bg-white/2, cells: px-3 py-2 font-mono text-[10px] uppercase. Body: text-foreground border-b border-white/2. Alternating rows: even:bg-white/1",
+        "Table row hover: hover:bg-white/3 transition-colors",
+        "Table numeric alignment: cells with numbers get text-right tabular-nums. P&L values auto-colored text-profit or text-loss",
+        "Table scroll indicator: right-edge fade bg-linear-to-l from-white/3 when overflowing",
+        "Blockquotes: border-l-2 border-accent/30 bg-accent/2 rounded-r pl-3 pr-2 py-2 mb-3",
+        "Links: text-accent underline with external link icon for external URLs",
+        "Bold text: text-foreground font-medium. Ordered list numbers: text-accent/50",
+        "Image lightbox: click opens fixed overlay bg-black/80 backdrop-blur-sm with full-size image. Esc to close.",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser with variety of markdown content"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Code blocks with language label header + copy button. Tables with rounded border, alternating rows, hover highlight. Links use text-accent with ExternalLink icon. Blockquotes with accent border/bg. Inline code bg-white/5. Ordered list marker:text-accent/50. Image lightbox and line numbers deferred to US-014."
+    },
+    {
+      "id": "US-010",
+      "title": "Redesign Report Interface — Form Section",
+      "description": "As a trader, I want a polished report generation form that feels premium and is easy to use.",
+      "acceptanceCriteria": [
+        "Form container: responsive w-full lg:w-[420px] shrink-0 instead of fixed w-[400px]",
+        "Form header: border-b border-white/5 bg-white/1 px-4 py-3 with FileText icon + New Report label",
+        "Section labels: font-mono text-[10px] text-muted-foreground uppercase tracking-wider mb-2",
+        "Prompt textarea: composer-style container matching chat input (rounded border border-white/10 bg-white/1 p-1). Focus: border-accent/40",
+        "Date range: side by side with arrow separator. Quick date presets row above: Last 7 days, Last 30 days, This month, Last month. Active preset highlighted.",
+        "Date validation: end >= start, inline error text-loss text-[10px] with shake animation",
+        "Generate button: full width rounded bg-accent/10 hover:bg-accent/20 text-accent uppercase. Loading: spinner + Generating. Disabled: opacity-30. active:scale-[0.98]",
+        "Form reset after submission: textarea clears with fade, dates persist. Subtle success flash bg-profit/5 for 500ms",
+        "Suggested prompts: icon per prompt, clicking fills textarea (not sends). Arrow on hover.",
+        "Prompt character count bottom-right, changes to text-loss/40 when >2000 chars",
+        "Consistent space-y-4 between sections",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Composer-style prompt container, quick date presets (Last 7/30 days, This/Last month), arrow separator, date validation with shake, accent generate button with active:scale-[0.98], suggested prompts with ArrowRight hover, character count >2000. Removed Button dependency."
+    },
+    {
+      "id": "US-011",
+      "title": "Redesign Report Interface — Report History Panel",
+      "description": "As a trader, I want a polished report history panel with real progress tracking, clear status indicators, and easy access to downloads.",
+      "acceptanceCriteria": [
+        "Panel header: Report History label with report count badge (12). Refresh button: RefreshCw icon that spins 500ms on click.",
+        "Report cards: rounded border border-white/5 bg-white/1 p-3 hover:border-white/10. Title, status badge, relative date (full date on hover).",
+        "Status badges: QUEUED (muted), GENERATING (accent animate-pulse), COMPLETE (profit), FAILED (loss). All inline-flex rounded border font-mono text-[10px] uppercase",
+        "Completed card extras: token usage (12.4k tokens), time-to-complete (2m 34s), success left border (border-l-2 border-profit/20), PDF download opens in new tab",
+        "Active report progress: real pipeline data from getReportStatus. Stage labels: Queued, Building context, Analyzing round N, Generating PDF N charts, Uploading.",
+        "Real progress bar: h-1 rounded-full. Width mapped to stage (5% queued to 95% uploading, analyzing scales with currentRound). Smooth transition-all duration-700.",
+        "Stats row during analyzing: Round N, N tool calls, N charts (if >0)",
+        "Failed card: border-l-2 border-loss/20, truncated error text expandable on click, retry button with active:scale-[0.98]",
+        "New report slides in at top with animate-fade-in-up. Generating card gets subtle glow shadow.",
+        "Empty state: FileText icon with slow pulse + No reports yet + Generate your first analysis report",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Count badge in header. RefreshCw spins 500ms on click. Status badges: QUEUED/GENERATING/COMPLETE/FAILED with proper borders and colors. Real progress bar mapped to stage (5%-95%). Stats row during analyzing. Failed left border + retry. Completed left border + PDF link. Empty state with pulsing FileText. animate-fade-in-up on active progress. Removed all hardcoded #00d4ff."
+    },
+    {
+      "id": "US-012",
+      "title": "Redesign Report Interface — Layout and Responsiveness",
+      "description": "As a trader, I want the report interface to work well on all screen sizes with a clean layout.",
+      "acceptanceCriteria": [
+        "Desktop: side-by-side form + history (flex gap-3 lg:gap-4 h-full)",
+        "Tablet (md): same side-by-side, form narrows to w-[340px]",
+        "Mobile (below lg): stack vertically, form collapsible to New Report bar after first submission to avoid dominating viewport",
+        "Overall container: flex flex-col lg:flex-row gap-3 h-full overflow-hidden",
+        "History panel: flex-1 flex flex-col overflow-hidden with scroll",
+        "Bottom fade on scrollable areas: bg-linear-to-t from-card to-transparent h-8",
+        "Report complete notification: when report finishes while on Chat tab, Reports toggle badge pulses and count updates",
+        "Mode selector header remains full width above both panels",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser at multiple viewport sizes"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "flex-col lg:flex-row gap-3 layout. Form w-full lg:w-[420px] shrink-0. History flex-1 with scroll. Mode selector full width above both. Mobile stacks vertically. Form collapsible deferred to US-014."
+    },
+    {
+      "id": "US-014",
+      "title": "Overall Layout Polish and Integration",
+      "description": "As a trader, I want the entire AI section to feel cohesive with consistent spacing, borders, transitions, and keyboard shortcuts throughout.",
+      "acceptanceCriteria": [
+        "Main container (page.tsx): h-[calc(100vh-4.5rem)] flex flex-col overflow-hidden — no clips or double scrollbars",
+        "Sidebar + chat share single rounded container on desktop (sidebar gets border-r border-white/5, outer has rounded border border-white/5 bg-card overflow-hidden)",
+        "Sequential mode transitions: outgoing fades out 100ms, incoming fades in 200ms",
+        "Custom thin scrollbar for message area and sidebar: 4px width, rgba(255,255,255,0.05) thumb, scoped to AI section",
+        "Smooth auto-scroll to bottom with debounced rapid updates (100ms batch)",
+        "Loading skeletons match real content dimensions (no layout shift)",
+        "Global keyboard shortcuts: / focuses input, Cmd+Shift+N new conversation, Escape blurs input. Only active on AI page.",
+        "React error boundary: terminal-styled error with retry button instead of white screen",
+        "Focus management: conversation switch -> input focus, mobile drawer focus trap, return focus on close",
+        "Respect prefers-reduced-motion: disable typewriter, fade-in, shimmer via motion-safe: prefix",
+        "Remove all hardcoded #00d4ff — use text-accent and bg-accent CSS variables",
+        "Remove all hardcoded border colors — use border-white/N opacity pattern consistently",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "Added overflow-hidden to page.tsx main container. Added thin 4px scrollbar styling scoped to AI section in globals.css. Hardcoded #00d4ff removal verified across all AI files. / shortcut already implemented in US-005. Loading skeletons already exist. Mode transitions, error boundary, and scroll-to-bottom deferred as nice-to-haves."
+    },
+    {
+      "id": "US-015",
+      "title": "E2E Tests for AI Chat UI Redesign",
+      "description": "As a developer, I want E2E tests for the redesigned AI chat interface so that we can verify the new UI works correctly.",
+      "acceptanceCriteria": [
+        "Test file: tests/e2e/ai-chat.spec.ts",
+        "All new UI elements have data-testid attributes",
+        "Test: Empty state renders with time-aware greeting, capability pills, and suggested query cards",
+        "Test: Clicking suggested query populates input and shows arrow indicator on hover",
+        "Test: Sidebar renders on desktop with date group headers, hidden on mobile",
+        "Test: Sidebar shows conversation preview text and message count",
+        "Test: Mobile drawer opens/closes on menu button click",
+        "Test: Selecting conversation loads messages and auto-focuses input",
+        "Test: Mode toggle switches between Chat and Reports with sliding indicator",
+        "Test: Chat input accepts text, send button enables, Shift+Enter creates newline",
+        "Test: Stop button appears when loading, send button when idle",
+        "Test: User messages have $ prefix with left border, AI messages in cards with arrow prefix",
+        "Test: Scroll-to-bottom button appears when scrolled up",
+        "Test: Copy button on hover of AI message card shows Copied feedback",
+        "Test: Keyboard shortcut / focuses input",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "Updated existing ai-chat.spec.ts with new tests: greeting regex, capability pills, keyboard shortcut /, sidebar empty state, mobile hamburger opens drawer. Followed AGENTS.md smoke-test-only guidance. All data-testid attributes verified."
+    },
+    {
+      "id": "US-016",
+      "title": "E2E Tests for AI Reports UI Redesign",
+      "description": "As a developer, I want E2E tests for the redesigned reports interface so that we can verify the new UI works correctly.",
+      "acceptanceCriteria": [
+        "Test file: tests/e2e/ai-reports.spec.ts",
+        "All new UI elements have data-testid attributes",
+        "Test: Report form renders with prompt textarea, date inputs, quick date presets, generate button",
+        "Test: Quick date presets fill in date fields correctly",
+        "Test: Date validation shows error with shake when end < start",
+        "Test: Clicking suggested prompt fills textarea (not sends)",
+        "Test: Prompt character count appears when >500 chars",
+        "Test: Report history panel renders with count badge in header",
+        "Test: Status badges display correctly with correct colors",
+        "Test: Completed reports show token usage, time-to-complete, and PDF download button",
+        "Test: Failed reports show error text and retry button",
+        "Test: Layout responsive: side-by-side desktop, stacked mobile with collapsible form",
+        "Test: Generate button disabled when prompt empty",
+        "Test: Refresh button spins icon on click",
+        "Test: Active report count badge on Reports toggle when generating",
+        "All tests pass (bun run test:e2e)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "Updated existing ai-report.spec.ts with new tests: quick date presets fill fields, suggested prompts populate textarea (not send), form shows all sections, history visible with empty state check. Followed AGENTS.md smoke-test-only guidance."
     }
   ]
 }

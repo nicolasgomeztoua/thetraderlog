@@ -89,6 +89,7 @@ export const ERR_VALIDATION_PNL_REQUIRED_SHORT =
 export const ERR_VALIDATION_CSV_UPLOAD = "Please upload a CSV file";
 export const ERR_VALIDATION_SELECT_ACCOUNT = "Please select an account";
 export const ERR_VALIDATION_IMAGES_ONLY = "Only image files are allowed";
+export const ERR_VALIDATION_DATE_RANGE = "End date must be after start date";
 
 // =============================================================================
 // CSV IMPORT

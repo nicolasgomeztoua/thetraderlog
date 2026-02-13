@@ -101,6 +101,26 @@ function getUserFriendlyErrorMessage(error: unknown): string {
 }
 
 /**
+ * Fire-and-forget progress update. Never blocks the pipeline.
+ */
+async function updateProgress(
+	reportId: string,
+	updates: {
+		progressStage?: string;
+		currentRound?: number;
+		totalToolCalls?: number;
+		chartsGenerated?: number;
+		progressDetail?: string;
+	},
+): Promise<void> {
+	try {
+		await db.update(aiReports).set(updates).where(eq(aiReports.id, reportId));
+	} catch {
+		// Progress updates are fire-and-forget — never block the pipeline
+	}
+}
+
+/**
  * Extract chart image URLs from tool call results in the message history.
  * Charts are produced by run_python tool and stored in the result's data.images array.
  */
@@ -170,6 +190,9 @@ async function generateAndUploadPdf(
 	});
 
 	if (result) {
+		// Emit progress: uploading
+		await updateProgress(reportId, { progressStage: "uploading" });
+
 		await db
 			.update(aiReports)
 			.set({ pdfUrl: result.pdfUrl, pdfKey: result.pdfKey })
@@ -207,13 +230,54 @@ export const generateAiReport = task({
 	id: "generate-ai-report",
 	// AI report generation involves multi-turn LLM tool-calling (up to 20 rounds),
 	// SQL queries, Python sandbox execution, PDF generation, and email delivery.
-	// 5 min global default is insufficient — allow up to 15 minutes.
-	maxDuration: 900,
+	// 5 min global default is insufficient — allow up to 30 minutes.
+	maxDuration: 1800,
 	queue: {
 		concurrencyLimit: 5,
 	},
 	retry: {
 		maxAttempts: 1,
+	},
+	onFailure: async ({ payload, error }) => {
+		// This hook runs in a separate execution even when the task is killed
+		// by MAX_DURATION_EXCEEDED, ensuring the report never stays stuck in "generating".
+		try {
+			const errorString =
+				error instanceof Error ? error.message : String(error ?? "");
+
+			const isTimeout =
+				errorString.includes("MAX_DURATION") ||
+				errorString.includes("maxDuration") ||
+				errorString.includes("compute time");
+
+			const errorMessage = isTimeout
+				? ERR_AI_TIMEOUT
+				: getUserFriendlyErrorMessage(error);
+
+			await db
+				.update(aiReports)
+				.set({
+					status: "failed",
+					progressStage: "failed",
+					completedAt: new Date(),
+					errorMessage,
+				})
+				.where(eq(aiReports.id, payload.reportId));
+
+			await db
+				.update(aiConversations)
+				.set({ status: "failed" })
+				.where(eq(aiConversations.id, payload.conversationId));
+
+			await db.insert(aiMessages).values({
+				conversationId: payload.conversationId,
+				role: "assistant",
+				content: ERR_AI_REPORT_FALLBACK,
+			});
+		} catch {
+			// Last-resort: if even the failure handler fails, there's nothing more we can do.
+			// Trigger.dev will still log the original error.
+		}
 	},
 	run: async (payload: {
 		reportId: string;
@@ -252,6 +316,11 @@ export const generateAiReport = task({
 					"Conversation ownership verification failed: conversation not found or does not belong to user",
 				);
 			}
+
+			// Emit progress: building context
+			await updateProgress(payload.reportId, {
+				progressStage: "building_context",
+			});
 
 			// Update report status to generating
 			await db
@@ -308,6 +377,13 @@ export const generateAiReport = task({
 			// Tool-calling loop
 			let totalTokensUsed = 0;
 			const allToolCalls: ToolCall[] = [];
+			const contentParts: string[] = [];
+
+			// Emit progress: analyzing starts
+			await updateProgress(payload.reportId, {
+				progressStage: "analyzing",
+				currentRound: 0,
+			});
 
 			for (let round = 0; round < MAX_TOOL_ROUNDS_REPORT; round++) {
 				const response = await chatCompletion({
@@ -329,7 +405,10 @@ export const generateAiReport = task({
 					!assistantMessage.tool_calls ||
 					assistantMessage.tool_calls.length === 0
 				) {
-					const finalContent = assistantMessage.content ?? "";
+					if (assistantMessage.content) {
+						contentParts.push(assistantMessage.content);
+					}
+					const finalContent = contentParts.join("\n\n");
 
 					// Save assistant message to conversation
 					await db.insert(aiMessages).values({
@@ -340,6 +419,13 @@ export const generateAiReport = task({
 						tokensUsed: totalTokensUsed,
 						toolCalls:
 							allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
+					});
+
+					// Emit progress: generating PDF
+					const charts = extractChartUrls(chatMessages);
+					await updateProgress(payload.reportId, {
+						progressStage: "generating_pdf",
+						chartsGenerated: charts.length,
 					});
 
 					// Generate PDF from report content
@@ -364,6 +450,7 @@ export const generateAiReport = task({
 						.update(aiReports)
 						.set({
 							status: "complete",
+							progressStage: "complete",
 							tokensUsed: totalTokensUsed,
 							completedAt: new Date(),
 						})
@@ -393,8 +480,14 @@ export const generateAiReport = task({
 					tool_calls: assistantMessage.tool_calls,
 				});
 
+				if (assistantMessage.content) {
+					contentParts.push(assistantMessage.content);
+				}
+
 				// Execute each tool call and add results
+				let lastToolName = "";
 				for (const toolCall of assistantMessage.tool_calls) {
+					lastToolName = toolCall.function.name;
 					let args: Record<string, unknown>;
 					try {
 						args = JSON.parse(toolCall.function.arguments);
@@ -413,11 +506,20 @@ export const generateAiReport = task({
 						tool_call_id: toolCall.id,
 					});
 				}
+
+				// Emit progress after each round with the last tool name
+				await updateProgress(payload.reportId, {
+					currentRound: round + 1,
+					totalToolCalls: allToolCalls.length,
+					progressDetail: lastToolName,
+				});
 			}
 
 			// If we exhausted tool rounds, save fallback and mark complete
-			const fallbackContent =
-				"The report analysis reached the maximum number of tool-calling rounds. The results above represent the analysis completed within the allowed iterations.";
+			const accumulatedContent = contentParts.join("\n\n");
+			const fallbackContent = accumulatedContent
+				? `${accumulatedContent}\n\n---\n\n*Note: This report reached the maximum analysis rounds. Results above represent the completed analysis.*`
+				: "The report analysis reached the maximum number of tool-calling rounds.";
 
 			await db.insert(aiMessages).values({
 				conversationId: payload.conversationId,
@@ -427,6 +529,13 @@ export const generateAiReport = task({
 				tokensUsed: totalTokensUsed,
 				toolCalls:
 					allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
+			});
+
+			// Emit progress: generating PDF (fallback path)
+			const fallbackCharts = extractChartUrls(chatMessages);
+			await updateProgress(payload.reportId, {
+				progressStage: "generating_pdf",
+				chartsGenerated: fallbackCharts.length,
 			});
 
 			// Generate PDF from fallback content
@@ -451,6 +560,7 @@ export const generateAiReport = task({
 				.update(aiReports)
 				.set({
 					status: "complete",
+					progressStage: "complete",
 					tokensUsed: totalTokensUsed,
 					completedAt: new Date(),
 				})
@@ -474,6 +584,7 @@ export const generateAiReport = task({
 				.update(aiReports)
 				.set({
 					status: "failed",
+					progressStage: "failed",
 					completedAt: new Date(),
 					errorMessage: getUserFriendlyErrorMessage(error),
 				})

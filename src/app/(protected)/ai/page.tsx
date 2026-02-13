@@ -10,7 +10,10 @@ export default function AIPage() {
 	const [mode, setMode] = useState<AiMode>("chat");
 
 	return (
-		<div className="flex h-[calc(100vh-4.5rem)] flex-col" data-testid="ai-page">
+		<div
+			className="flex h-[calc(100vh-4.5rem)] flex-col overflow-hidden"
+			data-testid="ai-page"
+		>
 			{mode === "chat" ? (
 				<ChatInterface mode={mode} onModeChange={setMode} />
 			) : (

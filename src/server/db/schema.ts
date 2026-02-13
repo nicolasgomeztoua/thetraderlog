@@ -588,6 +588,11 @@ export const aiReports = createTable(
 		tokensUsed: integer("tokens_used").notNull().default(0),
 		triggerTaskId: text("trigger_task_id"),
 		errorMessage: text("error_message"),
+		progressStage: text("progress_stage").default("queued"),
+		currentRound: integer("current_round").default(0),
+		totalToolCalls: integer("total_tool_calls").default(0),
+		chartsGenerated: integer("charts_generated").default(0),
+		progressDetail: text("progress_detail"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
