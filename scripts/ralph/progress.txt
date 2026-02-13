@@ -237,3 +237,36 @@ Started: Fri Feb 13 21:03:05 WET 2026
   - Biome auto-fix (`--write`) handles formatting issues like multi-line→single-line JSX
   - notFound() from next/navigation triggers the closest not-found.tsx boundary
 ---
+
+## 2026-02-13 - US-012 Client-Side PDF Export
+- Installed html2canvas-pro@1.6.7 and jspdf@4.1.0
+- Created src/lib/export/pdf-export.ts with exportReportToPdf(element, title) function:
+  - Captures report content DOM element via html2canvas-pro (scale 2x, dark bg #050505, CORS enabled)
+  - Generates multi-page A4 PDF via jsPDF with page slicing (source canvas split into page-sized chunks)
+  - Branded header on first page: "EDGEJOURNAL // AI ANALYSIS REPORT" in chartreuse + report title
+  - Footer on each page: page number (centered, courier font)
+  - Downloads as {slug}-report.pdf (title slugified, max 50 chars)
+- Created download-pdf-button.tsx client component:
+  - Uses dynamic import() of pdf-export for lazy loading (large dependencies not loaded until needed)
+  - Queries DOM for [data-testid="report-viewer-content"] element
+  - Loading state: Loader2 spinner + "Generating..." text
+  - Silent catch on failure (html2canvas may not support all rendering features)
+- Updated page.tsx:
+  - Replaced disabled PDF placeholder button with DownloadPdfButton for completed reports
+  - Added showPdfDownload prop to ReportHeader (only shown for completed reports)
+  - DownloadPdfButton imported as new client component
+- Added print CSS to globals.css:
+  - @media print rules hiding ToC sidebar, header actions, and back button
+  - Content area max-width and padding reset for print
+  - Body background/color override for print
+- Added print:hidden Tailwind class to ToC sidebar wrapper and actions div
+- Files changed: package.json, bun.lock, src/lib/export/pdf-export.ts (new), download-pdf-button.tsx (new), page.tsx, report-viewer-content.tsx, globals.css
+- **Learnings for future iterations:**
+  - html2canvas-pro captures DOM as canvas — scale: 2 gives good quality for PDF
+  - jsPDF addImage works with sliced canvases for multi-page — create temp canvas per page, draw slice from source
+  - Dynamic import() in button click handler is the right pattern for large client-only deps (html2canvas-pro + jspdf = ~800KB)
+  - Biome CSS lint flags !important — for print styles, use without !important or suppress per-line
+  - Biome enforces sorted Tailwind responsive/print variant classes — xl:block before print:hidden
+  - biome-ignore at @media level doesn't work for CSS properties — Biome requires per-line suppression for CSS
+  - Query DOM via data-testid attribute for reliable element selection from sibling components
+---

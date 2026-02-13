@@ -265,8 +265,8 @@
         "Verify in browser: download a multi-page report"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Installed html2canvas-pro@1.6.7 and jspdf@4.1.0. Created src/lib/export/pdf-export.ts with exportReportToPdf(element, title) function: captures report content via html2canvas-pro (scale 2, dark background), generates multi-page A4 PDF via jsPDF with page slicing, branded header on first page (EDGEJOURNAL // AI ANALYSIS REPORT + title), page numbers on each page, downloads as {slug}-report.pdf. Created download-pdf-button.tsx client component with dynamic import of pdf-export (lazy loading), loading state (spinner + Generating...), queries DOM for report-viewer-content testid. Updated page.tsx: replaced disabled PDF placeholder with DownloadPdfButton for completed reports, added showPdfDownload prop to ReportHeader. Added print CSS to globals.css hiding ToC sidebar, header actions, and back button. Added print:hidden Tailwind class to ToC sidebar and actions div. Biome check and build pass."
     },
     {
       "id": "US-013",
