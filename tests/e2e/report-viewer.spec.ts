@@ -217,6 +217,83 @@ test.describe("Report Viewer - Authenticated", () => {
 		await expect(pdfButton).toBeVisible({ timeout: 30000 });
 	});
 
+	// --- MDX Components (best-effort — depends on report content) ---
+
+	test("MetricCard components render if present", async ({
+		page,
+	}, testInfo) => {
+		testInfo.setTimeout(60000);
+		test.skip(!reportId, "No completed reports available for test user");
+
+		await page.goto(`/ai/reports/${reportId}`);
+		await expect(page.getByTestId("report-viewer-content")).toBeVisible({
+			timeout: 30000,
+		});
+
+		// MetricCard uses analytics component — look for metric cards in content
+		const content = page.getByTestId("report-viewer-content");
+		const metricGrids = content.locator('[data-testid="mdx-metric-grid"]');
+		const gridCount = await metricGrids.count();
+
+		if (gridCount > 0) {
+			// MetricGrid contains MetricCard children — verify grid is rendered
+			await expect(metricGrids.first()).toBeVisible();
+		}
+		// Skip silently if no MetricCard/MetricGrid in this report
+	});
+
+	test("Callout components render with correct styling", async ({
+		page,
+	}, testInfo) => {
+		testInfo.setTimeout(60000);
+		test.skip(!reportId, "No completed reports available for test user");
+
+		await page.goto(`/ai/reports/${reportId}`);
+		await expect(page.getByTestId("report-viewer-content")).toBeVisible({
+			timeout: 30000,
+		});
+
+		const content = page.getByTestId("report-viewer-content");
+		const callouts = content.locator('[data-testid^="mdx-callout-"]');
+		const calloutCount = await callouts.count();
+
+		if (calloutCount > 0) {
+			// Verify first callout is visible and has correct structure
+			const firstCallout = callouts.first();
+			await expect(firstCallout).toBeVisible();
+
+			// Callout should have a border-l-2 styling (left border indicator)
+			await expect(firstCallout).toHaveClass(/border-l-2/);
+		}
+		// Skip silently if no Callout in this report
+	});
+
+	test("DataTable renders with data if present", async ({ page }, testInfo) => {
+		testInfo.setTimeout(60000);
+		test.skip(!reportId, "No completed reports available for test user");
+
+		await page.goto(`/ai/reports/${reportId}`);
+		await expect(page.getByTestId("report-viewer-content")).toBeVisible({
+			timeout: 30000,
+		});
+
+		const content = page.getByTestId("report-viewer-content");
+		const dataTables = content.locator('[data-testid="mdx-data-table"]');
+		const tableCount = await dataTables.count();
+
+		if (tableCount > 0) {
+			// Verify table is rendered with rows
+			const firstTable = dataTables.first();
+			await expect(firstTable).toBeVisible();
+
+			// Table should have at least a header row
+			const rows = firstTable.locator("tr");
+			const rowCount = await rows.count();
+			expect(rowCount).toBeGreaterThan(0);
+		}
+		// Skip silently if no DataTable in this report
+	});
+
 	// --- Responsive ToC ---
 
 	test("ToC sidebar visible on xl+ viewport", async ({ browser }, testInfo) => {
