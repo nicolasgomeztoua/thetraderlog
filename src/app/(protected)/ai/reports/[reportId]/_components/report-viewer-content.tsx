@@ -2,9 +2,10 @@
 
 import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { ReportRenderer } from "@/components/report/report-renderer";
-import type {
-	Section,
-	StructuredReport,
+import {
+	type Section,
+	type StructuredReport,
+	toHeadingId,
 } from "@/lib/ai/report-pipeline/report-schema";
 
 // =============================================================================
@@ -27,14 +28,6 @@ interface ReportViewerContentProps {
 // =============================================================================
 // TABLE OF CONTENTS
 // =============================================================================
-
-/** Derive heading id the same way as report-renderer.tsx */
-function toHeadingId(text: string): string {
-	return text
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/(^-|-$)/g, "");
-}
 
 function extractHeadingsFromSections(sections: Section[]): TocItem[] {
 	return sections.map((section) => ({

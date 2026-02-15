@@ -119,6 +119,38 @@ export interface DataStoreEntry {
 export type DataStoreMap = Map<string, DataStoreEntry>;
 
 // =============================================================================
+// UTILITIES
+// =============================================================================
+
+/** Generate a URL-safe heading id from text. Shared by renderer and viewer TOC. */
+export function toHeadingId(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/(^-|-$)/g, "");
+}
+
+/**
+ * Safely parse a JSON string as a StructuredReport.
+ * Returns null if the string is not valid JSON or doesn't have the expected shape.
+ */
+export function parseStructuredReport(raw: string): StructuredReport | null {
+	try {
+		const parsed = JSON.parse(raw) as StructuredReport;
+		if (
+			!parsed ||
+			!Array.isArray(parsed.sections) ||
+			typeof parsed.executiveSummary !== "string"
+		) {
+			return null;
+		}
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+
+// =============================================================================
 // INFERRED TYPES
 // =============================================================================
 

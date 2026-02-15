@@ -22,16 +22,17 @@ import { DataTable } from "@/components/mdx/data-table";
 import { markdownComponents } from "@/components/mdx/markdown-components";
 import { MetricGrid } from "@/components/mdx/metric-grid";
 import { ReportDataProvider } from "@/components/mdx/provider";
-import type {
-	CalloutBlock,
-	ChartBlock,
-	ChartComponentName,
-	ContentBlock,
-	ImageBlock,
-	MetricsBlock,
-	ProseBlock,
-	Section,
-	StructuredReport,
+import {
+	type CalloutBlock,
+	type ChartBlock,
+	type ChartComponentName,
+	type ContentBlock,
+	type ImageBlock,
+	type MetricsBlock,
+	type ProseBlock,
+	type Section,
+	type StructuredReport,
+	toHeadingId,
 } from "@/lib/ai/report-pipeline/report-schema";
 
 // =============================================================================
@@ -58,17 +59,6 @@ const CHART_COMPONENTS: Record<
 		className?: string;
 	}>,
 };
-
-// =============================================================================
-// HEADING ID GENERATOR (matches markdown-components.tsx)
-// =============================================================================
-
-function toHeadingId(text: string): string {
-	return text
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/(^-|-$)/g, "");
-}
 
 /** Derive a stable key from a content block's fields */
 function blockKey(headingId: string, block: ContentBlock): string {

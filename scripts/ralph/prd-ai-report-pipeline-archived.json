@@ -1,295 +1,295 @@
 {
-  "project": "EdgeJournal",
-  "branchName": "ralph/ai-report-pipeline",
-  "description": "Migrate to Vercel AI SDK, implement 4-phase report pipeline (Plan → Gather → Write → Validate), add templates and few-shot examples",
-  "userStories": [
-    {
-      "id": "US-000",
-      "title": "Audit Existing AI Code + Vercel AI SDK Patterns",
-      "description": "As a developer, I want to audit the current AI implementation and understand Vercel AI SDK patterns so that the migration is informed and we reuse existing code.",
-      "acceptanceCriteria": [
-        "Document all imports/usages of src/lib/ai/client.ts across the codebase",
-        "Document all tool definitions in src/lib/ai/tools/ — their JSON Schema shapes and executor functions",
-        "Document the chat flow in src/server/api/routers/ai.ts — how tool loops work, how messages are saved",
-        "Document the report flow in src/trigger/generate-ai-report.ts — phases, progress tracking, dataStore",
-        "Research Vercel AI SDK patterns: generateText with maxSteps, streamText, tool() with Zod, OpenRouter provider setup via createOpenAI({ baseURL })",
-        "Document migration mapping: which current functions map to which SDK functions",
-        "Write findings to scripts/ralph/progress.txt",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 1,
-      "passes": true,
-      "notes": "Audit complete. Key finding: use @openrouter/ai-sdk-provider (not @ai-sdk/openai). SDK uses stopWhen: stepCountIs(N) instead of maxSteps."
-    },
-    {
-      "id": "US-001",
-      "title": "Install Vercel AI SDK + OpenRouter Provider",
-      "description": "As a developer, I want the Vercel AI SDK installed with an OpenRouter-compatible provider so that all subsequent stories can use it.",
-      "acceptanceCriteria": [
-        "Install packages: bun add ai @ai-sdk/openai",
-        "Create src/lib/ai/provider.ts — configure OpenRouter provider using createOpenAI with baseURL https://openrouter.ai/api/v1 and apiKey from env",
-        "Export helper functions: getModel(modelId: string) that returns a Vercel AI SDK model instance",
-        "Export default models: getChatModel() uses DEFAULT_CHAT_MODEL, getReportModel() uses DEFAULT_REPORT_MODEL",
-        "Include OpenRouter-specific headers (HTTP-Referer, X-Title) via provider config",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": "Used @openrouter/ai-sdk-provider instead of @ai-sdk/openai. Fixed pre-existing build errors (Bun global type conflict, TS narrowing)."
-    },
-    {
-      "id": "US-002",
-      "title": "Migrate Tool Definitions to Vercel AI SDK Format",
-      "description": "As a developer, I want all AI tool definitions converted to Vercel AI SDK tool() format with Zod schemas so that they work with generateText and streamText.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/tools/definitions.ts with Vercel AI SDK tool definitions",
-        "Convert each tool's JSON Schema parameters to Zod schemas: run_query, call_analytics, get_market_data, run_python, store_report_data",
-        "Each tool definition includes description matching the existing descriptions",
-        "Each tool has an execute function that calls the existing executor (reuse executeRunQuery, executeCallAnalytics, etc.)",
-        "Export getChatTools(context) and getReportTools(context) that return tool maps with context (userId, db, dataStore) bound",
-        "Existing src/lib/ai/tools/index.ts exports preserved for backward compatibility during migration",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Used z.record(z.string(), z.unknown()) for input param — Zod in this project requires both key and value schemas."
-    },
-    {
-      "id": "US-003",
-      "title": "Replace AI Client with Vercel AI SDK",
-      "description": "As a developer, I want to replace the hand-rolled OpenRouter client with Vercel AI SDK functions so that all AI calls use the new SDK.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/client-v2.ts (new file, coexists with old client during migration)",
-        "Export aiGenerateText(options) wrapping Vercel AI SDK generateText() with model from provider, system prompt, messages, tools, maxSteps",
-        "Export aiStreamText(options) wrapping streamText() with same config",
-        "Both functions handle OpenRouter errors and map to existing OpenRouterError format",
-        "Token usage extracted from Vercel AI SDK response (usage.totalTokens etc.)",
-        "Retry logic: wrap with existing exponential backoff for 429/5xx errors",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "AI SDK v6 uses ModelMessage (not CoreMessage), maxOutputTokens (not maxTokens), inputTokens/outputTokens (not promptTokens/completionTokens)."
-    },
-    {
-      "id": "US-004",
-      "title": "Migrate Chat to Vercel AI SDK",
-      "description": "As a developer, I want the chat tool-calling loop in ai.ts router to use Vercel AI SDK so that chat and reports share the same SDK.",
-      "acceptanceCriteria": [
-        "Update src/server/api/routers/ai.ts sendMessage procedure to use aiGenerateText from client-v2.ts",
-        "Replace manual for-loop with maxSteps: MAX_TOOL_ROUNDS_CHAT — Vercel AI SDK handles the tool loop automatically",
-        "Tools provided via getChatTools(context) from the new definitions",
-        "System prompt building unchanged (same buildSystemPrompt call)",
-        "Message format conversion: map existing ChatMessage[] to Vercel AI SDK CoreMessage[] format",
-        "Token usage still tracked from response (usage.totalTokens)",
-        "Tool calls still saved to aiMessages.toolCalls column",
-        "All existing chat behavior preserved — same tools, same limits, same error handling",
-        "Old chatCompletion import removed from ai.ts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Tool call property is 'input' not 'args'. toolCallId for id. Biome reorders imports alphabetically."
-    },
-    {
-      "id": "US-005",
-      "title": "Create Report Planner Phase",
-      "description": "As a developer, I want a planner phase that analyzes the user's prompt and outputs a structured markdown analysis plan so that subsequent phases know exactly what data to gather and what sections to write.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/report-pipeline/planner.ts",
-        "Export runPlannerPhase(options) function taking prompt, userContext, and model",
-        "Uses generateText with a planner-specific system prompt instructing the model to: analyze the request, list data sources needed, outline report sections, identify MDX components, estimate tool calls",
-        "Planner does NOT have access to tools — it only plans, never executes",
-        "Planner system prompt includes: condensed user context, list of available analytics endpoints (names + descriptions only), list of available MDX components (names + data shape summaries)",
-        "Returns { plan: string, tokensUsed: number } — plan is the markdown output",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Planner phase created at src/lib/ai/report-pipeline/planner.ts. Uses aiGenerateText with NO tools. System prompt includes condensed analytics endpoints list, MDX component catalog, and planner instructions. Accepts optional templateHint for template-driven reports."
-    },
-    {
-      "id": "US-006",
-      "title": "Create Report Data Gatherer Phase",
-      "description": "As a developer, I want a data gatherer phase that reads the planner's output and executes all necessary tool calls to populate the dataStore so that the writer has all data ready.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/report-pipeline/gatherer.ts",
-        "Export runGathererPhase(options) function taking plan, prompt, userContext, schemaContext, model, userId, db, and dataStore",
-        "Uses generateText with maxSteps set to MAX_TOOL_ROUNDS_REPORT (20)",
-        "Has access to ALL tools: run_query, call_analytics, get_market_data, run_python, store_report_data",
-        "System prompt instructs: execute the analysis plan, call tools to gather data, use store_report_data to register datasets, do NOT write report prose",
-        "System prompt includes the plan, full schema context, and data handling notes (timezone, breakeven, etc.)",
-        "Returns { tokensUsed: number, dataStoreKeys: string[], totalToolCalls: number }",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Gatherer phase created at src/lib/ai/report-pipeline/gatherer.ts. Uses aiGenerateText with ALL report tools (run_query, call_analytics, get_market_data, run_python, store_report_data) and maxSteps=MAX_TOOL_ROUNDS_REPORT. System prompt includes plan, user context, schema context, and data handling notes. Returns tokensUsed, dataStoreKeys, totalToolCalls."
-    },
-    {
-      "id": "US-007",
-      "title": "Create Condensed Writer Context",
-      "description": "As a developer, I want a condensed context builder for the writer phase that only includes what the writer needs so that the writer operates with minimal context noise.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/report-pipeline/writer-context.ts",
-        "Export buildWriterContext(options) taking dataStore Map and plan string",
-        "Generates condensed context containing: analysis plan, data summaries per dataStore entry (refId, description, first 3 rows if array or key fields if object), full MDX component catalog, formatting rules",
-        "Does NOT include: database schema, SQL syntax, tRPC endpoint docs, tool descriptions",
-        "Context size roughly 40-60% smaller than the current full system prompt",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Created src/lib/ai/report-pipeline/writer-context.ts. Exports buildWriterContext(options) taking dataStore Map and plan string. Generates condensed context with: analysis plan, data summaries (first 3 rows for arrays, key fields for objects), full MDX component catalog, formatting rules. Excludes schema, SQL, tool descriptions, and tRPC docs."
-    },
-    {
-      "id": "US-008",
-      "title": "Create Report Writer Phase + Few-Shot Examples",
-      "description": "As a developer, I want a writer phase with few-shot examples that takes gathered data and plan, then produces the final MDX report with maximum writing quality.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/report-pipeline/writer.ts",
-        "Create src/lib/ai/report-pipeline/few-shot-examples.ts with WRITER_FEW_SHOT_EXAMPLES string",
-        "Few-shot examples: 2 curated report sections — one performance overview (MetricGrid, EquityCurve, Callout), one risk analysis (DrawdownTable, MonteCarloChart, RMultipleChart)",
-        "Examples demonstrate: correct dataRef usage, mixing prose and MDX naturally, specific numbers in narrative, actionable recommendations, proper formatting",
-        "Export runWriterPhase(options) taking plan, writerContext, prompt, model, and dataStoreKeys",
-        "Uses generateText with NO tools — writer only writes, never calls tools",
-        "System prompt instructs: write MDX report following plan, use provided dataRef keys, follow formatting rules, include executive summary and recommendations",
-        "Few-shot examples integrated into writer system prompt",
-        "Returns { content: string, tokensUsed: number }",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Created src/lib/ai/report-pipeline/writer.ts and src/lib/ai/report-pipeline/few-shot-examples.ts. Writer uses aiGenerateText with NO tools. System prompt includes writer context, dataRef key list, writing instructions, and two curated few-shot examples (performance overview with MetricGrid/EquityCurve/Callout, risk analysis with DrawdownTable/RMultipleChart/MonteCarloChart). Returns { content, tokensUsed }."
-    },
-    {
-      "id": "US-009",
-      "title": "Create Report Validator + Auto-Repair Phase",
-      "description": "As a developer, I want a validator phase that checks the writer's MDX output for broken dataRefs and compilation errors, and auto-repairs if needed.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/report-pipeline/validator.ts",
-        "Export runValidatorPhase(options) taking content, dataStoreKeys, and model",
-        "DataRef validation: parse all MDX components, extract dataRef attributes, check each exists in dataStoreKeys",
-        "MDX compilation check: attempt to compile MDX using next-mdx-remote (same as viewer) — catch compilation errors",
-        "Component validation: check all MDX component names are from the known catalog",
-        "If validation passes: return { valid: true, content } unchanged",
-        "If validation fails: attempt auto-repair up to 2 times — build repair prompt listing specific errors, call generateText to fix, re-validate",
-        "If repair fails after 2 attempts: return { valid: false, content: originalContent, errors: string[] } — graceful degradation",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Created src/lib/ai/report-pipeline/validator.ts. Exports runValidatorPhase(options) taking content, dataStoreKeys, and model. Three validation checks: (1) component name validation against KNOWN_COMPONENTS set matching mdxComponents registry, (2) dataRef validation checking existence in dataStoreKeys and required dataRef for chart/display components, (3) MDX compilation check using compileMDX from next-mdx-remote/rsc with sanitizeMdxProse. Auto-repair: up to 2 attempts using aiGenerateText with a repair-specific prompt listing errors and available keys. Graceful degradation: returns original content with errors if repair fails. Returns { valid, content, errors, tokensUsed }."
-    },
-    {
-      "id": "US-010",
-      "title": "Report Templates",
-      "description": "As a developer, I want pre-defined report templates so that users get consistent, structured reports and the LLM doesn't have to invent structure from scratch.",
-      "acceptanceCriteria": [
-        "Create src/lib/ai/report-templates/index.ts",
-        "Create ReportTemplate type with: id, name, description, sections array ({ title, description, suggestedDataSources, suggestedComponents }), plannerHint string",
-        "Monthly Review template: equity curve, monthly P&L, win rate trends, symbol breakdown, behavioral patterns, recommendations",
-        "Risk Audit template: drawdown analysis, position sizing, R-multiple distribution, Monte Carlo, risk of ruin, risk-adjusted returns",
-        "Strategy Comparison template: per-strategy metrics, win rate/expectancy/profit factor comparison, recommendations",
-        "Export getTemplate(id) and getAllTemplates() functions",
-        "Templates are data-only (no LLM calls) — they augment the planner prompt",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": "Created src/lib/ai/report-templates/index.ts. Exports ReportTemplate type, 3 templates (monthly-review, risk-audit, strategy-comparison), getTemplate(id), getAllTemplates(). Each template has: id, name, description, sections array (title, description, suggestedDataSources, suggestedComponents), and plannerHint string. Templates are data-only — no LLM calls. PlannerHint provides structured guidance for the planner phase."
-    },
-    {
-      "id": "US-011",
-      "title": "Rewire Report Generation to 4-Phase Pipeline",
-      "description": "As a developer, I want generate-ai-report.ts to use the new 4-phase pipeline instead of the single tool-calling loop.",
-      "acceptanceCriteria": [
-        "Update src/trigger/generate-ai-report.ts to call phases sequentially: runPlannerPhase (planning), runGathererPhase (gathering_data), runWriterPhase (writing), runValidatorPhase (validating)",
-        "Progress tracking updated with new stage names: building_context → planning → gathering_data → writing → validating → complete",
-        "Token usage aggregated across all 4 phases",
-        "Tool call count from gatherer phase saved to totalToolCalls",
-        "chartsGenerated from dataStore size (same as before)",
-        "DataStore, content, and dataArtifacts saving unchanged",
-        "Email notification unchanged",
-        "If planner fails: fallback — run gatherer with raw user prompt (graceful degradation)",
-        "If validator reports errors but repair failed: save content anyway with warnings logged",
-        "Remove the old single-loop logic entirely",
-        "Template support: if report initiated with templateId, pass template plannerHint to planner phase",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": "Rewired src/trigger/generate-ai-report.ts to use 4-phase pipeline: Plan → Gather → Write → Validate. Replaced old single tool-calling loop entirely. New progress stages: building_context → planning → gathering_data → writing → validating → complete. Token usage aggregated across all 4 phases. Planner failure fallback uses raw prompt. Validator failure saves content with logged warnings. Template support via optional templateId in payload → getTemplate() → plannerHint. Old imports (chatCompletion, ChatMessage, ToolCall, executeTool, getToolsForMode, buildSystemPrompt) removed. New imports: getModel, pipeline phases, buildWriterContext, getTemplate. 139 lines added, 218 removed."
-    },
-    {
-      "id": "US-012",
-      "title": "Clean Up Old Client + Migration Artifacts",
-      "description": "As a developer, I want to remove the old hand-rolled OpenRouter client and consolidate to a single Vercel AI SDK client.",
-      "acceptanceCriteria": [
-        "Remove src/lib/ai/client.ts (old hand-rolled client)",
-        "Rename src/lib/ai/client-v2.ts to src/lib/ai/client.ts (or inline into consumers)",
-        "Remove old tool definition format from src/lib/ai/tools/index.ts — only keep Vercel AI SDK format",
-        "Update all remaining imports across codebase (grep for old client imports)",
-        "Remove ChatMessage, ToolCall, ToolDefinition, ChatCompletionOptions, ChatCompletionResponse, StreamChunk types if fully replaced",
-        "Remove fetchWithRetry, buildHeaders, buildRequestBody helper functions",
-        "Verify no references to old client remain",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": "Removed old hand-rolled OpenRouter client (client.ts). Moved OpenRouterError into client-v2.ts, renamed client-v2.ts → client.ts via git mv. Removed all old types (ChatMessage, ToolCall, ToolDefinition, ChatCompletionOptions, ChatCompletionResponse, StreamChunk, TokenUsage). Removed fetchWithRetry, buildHeaders, buildRequestBody. Removed old JSON Schema tool definitions from all 5 tool files (run-query, call-analytics, get-market-data, run-python, store-report-data). Cleaned tools/index.ts: removed AI_TOOLS, AI_REPORT_TOOLS, getToolsForMode; kept executeTool (used by tests). Updated 5 pipeline/router imports from client-v2 → client. Updated 2 test files to mock aiGenerateText instead of chatCompletion. 185 additions, 683 deletions."
-    },
-    {
-      "id": "US-013",
-      "title": "Template Selection UI",
-      "description": "As a trader, I want to choose a report template when creating a report so that I get structured, consistent analysis without writing detailed prompts.",
-      "acceptanceCriteria": [
-        "Update the report creation UI to show template options alongside the free-text prompt",
-        "Display 3 template cards: Monthly Review, Risk Audit, Strategy Comparison",
-        "Each card shows: name, description, number of sections",
-        "User can select a template OR write a free-form prompt (template auto-fills a default prompt)",
-        "When template selected, pass templateId to the startReport mutation",
-        "Update ai.startReport tRPC mutation to accept optional templateId parameter",
-        "Pass templateId through to the Trigger.dev task payload",
-        "Terminal design system styling: dark cards, chartreuse accent on selected, monospace labels",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": "Added template selection UI to report-interface.tsx. 3 template cards (Monthly Review, Risk Audit, Strategy Comparison) displayed above the prompt textarea. Selecting a template highlights it with chartreuse accent and auto-fills a default prompt. Deselecting clears the template. templateId passed through startReport tRPC mutation → Trigger.dev task payload. Terminal design system styling: monospace fonts, dark cards, chartreuse accent on selected. 93 lines added across 2 files."
-    },
-    {
-      "id": "US-014",
-      "title": "Integration Tests for Report Pipeline Phases",
-      "description": "As a developer, I want integration tests for the individual pipeline phase modules so that we can verify each phase works correctly in isolation.",
-      "acceptanceCriteria": [
-        "Create tests/integration/ai-report-pipeline.test.ts",
-        "Test buildWriterContext: given mock dataStore and plan, verify output contains data summaries and MDX catalog, excludes schema/SQL docs",
-        "Test runValidatorPhase with valid MDX: returns { valid: true }",
-        "Test runValidatorPhase with missing dataRef: detects the error",
-        "Test runValidatorPhase with invalid component name: detects the error",
-        "Test getTemplate returns correct structure for each template",
-        "Test getAllTemplates returns all 3 templates",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 15,
-      "passes": true,
-      "notes": "Created tests/integration/ai-report-pipeline.test.ts with 19 tests across 3 describe blocks. Tests: buildWriterContext (6 tests — data summaries, MDX catalog, formatting rules, excludes schema/SQL, empty dataStore, array truncation), runValidatorPhase (6 tests — valid MDX passes, missing dataRef detected, non-existent dataRef detected, invalid component names detected, MDX compilation errors detected, tokensUsed:0 when valid), Report Templates (7 tests — getTemplate structure for all 3 templates, unknown IDs return undefined, getAllTemplates returns 3, unique IDs, expected IDs present). Mocked compileMDX (RSC module) and aiGenerateText for validator tests."
-    }
-  ]
+	"project": "EdgeJournal",
+	"branchName": "ralph/ai-report-pipeline",
+	"description": "Migrate to Vercel AI SDK, implement 4-phase report pipeline (Plan → Gather → Write → Validate), add templates and few-shot examples",
+	"userStories": [
+		{
+			"id": "US-000",
+			"title": "Audit Existing AI Code + Vercel AI SDK Patterns",
+			"description": "As a developer, I want to audit the current AI implementation and understand Vercel AI SDK patterns so that the migration is informed and we reuse existing code.",
+			"acceptanceCriteria": [
+				"Document all imports/usages of src/lib/ai/client.ts across the codebase",
+				"Document all tool definitions in src/lib/ai/tools/ — their JSON Schema shapes and executor functions",
+				"Document the chat flow in src/server/api/routers/ai.ts — how tool loops work, how messages are saved",
+				"Document the report flow in src/trigger/generate-ai-report.ts — phases, progress tracking, dataStore",
+				"Research Vercel AI SDK patterns: generateText with maxSteps, streamText, tool() with Zod, OpenRouter provider setup via createOpenAI({ baseURL })",
+				"Document migration mapping: which current functions map to which SDK functions",
+				"Write findings to scripts/ralph/progress.txt",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 1,
+			"passes": true,
+			"notes": "Audit complete. Key finding: use @openrouter/ai-sdk-provider (not @ai-sdk/openai). SDK uses stopWhen: stepCountIs(N) instead of maxSteps."
+		},
+		{
+			"id": "US-001",
+			"title": "Install Vercel AI SDK + OpenRouter Provider",
+			"description": "As a developer, I want the Vercel AI SDK installed with an OpenRouter-compatible provider so that all subsequent stories can use it.",
+			"acceptanceCriteria": [
+				"Install packages: bun add ai @ai-sdk/openai",
+				"Create src/lib/ai/provider.ts — configure OpenRouter provider using createOpenAI with baseURL https://openrouter.ai/api/v1 and apiKey from env",
+				"Export helper functions: getModel(modelId: string) that returns a Vercel AI SDK model instance",
+				"Export default models: getChatModel() uses DEFAULT_CHAT_MODEL, getReportModel() uses DEFAULT_REPORT_MODEL",
+				"Include OpenRouter-specific headers (HTTP-Referer, X-Title) via provider config",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 2,
+			"passes": true,
+			"notes": "Used @openrouter/ai-sdk-provider instead of @ai-sdk/openai. Fixed pre-existing build errors (Bun global type conflict, TS narrowing)."
+		},
+		{
+			"id": "US-002",
+			"title": "Migrate Tool Definitions to Vercel AI SDK Format",
+			"description": "As a developer, I want all AI tool definitions converted to Vercel AI SDK tool() format with Zod schemas so that they work with generateText and streamText.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/tools/definitions.ts with Vercel AI SDK tool definitions",
+				"Convert each tool's JSON Schema parameters to Zod schemas: run_query, call_analytics, get_market_data, run_python, store_report_data",
+				"Each tool definition includes description matching the existing descriptions",
+				"Each tool has an execute function that calls the existing executor (reuse executeRunQuery, executeCallAnalytics, etc.)",
+				"Export getChatTools(context) and getReportTools(context) that return tool maps with context (userId, db, dataStore) bound",
+				"Existing src/lib/ai/tools/index.ts exports preserved for backward compatibility during migration",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 3,
+			"passes": true,
+			"notes": "Used z.record(z.string(), z.unknown()) for input param — Zod in this project requires both key and value schemas."
+		},
+		{
+			"id": "US-003",
+			"title": "Replace AI Client with Vercel AI SDK",
+			"description": "As a developer, I want to replace the hand-rolled OpenRouter client with Vercel AI SDK functions so that all AI calls use the new SDK.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/client-v2.ts (new file, coexists with old client during migration)",
+				"Export aiGenerateText(options) wrapping Vercel AI SDK generateText() with model from provider, system prompt, messages, tools, maxSteps",
+				"Export aiStreamText(options) wrapping streamText() with same config",
+				"Both functions handle OpenRouter errors and map to existing OpenRouterError format",
+				"Token usage extracted from Vercel AI SDK response (usage.totalTokens etc.)",
+				"Retry logic: wrap with existing exponential backoff for 429/5xx errors",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 4,
+			"passes": true,
+			"notes": "AI SDK v6 uses ModelMessage (not CoreMessage), maxOutputTokens (not maxTokens), inputTokens/outputTokens (not promptTokens/completionTokens)."
+		},
+		{
+			"id": "US-004",
+			"title": "Migrate Chat to Vercel AI SDK",
+			"description": "As a developer, I want the chat tool-calling loop in ai.ts router to use Vercel AI SDK so that chat and reports share the same SDK.",
+			"acceptanceCriteria": [
+				"Update src/server/api/routers/ai.ts sendMessage procedure to use aiGenerateText from client-v2.ts",
+				"Replace manual for-loop with maxSteps: MAX_TOOL_ROUNDS_CHAT — Vercel AI SDK handles the tool loop automatically",
+				"Tools provided via getChatTools(context) from the new definitions",
+				"System prompt building unchanged (same buildSystemPrompt call)",
+				"Message format conversion: map existing ChatMessage[] to Vercel AI SDK CoreMessage[] format",
+				"Token usage still tracked from response (usage.totalTokens)",
+				"Tool calls still saved to aiMessages.toolCalls column",
+				"All existing chat behavior preserved — same tools, same limits, same error handling",
+				"Old chatCompletion import removed from ai.ts",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 5,
+			"passes": true,
+			"notes": "Tool call property is 'input' not 'args'. toolCallId for id. Biome reorders imports alphabetically."
+		},
+		{
+			"id": "US-005",
+			"title": "Create Report Planner Phase",
+			"description": "As a developer, I want a planner phase that analyzes the user's prompt and outputs a structured markdown analysis plan so that subsequent phases know exactly what data to gather and what sections to write.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/report-pipeline/planner.ts",
+				"Export runPlannerPhase(options) function taking prompt, userContext, and model",
+				"Uses generateText with a planner-specific system prompt instructing the model to: analyze the request, list data sources needed, outline report sections, identify MDX components, estimate tool calls",
+				"Planner does NOT have access to tools — it only plans, never executes",
+				"Planner system prompt includes: condensed user context, list of available analytics endpoints (names + descriptions only), list of available MDX components (names + data shape summaries)",
+				"Returns { plan: string, tokensUsed: number } — plan is the markdown output",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 6,
+			"passes": true,
+			"notes": "Planner phase created at src/lib/ai/report-pipeline/planner.ts. Uses aiGenerateText with NO tools. System prompt includes condensed analytics endpoints list, MDX component catalog, and planner instructions. Accepts optional templateHint for template-driven reports."
+		},
+		{
+			"id": "US-006",
+			"title": "Create Report Data Gatherer Phase",
+			"description": "As a developer, I want a data gatherer phase that reads the planner's output and executes all necessary tool calls to populate the dataStore so that the writer has all data ready.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/report-pipeline/gatherer.ts",
+				"Export runGathererPhase(options) function taking plan, prompt, userContext, schemaContext, model, userId, db, and dataStore",
+				"Uses generateText with maxSteps set to MAX_TOOL_ROUNDS_REPORT (20)",
+				"Has access to ALL tools: run_query, call_analytics, get_market_data, run_python, store_report_data",
+				"System prompt instructs: execute the analysis plan, call tools to gather data, use store_report_data to register datasets, do NOT write report prose",
+				"System prompt includes the plan, full schema context, and data handling notes (timezone, breakeven, etc.)",
+				"Returns { tokensUsed: number, dataStoreKeys: string[], totalToolCalls: number }",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 7,
+			"passes": true,
+			"notes": "Gatherer phase created at src/lib/ai/report-pipeline/gatherer.ts. Uses aiGenerateText with ALL report tools (run_query, call_analytics, get_market_data, run_python, store_report_data) and maxSteps=MAX_TOOL_ROUNDS_REPORT. System prompt includes plan, user context, schema context, and data handling notes. Returns tokensUsed, dataStoreKeys, totalToolCalls."
+		},
+		{
+			"id": "US-007",
+			"title": "Create Condensed Writer Context",
+			"description": "As a developer, I want a condensed context builder for the writer phase that only includes what the writer needs so that the writer operates with minimal context noise.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/report-pipeline/writer-context.ts",
+				"Export buildWriterContext(options) taking dataStore Map and plan string",
+				"Generates condensed context containing: analysis plan, data summaries per dataStore entry (refId, description, first 3 rows if array or key fields if object), full MDX component catalog, formatting rules",
+				"Does NOT include: database schema, SQL syntax, tRPC endpoint docs, tool descriptions",
+				"Context size roughly 40-60% smaller than the current full system prompt",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 8,
+			"passes": true,
+			"notes": "Created src/lib/ai/report-pipeline/writer-context.ts. Exports buildWriterContext(options) taking dataStore Map and plan string. Generates condensed context with: analysis plan, data summaries (first 3 rows for arrays, key fields for objects), full MDX component catalog, formatting rules. Excludes schema, SQL, tool descriptions, and tRPC docs."
+		},
+		{
+			"id": "US-008",
+			"title": "Create Report Writer Phase + Few-Shot Examples",
+			"description": "As a developer, I want a writer phase with few-shot examples that takes gathered data and plan, then produces the final MDX report with maximum writing quality.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/report-pipeline/writer.ts",
+				"Create src/lib/ai/report-pipeline/few-shot-examples.ts with WRITER_FEW_SHOT_EXAMPLES string",
+				"Few-shot examples: 2 curated report sections — one performance overview (MetricGrid, EquityCurve, Callout), one risk analysis (DrawdownTable, MonteCarloChart, RMultipleChart)",
+				"Examples demonstrate: correct dataRef usage, mixing prose and MDX naturally, specific numbers in narrative, actionable recommendations, proper formatting",
+				"Export runWriterPhase(options) taking plan, writerContext, prompt, model, and dataStoreKeys",
+				"Uses generateText with NO tools — writer only writes, never calls tools",
+				"System prompt instructs: write MDX report following plan, use provided dataRef keys, follow formatting rules, include executive summary and recommendations",
+				"Few-shot examples integrated into writer system prompt",
+				"Returns { content: string, tokensUsed: number }",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 9,
+			"passes": true,
+			"notes": "Created src/lib/ai/report-pipeline/writer.ts and src/lib/ai/report-pipeline/few-shot-examples.ts. Writer uses aiGenerateText with NO tools. System prompt includes writer context, dataRef key list, writing instructions, and two curated few-shot examples (performance overview with MetricGrid/EquityCurve/Callout, risk analysis with DrawdownTable/RMultipleChart/MonteCarloChart). Returns { content, tokensUsed }."
+		},
+		{
+			"id": "US-009",
+			"title": "Create Report Validator + Auto-Repair Phase",
+			"description": "As a developer, I want a validator phase that checks the writer's MDX output for broken dataRefs and compilation errors, and auto-repairs if needed.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/report-pipeline/validator.ts",
+				"Export runValidatorPhase(options) taking content, dataStoreKeys, and model",
+				"DataRef validation: parse all MDX components, extract dataRef attributes, check each exists in dataStoreKeys",
+				"MDX compilation check: attempt to compile MDX using next-mdx-remote (same as viewer) — catch compilation errors",
+				"Component validation: check all MDX component names are from the known catalog",
+				"If validation passes: return { valid: true, content } unchanged",
+				"If validation fails: attempt auto-repair up to 2 times — build repair prompt listing specific errors, call generateText to fix, re-validate",
+				"If repair fails after 2 attempts: return { valid: false, content: originalContent, errors: string[] } — graceful degradation",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 10,
+			"passes": true,
+			"notes": "Created src/lib/ai/report-pipeline/validator.ts. Exports runValidatorPhase(options) taking content, dataStoreKeys, and model. Three validation checks: (1) component name validation against KNOWN_COMPONENTS set matching mdxComponents registry, (2) dataRef validation checking existence in dataStoreKeys and required dataRef for chart/display components, (3) MDX compilation check using compileMDX from next-mdx-remote/rsc with sanitizeMdxProse. Auto-repair: up to 2 attempts using aiGenerateText with a repair-specific prompt listing errors and available keys. Graceful degradation: returns original content with errors if repair fails. Returns { valid, content, errors, tokensUsed }."
+		},
+		{
+			"id": "US-010",
+			"title": "Report Templates",
+			"description": "As a developer, I want pre-defined report templates so that users get consistent, structured reports and the LLM doesn't have to invent structure from scratch.",
+			"acceptanceCriteria": [
+				"Create src/lib/ai/report-templates/index.ts",
+				"Create ReportTemplate type with: id, name, description, sections array ({ title, description, suggestedDataSources, suggestedComponents }), plannerHint string",
+				"Monthly Review template: equity curve, monthly P&L, win rate trends, symbol breakdown, behavioral patterns, recommendations",
+				"Risk Audit template: drawdown analysis, position sizing, R-multiple distribution, Monte Carlo, risk of ruin, risk-adjusted returns",
+				"Strategy Comparison template: per-strategy metrics, win rate/expectancy/profit factor comparison, recommendations",
+				"Export getTemplate(id) and getAllTemplates() functions",
+				"Templates are data-only (no LLM calls) — they augment the planner prompt",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 11,
+			"passes": true,
+			"notes": "Created src/lib/ai/report-templates/index.ts. Exports ReportTemplate type, 3 templates (monthly-review, risk-audit, strategy-comparison), getTemplate(id), getAllTemplates(). Each template has: id, name, description, sections array (title, description, suggestedDataSources, suggestedComponents), and plannerHint string. Templates are data-only — no LLM calls. PlannerHint provides structured guidance for the planner phase."
+		},
+		{
+			"id": "US-011",
+			"title": "Rewire Report Generation to 4-Phase Pipeline",
+			"description": "As a developer, I want generate-ai-report.ts to use the new 4-phase pipeline instead of the single tool-calling loop.",
+			"acceptanceCriteria": [
+				"Update src/trigger/generate-ai-report.ts to call phases sequentially: runPlannerPhase (planning), runGathererPhase (gathering_data), runWriterPhase (writing), runValidatorPhase (validating)",
+				"Progress tracking updated with new stage names: building_context → planning → gathering_data → writing → validating → complete",
+				"Token usage aggregated across all 4 phases",
+				"Tool call count from gatherer phase saved to totalToolCalls",
+				"chartsGenerated from dataStore size (same as before)",
+				"DataStore, content, and dataArtifacts saving unchanged",
+				"Email notification unchanged",
+				"If planner fails: fallback — run gatherer with raw user prompt (graceful degradation)",
+				"If validator reports errors but repair failed: save content anyway with warnings logged",
+				"Remove the old single-loop logic entirely",
+				"Template support: if report initiated with templateId, pass template plannerHint to planner phase",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 12,
+			"passes": true,
+			"notes": "Rewired src/trigger/generate-ai-report.ts to use 4-phase pipeline: Plan → Gather → Write → Validate. Replaced old single tool-calling loop entirely. New progress stages: building_context → planning → gathering_data → writing → validating → complete. Token usage aggregated across all 4 phases. Planner failure fallback uses raw prompt. Validator failure saves content with logged warnings. Template support via optional templateId in payload → getTemplate() → plannerHint. Old imports (chatCompletion, ChatMessage, ToolCall, executeTool, getToolsForMode, buildSystemPrompt) removed. New imports: getModel, pipeline phases, buildWriterContext, getTemplate. 139 lines added, 218 removed."
+		},
+		{
+			"id": "US-012",
+			"title": "Clean Up Old Client + Migration Artifacts",
+			"description": "As a developer, I want to remove the old hand-rolled OpenRouter client and consolidate to a single Vercel AI SDK client.",
+			"acceptanceCriteria": [
+				"Remove src/lib/ai/client.ts (old hand-rolled client)",
+				"Rename src/lib/ai/client-v2.ts to src/lib/ai/client.ts (or inline into consumers)",
+				"Remove old tool definition format from src/lib/ai/tools/index.ts — only keep Vercel AI SDK format",
+				"Update all remaining imports across codebase (grep for old client imports)",
+				"Remove ChatMessage, ToolCall, ToolDefinition, ChatCompletionOptions, ChatCompletionResponse, StreamChunk types if fully replaced",
+				"Remove fetchWithRetry, buildHeaders, buildRequestBody helper functions",
+				"Verify no references to old client remain",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 13,
+			"passes": true,
+			"notes": "Removed old hand-rolled OpenRouter client (client.ts). Moved OpenRouterError into client-v2.ts, renamed client-v2.ts → client.ts via git mv. Removed all old types (ChatMessage, ToolCall, ToolDefinition, ChatCompletionOptions, ChatCompletionResponse, StreamChunk, TokenUsage). Removed fetchWithRetry, buildHeaders, buildRequestBody. Removed old JSON Schema tool definitions from all 5 tool files (run-query, call-analytics, get-market-data, run-python, store-report-data). Cleaned tools/index.ts: removed AI_TOOLS, AI_REPORT_TOOLS, getToolsForMode; kept executeTool (used by tests). Updated 5 pipeline/router imports from client-v2 → client. Updated 2 test files to mock aiGenerateText instead of chatCompletion. 185 additions, 683 deletions."
+		},
+		{
+			"id": "US-013",
+			"title": "Template Selection UI",
+			"description": "As a trader, I want to choose a report template when creating a report so that I get structured, consistent analysis without writing detailed prompts.",
+			"acceptanceCriteria": [
+				"Update the report creation UI to show template options alongside the free-text prompt",
+				"Display 3 template cards: Monthly Review, Risk Audit, Strategy Comparison",
+				"Each card shows: name, description, number of sections",
+				"User can select a template OR write a free-form prompt (template auto-fills a default prompt)",
+				"When template selected, pass templateId to the startReport mutation",
+				"Update ai.startReport tRPC mutation to accept optional templateId parameter",
+				"Pass templateId through to the Trigger.dev task payload",
+				"Terminal design system styling: dark cards, chartreuse accent on selected, monospace labels",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 14,
+			"passes": true,
+			"notes": "Added template selection UI to report-interface.tsx. 3 template cards (Monthly Review, Risk Audit, Strategy Comparison) displayed above the prompt textarea. Selecting a template highlights it with chartreuse accent and auto-fills a default prompt. Deselecting clears the template. templateId passed through startReport tRPC mutation → Trigger.dev task payload. Terminal design system styling: monospace fonts, dark cards, chartreuse accent on selected. 93 lines added across 2 files."
+		},
+		{
+			"id": "US-014",
+			"title": "Integration Tests for Report Pipeline Phases",
+			"description": "As a developer, I want integration tests for the individual pipeline phase modules so that we can verify each phase works correctly in isolation.",
+			"acceptanceCriteria": [
+				"Create tests/integration/ai-report-pipeline.test.ts",
+				"Test buildWriterContext: given mock dataStore and plan, verify output contains data summaries and MDX catalog, excludes schema/SQL docs",
+				"Test runValidatorPhase with valid MDX: returns { valid: true }",
+				"Test runValidatorPhase with missing dataRef: detects the error",
+				"Test runValidatorPhase with invalid component name: detects the error",
+				"Test getTemplate returns correct structure for each template",
+				"Test getAllTemplates returns all 3 templates",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 15,
+			"passes": true,
+			"notes": "Created tests/integration/ai-report-pipeline.test.ts with 19 tests across 3 describe blocks. Tests: buildWriterContext (6 tests — data summaries, MDX catalog, formatting rules, excludes schema/SQL, empty dataStore, array truncation), runValidatorPhase (6 tests — valid MDX passes, missing dataRef detected, non-existent dataRef detected, invalid component names detected, MDX compilation errors detected, tokensUsed:0 when valid), Report Templates (7 tests — getTemplate structure for all 3 templates, unknown IDs return undefined, getAllTemplates returns 3, unique IDs, expected IDs present). Mocked compileMDX (RSC module) and aiGenerateText for validator tests."
+		}
+	]
 }

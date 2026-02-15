@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/mdx/markdown-components";
-import type { StructuredReport } from "@/lib/ai/report-pipeline/report-schema";
+import { parseStructuredReport } from "@/lib/ai/report-pipeline/report-schema";
 import { api, HydrateClient } from "@/trpc/server";
 import { DownloadPdfButton } from "./_components/download-pdf-button";
 import { ReportViewerContent } from "./_components/report-viewer-content";
@@ -97,21 +97,7 @@ export default async function ReportViewerPage({
 
 	// Parse content as structured JSON report, fall back to markdown for legacy
 	const rawContent = report.content ?? "";
-	let parsedReport: StructuredReport | null = null;
-	try {
-		parsedReport = JSON.parse(rawContent) as StructuredReport;
-		// Basic shape check: must have sections array
-		if (
-			!parsedReport ||
-			!Array.isArray(parsedReport.sections) ||
-			typeof parsedReport.executiveSummary !== "string"
-		) {
-			parsedReport = null;
-		}
-	} catch {
-		// Not valid JSON — legacy MDX/markdown content
-		parsedReport = null;
-	}
+	const parsedReport = parseStructuredReport(rawContent);
 
 	return (
 		<HydrateClient>

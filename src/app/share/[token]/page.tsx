@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/mdx/markdown-components";
 import { ReportRenderer } from "@/components/report/report-renderer";
-import type { StructuredReport } from "@/lib/ai/report-pipeline/report-schema";
+import { parseStructuredReport } from "@/lib/ai/report-pipeline/report-schema";
 import { db } from "@/server/db";
 import { aiReports, shareLinks } from "@/server/db/schema";
 
@@ -128,20 +128,7 @@ function SharedReport({
 	const rawContent = report.content;
 
 	// Parse content as structured JSON report, fall back to markdown for legacy
-	let parsedReport: StructuredReport | null = null;
-	try {
-		parsedReport = JSON.parse(rawContent) as StructuredReport;
-		if (
-			!parsedReport ||
-			!Array.isArray(parsedReport.sections) ||
-			typeof parsedReport.executiveSummary !== "string"
-		) {
-			parsedReport = null;
-		}
-	} catch {
-		// Not valid JSON — legacy MDX/markdown content
-		parsedReport = null;
-	}
+	const parsedReport = parseStructuredReport(rawContent);
 
 	const displayTitle = report.prompt ?? report.title;
 	const formattedDate = report.completedAt
