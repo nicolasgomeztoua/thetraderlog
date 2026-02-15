@@ -104,7 +104,7 @@ export default async function SharePage({ params }: SharePageProps) {
 
 		if (!report || !report.content) notFound();
 
-		return <SharedReport report={report} />;
+		return <SharedReport report={{ ...report, content: report.content }} />;
 	}
 
 	notFound();
