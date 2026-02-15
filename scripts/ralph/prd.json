@@ -206,8 +206,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/report-templates/index.ts. Exports ReportTemplate type, 3 templates (monthly-review, risk-audit, strategy-comparison), getTemplate(id), getAllTemplates(). Each template has: id, name, description, sections array (title, description, suggestedDataSources, suggestedComponents), and plannerHint string. Templates are data-only — no LLM calls. PlannerHint provides structured guidance for the planner phase."
     },
     {
       "id": "US-011",

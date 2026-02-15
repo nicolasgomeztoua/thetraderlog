@@ -220,3 +220,22 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - Regex-based component parsing (`<PascalCase ...>`) is sufficient for validation — no need for a full AST parser since we control the component naming convention
   - The validator doesn't need React components registered in `compileMDX` for syntax validation — unknown components won't cause compilation errors in MDX (they're treated as custom elements)
 ---
+
+## 2026-02-15 - US-010
+- Created `src/lib/ai/report-templates/index.ts` — pre-defined report templates that augment the planner phase
+- `ReportTemplate` type: id, name, description, sections array, plannerHint string
+- 3 templates:
+  - **monthly-review**: equity curve, monthly P&L, win rate trends, symbol breakdown, behavioral patterns, recommendations
+  - **risk-audit**: drawdown analysis, position sizing, R-multiple distribution, Monte Carlo, risk of ruin, risk-adjusted returns
+  - **strategy-comparison**: per-strategy metrics, win rate/expectancy/profit factor comparison, SQL-based aggregation, recommendations
+- Each template section has: title, description, suggestedDataSources (endpoint names), suggestedComponents (MDX component names)
+- `plannerHint` is a structured string injected into the planner system prompt via the existing `templateHint` parameter
+- `getTemplate(id)` returns a single template by ID, `getAllTemplates()` returns all 3
+- Templates are data-only — no LLM calls, no tool execution
+- Files changed: `src/lib/ai/report-templates/index.ts` (new)
+- **Learnings for future iterations:**
+  - Templates use a Map for O(1) lookup by ID — same pattern as dataStore
+  - The `plannerHint` field maps directly to the `templateHint` parameter already accepted by `runPlannerPhase()` — no planner changes needed
+  - Strategy comparison template relies on `run_query` SQL because the analytics router doesn't have per-strategy endpoints
+  - Biome auto-formats arrays with 2+ string items longer than ~80 chars into multi-line format
+---
