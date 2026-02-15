@@ -131,8 +131,8 @@ export async function executeCallAnalytics(
 		// Look up the user by internal ID to get their clerkId for the tRPC context.
 		// The userId parameter is an internal ID (e.g. "usr_abc"), but the auth middleware
 		// looks up users by clerkId. We also pass the full user object to skip the lookup.
-		const { db: defaultDb } = await import("@/server/db");
-		const resolvedDb = db ?? defaultDb;
+		const { dbReadOnly } = await import("@/server/db");
+		const resolvedDb = db ?? dbReadOnly;
 
 		const user = await resolvedDb.query.users.findFirst({
 			where: eq(users.id, userId),

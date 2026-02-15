@@ -7,6 +7,8 @@ const isPublicRoute = createRouteMatcher([
 	"/sign-up(.*)",
 	"/api/webhooks(.*)",
 	"/api/queue(.*)", // QStash callback endpoint
+	"/print/(.*)", // PDF print pages (token auth, not Clerk)
+	"/share/(.*)", // Public share pages (token-based access)
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

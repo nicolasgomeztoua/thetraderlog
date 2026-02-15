@@ -112,6 +112,7 @@ export const aiReportStatusEnum = pgEnum("ai_report_status", [
 	"complete",
 	"failed",
 ]);
+export const shareResourceTypeEnum = pgEnum("share_resource_type", ["report"]);
 
 // ============================================================================
 // USERS TABLE
@@ -899,6 +900,38 @@ export const candleCache = createTable(
 );
 
 // ============================================================================
+// SHARE LINKS TABLE (polymorphic shareable URLs)
+// ============================================================================
+
+export const shareLinks = createTable(
+	"share_link",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.shareLink()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		token: text("token").notNull().unique(),
+		resourceType: shareResourceTypeEnum("resource_type").notNull(),
+		resourceId: text("resource_id").notNull(),
+		label: text("label"),
+		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		isActive: boolean("is_active").notNull().default(true),
+		viewCount: integer("view_count").notNull().default(0),
+		lastViewedAt: timestamp("last_viewed_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [
+		uniqueIndex("share_link_token_idx").on(t.token),
+		index("share_link_resource_idx").on(t.resourceType, t.resourceId),
+		index("share_link_user_id_idx").on(t.userId),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -914,6 +947,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	strategies: many(strategies),
 	dailyJournals: many(dailyJournals),
 	dailyChecklistTemplates: many(dailyChecklistTemplates),
+	shareLinks: many(shareLinks),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -1130,6 +1164,13 @@ export const tradeAttachmentsRelations = relations(
 	}),
 );
 
+export const shareLinksRelations = relations(shareLinks, ({ one }) => ({
+	user: one(users, {
+		fields: [shareLinks.userId],
+		references: [users.id],
+	}),
+}));
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1173,3 +1214,5 @@ export type JournalAttachment = typeof journalAttachments.$inferSelect;
 export type NewJournalAttachment = typeof journalAttachments.$inferInsert;
 export type TradeAttachment = typeof tradeAttachments.$inferSelect;
 export type NewTradeAttachment = typeof tradeAttachments.$inferInsert;
+export type ShareLink = typeof shareLinks.$inferSelect;
+export type NewShareLink = typeof shareLinks.$inferInsert;

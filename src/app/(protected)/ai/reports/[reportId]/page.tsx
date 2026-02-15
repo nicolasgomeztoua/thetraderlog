@@ -1,10 +1,16 @@
 import { ArrowLeft, Clock, Cpu, FileText, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { compileMDX } from "next-mdx-remote/rsc";
 import { Suspense } from "react";
+import remarkGfm from "remark-gfm";
+import { mdxComponents } from "@/components/mdx/components";
+import { markdownComponents } from "@/components/mdx/markdown-components";
+import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
 import { api, HydrateClient } from "@/trpc/server";
 import { DownloadPdfButton } from "./_components/download-pdf-button";
 import { ReportViewerContent } from "./_components/report-viewer-content";
+import { ShareButton } from "./_components/share-button";
 
 // =============================================================================
 // REPORT VIEWER PAGE — /ai/reports/[reportId]
@@ -90,10 +96,34 @@ export default async function ReportViewerPage({
 	const dataArtifacts =
 		(report.dataArtifacts as Record<string, unknown> | null) ?? {};
 
+	// Compile MDX on the server using next-mdx-remote/rsc
+	const rawContent = report.content ?? "";
+	const sanitizedContent = sanitizeMdxProse(rawContent);
+	const allComponents = { ...markdownComponents, ...mdxComponents };
+
+	let mdxContent: React.ReactNode = null;
+	let mdxFailed = false;
+	try {
+		const { content: compiled } = await compileMDX({
+			source: sanitizedContent,
+			components: allComponents as never,
+			options: {
+				mdxOptions: {
+					remarkPlugins: [remarkGfm],
+					format: "mdx",
+				},
+			},
+		});
+		mdxContent = compiled;
+	} catch (e) {
+		console.error("[MDX] Compilation failed, falling back to markdown:", e);
+		mdxFailed = true;
+	}
+
 	return (
 		<HydrateClient>
 			<div
-				className="flex h-[calc(100vh-4.5rem)] flex-col"
+				className="flex h-[calc(100vh-4.5rem)] min-w-0 flex-col"
 				data-testid="report-viewer-page"
 			>
 				<ReportHeader
@@ -102,9 +132,9 @@ export default async function ReportViewerPage({
 					reportId={reportId}
 					showPdfDownload
 					status={report.status}
-					title={report.title}
+					title={report.prompt ?? report.title}
 				/>
-				<div className="flex min-h-0 flex-1">
+				<div className="flex min-h-0 min-w-0 flex-1">
 					<Suspense
 						fallback={
 							<div className="flex flex-1 items-center justify-center">
@@ -113,9 +143,12 @@ export default async function ReportViewerPage({
 						}
 					>
 						<ReportViewerContent
-							content={report.content ?? ""}
+							content={rawContent}
 							dataArtifacts={dataArtifacts}
-						/>
+							mdxFailed={mdxFailed}
+						>
+							{mdxContent}
+						</ReportViewerContent>
 					</Suspense>
 				</div>
 			</div>
@@ -144,76 +177,68 @@ function ReportHeader({
 }) {
 	return (
 		<div
-			className="flex shrink-0 items-center justify-between border-white/5 border-b bg-white/[0.01] px-6 py-4"
+			className="shrink-0 border-white/5 border-b bg-white/[0.01]"
 			data-testid="report-viewer-header"
 		>
-			<div className="flex min-w-0 items-center gap-4">
+			{/* Nav row: back link + actions */}
+			<div className="flex items-center justify-between px-6 pt-4 pb-3">
 				<Link
-					className="flex shrink-0 items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-2.5 py-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-accent/30 hover:text-accent"
+					className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:text-accent"
 					data-testid="report-viewer-back"
 					href="/ai"
 				>
 					<ArrowLeft className="size-3" />
 					Reports
 				</Link>
-				<div className="min-w-0">
-					<h1
-						className="truncate font-mono text-foreground text-lg"
-						data-testid="report-viewer-title"
-					>
-						{title}
-					</h1>
-					<div className="flex items-center gap-3">
-						{model && (
-							<span
-								className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground"
-								data-testid="report-viewer-model"
-							>
-								<Cpu className="size-2.5" />
-								{model}
-							</span>
-						)}
-						{completedAt && (
-							<span
-								className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground"
-								data-testid="report-viewer-date"
-							>
-								<Clock className="size-2.5" />
-								{new Date(completedAt).toLocaleDateString("en-US", {
-									month: "short",
-									day: "numeric",
-									year: "numeric",
-									hour: "2-digit",
-									minute: "2-digit",
-								})}
-							</span>
-						)}
-						{status !== "complete" && (
-							<span className="font-mono text-[10px] text-accent uppercase">
-								{status}
-							</span>
-						)}
-					</div>
+				<div
+					className="flex items-center gap-2 print:hidden"
+					data-testid="report-viewer-actions"
+				>
+					{showPdfDownload && <DownloadPdfButton reportId={reportId} />}
+					<ShareButton reportId={reportId} />
 				</div>
 			</div>
-			<div
-				className="flex shrink-0 items-center gap-2 print:hidden"
-				data-testid="report-viewer-actions"
-			>
-				{showPdfDownload && <DownloadPdfButton title={title} />}
-				<CopyLinkButton reportId={reportId} />
+			{/* Title block */}
+			<div className="px-6 pb-4">
+				<h1
+					className="font-mono text-base text-foreground leading-relaxed"
+					data-testid="report-viewer-title"
+				>
+					{title}
+				</h1>
+				<div className="mt-2 flex items-center gap-3">
+					{model && (
+						<span
+							className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground"
+							data-testid="report-viewer-model"
+						>
+							<Cpu className="size-2.5" />
+							{model}
+						</span>
+					)}
+					{completedAt && (
+						<span
+							className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground"
+							data-testid="report-viewer-date"
+						>
+							<Clock className="size-2.5" />
+							{new Date(completedAt).toLocaleDateString("en-US", {
+								month: "short",
+								day: "numeric",
+								year: "numeric",
+								hour: "2-digit",
+								minute: "2-digit",
+							})}
+						</span>
+					)}
+					{status !== "complete" && (
+						<span className="font-mono text-[10px] text-accent uppercase tracking-wider">
+							{status}
+						</span>
+					)}
+				</div>
 			</div>
 		</div>
 	);
 }
 
-// =============================================================================
-// COPY LINK BUTTON (client-interactivity needs "use client" wrapper)
-// =============================================================================
-
-function CopyLinkButton({ reportId }: { reportId: string }) {
-	return <CopyLinkButtonClient url={`/ai/reports/${reportId}`} />;
-}
-
-// Imported as separate client component below
-import { CopyLinkButtonClient } from "./_components/copy-link-button";

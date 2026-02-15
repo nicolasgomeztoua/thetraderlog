@@ -174,6 +174,19 @@ export const ERR_AI_GENERIC =
 export const ERR_AI_REPORT_FALLBACK =
 	"Report generation failed. Please try again or contact support if the issue persists.";
 
+// =============================================================================
+// SHARING
+// =============================================================================
+
+export const ERR_SHARE_LINK_NOT_FOUND = "Share link not found";
+export const ERR_SHARE_LINK_EXPIRED = "This share link has expired";
+export const ERR_SHARE_LINK_REVOKED = "This share link has been revoked";
+export const ERR_SHARE_LINK_LIMIT_REACHED =
+	"Maximum number of share links reached for this resource";
+export const ERR_SHARE_RESOURCE_NOT_FOUND = "Shared resource not found";
+export const ERR_SHARE_RESOURCE_NOT_COMPLETE =
+	"Resource must be complete before sharing";
+
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,

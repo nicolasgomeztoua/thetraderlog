@@ -1,3 +1,4 @@
+import { runs } from "@trigger.dev/sdk/v3";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -9,6 +10,7 @@ import { buildUserContext } from "@/lib/ai/context-builder";
 import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
+import { createPdfToken } from "@/lib/auth/pdf-token";
 import {
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
@@ -29,6 +31,7 @@ import {
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
 import { generateAiReport } from "@/trigger/generate-ai-report";
+import { generateReportPdf } from "@/trigger/generate-report-pdf";
 
 // =============================================================================
 // AI ROUTER (Chat + Report Endpoints)
@@ -621,5 +624,77 @@ export const aiRouter = createTRPCRouter({
 				.where(eq(aiReports.id, report.id));
 
 			return { ...report, status: "queued" as const, triggerTaskId: handle.id };
+		}),
+
+	// =========================================================================
+	// PDF DOWNLOAD ENDPOINTS
+	// =========================================================================
+
+	/**
+	 * Start PDF generation for a completed report.
+	 * Creates a signed auth token and triggers the Puppeteer-based PDF task.
+	 */
+	generatePdf: protectedProcedure
+		.input(z.object({ reportId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.id, input.reportId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+				columns: { id: true, status: true },
+			});
+
+			if (!report) {
+				throw new Error(ERR_REPORT_NOT_FOUND);
+			}
+
+			if (report.status !== "complete") {
+				throw new Error("Report is not complete");
+			}
+
+			const token = createPdfToken(input.reportId, ctx.user.id);
+
+			const handle = await generateReportPdf.trigger({
+				reportId: input.reportId,
+				userId: ctx.user.id,
+				token,
+			});
+
+			return { runId: handle.id };
+		}),
+
+	/**
+	 * Check PDF generation status. Returns a presigned download URL when complete.
+	 */
+	getPdfStatus: protectedProcedure
+		.input(z.object({ runId: z.string() }))
+		.query(async ({ input }) => {
+			const run = await runs.retrieve(input.runId);
+
+			if (run.status === "COMPLETED") {
+				const output = run.output as { s3Key: string } | undefined;
+				if (!output?.s3Key) {
+					return { status: "failed" as const };
+				}
+
+				// Generate presigned download URL
+				const { getPresignedDownloadUrl } = await import("@/lib/storage/s3");
+				const downloadUrl = getPresignedDownloadUrl(output.s3Key, 3600);
+				return { status: "complete" as const, downloadUrl };
+			}
+
+			if (
+				run.status === "FAILED" ||
+				run.status === "CANCELED" ||
+				run.status === "CRASHED" ||
+				run.status === "SYSTEM_FAILURE" ||
+				run.status === "EXPIRED" ||
+				run.status === "TIMED_OUT"
+			) {
+				return { status: "failed" as const };
+			}
+
+			return { status: "generating" as const };
 		}),
 });

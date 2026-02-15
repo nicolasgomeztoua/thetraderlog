@@ -25,7 +25,7 @@ import {
 	ERR_AI_TIMEOUT,
 	ERR_AI_UNAVAILABLE,
 } from "@/lib/constants/errors";
-import { db } from "@/server/db";
+import { db, dbReadOnly } from "@/server/db";
 import {
 	aiConversations,
 	aiMessages,
@@ -276,7 +276,7 @@ export const generateAiReport = task({
 			// Build system prompt with schema + user context
 			const [schemaContext, userContext] = await Promise.all([
 				Promise.resolve(generateSchemaContext()),
-				buildUserContext(payload.userId, db),
+				buildUserContext(payload.userId, dbReadOnly),
 			]);
 
 			// Add date range context to the prompt if provided
@@ -317,6 +317,10 @@ export const generateAiReport = task({
 			});
 
 			for (let round = 0; round < MAX_TOOL_ROUNDS_REPORT; round++) {
+				console.log(
+					`[report:${payload.reportId}] Round ${round + 1}/${MAX_TOOL_ROUNDS_REPORT}`,
+				);
+
 				const response = await chatCompletion({
 					model: payload.model,
 					messages: chatMessages,
@@ -340,6 +344,28 @@ export const generateAiReport = task({
 						contentParts.push(assistantMessage.content);
 					}
 					const finalContent = contentParts.join("\n\n");
+
+					// Diagnostic: log dataStore state and MDX component usage
+					const mdxComponentPattern =
+						/<(EquityCurve|MonthlyChart|SymbolDistributionChart|DayOfWeekChart|HourHeatmap|SessionChart|RMultipleChart|MonteCarloChart|CalendarHeatmap|DrawdownTable|SymbolTable|DataTable)\b([^>]*)\/?>/g;
+					const componentRefs: string[] = [];
+					let match: RegExpExecArray | null;
+					while ((match = mdxComponentPattern.exec(finalContent)) !== null) {
+						const tag = match[1];
+						const attrs = match[2] ?? "";
+						const dataRefMatch = /dataRef="([^"]*)"/.exec(attrs);
+						componentRefs.push(
+							`${tag}${dataRefMatch ? ` dataRef="${dataRefMatch[1]}"` : " (NO dataRef!)"}`,
+						);
+					}
+					console.log(
+						`[report:${payload.reportId}] Generation complete — dataStore keys: [${[...dataStore.keys()].join(", ")}], MDX components found: [${componentRefs.join(", ")}]`,
+					);
+					if (componentRefs.some((r) => r.includes("NO dataRef"))) {
+						console.warn(
+							`[report:${payload.reportId}] WARNING: MDX components without dataRef detected — charts will show fallback`,
+						);
+					}
 					const dataArtifacts =
 						dataStore.size > 0 ? Object.fromEntries(dataStore) : null;
 
@@ -419,11 +445,36 @@ export const generateAiReport = task({
 						args = {};
 					}
 
+					// Log tool call with key args (avoid logging full data payloads)
+					const logArgs =
+						toolCall.function.name === "store_report_data"
+							? { refId: args.refId, description: args.description }
+							: toolCall.function.name === "call_analytics"
+								? { router: args.router, endpoint: args.endpoint }
+								: toolCall.function.name === "run_query"
+									? {
+											query:
+												typeof args.query === "string"
+													? args.query.slice(0, 120)
+													: args.query,
+										}
+									: { keys: Object.keys(args) };
+					console.log(
+						`[report:${payload.reportId}] Tool call: ${toolCall.function.name}`,
+						JSON.stringify(logArgs),
+					);
+
 					const result = await executeTool(toolCall.function.name, args, {
 						userId: payload.userId,
-						db,
+						db: dbReadOnly,
 						dataStore,
 					});
+
+					if (!result.success) {
+						console.warn(
+							`[report:${payload.reportId}] Tool FAILED: ${toolCall.function.name} — ${result.error}`,
+						);
+					}
 
 					chatMessages.push({
 						role: "tool",

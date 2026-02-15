@@ -253,12 +253,16 @@ export function SymbolTable({ data, className }: SymbolTableProps) {
 							<td
 								className={cn(
 									"py-3 pr-4 text-right tabular-nums",
-									row.profitFactor >= 1 ? "text-profit" : "text-loss",
+									row.profitFactor != null && row.profitFactor >= 1
+										? "text-profit"
+										: "text-loss",
 								)}
 							>
-								{row.profitFactor === Infinity
-									? "\u221E"
-									: row.profitFactor.toFixed(2)}
+								{row.profitFactor == null
+									? "—"
+									: row.profitFactor === Infinity
+										? "\u221E"
+										: row.profitFactor.toFixed(2)}
 							</td>
 							<td
 								className={cn(

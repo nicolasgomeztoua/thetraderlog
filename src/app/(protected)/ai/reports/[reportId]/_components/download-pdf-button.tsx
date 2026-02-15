@@ -1,40 +1,67 @@
 "use client";
 
 import { FileText, Loader2 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { api } from "@/trpc/react";
 
-export function DownloadPdfButton({ title }: { title: string }) {
-	const [isGenerating, setIsGenerating] = useState(false);
+export function DownloadPdfButton({ reportId }: { reportId: string }) {
+	const [runId, setRunId] = useState<string | null>(null);
 
-	const handleDownload = useCallback(async () => {
-		const contentEl = document.querySelector(
-			'[data-testid="report-viewer-content"]',
-		);
-		if (!contentEl || !(contentEl instanceof HTMLElement)) return;
+	const generatePdf = api.ai.generatePdf.useMutation({
+		onSuccess: (data) => {
+			setRunId(data.runId);
+		},
+		onError: () => {
+			toast.error("Failed to start PDF generation");
+		},
+	});
 
-		setIsGenerating(true);
-		try {
-			const { exportReportToPdf } = await import("@/lib/export/pdf-export");
-			await exportReportToPdf(contentEl, title);
-		} catch {
-			// Silently fail — html2canvas may not support all rendering features
-		} finally {
-			setIsGenerating(false);
+	// Poll for status using tRPC useQuery with refetchInterval
+	const statusQuery = api.ai.getPdfStatus.useQuery(
+		{ runId: runId! },
+		{
+			enabled: !!runId,
+			refetchInterval: 2000,
+			refetchIntervalInBackground: false,
+		},
+	);
+
+	// Handle status changes
+	useEffect(() => {
+		if (!statusQuery.data || !runId) return;
+
+		if (
+			statusQuery.data.status === "complete" &&
+			"downloadUrl" in statusQuery.data
+		) {
+			setRunId(null);
+			window.open(statusQuery.data.downloadUrl, "_blank");
+		} else if (statusQuery.data.status === "failed") {
+			setRunId(null);
+			toast.error("PDF generation failed");
 		}
-	}, [title]);
+	}, [statusQuery.data, runId]);
+
+	const isGenerating = generatePdf.isPending || !!runId;
+
+	const handleClick = () => {
+		if (isGenerating) return;
+		generatePdf.mutate({ reportId });
+	};
 
 	return (
 		<button
 			className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-3 py-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-accent/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
 			data-testid="report-viewer-download-pdf"
 			disabled={isGenerating}
-			onClick={() => void handleDownload()}
+			onClick={handleClick}
 			type="button"
 		>
 			{isGenerating ? (
 				<>
 					<Loader2 className="size-3 animate-spin" />
-					Generating...
+					Generating PDF...
 				</>
 			) : (
 				<>

@@ -1,3 +1,4 @@
+import { puppeteer } from "@trigger.dev/build/extensions/puppeteer";
 import { defineConfig } from "@trigger.dev/sdk/v3";
 
 export default defineConfig({
@@ -6,7 +7,9 @@ export default defineConfig({
 	logLevel: "log",
 	// Maximum compute time for tasks (5 minutes should be plenty for MAE/MFE)
 	maxDuration: 300,
-	build: {},
+	build: {
+		extensions: [puppeteer()],
+	},
 	retries: {
 		enabledInDev: true,
 		default: {

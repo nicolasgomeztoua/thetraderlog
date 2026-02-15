@@ -1,6 +1,4 @@
-"use client";
-
-import { MetricCard } from "@/components/analytics";
+import { MetricCard } from "@/components/analytics/metric-card";
 import { Callout } from "./callout";
 import { ChartImage } from "./chart-image";
 import {
