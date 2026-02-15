@@ -96,4 +96,16 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - `@openrouter/ai-sdk-provider` v2.2.3 uses `createOpenRouter({ apiKey })` — headers like HTTP-Referer/X-Title are handled by the provider automatically
   - Pre-existing build errors can block story completion — fix them as part of the story
   - Biome formatting is strict about single-line vs multi-line function signatures
+  - z.record() in this project requires two args: z.record(z.string(), z.unknown()) — not z.record(z.unknown())
+---
+
+## 2026-02-15 - US-002
+- Created `src/lib/ai/tools/definitions.ts` with 5 Vercel AI SDK tool definitions
+- Each tool wraps existing executor functions with Zod schemas
+- Exported `getChatTools(context)` and `getReportTools(context)` factory functions
+- Old `index.ts` exports preserved for backward compatibility
+- Files changed: `src/lib/ai/tools/definitions.ts` (new)
+- **Learnings for future iterations:**
+  - Zod `z.record()` requires both key and value schemas in this project (z.record(z.string(), z.unknown()))
+  - Biome auto-formats `z.string().describe(...)` chains into multi-line — use `bunx biome check --write` to fix
 ---
