@@ -22,23 +22,23 @@ import {
 // =============================================================================
 
 vi.mock("@/lib/ai/client", () => ({
-	chatCompletion: vi.fn().mockResolvedValue({
-		id: "mock-response-id",
-		choices: [
-			{
-				index: 0,
-				message: {
-					role: "assistant",
-					content: "Mock response",
-					tool_calls: undefined,
-				},
-				finish_reason: "stop",
-			},
-		],
-		usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
-		model: "moonshotai/kimi-k2",
+	aiGenerateText: vi.fn().mockResolvedValue({
+		text: "Mock response",
+		totalTokens: 150,
+		steps: [],
+		finishReason: "stop",
 	}),
-	chatCompletionStream: vi.fn(),
+	aiStreamText: vi.fn(),
+	OpenRouterError: class OpenRouterError extends Error {
+		statusCode: number;
+		retryable: boolean;
+		constructor(message: string, statusCode: number, retryable = false) {
+			super(message);
+			this.name = "OpenRouterError";
+			this.statusCode = statusCode;
+			this.retryable = retryable;
+		}
+	},
 }));
 
 vi.mock("@/lib/ai/context-builder", () => ({

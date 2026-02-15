@@ -1,39 +1,8 @@
 import { sql } from "drizzle-orm";
-import type { ToolDefinition } from "@/lib/ai/client";
 import { MAX_SQL_QUERY_ROWS } from "@/lib/constants/ai";
 import type { db as DbInstance } from "@/server/db";
 
 type Db = typeof DbInstance;
-
-// =============================================================================
-// TOOL DEFINITION
-// =============================================================================
-
-export const runQueryToolDefinition: ToolDefinition = {
-	type: "function",
-	function: {
-		name: "run_query",
-		description:
-			"Execute a read-only SQL SELECT query against the trading database. " +
-			"All queries are automatically scoped to the current user via CTEs. " +
-			"Use user_trades, user_accounts, user_tags, user_strategies, user_journals, " +
-			"user_executions, user_trade_tags as table aliases (they filter to the current user). " +
-			"P&L columns (realized_pnl, net_pnl, fees) are stored as decimal strings — use CAST(column AS NUMERIC) for aggregation. " +
-			"Always include deleted_at IS NULL for trade queries to exclude soft-deleted trades. " +
-			"Results are limited to 500 rows.",
-		parameters: {
-			type: "object",
-			properties: {
-				query: {
-					type: "string",
-					description:
-						"A SELECT SQL query. Use the user-scoped CTE aliases (user_trades, user_accounts, etc.) instead of raw table names. Example: SELECT symbol, COUNT(*) as trades, SUM(CAST(net_pnl AS NUMERIC)) as total_pnl FROM user_trades WHERE deleted_at IS NULL GROUP BY symbol ORDER BY total_pnl DESC LIMIT 20",
-				},
-			},
-			required: ["query"],
-		},
-	},
-};
 
 // =============================================================================
 // BLOCKED STATEMENTS

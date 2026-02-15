@@ -1,7 +1,7 @@
 import type { LanguageModel } from "ai";
 import { compileMDX } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
-import { aiGenerateText } from "@/lib/ai/client-v2";
+import { aiGenerateText } from "@/lib/ai/client";
 import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
 
 // =============================================================================

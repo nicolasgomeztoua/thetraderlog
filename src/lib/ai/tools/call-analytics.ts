@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import type { ToolDefinition } from "@/lib/ai/client";
 import { createCaller } from "@/server/api/root";
 import { createTRPCContext } from "@/server/api/trpc";
 import type { db as DbInstance } from "@/server/db";
@@ -47,52 +46,6 @@ type TradesEndpoint = (typeof ALLOWED_TRADES_ENDPOINTS)[number];
 
 const ANALYTICS_SET = new Set<string>(ALLOWED_ANALYTICS_ENDPOINTS);
 const TRADES_SET = new Set<string>(ALLOWED_TRADES_ENDPOINTS);
-
-// =============================================================================
-// TOOL DEFINITION
-// =============================================================================
-
-export const callAnalyticsToolDefinition: ToolDefinition = {
-	type: "function",
-	function: {
-		name: "call_analytics",
-		description:
-			"Call an existing analytics or trades tRPC endpoint to get pre-computed trading statistics. " +
-			"Prefer this over raw SQL queries when an endpoint already provides the data you need. " +
-			"Available analytics endpoints: getOverview, getCalendarData, getPerformanceByDayOfWeek, " +
-			"getPerformanceByHour, getPerformanceBySession, getPerformanceByMonth, getRiskMetrics, " +
-			"getEquityCurve, getDrawdownHistory, getRMultipleDistribution, getRiskRewardAnalysis, " +
-			"getPositionSizeAnalysis, getPerformanceBySymbol, getSymbolTrend, getStreakAnalysis, " +
-			"getRevengeTrading, getOvertradingAnalysis, getHoldingTimeAnalysis, getBehavioralPatterns, " +
-			"getMonteCarloSimulation, getFilteredTradeCount, exportFilteredTrades. " +
-			"Available trades endpoints: getStats, getAll. " +
-			"Most analytics endpoints accept optional input: { accountId?: string, filters?: { symbols?, dateRange?: { start?, end? }, " +
-			"daysOfWeek?, hours?, sessions?, strategies?, tags?, rMultipleRange?, positionSizeRange?, outcome?, reviewed? } }. " +
-			"trades.getStats accepts: { startDate?, endDate?, accountId? }. " +
-			"trades.getAll accepts: { limit?, status?, symbol?, startDate?, endDate?, accountId?, sortField?, sortDirection? }.",
-		parameters: {
-			type: "object",
-			properties: {
-				router: {
-					type: "string",
-					enum: ["analytics", "trades"],
-					description: 'The tRPC router to call: "analytics" or "trades".',
-				},
-				endpoint: {
-					type: "string",
-					description:
-						"The endpoint name to call (e.g., getOverview, getStats).",
-				},
-				input: {
-					type: "object",
-					description:
-						"Input parameters for the endpoint. Shape depends on the endpoint. Most analytics endpoints accept { accountId?, filters? }.",
-				},
-			},
-			required: ["router", "endpoint"],
-		},
-	},
-};
 
 // =============================================================================
 // EXECUTOR

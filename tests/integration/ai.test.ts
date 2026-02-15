@@ -22,29 +22,25 @@ import {
 // MOCKS — Must be declared before any module imports that use them
 // =============================================================================
 
-// Mock OpenRouter client — return a simple text response by default
+// Mock Vercel AI SDK client — return a simple text response by default
 vi.mock("@/lib/ai/client", () => ({
-	chatCompletion: vi.fn().mockResolvedValue({
-		id: "mock-response-id",
-		choices: [
-			{
-				index: 0,
-				message: {
-					role: "assistant",
-					content: "This is a mock AI response about your trading data.",
-					tool_calls: undefined,
-				},
-				finish_reason: "stop",
-			},
-		],
-		usage: {
-			prompt_tokens: 100,
-			completion_tokens: 50,
-			total_tokens: 150,
-		},
-		model: "moonshotai/kimi-k2",
+	aiGenerateText: vi.fn().mockResolvedValue({
+		text: "This is a mock AI response about your trading data.",
+		totalTokens: 150,
+		steps: [],
+		finishReason: "stop",
 	}),
-	chatCompletionStream: vi.fn(),
+	aiStreamText: vi.fn(),
+	OpenRouterError: class OpenRouterError extends Error {
+		statusCode: number;
+		retryable: boolean;
+		constructor(message: string, statusCode: number, retryable = false) {
+			super(message);
+			this.name = "OpenRouterError";
+			this.statusCode = statusCode;
+			this.retryable = retryable;
+		}
+	},
 }));
 
 // Mock context builders — return static strings to avoid DB lookups

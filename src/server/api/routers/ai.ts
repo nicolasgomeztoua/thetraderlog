@@ -2,7 +2,7 @@ import { runs } from "@trigger.dev/sdk/v3";
 import type { ModelMessage } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { aiGenerateText } from "@/lib/ai/client-v2";
+import { aiGenerateText } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
 import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
 import { getModel } from "@/lib/ai/provider";

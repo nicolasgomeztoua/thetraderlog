@@ -1,56 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Daytona, Image } from "@daytonaio/sdk";
 import { env } from "@/env";
-import type { ToolDefinition } from "@/lib/ai/client";
 import {
 	getPresignedDownloadUrl,
 	getS3Client,
 	isS3Configured,
 } from "@/lib/storage/s3";
-
-// =============================================================================
-// TOOL DEFINITION
-// =============================================================================
-
-export const runPythonToolDefinition: ToolDefinition = {
-	type: "function",
-	function: {
-		name: "run_python",
-		description:
-			"Execute Python code in a secure sandboxed environment (Daytona). " +
-			"Pre-installed packages: pandas, numpy, scipy, matplotlib, plotly, seaborn, statsmodels. " +
-			"Use for statistical analysis, custom calculations, and chart generation. " +
-			"For charts, use matplotlib with plt.show() — chart data and PNG images are automatically captured. " +
-			"For plotly, use fig.write_image() to save to /tmp/ and the image will be uploaded. " +
-			"Print results to stdout for the AI to read. " +
-			"Execution timeout: 60 seconds. " +
-			"You can pass data as a JSON string in the dataContext parameter — " +
-			"it will be available in the sandbox as a file at /tmp/data.json. " +
-			"CHART STYLING: Use dark theme — figure/axes facecolor '#0a0a0a', text '#e0e0e0', grid '#1a1a1a', " +
-			"profit '#00ff88', loss '#ff3b3b', accent '#d4ff00', ai accent '#00d4ff'. " +
-			"Always call plt.tight_layout() before plt.show().",
-		parameters: {
-			type: "object",
-			properties: {
-				code: {
-					type: "string",
-					description:
-						"Python code to execute. Use print() for output. " +
-						"Use matplotlib plt.show() for charts. " +
-						"If dataContext was provided, read it with: " +
-						'import json; data = json.load(open("/tmp/data.json"))',
-				},
-				dataContext: {
-					type: "string",
-					description:
-						"Optional JSON string of data to make available in the sandbox as /tmp/data.json. " +
-						"Use this to pass trading data, query results, or other data for analysis.",
-				},
-			},
-			required: ["code"],
-		},
-	},
-};
 
 // =============================================================================
 // CONSTANTS

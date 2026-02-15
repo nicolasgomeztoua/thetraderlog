@@ -1,5 +1,5 @@
 import type { LanguageModel } from "ai";
-import { aiGenerateText } from "@/lib/ai/client-v2";
+import { aiGenerateText } from "@/lib/ai/client";
 import { getReportTools } from "@/lib/ai/tools/definitions";
 import { MAX_TOOL_ROUNDS_REPORT } from "@/lib/constants/ai";
 import type { db as DbInstance } from "@/server/db";

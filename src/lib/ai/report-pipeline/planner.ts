@@ -1,5 +1,5 @@
 import type { LanguageModel } from "ai";
-import { aiGenerateText } from "@/lib/ai/client-v2";
+import { aiGenerateText } from "@/lib/ai/client";
 
 // =============================================================================
 // TYPES
