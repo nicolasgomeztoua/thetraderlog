@@ -140,3 +140,18 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - The SDK handles the entire tool loop — no need for manual message array mutation
   - 51 lines added, 111 removed — significant simplification
 ---
+
+## 2026-02-15 - US-005
+- Created `src/lib/ai/report-pipeline/planner.ts` — the first phase of the 4-phase report pipeline
+- Planner uses `aiGenerateText` from `client-v2.ts` with NO tools (plan only, no execution)
+- System prompt includes: condensed user context, available analytics endpoints (names + descriptions), MDX component catalog (names + brief descriptions), structured planning instructions
+- Planner output is structured markdown with 5 sections: Request Analysis, Data Sources Needed, Report Sections, MDX Component Plan, Estimated Complexity
+- Accepts optional `templateHint` string (for template-driven reports in US-010/US-011)
+- Returns `{ plan: string, tokensUsed: number }`
+- Files changed: `src/lib/ai/report-pipeline/planner.ts` (new)
+- **Learnings for future iterations:**
+  - The `report-pipeline/` directory is new — created for this story
+  - Planner system prompt is intentionally smaller than the full report prompt — no schema context, no SQL syntax, no tool descriptions (only endpoint names)
+  - The `aiGenerateText` wrapper from `client-v2.ts` handles all the SDK complexity (model config, error mapping, token tracking)
+  - Simple `{ role: "user", content: prompt }` message works — no need for `ModelMessage` type conversion for basic use cases
+---
