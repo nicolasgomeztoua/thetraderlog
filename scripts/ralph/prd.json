@@ -135,8 +135,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Rewrote validator.ts: removed all AI repair logic (attemptRepair, REPAIR_SYSTEM_PROMPT, buildRepairPrompt), MDX compilation check (validateMdxCompilation, compileMDX import), and regex-based MDX parsing. New runValidatorPhase accepts { report: StructuredReport, dataStore: DataStoreMap } and returns { report: StructuredReport, warnings: string[] }. Function is now synchronous (no async). For each chart block: verifies dataRef exists in dataStore, checks data shape compatibility (array for most, { buckets, stats } for RMultipleChart, non-array object for MonteCarloChart), checks data sufficiency using COMPONENT_MINIMUMS. Invalid chart blocks are replaced with prose fallbacks. Updated generate-ai-report.ts trigger task to use new validator API. tokensUsed is always 0 (no LLM calls)."
     },
     {
       "id": "US-008",

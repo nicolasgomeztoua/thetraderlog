@@ -74,3 +74,45 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - Few-shot examples (US-006) still use MDX format — they need to be converted to JSON format to match the new schema
   - The validator (US-007) still expects `{ content: string, dataStoreKeys, model }` — will need updating when rewritten
 ---
+
+## 2026-02-15 - US-006: Update Few-Shot Examples for Structured JSON Format
+- Rewrote `src/lib/ai/report-pipeline/few-shot-examples.ts`
+- Converted all 3 few-shot examples from MDX (`\`\`\`mdx` with `<MetricGrid>`, `<EquityCurve>`, etc.) to JSON (`\`\`\`json` with section objects)
+- Performance Overview: prose → metrics (4 items) → chart (EquityCurve) → prose → callout (tip)
+- Risk Analysis: prose → chart (DrawdownTable) → prose → chart (RMultipleChart) → prose → metrics (4 items) → chart (MonteCarloChart) → prose → callout (warning) → callout (tip)
+- Sparse Data: prose → metrics (2 items) → prose → callout (note) → callout (warning) — demonstrates skipping chart blocks
+- Updated WRITER_FEW_SHOT_EXAMPLES intro text: references JSON format, block types, section objects instead of MDX components
+- Export name `WRITER_FEW_SHOT_EXAMPLES` unchanged for compatibility with writer.ts
+- Files changed: `src/lib/ai/report-pipeline/few-shot-examples.ts`
+- **Learnings for future iterations:**
+  - The few-shot examples are string templates (not actual parsed JSON) — they're embedded in the system prompt as formatted JSON code blocks for the LLM to learn from
+  - Each example shows a single section object (not a full report) — this is intentional to keep examples focused
+  - The sparse data example is critical — it demonstrates the pattern for skipping chart blocks when data is insufficient (use metrics + prose instead)
+  - Pre-existing Biome errors in archived PRD JSON and trigger.config.ts are not blocking — only 2 format issues in files not touched by this story
+---
+
+## 2026-02-15 - US-007: Create Deterministic Report Validator
+- Rewrote `src/lib/ai/report-pipeline/validator.ts` — complete rewrite, not incremental
+- Removed all AI repair logic: `attemptRepair`, `REPAIR_SYSTEM_PROMPT`, `buildRepairPrompt`, `MAX_REPAIR_ATTEMPTS`
+- Removed MDX compilation check: `validateMdxCompilation`, `compileMDX` import, `sanitizeMdxProse` import
+- Removed MDX regex parsing: `COMPONENT_REGEX`, `DATAREF_REGEX`, `parseComponents`, `validateComponents`, `validateDataRefs`, `KNOWN_COMPONENTS`, `DATAREF_COMPONENTS`
+- New `runValidatorPhase` accepts `{ report: StructuredReport, dataStore: DataStoreMap }` — fully typed
+- Returns `{ report: StructuredReport, warnings: string[] }` — always returns a valid report with inline fixes
+- Function is now **synchronous** (no async needed — no LLM calls, no MDX compilation)
+- For each chart block, validates 3 things in order:
+  1. `dataRef` exists in `dataStore` → if not, replace with prose fallback
+  2. Data shape is compatible with component (array for most, `{ buckets, stats }` for RMultipleChart, non-array object for MonteCarloChart)
+  3. Data sufficiency using `COMPONENT_MINIMUMS` imported from `writer-context.ts`
+- Updated `src/trigger/generate-ai-report.ts`:
+  - Validator call is now synchronous (no `await`)
+  - Passes `{ report: writerResult.report, dataStore }` instead of `{ content, dataStoreKeys, model }`
+  - Uses `JSON.stringify(validatorResult.report)` for `finalContent`
+  - Removed `writerContent` intermediate variable
+  - Logs warnings instead of errors/valid status
+- Files changed: `validator.ts`, `generate-ai-report.ts`
+- **Learnings for future iterations:**
+  - The validator is now synchronous — callers don't need `await`
+  - `COMPONENT_MINIMUMS` is imported from `writer-context.ts` (shared between writer context and validator)
+  - Data shape checking covers 3 categories: arrays (most charts), `{ buckets, stats }` (RMultipleChart), non-array objects (MonteCarloChart) — these match the patterns in `chart-wrappers.tsx`
+  - Sufficiency checks use both dataRef patterns AND component name patterns to catch cases where naming doesn't match (e.g., custom dataRef names)
+---
