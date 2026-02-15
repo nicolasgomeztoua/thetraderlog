@@ -155,3 +155,18 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - The `aiGenerateText` wrapper from `client-v2.ts` handles all the SDK complexity (model config, error mapping, token tracking)
   - Simple `{ role: "user", content: prompt }` message works — no need for `ModelMessage` type conversion for basic use cases
 ---
+
+## 2026-02-15 - US-006
+- Created `src/lib/ai/report-pipeline/gatherer.ts` — the second phase of the 4-phase report pipeline
+- Gatherer uses `aiGenerateText` with ALL report tools via `getReportTools()` and `maxSteps: MAX_TOOL_ROUNDS_REPORT` (20)
+- System prompt includes: analysis plan from planner, user context, full schema context, data handling notes (timezone, breakeven, decimal casting, soft-delete)
+- Tools: `run_query`, `call_analytics`, `get_market_data`, `run_python`, `store_report_data`
+- Counts total tool calls by iterating `result.steps[].toolCalls`
+- Returns `{ tokensUsed, dataStoreKeys, totalToolCalls }`
+- Files changed: `src/lib/ai/report-pipeline/gatherer.ts` (new)
+- **Learnings for future iterations:**
+  - Gatherer needs schema context (unlike planner) because it executes SQL queries and needs to know table/column structure
+  - `result.steps` array contains all intermediate steps — iterate `step.toolCalls?.length ?? 0` to count total tool calls
+  - The `getReportTools()` factory binds userId, db, and dataStore into tool closures — no need to pass context through the prompt
+  - Data handling notes (decimal casting, soft-delete, CTE aliases) are critical for the gatherer since it writes SQL queries
+---
