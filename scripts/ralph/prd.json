@@ -257,8 +257,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/structured-report.test.ts with 29 tests across 3 describe blocks. structuredReportSchema: validates well-formed report with all 5 block types, rejects missing executiveSummary, empty sections, empty keyTakeaways, empty blocks, invalid block type, invalid component name, empty metrics items, invalid calloutType, validates all 12 ChartComponent enum values. runValidatorPhase: passes report with valid dataRefs, replaces chart with prose for missing dataRef, incompatible data shape (array for RMultipleChart, non-object for EquityCurve, array for MonteCarloChart), insufficient data below COMPONENT_MINIMUMS, passes correct shapes (RMultipleChart with { buckets, stats }, MonteCarloChart with non-array object), preserves non-chart blocks and executiveSummary/keyTakeaways, handles mixed valid/invalid across sections. executeStoreReportData: stores component metadata, stores without component, rejects duplicates, rejects empty/whitespace refId, includes rowCount for arrays, includes component in result data."
     }
   ]
 }

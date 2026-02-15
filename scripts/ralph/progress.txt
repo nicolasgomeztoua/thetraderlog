@@ -217,3 +217,16 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - The `src/components/mdx/` directory still exists with chart-wrappers, provider, data-table, etc. — only `components.tsx` was removed
   - When removing a package, verify with `grep` across ALL files (src/, tests/, etc.) not just src/
 ---
+
+## 2026-02-15 - US-013: Integration Tests for Structured Report Pipeline
+- Created `tests/integration/structured-report.test.ts` with 29 tests across 3 describe blocks
+- **structuredReportSchema** (10 tests): validates well-formed report with all 5 block types, rejects missing fields, invalid block types, invalid component names, empty arrays
+- **runValidatorPhase** (11 tests): validates/replaces chart blocks based on dataRef existence, data shape compatibility, data sufficiency; preserves non-chart blocks and top-level fields
+- **executeStoreReportData** (8 tests): stores component metadata, rejects duplicates and empty refIds, includes rowCount/component in result data
+- Files changed: `tests/integration/structured-report.test.ts` (new)
+- **Learnings for future iterations:**
+  - MonteCarloChart sufficiency check uses `Object.keys(data).length` for non-array objects — test data needs 20+ keys to pass the `monte-carlo` pattern minimum
+  - The `checkDataSufficiency` function checks both `dataRef.includes(pattern)` AND `componentLower.includes(pattern)` — data naming affects which minimum threshold applies
+  - Pre-existing `report-pdf-sanitize.test.ts` failure exists because `@/lib/ai/report-pdf` module was removed in a prior branch — not blocking
+  - These tests don't need database (pure function tests) but run under the integration config since acceptance criteria specify `tests/integration/`
+---
