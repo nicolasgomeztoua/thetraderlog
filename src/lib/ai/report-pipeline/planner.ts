@@ -60,11 +60,11 @@ These endpoints provide pre-computed trading statistics. The data gatherer phase
 ### Deep Analysis Tools
 - **run_query** — Execute read-only SQL against user-scoped tables. Use for trade-level detail, custom aggregations, cross-referencing, and any analysis not covered by analytics endpoints. Examples: entry timing relative to session open, trade clustering patterns, P&L by holding time buckets, consecutive loss behavior.
 - **get_market_data** — Fetch OHLC candle data for symbols (ES, NQ, EUR/USD, etc.). Use proactively for any analysis involving entry/exit quality, market context, or price structure — not just when explicitly requested. Cross-reference with run_query results for insights like "where in the daily range did I enter?" or "did I trade with or against the trend?"
-- **run_python** — Execute Python code for statistical analysis, regressions, distribution fitting, and custom charts that don't map to MDX components.
+- **run_python** — Execute Python code for statistical analysis, regressions, distribution fitting, and custom charts that don't map to built-in chart components.
 
 **Important**: Not every report section needs analytics endpoints. Custom queries and market data yield insights the dashboard cannot — plan for them when the report topic involves price context, trade quality, or cross-referenced analysis.`;
 
-const AVAILABLE_MDX_COMPONENTS = `## Available MDX Components
+const AVAILABLE_CHART_COMPONENTS = `## Available Chart Components
 
 The writer phase can use these components in the report. Plan which ones to include.
 
@@ -110,18 +110,18 @@ Your plan MUST include these sections:
 For each section of the final report, specify:
 - **Section title** (e.g., "## Performance Overview")
 - **Data sources** — which endpoints/queries feed this section
-- **MDX components** — which components to use and what data they need
+- **Chart components** — which components to use and what data they need
 - **Narrative focus** — what insights to highlight in the prose
 
-### 4. MDX Component Plan
-- List each MDX component to include with its planned dataRef key
+### 4. Chart Component Plan
+- List each chart component to include with its planned dataRef key
 - Note any MetricGrid groups and their MetricCards
 - Note any Callout types to include (tip, warning, etc.)
 
 ### 5. Estimated Complexity
 - Total tool calls estimate (aim for 8–15 for standard reports, 15–20 for comprehensive)
 - Number of report sections
-- Number of MDX components
+- Number of chart components
 
 Be specific and actionable. The data gatherer will execute your plan step by step.`;
 
@@ -133,7 +133,7 @@ function buildPlannerSystemPrompt(
 		PLANNER_PERSONA,
 		userContext,
 		AVAILABLE_ANALYTICS_ENDPOINTS,
-		AVAILABLE_MDX_COMPONENTS,
+		AVAILABLE_CHART_COMPONENTS,
 		PLANNER_INSTRUCTIONS,
 	];
 

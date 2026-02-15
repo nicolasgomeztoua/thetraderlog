@@ -140,7 +140,8 @@ export function parseStructuredReport(raw: string): StructuredReport | null {
 		if (
 			!parsed ||
 			!Array.isArray(parsed.sections) ||
-			typeof parsed.executiveSummary !== "string"
+			typeof parsed.executiveSummary !== "string" ||
+			!Array.isArray(parsed.keyTakeaways)
 		) {
 			return null;
 		}

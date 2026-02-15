@@ -551,6 +551,7 @@ export const aiRouter = createTRPCRouter({
 				.where(eq(aiConversations.id, report.conversationId));
 
 			// Re-trigger background task
+			// TODO: persist templateId and accountId in aiReports schema so retries preserve them
 			const handle = await generateAiReport.trigger({
 				reportId: report.id,
 				userId: ctx.user.id,
