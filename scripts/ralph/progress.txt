@@ -263,3 +263,21 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - Pre-existing Biome errors in archive JSON and trigger.config.ts are not from pipeline changes — safe to ignore
   - The old flow had separate "normal completion" and "exhausted rounds fallback" paths — the new pipeline has a single linear path since the gatherer uses `maxSteps` internally
 ---
+
+## 2026-02-15 - US-012
+- Removed old hand-rolled OpenRouter client (`src/lib/ai/client.ts`) and consolidated to single Vercel AI SDK client
+- **Old client.ts removed**: `chatCompletion`, `chatCompletionStream`, `fetchWithRetry`, `buildHeaders`, `buildRequestBody`, and all old types (`ChatMessage`, `ToolCall`, `ToolDefinition`, `ChatCompletionOptions`, `ChatCompletionResponse`, `StreamChunk`, `TokenUsage`)
+- **OpenRouterError preserved**: Moved into the new client (was depended on by error mapping in the SDK wrapper)
+- **client-v2.ts → client.ts**: Renamed via `git mv` so all existing `@/lib/ai/client` imports now point to the Vercel AI SDK wrapper
+- **Old JSON Schema tool definitions removed** from all 5 tool files: `runQueryToolDefinition`, `callAnalyticsToolDefinition`, `getMarketDataToolDefinition`, `runPythonToolDefinition`, `storeReportDataToolDefinition`
+- **tools/index.ts cleaned**: Removed `AI_TOOLS`, `AI_REPORT_TOOLS`, `getToolsForMode` exports (all used old `ToolDefinition` format). Kept `executeTool` dispatcher (still used by `ai-tools.test.ts`)
+- **5 import updates**: `client-v2` → `client` in `planner.ts`, `gatherer.ts`, `writer.ts`, `validator.ts`, `ai.ts` (router)
+- **2 test mock updates**: `ai.test.ts` and `report-viewer.test.ts` now mock `aiGenerateText` (returns `{ text, totalTokens, steps, finishReason }`) instead of old `chatCompletion`
+- Files changed: `src/lib/ai/client.ts` (renamed + modified), `src/lib/ai/client-v2.ts` (deleted), 5 tool files, `tools/index.ts`, 4 pipeline files, `ai.ts` router, 2 test files
+- 185 additions, 683 deletions — significant cleanup
+- **Learnings for future iterations:**
+  - When renaming files via `git mv`, the staged and unstaged changes need to be re-staged together — git sees the deletion + new file as separate operations
+  - Test mocks must match the actual module exports — after migrating from old `chatCompletion` to `aiGenerateText`, mocks need the new return shape `{ text, totalTokens, steps, finishReason }`
+  - The `executeTool` dispatcher in `tools/index.ts` is still useful for tests even after migrating to Vercel AI SDK tool definitions — it provides a simpler way to test individual tool executors without the SDK harness
+  - Pre-existing Biome errors in archive JSON files and `trigger.config.ts` remain from previous iterations — not caused by any pipeline changes
+---

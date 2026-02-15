@@ -87,7 +87,11 @@ const trades = await ctx.db.query.trades.findMany({
 
 ### Vercel AI SDK Integration (ai.ts router)
 **When:** Working with the AI chat sendMessage procedure
-**How:** Uses `aiGenerateText` from `client-v2.ts` with `getChatTools` from `tools/definitions.ts`. System prompt is a separate `system` param. SDK handles tool loop via `maxSteps`. Tool calls extracted from `result.steps[].toolCalls[]` — properties are `toolCallId`, `toolName`, `input` (not `id`, `name`, `args`).
+**How:** Uses `aiGenerateText` from `client.ts` (consolidated Vercel AI SDK wrapper) with `getChatTools` from `tools/definitions.ts`. System prompt is a separate `system` param. SDK handles tool loop via `maxSteps`. Tool calls extracted from `result.steps[].toolCalls[]` — properties are `toolCallId`, `toolName`, `input` (not `id`, `name`, `args`).
+
+### Test Mocking for AI Client
+**When:** Writing integration tests that touch AI router (sendMessage, etc.)
+**How:** Mock `@/lib/ai/client` with `aiGenerateText` returning `{ text, totalTokens, steps: [], finishReason: "stop" }`. Also export `OpenRouterError` class in the mock. Do NOT mock old `chatCompletion`/`chatCompletionStream` — those were removed in US-012.
 
 ## Decisions
 

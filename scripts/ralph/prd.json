@@ -248,8 +248,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed old hand-rolled OpenRouter client (client.ts). Moved OpenRouterError into client-v2.ts, renamed client-v2.ts → client.ts via git mv. Removed all old types (ChatMessage, ToolCall, ToolDefinition, ChatCompletionOptions, ChatCompletionResponse, StreamChunk, TokenUsage). Removed fetchWithRetry, buildHeaders, buildRequestBody. Removed old JSON Schema tool definitions from all 5 tool files (run-query, call-analytics, get-market-data, run-python, store-report-data). Cleaned tools/index.ts: removed AI_TOOLS, AI_REPORT_TOOLS, getToolsForMode; kept executeTool (used by tests). Updated 5 pipeline/router imports from client-v2 → client. Updated 2 test files to mock aiGenerateText instead of chatCompletion. 185 additions, 683 deletions."
     },
     {
       "id": "US-013",
