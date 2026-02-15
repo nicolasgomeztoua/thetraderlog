@@ -113,8 +113,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Converted all three few-shot examples (Performance Overview, Risk Analysis, Sparse Data) from MDX to JSON format matching the StructuredReport Zod schema. Each example is now a section object with heading and blocks array using prose, metrics, chart, and callout block types. Updated WRITER_FEW_SHOT_EXAMPLES intro text to reference JSON format, block types, and section objects instead of MDX components. Export name unchanged for compatibility."
     },
     {
       "id": "US-007",
