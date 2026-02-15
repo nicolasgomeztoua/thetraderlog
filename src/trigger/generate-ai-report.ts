@@ -385,12 +385,12 @@ export const generateAiReport = task({
 				writerContext,
 				prompt: augmentedPrompt,
 				model,
-				dataStoreKeys: gathererResult.dataStoreKeys,
 			});
 
+			const writerContent = JSON.stringify(writerResult.report);
 			totalTokensUsed += writerResult.tokensUsed;
 			console.log(
-				`[report:${payload.reportId}] Writing complete — ${writerResult.tokensUsed} tokens, ${writerResult.content.length} chars`,
+				`[report:${payload.reportId}] Writing complete — ${writerResult.tokensUsed} tokens, ${writerContent.length} chars`,
 			);
 
 			// =====================================================================
@@ -400,10 +400,10 @@ export const generateAiReport = task({
 				progressStage: "validating",
 			});
 
-			console.log(`[report:${payload.reportId}] Phase 4: Validating MDX`);
+			console.log(`[report:${payload.reportId}] Phase 4: Validating report`);
 
 			const validatorResult = await runValidatorPhase({
-				content: writerResult.content,
+				content: writerContent,
 				dataStoreKeys: gathererResult.dataStoreKeys,
 				model,
 			});
