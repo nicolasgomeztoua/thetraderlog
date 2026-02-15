@@ -281,3 +281,20 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - The `executeTool` dispatcher in `tools/index.ts` is still useful for tests even after migrating to Vercel AI SDK tool definitions — it provides a simpler way to test individual tool executors without the SDK harness
   - Pre-existing Biome errors in archive JSON files and `trigger.config.ts` remain from previous iterations — not caused by any pipeline changes
 ---
+
+## 2026-02-15 - US-013
+- Added template selection UI to the report creation form in `report-interface.tsx`
+- 3 template cards displayed above the prompt textarea: Monthly Review, Risk Audit, Strategy Comparison
+- Each card shows: template name, section count, and description
+- Selecting a template highlights it with chartreuse accent (`border-accent/50 bg-accent/10`) and auto-fills a default prompt
+- Deselecting (clicking again or "Clear template" button) removes the selection
+- `templateId` added to `startReport` tRPC mutation input schema and passed through to Trigger.dev task payload
+- Templates imported via `getAllTemplates()` from `src/lib/ai/report-templates/index.ts` — data-only, no SSR issues
+- Files changed: `src/app/(protected)/ai/_components/report-interface.tsx`, `src/server/api/routers/ai.ts`
+- 93 lines added across 2 files
+- **Learnings for future iterations:**
+  - `getAllTemplates()` returns the template array synchronously — safe to call at module level in client components
+  - Template default prompts are stored as a `Record<string, string>` constant in the component file, keyed by template ID
+  - The `selectedTemplateId` state is cleared on successful report generation via `onSuccess` callback
+  - Lucide icons `LayoutTemplate` and `X` are available for template-related UI
+---
