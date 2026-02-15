@@ -208,6 +208,55 @@ commit_all_changes() {
 # Commit any local changes before starting (prd.json updates, progress resets, etc.)
 commit_all_changes "chore: ralph pre-run setup (prd.json, progress, branch config)"
 
+# =============================================================================
+# Detect existing PR — offer to skip to review phase
+# =============================================================================
+SKIP_TO_REVIEW=false
+
+# Check .pr-number file first, then fall back to gh pr list
+EXISTING_PR=""
+if [ -f "$PR_NUMBER_FILE" ]; then
+    SAVED_PR=$(cat "$PR_NUMBER_FILE" 2>/dev/null | tr -d '[:space:]')
+    if [ -n "$SAVED_PR" ]; then
+        # Verify the saved PR is still open
+        PR_STATE=$(gh pr view "$SAVED_PR" --json state --jq '.state' 2>/dev/null || echo "")
+        if [ "$PR_STATE" = "OPEN" ]; then
+            EXISTING_PR="$SAVED_PR"
+        fi
+    fi
+fi
+
+# Fall back to searching by branch name
+if [ -z "$EXISTING_PR" ]; then
+    BRANCH_FOR_PR=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "$WORK_BRANCH")
+    EXISTING_PR=$(gh pr list --head "$BRANCH_FOR_PR" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+fi
+
+if [ -n "$EXISTING_PR" ]; then
+    PR_URL_DISPLAY=$(gh pr view "$EXISTING_PR" --json url --jq '.url' 2>/dev/null || echo "PR #$EXISTING_PR")
+    echo ""
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}Existing PR detected: #$EXISTING_PR${NC}"
+    echo -e "${GREEN}  $PR_URL_DISPLAY${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${YELLOW}What would you like to do?${NC}"
+    echo -e "  1) Skip to PR review phase (Greptile monitoring) ${MAGENTA}← default${NC}"
+    echo -e "  2) Run full loop (implementation → quality → PR → review)"
+    echo ""
+    read -r -p "Pick a number (Enter = default): " PR_PICK || true
+    PR_PICK="${PR_PICK:-1}"
+
+    if [ "$PR_PICK" = "1" ]; then
+        SKIP_TO_REVIEW=true
+        PR_NUMBER="$EXISTING_PR"
+        echo "$PR_NUMBER" > "$PR_NUMBER_FILE"
+        echo -e "${GREEN}Skipping to PR review phase for PR #$PR_NUMBER${NC}"
+    else
+        echo -e "${YELLOW}Running full loop...${NC}"
+    fi
+fi
+
 echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════════════════════════╗"
 echo "║           Ralph - Claude Code Agent Loop                  ║"
@@ -219,6 +268,8 @@ echo -e "${NC}"
 echo -e "${YELLOW}Current PRD Status:${NC}"
 jq -r '.userStories[] | "  [\(if .passes then "✓" else " " end)] \(.id): \(.title)"' "$PRD_FILE"
 echo ""
+
+if [ "$SKIP_TO_REVIEW" = false ]; then
 
 # =============================================================================
 # PHASE 1: Implementation Loop
@@ -339,6 +390,13 @@ fi
 
 # Save PR number for future runs
 echo "$PR_NUMBER" > "$PR_NUMBER_FILE"
+
+fi # end SKIP_TO_REVIEW check
+
+# Push any pending changes before review phase (covers both fresh and skip-to-review paths)
+cd "$PROJECT_ROOT"
+BRANCH_NAME=$(jq -r '.branchName' "$PRD_FILE")
+git push origin "$BRANCH_NAME" 2>&1 || true
 
 # =============================================================================
 # PHASE 4: Greptile Review Loop
