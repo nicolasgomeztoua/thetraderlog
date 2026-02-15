@@ -1,3 +1,87 @@
 # Ralph Progress Log
 Started: Sun Feb 15 03:12:29 WET 2026
 ---
+
+## Codebase Patterns
+- Use `@openrouter/ai-sdk-provider` (not `@ai-sdk/openai`) for OpenRouter integration with Vercel AI SDK
+- Vercel AI SDK v5+ uses `stopWhen: stepCountIs(N)` instead of deprecated `maxSteps`
+- Tool definitions use `tool()` with Zod `inputSchema` and `execute` function
+- `generateText` returns `{ text, steps, toolCalls, toolResults, usage, totalUsage, response }`
+- `onStepFinish` callback available for progress tracking during tool loops
+- OpenRouter provider: `createOpenRouter({ apiKey })` then `provider('model/name')`
+- Existing tools have executor functions that can be reused — just wrap with Zod schemas
+- DataStore pattern (Map<string, unknown>) passes through tool context — reusable in SDK format
+- All AI constants live in `src/lib/constants/ai.ts` — update MAX_TOOL_ROUNDS references
+- Schema context is static (generateSchemaContext), user context is async (buildUserContext)
+- Report progress tracking uses fire-and-forget DB updates via updateProgress()
+- Chat tool loop: MAX_TOOL_ROUNDS_CHAT = 10, Report: MAX_TOOL_ROUNDS_REPORT = 20
+- System prompt built by buildSystemPrompt() in src/lib/ai/prompts/trading-analyst.ts
+- Tool executor pattern: executeTool() switch-case dispatches to individual executor functions
+- Report email sent via Resend after completion — unchanged in migration
+
+## 2026-02-15 - US-000
+- **Audited existing AI implementation:**
+
+### Files Inventory
+- `src/lib/ai/client.ts` — Hand-rolled OpenRouter client (chatCompletion, chatCompletionStream, retry logic, SSE parsing)
+- `src/lib/ai/tools/index.ts` — Tool registry (AI_TOOLS, AI_REPORT_TOOLS, executeTool dispatcher)
+- `src/lib/ai/tools/run-query.ts` — SQL query tool (user-scoped CTEs, validation, LIMIT 500)
+- `src/lib/ai/tools/call-analytics.ts` — tRPC endpoint tool (allowlisted analytics/trades endpoints)
+- `src/lib/ai/tools/get-market-data.ts` — OHLC market data tool (1000 bar limit)
+- `src/lib/ai/tools/run-python.ts` — Python sandbox tool (Daytona, matplotlib/plotly charts)
+- `src/lib/ai/tools/store-report-data.ts` — Report data store tool (Map-based, refId keying)
+- `src/lib/ai/context-builder.ts` — buildUserContext() — loads strategies, tags, accounts, settings, journals
+- `src/lib/ai/schema-context.ts` — generateSchemaContext() — static 565-line schema reference
+- `src/lib/ai/prompts/trading-analyst.ts` — buildSystemPrompt() — persona, tool instructions, MDX catalog
+- `src/lib/ai/report-email.ts` — sendReportEmail() — Resend API
+- `src/server/api/routers/ai.ts` — Chat/report tRPC procedures (sendMessage, startReport, etc.)
+- `src/trigger/generate-ai-report.ts` — Trigger.dev report generation task (20-round tool loop)
+- `src/lib/constants/ai.ts` — AI constants (models, limits, suggested prompts)
+
+### Current Types to Replace
+- `ChatMessage` — maps to Vercel AI SDK `CoreMessage`
+- `ToolCall` — handled natively by SDK
+- `ToolDefinition` — replaced by `tool()` with Zod
+- `ChatCompletionOptions/Response` — replaced by `generateText()` params/return
+- `StreamChunk` — replaced by `streamText()` stream parts
+- `OpenRouterError` — SDK handles errors internally
+
+### Migration Mapping
+| Current | Vercel AI SDK |
+|---------|---------------|
+| `chatCompletion(opts)` | `generateText({ model, system, messages, tools, stopWhen })` |
+| `chatCompletionStream(opts)` | `streamText({ model, system, messages, tools })` |
+| `for (round < MAX_ROUNDS)` | `stopWhen: stepCountIs(MAX_ROUNDS)` |
+| `ToolDefinition` JSON Schema | `tool({ description, inputSchema: z.object(...), execute })` |
+| `executeTool()` switch-case | Individual `execute` functions in tool definitions |
+| `response.usage.total_tokens` | `result.totalUsage.totalTokens` |
+| `response.choices[0].message` | `result.text` / `result.toolCalls` |
+| Manual tool result messages | Automatic — SDK handles tool result → model loop |
+| `buildHeaders()` | `createOpenRouter({ apiKey, headers })` |
+| `fetchWithRetry()` | SDK built-in retry via `maxRetries` param |
+| `MAX_TOOL_ROUNDS_CHAT = 10` | `stopWhen: stepCountIs(10)` |
+| `MAX_TOOL_ROUNDS_REPORT = 20` | `stopWhen: stepCountIs(20)` |
+
+### Vercel AI SDK Key Patterns
+1. **Provider setup:** `createOpenRouter({ apiKey: env.OPENROUTER_API_KEY })` from `@openrouter/ai-sdk-provider`
+2. **Model selection:** `provider('moonshotai/kimi-k2')` returns a model instance
+3. **Tool definition:** `tool({ description: '...', inputSchema: z.object({...}), execute: async (args) => {...} })`
+4. **Multi-step:** `generateText({ ..., tools, stopWhen: stepCountIs(10) })` — SDK handles the loop
+5. **Progress tracking:** `onStepFinish({ text, toolCalls, toolResults, usage, stepType })` callback
+6. **Token tracking:** `result.totalUsage` aggregates across all steps
+7. **Steps access:** `result.steps` array contains all intermediate tool calls/results
+8. **System prompt:** Separate `system` param (not first message)
+
+### Package Decision
+- PRD says `bun add ai @ai-sdk/openai` — but we need `@openrouter/ai-sdk-provider` for OpenRouter
+- Correct install: `bun add ai @openrouter/ai-sdk-provider`
+- The `@ai-sdk/openai` package targets OpenAI directly, NOT OpenRouter
+
+### Learnings for future iterations:
+- The existing tool executor functions (executeRunQuery, executeCallAnalytics, etc.) return `{ success, data?, error? }` — wrap these in SDK tool execute functions
+- The dataStore Map is passed through tool context and stored as JSONB via Object.fromEntries(dataStore)
+- Report progress uses fire-and-forget pattern — must preserve in pipeline phases
+- Chat messages are stored in aiMessages table with role, content, model, tokensUsed, toolCalls (JSON)
+- Conversation status transitions: active → generating → complete/failed
+- Report status: queued → generating → complete/failed with progressStage tracking
+---

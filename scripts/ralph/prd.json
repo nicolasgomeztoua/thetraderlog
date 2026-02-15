@@ -18,8 +18,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Audit complete. Key finding: use @openrouter/ai-sdk-provider (not @ai-sdk/openai). SDK uses stopWhen: stepCountIs(N) instead of maxSteps."
     },
     {
       "id": "US-001",
