@@ -1,13 +1,24 @@
 "use client";
 
-import { ArrowRight, FileText, Loader2, RefreshCw, Send } from "lucide-react";
+import {
+	ArrowRight,
+	FileText,
+	LayoutTemplate,
+	Loader2,
+	RefreshCw,
+	Send,
+	X,
+} from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getAllTemplates } from "@/lib/ai/report-templates";
 import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
 import { ERR_VALIDATION_DATE_RANGE } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 import { ModelSelector } from "./model-selector";
+
+const REPORT_TEMPLATES = getAllTemplates();
 
 // =============================================================================
 // CONSTANTS
@@ -24,6 +35,15 @@ const QUICK_DATE_PRESETS = [
 	{ label: "This month", days: 0 },
 	{ label: "Last month", days: -1 },
 ];
+
+const TEMPLATE_DEFAULT_PROMPTS: Record<string, string> = {
+	"monthly-review":
+		"Generate a comprehensive monthly performance review covering equity analysis, win rate trends, symbol breakdown, and behavioral insights.",
+	"risk-audit":
+		"Run a full risk audit of my trading: drawdown analysis, position sizing review, R-multiple distribution, and Monte Carlo projections.",
+	"strategy-comparison":
+		"Compare all my trading strategies side by side: win rate, expectancy, profit factor, and per-strategy recommendations.",
+};
 
 const CHAR_WARN_THRESHOLD = 2000;
 
@@ -100,6 +120,9 @@ function getDatePreset(preset: (typeof QUICK_DATE_PRESETS)[number]): {
 
 export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const [prompt, setPrompt] = useState("");
+	const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+		null,
+	);
 	const [dateRangeStart, setDateRangeStart] = useState("");
 	const [dateRangeEnd, setDateRangeEnd] = useState("");
 	const [dateError, setDateError] = useState("");
@@ -128,6 +151,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const startReport = api.ai.startReport.useMutation({
 		onSuccess: () => {
 			setPrompt("");
+			setSelectedTemplateId(null);
 			void utils.ai.listReports.invalidate();
 		},
 	});
@@ -157,6 +181,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 			...(dateRangeEnd && {
 				dateRangeEnd: new Date(dateRangeEnd).toISOString(),
 			}),
+			...(selectedTemplateId && { templateId: selectedTemplateId }),
 		});
 	};
 
@@ -190,6 +215,71 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 					</div>
 
 					<div className="flex flex-1 flex-col gap-4 p-3 sm:p-4">
+						{/* Template Selection */}
+						<div>
+							<span className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+								<LayoutTemplate className="mr-1 inline size-3" />
+								Template
+							</span>
+							<div
+								className="flex flex-col gap-1.5"
+								data-testid="report-template-cards"
+							>
+								{REPORT_TEMPLATES.map((template) => {
+									const isSelected = selectedTemplateId === template.id;
+									return (
+										<button
+											className={`group flex flex-col rounded border p-2.5 text-left transition-all ${
+												isSelected
+													? "border-accent/50 bg-accent/10"
+													: "border-white/5 bg-white/[0.02] hover:border-white/15"
+											}`}
+											data-testid={`report-template-${template.id}`}
+											key={template.id}
+											onClick={() => {
+												if (isSelected) {
+													setSelectedTemplateId(null);
+												} else {
+													setSelectedTemplateId(template.id);
+													const defaultPrompt =
+														TEMPLATE_DEFAULT_PROMPTS[template.id];
+													if (defaultPrompt) {
+														setPrompt(defaultPrompt);
+													}
+												}
+											}}
+											type="button"
+										>
+											<div className="flex items-center justify-between">
+												<span
+													className={`font-mono text-xs ${isSelected ? "text-accent" : "text-foreground"}`}
+												>
+													{template.name}
+												</span>
+												<span className="font-mono text-[9px] text-muted-foreground/50">
+													{template.sections.length.toString()} sections
+												</span>
+											</div>
+											<p className="mt-1 font-mono text-[10px] text-muted-foreground leading-relaxed">
+												{template.description}
+											</p>
+										</button>
+									);
+								})}
+							</div>
+							{selectedTemplateId && (
+								<button
+									className="mt-1.5 flex items-center gap-1 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+									data-testid="report-template-clear"
+									onClick={() => setSelectedTemplateId(null)}
+									type="button"
+								>
+									<X className="size-3" />
+									Clear template
+								</button>
+							)}
+						</div>
+
 						{/* Prompt */}
 						<div>
 							<label
