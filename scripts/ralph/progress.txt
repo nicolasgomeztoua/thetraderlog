@@ -161,3 +161,23 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - The `toHeadingId` function is duplicated in `report-renderer.tsx`, `report-viewer-content.tsx`, and `markdown-components.tsx` — each needs to stay in sync
   - The shape check (`Array.isArray(sections) && typeof executiveSummary === 'string'`) is a quick guard against non-report JSON content; full Zod parsing would be heavier but more correct
 ---
+
+## 2026-02-15 - US-010: Update Share and Print Pages for JSON Rendering
+- Updated `src/app/share/[token]/page.tsx`:
+  - Removed `compileMDX` (from `next-mdx-remote/rsc`), `sanitizeMdxProse`, `mdxComponents`, `ReportDataProvider` imports
+  - `SharedReport` is now a sync function (no longer `async` — no MDX compilation needed)
+  - Parses `report.content` as JSON with try/catch + shape check (`sections` array, `executiveSummary` string)
+  - Falls back to `ReactMarkdown` for legacy MDX/markdown content
+  - Uses `ReportRenderer` component for structured JSON reports (handles `ReportDataProvider` internally)
+- Updated `src/app/print/reports/[id]/page.tsx`:
+  - Same import changes: removed `compileMDX`, `sanitizeMdxProse`, `mdxComponents`, `ReportDataProvider`
+  - Added `ReportRenderer` and `StructuredReport` type imports
+  - Same JSON parsing pattern with legacy fallback
+  - Print-specific features preserved: `pdf-content` class, `PdfReadySignal` component, print CSS
+- Files changed: `src/app/share/[token]/page.tsx`, `src/app/print/reports/[id]/page.tsx`
+- **Learnings for future iterations:**
+  - The `ReportRenderer` is a `"use client"` component that wraps content in `ReportDataProvider` internally, so page-level `ReportDataProvider` wrappers are no longer needed
+  - Share page `SharedReport` was `async` only because of `compileMDX` — with JSON parsing it can be a regular sync function
+  - The JSON parse + shape check + ReactMarkdown fallback pattern is now used in 3 places: report viewer page, share page, print page — could potentially be extracted to a shared utility but kept inline for clarity
+  - Pre-existing Biome errors in `prd-ai-report-pipeline-archived.json` and `trigger.config.ts` are not blocking
+---

@@ -197,8 +197,8 @@
         "Verify print page in browser"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated share page (src/app/share/[token]/page.tsx): removed compileMDX, sanitizeMdxProse, mdxComponents imports. SharedReport is now a sync function (no longer async). Parses content as JSON with try/catch + shape check, falls back to ReactMarkdown for legacy content. Uses ReportRenderer for structured reports. Removed ReportDataProvider wrapper (ReportRenderer handles it internally). Updated print page (src/app/print/reports/[id]/page.tsx): same changes — removed compileMDX, sanitizeMdxProse, mdxComponents, ReportDataProvider imports. Parses JSON with fallback. Uses ReportRenderer. Print-specific styling (pdf-content, PdfReadySignal, print CSS) preserved."
     },
     {
       "id": "US-011",
