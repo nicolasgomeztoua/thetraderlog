@@ -95,8 +95,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Rewrote writer.ts: replaced aiGenerateText with aiGenerateObject using structuredReportSchema. WriterResult now returns { report: StructuredReport, tokensUsed } instead of { content: string, tokensUsed }. Removed dataStoreKeys from WriterOptions (dataRef keys now embedded in writerContext from US-004). Removed DATAREF_KEYS_PLACEHOLDER replacement logic. Rewrote WRITER_PERSONA and WRITER_INSTRUCTIONS for JSON output with block type documentation, chart block rules, and skip-chart guidance. Updated trigger task minimally to pass writerContent as JSON.stringify(writerResult.report)."
     },
     {
       "id": "US-006",

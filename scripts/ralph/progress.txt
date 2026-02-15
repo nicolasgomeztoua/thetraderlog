@@ -58,3 +58,19 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - The writer context is now much smaller: Analysis Plan + Data Summary + Formatting Rules (no catalog)
   - Warning messages in `getDataSufficiencyWarning` were updated to say "metrics block or prose" instead of "MetricCards or prose" to match JSON schema terminology
 ---
+
+## 2026-02-15 - US-005: Rewrite Writer Phase for Structured JSON Output
+- Rewrote `src/lib/ai/report-pipeline/writer.ts` to use `aiGenerateObject` with `structuredReportSchema` instead of `aiGenerateText`
+- `WriterResult` now returns `{ report: StructuredReport, tokensUsed }` instead of `{ content: string, tokensUsed }`
+- Removed `dataStoreKeys` from `WriterOptions` — dataRef keys are now embedded in the writer context (from US-004)
+- Removed `DATAREF_KEYS_PLACEHOLDER` replacement logic and the `buildWriterSystemPrompt` dataStoreKeys parameter
+- Rewrote `WRITER_PERSONA` for JSON output (references "structured JSON report" not "MDX report")
+- Rewrote `WRITER_INSTRUCTIONS` with: block type documentation, chart block rules, dataRef integrity rules, data accuracy rules, skip-chart guidance
+- Updated `src/trigger/generate-ai-report.ts` minimally: removed `dataStoreKeys` from writer call, serialize `writerResult.report` to JSON string for downstream compatibility
+- Files changed: `writer.ts`, `generate-ai-report.ts`
+- **Learnings for future iterations:**
+  - When changing a phase's return type, the trigger task (`generate-ai-report.ts`) is the main caller that needs updating to stay buildable
+  - The `buildWriterSystemPrompt` function is now simpler: just joins persona + context + instructions + few-shot examples (no key list replacement)
+  - Few-shot examples (US-006) still use MDX format — they need to be converted to JSON format to match the new schema
+  - The validator (US-007) still expects `{ content: string, dataStoreKeys, model }` — will need updating when rewritten
+---
