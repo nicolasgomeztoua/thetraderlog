@@ -57,10 +57,12 @@ These endpoints provide pre-computed trading statistics. The data gatherer phase
 - **getStats** — Quick trade stats (count, P&L, win rate) with optional date range
 - **getAll** — List of trades with filtering, sorting, pagination
 
-### Custom SQL
-- **run_query** — Execute arbitrary read-only SQL against user-scoped tables (user_trades, user_accounts, etc.)
-- **get_market_data** — Fetch OHLC candle data for symbols (ES, NQ, EUR/USD, etc.)
-- **run_python** — Execute Python code for statistical analysis and custom charts`;
+### Deep Analysis Tools
+- **run_query** — Execute read-only SQL against user-scoped tables. Use for trade-level detail, custom aggregations, cross-referencing, and any analysis not covered by analytics endpoints. Examples: entry timing relative to session open, trade clustering patterns, P&L by holding time buckets, consecutive loss behavior.
+- **get_market_data** — Fetch OHLC candle data for symbols (ES, NQ, EUR/USD, etc.). Use proactively for any analysis involving entry/exit quality, market context, or price structure — not just when explicitly requested. Cross-reference with run_query results for insights like "where in the daily range did I enter?" or "did I trade with or against the trend?"
+- **run_python** — Execute Python code for statistical analysis, regressions, distribution fitting, and custom charts that don't map to MDX components.
+
+**Important**: Not every report section needs analytics endpoints. Custom queries and market data yield insights the dashboard cannot — plan for them when the report topic involves price context, trade quality, or cross-referenced analysis.`;
 
 const AVAILABLE_MDX_COMPONENTS = `## Available MDX Components
 

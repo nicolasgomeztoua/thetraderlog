@@ -1,24 +1,13 @@
 "use client";
 
-import {
-	ArrowRight,
-	FileText,
-	LayoutTemplate,
-	Loader2,
-	RefreshCw,
-	Send,
-	X,
-} from "lucide-react";
+import { ArrowRight, FileText, Loader2, RefreshCw, Send } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAllTemplates } from "@/lib/ai/report-templates";
 import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
 import { ERR_VALIDATION_DATE_RANGE } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 import { ModelSelector } from "./model-selector";
-
-const REPORT_TEMPLATES = getAllTemplates();
 
 // =============================================================================
 // CONSTANTS
@@ -35,15 +24,6 @@ const QUICK_DATE_PRESETS = [
 	{ label: "This month", days: 0 },
 	{ label: "Last month", days: -1 },
 ];
-
-const TEMPLATE_DEFAULT_PROMPTS: Record<string, string> = {
-	"monthly-review":
-		"Generate a comprehensive monthly performance review covering equity analysis, win rate trends, symbol breakdown, and behavioral insights.",
-	"risk-audit":
-		"Run a full risk audit of my trading: drawdown analysis, position sizing review, R-multiple distribution, and Monte Carlo projections.",
-	"strategy-comparison":
-		"Compare all my trading strategies side by side: win rate, expectancy, profit factor, and per-strategy recommendations.",
-};
 
 const CHAR_WARN_THRESHOLD = 2000;
 
@@ -135,9 +115,6 @@ function getDatePreset(preset: (typeof QUICK_DATE_PRESETS)[number]): {
 
 export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const [prompt, setPrompt] = useState("");
-	const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
-		null,
-	);
 	const [dateRangeStart, setDateRangeStart] = useState("");
 	const [dateRangeEnd, setDateRangeEnd] = useState("");
 	const [dateError, setDateError] = useState("");
@@ -166,7 +143,6 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const startReport = api.ai.startReport.useMutation({
 		onSuccess: () => {
 			setPrompt("");
-			setSelectedTemplateId(null);
 			void utils.ai.listReports.invalidate();
 		},
 	});
@@ -196,7 +172,6 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 			...(dateRangeEnd && {
 				dateRangeEnd: new Date(dateRangeEnd).toISOString(),
 			}),
-			...(selectedTemplateId && { templateId: selectedTemplateId }),
 		});
 	};
 
@@ -220,7 +195,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 				{/* ================================================================ */}
 				{/* FORM SECTION */}
 				{/* ================================================================ */}
-				<div className="flex w-full shrink-0 flex-col rounded border border-border bg-card lg:w-[420px]">
+				<div className="flex w-full shrink-0 flex-col overflow-hidden rounded border border-border bg-card lg:w-[420px]">
 					{/* Form header */}
 					<div className="flex items-center gap-2 border-white/5 border-b bg-white/[0.01] px-4 py-3">
 						<FileText className="h-3.5 w-3.5 text-muted-foreground" />
@@ -229,201 +204,138 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 						</span>
 					</div>
 
-					<div className="flex flex-1 flex-col gap-4 p-3 sm:p-4">
-						{/* Template Selection */}
-						<div>
-							<span className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								<LayoutTemplate className="mr-1 inline size-3" />
-								Template
-							</span>
-							<div
-								className="flex flex-col gap-1.5"
-								data-testid="report-template-cards"
-							>
-								{REPORT_TEMPLATES.map((template) => {
-									const isSelected = selectedTemplateId === template.id;
-									return (
+					<ScrollArea className="flex-1">
+						<div className="flex flex-col gap-4 p-3 sm:p-4">
+							{/* Prompt */}
+							<div>
+								<label
+									className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider"
+									htmlFor="report-prompt"
+								>
+									Analysis Prompt
+								</label>
+								<div
+									className={`rounded border p-1 transition-colors ${
+										prompt
+											? "border-accent/40 bg-white/[0.02]"
+											: "border-white/10 bg-white/[0.01]"
+									}`}
+								>
+									<textarea
+										className="min-h-[120px] w-full resize-none bg-transparent px-2.5 py-2 font-mono text-sm placeholder:text-muted-foreground/40 focus:outline-none"
+										data-testid="report-prompt-input"
+										id="report-prompt"
+										onChange={(e) => setPrompt(e.target.value)}
+										placeholder="Describe the analysis you want..."
+										value={prompt}
+									/>
+								</div>
+								{showCharCount && (
+									<div className="mt-1 flex justify-end">
+										<span
+											className={`font-mono text-[10px] ${prompt.length > CHAR_WARN_THRESHOLD ? "text-loss/40" : "text-muted-foreground/40"}`}
+										>
+											{prompt.length.toLocaleString()}
+										</span>
+									</div>
+								)}
+							</div>
+
+							{/* Quick Date Presets */}
+							<div>
+								<span className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Date Range
+								</span>
+								<div className="mb-2 flex flex-wrap gap-1">
+									{QUICK_DATE_PRESETS.map((preset) => (
 										<button
-											className={`group flex flex-col rounded border p-2.5 text-left transition-all ${
-												isSelected
-													? "border-accent/50 bg-accent/10"
-													: "border-white/5 bg-white/[0.02] hover:border-white/15"
-											}`}
-											data-testid={`report-template-${template.id}`}
-											key={template.id}
+											className="rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+											key={preset.label}
 											onClick={() => {
-												if (isSelected) {
-													setSelectedTemplateId(null);
-												} else {
-													setSelectedTemplateId(template.id);
-													const defaultPrompt =
-														TEMPLATE_DEFAULT_PROMPTS[template.id];
-													if (defaultPrompt) {
-														setPrompt(defaultPrompt);
-													}
-												}
+												const { start, end } = getDatePreset(preset);
+												setDateRangeStart(start);
+												setDateRangeEnd(end);
+												setDateError("");
 											}}
 											type="button"
 										>
-											<div className="flex items-center justify-between">
-												<span
-													className={`font-mono text-xs ${isSelected ? "text-accent" : "text-foreground"}`}
-												>
-													{template.name}
-												</span>
-												<span className="font-mono text-[9px] text-muted-foreground/50">
-													{template.sections.length.toString()} sections
-												</span>
-											</div>
-											<p className="mt-1 font-mono text-[10px] text-muted-foreground leading-relaxed">
-												{template.description}
-											</p>
+											{preset.label}
 										</button>
-									);
-								})}
-							</div>
-							{selectedTemplateId && (
-								<button
-									className="mt-1.5 flex items-center gap-1 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-									data-testid="report-template-clear"
-									onClick={() => setSelectedTemplateId(null)}
-									type="button"
-								>
-									<X className="size-3" />
-									Clear template
-								</button>
-							)}
-						</div>
-
-						{/* Prompt */}
-						<div>
-							<label
-								className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider"
-								htmlFor="report-prompt"
-							>
-								Analysis Prompt
-							</label>
-							<div
-								className={`rounded border p-1 transition-colors ${
-									prompt
-										? "border-accent/40 bg-white/[0.02]"
-										: "border-white/10 bg-white/[0.01]"
-								}`}
-							>
-								<textarea
-									className="min-h-[120px] w-full resize-none bg-transparent px-2.5 py-2 font-mono text-sm placeholder:text-muted-foreground/40 focus:outline-none"
-									data-testid="report-prompt-input"
-									id="report-prompt"
-									onChange={(e) => setPrompt(e.target.value)}
-									placeholder="Describe the analysis you want..."
-									value={prompt}
-								/>
-							</div>
-							{showCharCount && (
-								<div className="mt-1 flex justify-end">
-									<span
-										className={`font-mono text-[10px] ${prompt.length > CHAR_WARN_THRESHOLD ? "text-loss/40" : "text-muted-foreground/40"}`}
-									>
-										{prompt.length.toLocaleString()}
-									</span>
+									))}
 								</div>
-							)}
-						</div>
-
-						{/* Quick Date Presets */}
-						<div>
-							<span className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Date Range
-							</span>
-							<div className="mb-2 flex flex-wrap gap-1">
-								{QUICK_DATE_PRESETS.map((preset) => (
-									<button
-										className="rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
-										key={preset.label}
-										onClick={() => {
-											const { start, end } = getDatePreset(preset);
-											setDateRangeStart(start);
-											setDateRangeEnd(end);
+								<div className="flex items-center gap-2">
+									<input
+										className="h-9 flex-1 rounded border border-white/10 bg-transparent px-2.5 font-mono text-foreground text-xs transition-colors focus:border-accent/40 focus:outline-none"
+										data-testid="report-date-start"
+										onChange={(e) => {
+											setDateRangeStart(e.target.value);
 											setDateError("");
 										}}
-										type="button"
-									>
-										{preset.label}
-									</button>
-								))}
+										type="date"
+										value={dateRangeStart}
+									/>
+									<span className="font-mono text-[10px] text-muted-foreground/40">
+										→
+									</span>
+									<input
+										className="h-9 flex-1 rounded border border-white/10 bg-transparent px-2.5 font-mono text-foreground text-xs transition-colors focus:border-accent/40 focus:outline-none"
+										data-testid="report-date-end"
+										onChange={(e) => {
+											setDateRangeEnd(e.target.value);
+											setDateError("");
+										}}
+										type="date"
+										value={dateRangeEnd}
+									/>
+								</div>
+								{dateError && (
+									<p className="mt-1 animate-shake font-mono text-[10px] text-loss">
+										{dateError}
+									</p>
+								)}
 							</div>
-							<div className="flex items-center gap-2">
-								<input
-									className="h-9 flex-1 rounded border border-white/10 bg-transparent px-2.5 font-mono text-foreground text-xs transition-colors focus:border-accent/40 focus:outline-none"
-									data-testid="report-date-start"
-									onChange={(e) => {
-										setDateRangeStart(e.target.value);
-										setDateError("");
-									}}
-									type="date"
-									value={dateRangeStart}
-								/>
-								<span className="font-mono text-[10px] text-muted-foreground/40">
-									→
-								</span>
-								<input
-									className="h-9 flex-1 rounded border border-white/10 bg-transparent px-2.5 font-mono text-foreground text-xs transition-colors focus:border-accent/40 focus:outline-none"
-									data-testid="report-date-end"
-									onChange={(e) => {
-										setDateRangeEnd(e.target.value);
-										setDateError("");
-									}}
-									type="date"
-									value={dateRangeEnd}
-								/>
-							</div>
-							{dateError && (
-								<p className="mt-1 animate-shake font-mono text-[10px] text-loss">
-									{dateError}
-								</p>
-							)}
-						</div>
 
-						{/* Generate Button */}
-						<button
-							className="flex w-full items-center justify-center gap-2 rounded bg-accent/10 py-2.5 font-mono text-accent text-xs uppercase tracking-wider transition-colors hover:bg-accent/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
-							data-testid="report-generate-button"
-							disabled={startReport.isPending || !prompt.trim()}
-							onClick={handleGenerateReport}
-							type="button"
-						>
-							{startReport.isPending ? (
-								<Loader2 className="h-3.5 w-3.5 animate-spin" />
-							) : (
-								<Send className="h-3.5 w-3.5" />
-							)}
-							{startReport.isPending ? "Generating..." : "Generate Report"}
-						</button>
-
-						{/* Suggested Prompts */}
-						<div>
-							<span className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Suggested
-							</span>
-							<div
-								className="flex flex-col gap-1"
-								data-testid="report-suggested-prompts"
+							{/* Generate Button */}
+							<button
+								className="flex w-full items-center justify-center gap-2 rounded bg-accent/10 py-2.5 font-mono text-accent text-xs uppercase tracking-wider transition-colors hover:bg-accent/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
+								data-testid="report-generate-button"
+								disabled={startReport.isPending || !prompt.trim()}
+								onClick={handleGenerateReport}
+								type="button"
 							>
-								{SUGGESTED_REPORT_PROMPTS.map((p) => (
-									<button
-										className="group flex items-center justify-between rounded border border-white/5 bg-white/[0.02] p-2 text-left font-mono text-[10px] text-muted-foreground transition-all hover:border-accent/20 hover:text-foreground"
-										data-testid="report-suggested-prompt"
-										key={p}
-										onClick={() => setPrompt(p)}
-										type="button"
-									>
-										<span className="line-clamp-1">{p}</span>
-										<ArrowRight className="-translate-x-1 h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:text-accent group-hover:opacity-100" />
-									</button>
-								))}
+								{startReport.isPending ? (
+									<Loader2 className="h-3.5 w-3.5 animate-spin" />
+								) : (
+									<Send className="h-3.5 w-3.5" />
+								)}
+								{startReport.isPending ? "Generating..." : "Generate Report"}
+							</button>
+
+							{/* Suggested Prompts */}
+							<div>
+								<span className="mb-2 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+									Suggested
+								</span>
+								<div
+									className="flex flex-col gap-1"
+									data-testid="report-suggested-prompts"
+								>
+									{SUGGESTED_REPORT_PROMPTS.map((p) => (
+										<button
+											className="group flex items-center justify-between rounded border border-white/5 bg-white/[0.02] p-2 text-left font-mono text-[10px] text-muted-foreground transition-all hover:border-accent/20 hover:text-foreground"
+											data-testid="report-suggested-prompt"
+											key={p}
+											onClick={() => setPrompt(p)}
+											type="button"
+										>
+											<span className="line-clamp-1">{p}</span>
+											<ArrowRight className="-translate-x-1 h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:text-accent group-hover:opacity-100" />
+										</button>
+									))}
+								</div>
 							</div>
 						</div>
-					</div>
+					</ScrollArea>
 				</div>
 
 				{/* ================================================================ */}

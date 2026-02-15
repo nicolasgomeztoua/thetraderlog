@@ -296,6 +296,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 									className="mb-1.5 font-bold text-foreground text-xl tracking-tight sm:text-2xl"
 									data-testid="chat-empty-greeting"
 									style={{ animationDelay: "100ms" }}
+									suppressHydrationWarning
 								>
 									{greeting}
 								</h2>

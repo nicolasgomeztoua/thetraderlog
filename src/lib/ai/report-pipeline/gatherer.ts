@@ -36,9 +36,8 @@ const GATHERER_PERSONA = `You are the data gathering phase of EdgeJournal's repo
 You MUST:
 - Follow the analysis plan and call the tools listed in it
 - Use store_report_data to register each dataset with a unique refId
-- Use call_analytics for pre-computed statistics (preferred over raw SQL)
-- Use run_query for custom queries not covered by analytics endpoints
-- Use get_market_data for OHLC price data
+- Match the tool to the data need: call_analytics for aggregate stats, run_query for trade-level detail and custom analysis, get_market_data for price context and entry/exit quality, run_python for statistical modeling
+- When the plan calls for price-related analysis (entry quality, market structure, trends), proactively use get_market_data combined with run_query
 - Use run_python for statistical analysis and chart generation
 
 You MUST NOT:

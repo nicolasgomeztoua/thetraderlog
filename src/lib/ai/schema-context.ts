@@ -513,6 +513,52 @@ WHERE t.deleted_at IS NULL AND t.status = 'closed'
 ORDER BY r_multiple DESC;
 \`\`\`
 
+### Entry Position Within Daily Range (cross-reference with get_market_data)
+Use this pattern with get_market_data to assess entry quality. First fetch daily candles for the symbol, then compare entry prices.
+\`\`\`sql
+SELECT
+  t.id, t.symbol, t.direction,
+  CAST(t.entry_price AS NUMERIC) AS entry_price,
+  CAST(t.net_pnl AS NUMERIC) AS pnl,
+  t.entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1) AS local_entry_time,
+  TO_CHAR(t.entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1), 'YYYY-MM-DD') AS trade_date
+FROM user_trades t
+WHERE t.deleted_at IS NULL AND t.status = 'closed'
+  AND t.symbol = 'ES'
+ORDER BY t.entry_time DESC
+LIMIT 50;
+\`\`\`
+Then use get_market_data for the same symbol/dates and compute: entry_position = (entry_price - day_low) / (day_high - day_low). Values near 0 = entered near the low, near 1 = entered near the high. For longs, lower is better; for shorts, higher is better.
+
+### Trade P&L vs Market Volatility
+\`\`\`sql
+SELECT
+  TO_CHAR(t.entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1), 'YYYY-MM-DD') AS trade_date,
+  t.symbol,
+  COUNT(*) AS trades,
+  SUM(CAST(t.net_pnl AS NUMERIC)) AS daily_pnl,
+  AVG(CAST(t.net_pnl AS NUMERIC)) AS avg_pnl
+FROM user_trades t
+WHERE t.deleted_at IS NULL AND t.status = 'closed'
+GROUP BY trade_date, t.symbol
+ORDER BY trade_date DESC;
+\`\`\`
+Cross-reference with get_market_data daily candles: volatility = (high - low). Correlate daily_pnl with volatility to see if the trader performs better on high or low volatility days.
+
+### Entries Relative to Session Open
+\`\`\`sql
+SELECT
+  t.id, t.symbol, t.direction,
+  CAST(t.entry_price AS NUMERIC) AS entry_price,
+  CAST(t.net_pnl AS NUMERIC) AS pnl,
+  EXTRACT(HOUR FROM t.entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1)) AS entry_hour,
+  EXTRACT(MINUTE FROM t.entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1)) AS entry_minute
+FROM user_trades t
+WHERE t.deleted_at IS NULL AND t.status = 'closed'
+ORDER BY t.entry_time DESC;
+\`\`\`
+Combine with get_market_data (use 1h or 15min candles) to compute how far from session open price the trader entered, and whether they traded with or against the initial move.
+
 ## Available tRPC Analytics Endpoints
 
 Use the \`call_analytics\` tool to invoke these endpoints. All accept optional accountId and analytics filters.
