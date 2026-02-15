@@ -387,10 +387,9 @@ export const generateAiReport = task({
 				model,
 			});
 
-			const writerContent = JSON.stringify(writerResult.report);
 			totalTokensUsed += writerResult.tokensUsed;
 			console.log(
-				`[report:${payload.reportId}] Writing complete — ${writerResult.tokensUsed} tokens, ${writerContent.length} chars`,
+				`[report:${payload.reportId}] Writing complete — ${writerResult.tokensUsed} tokens`,
 			);
 
 			// =====================================================================
@@ -402,24 +401,21 @@ export const generateAiReport = task({
 
 			console.log(`[report:${payload.reportId}] Phase 4: Validating report`);
 
-			const validatorResult = await runValidatorPhase({
-				content: writerContent,
-				dataStoreKeys: gathererResult.dataStoreKeys,
-				model,
+			const validatorResult = runValidatorPhase({
+				report: writerResult.report,
+				dataStore,
 			});
 
-			totalTokensUsed += validatorResult.tokensUsed;
+			// Deterministic validator uses 0 tokens (no LLM calls)
+			const finalContent = JSON.stringify(validatorResult.report);
 
-			// Use validated content (may be repaired), or original if repair failed
-			const finalContent = validatorResult.content;
-
-			if (validatorResult.valid) {
-				console.log(
-					`[report:${payload.reportId}] Validation passed — ${validatorResult.tokensUsed} tokens`,
+			if (validatorResult.warnings.length > 0) {
+				console.warn(
+					`[report:${payload.reportId}] Validator warnings: ${validatorResult.warnings.join("; ")}`,
 				);
 			} else {
-				console.warn(
-					`[report:${payload.reportId}] Validation failed after repair attempts — saving content anyway. Errors: ${validatorResult.errors.join("; ")}`,
+				console.log(
+					`[report:${payload.reportId}] Validation passed — no issues found`,
 				);
 			}
 

@@ -1,293 +1,221 @@
-import type { LanguageModel } from "ai";
-import { compileMDX } from "next-mdx-remote/rsc";
-import remarkGfm from "remark-gfm";
-import { aiGenerateText } from "@/lib/ai/client";
-import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
+import type {
+	ContentBlock,
+	DataStoreMap,
+	Section,
+	StructuredReport,
+} from "@/lib/ai/report-pipeline/report-schema";
+import { COMPONENT_MINIMUMS } from "@/lib/ai/report-pipeline/writer-context";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 interface ValidatorOptions {
-	content: string;
-	dataStoreKeys: string[];
-	model: LanguageModel;
+	report: StructuredReport;
+	dataStore: DataStoreMap;
 }
 
 interface ValidatorResult {
-	valid: boolean;
-	content: string;
-	errors: string[];
-	tokensUsed: number;
+	report: StructuredReport;
+	warnings: string[];
 }
 
 // =============================================================================
-// KNOWN MDX COMPONENTS — must match src/components/mdx/components.tsx
+// DATA SHAPE VALIDATORS
 // =============================================================================
 
-const KNOWN_COMPONENTS = new Set([
-	// Chart components (require dataRef)
-	"EquityCurve",
-	"MonthlyChart",
-	"SymbolDistributionChart",
-	"DayOfWeekChart",
-	"HourHeatmap",
-	"SessionChart",
-	"RMultipleChart",
-	"MonteCarloChart",
-	// Display components (require dataRef)
-	"CalendarHeatmap",
-	"DrawdownTable",
-	"SymbolTable",
-	"DataTable",
-	// Inline components (no dataRef)
-	"MetricCard",
-	"MetricGrid",
-	"Callout",
-	"ChartImage",
-]);
-
-// Components that require a dataRef attribute
-const DATAREF_COMPONENTS = new Set([
-	"EquityCurve",
-	"MonthlyChart",
-	"SymbolDistributionChart",
-	"DayOfWeekChart",
-	"HourHeatmap",
-	"SessionChart",
-	"RMultipleChart",
-	"MonteCarloChart",
-	"CalendarHeatmap",
-	"DrawdownTable",
-	"SymbolTable",
-	"DataTable",
-]);
-
-// =============================================================================
-// VALIDATION CHECKS
-// =============================================================================
-
-// Regex to match JSX/MDX component usage: <ComponentName ... />  or <ComponentName ...>
-// Captures: component name + attributes string
-const COMPONENT_REGEX =
-	/<([A-Z][A-Za-z0-9]*)(\s[^>]*)?\s*\/?>|<([A-Z][A-Za-z0-9]*)(\s[^>]*)?>/g;
-
-// Regex to extract dataRef attribute value: dataRef="value" or dataRef={'value'} or dataRef={`value`}
-const DATAREF_REGEX = /dataRef=["'{`]([^"'{`]+)["'}`]/;
-
-interface ParsedComponent {
-	name: string;
-	dataRef: string | null;
-	raw: string;
-}
-
-function parseComponents(content: string): ParsedComponent[] {
-	const components: ParsedComponent[] = [];
-	let match = COMPONENT_REGEX.exec(content);
-	while (match) {
-		const name = match[1] ?? match[3] ?? "";
-		const attrs = match[2] ?? match[4] ?? "";
-		const dataRefMatch = DATAREF_REGEX.exec(attrs);
-		components.push({
-			name,
-			dataRef: dataRefMatch?.[1] ?? null,
-			raw: match[0],
-		});
-		match = COMPONENT_REGEX.exec(content);
+/**
+ * Check if data shape is compatible with the chart component.
+ * - RMultipleChart expects { buckets: unknown[], stats: object }
+ * - MonteCarloChart expects a non-array object
+ * - All other chart components expect an array
+ */
+function isDataShapeCompatible(component: string, data: unknown): boolean {
+	if (component === "RMultipleChart") {
+		return (
+			typeof data === "object" &&
+			data !== null &&
+			!Array.isArray(data) &&
+			"buckets" in data &&
+			Array.isArray((data as Record<string, unknown>).buckets) &&
+			"stats" in data &&
+			typeof (data as Record<string, unknown>).stats === "object"
+		);
 	}
-	return components;
+
+	if (component === "MonteCarloChart") {
+		return typeof data === "object" && data !== null && !Array.isArray(data);
+	}
+
+	// All other chart components expect arrays
+	return Array.isArray(data);
 }
 
-function validateComponents(components: ParsedComponent[]): string[] {
-	const errors: string[] = [];
-	for (const comp of components) {
-		if (!KNOWN_COMPONENTS.has(comp.name)) {
-			errors.push(
-				`Unknown MDX component: <${comp.name}>. Valid components: ${[...KNOWN_COMPONENTS].join(", ")}`,
-			);
+/**
+ * Get the effective data count for sufficiency checks.
+ * - Arrays: length
+ * - RMultipleChart: buckets.length
+ * - Other objects: number of keys
+ */
+function getDataCount(component: string, data: unknown): number {
+	if (Array.isArray(data)) {
+		return data.length;
+	}
+
+	if (
+		component === "RMultipleChart" &&
+		typeof data === "object" &&
+		data !== null &&
+		"buckets" in data
+	) {
+		const buckets = (data as Record<string, unknown>).buckets;
+		return Array.isArray(buckets) ? buckets.length : 0;
+	}
+
+	if (typeof data === "object" && data !== null) {
+		return Object.keys(data).length;
+	}
+
+	return 0;
+}
+
+/**
+ * Check data sufficiency using COMPONENT_MINIMUMS thresholds.
+ * Returns the minimum threshold if data is insufficient, null otherwise.
+ */
+function checkDataSufficiency(
+	dataRef: string,
+	component: string,
+	count: number,
+): { minimum: number } | null {
+	// Check by dataRef pattern (same approach as writer-context.ts)
+	for (const [pattern, minimum] of Object.entries(COMPONENT_MINIMUMS)) {
+		if (dataRef.includes(pattern) && count < minimum) {
+			return { minimum };
 		}
 	}
-	return errors;
-}
 
-function validateDataRefs(
-	components: ParsedComponent[],
-	dataStoreKeys: string[],
-): string[] {
-	const errors: string[] = [];
-	const validKeys = new Set(dataStoreKeys);
-
-	for (const comp of components) {
-		// Check components that require dataRef
-		if (DATAREF_COMPONENTS.has(comp.name) && !comp.dataRef) {
-			errors.push(`<${comp.name}> is missing required dataRef attribute`);
-		}
-
-		// Check that dataRef values exist in the dataStore
-		if (comp.dataRef && !validKeys.has(comp.dataRef)) {
-			errors.push(
-				`<${comp.name} dataRef="${comp.dataRef}" /> references non-existent data key. Available keys: ${dataStoreKeys.join(", ")}`,
-			);
+	// Check by component name patterns
+	const componentLower = component.toLowerCase();
+	for (const [pattern, minimum] of Object.entries(COMPONENT_MINIMUMS)) {
+		if (componentLower.includes(pattern) && count < minimum) {
+			return { minimum };
 		}
 	}
-	return errors;
-}
 
-async function validateMdxCompilation(content: string): Promise<string[]> {
-	try {
-		const sanitized = sanitizeMdxProse(content);
-		await compileMDX({
-			source: sanitized,
-			options: {
-				mdxOptions: {
-					remarkPlugins: [remarkGfm],
-					format: "mdx",
-				},
-			},
-		});
-		return [];
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		return [`MDX compilation error: ${message}`];
+	// General minimum: at least 1 data point for any chart
+	if (count === 0) {
+		return { minimum: 1 };
 	}
-}
 
-function runStaticValidation(
-	content: string,
-	dataStoreKeys: string[],
-): string[] {
-	const components = parseComponents(content);
-	const componentErrors = validateComponents(components);
-	const dataRefErrors = validateDataRefs(components, dataStoreKeys);
-	return [...componentErrors, ...dataRefErrors];
+	return null;
 }
 
 // =============================================================================
-// AUTO-REPAIR
+// PROSE FALLBACK BUILDER
 // =============================================================================
 
-const MAX_REPAIR_ATTEMPTS = 2;
-
-const REPAIR_SYSTEM_PROMPT = `You are an MDX report repair assistant for EdgeJournal. Your job is to fix errors in an MDX trading report.
-
-You will receive the original MDX content and a list of specific errors. Fix ONLY the listed errors while preserving all other content exactly as-is.
-
-Rules:
-- If a component name is unknown, replace it with the closest valid component or remove it
-- If a dataRef references a non-existent key, replace with the correct key from the available list or remove the component
-- If a component is missing a required dataRef, add a dataRef from the available keys if appropriate, or remove the component
-- If there are MDX compilation errors, fix the syntax (unclosed tags, invalid JSX expressions, etc.)
-- Do NOT change the narrative text, data values, or report structure
-- Do NOT add new components or sections
-- Do NOT wrap your output in code fences — return raw MDX content only
-- Preserve all formatting and whitespace`;
-
-function buildRepairPrompt(
-	content: string,
-	errors: string[],
-	dataStoreKeys: string[],
-): string {
-	const errorList = errors.map((e, i) => `${i + 1}. ${e}`).join("\n");
-	const keyList =
-		dataStoreKeys.length > 0
-			? dataStoreKeys.map((k) => `- \`${k}\``).join("\n")
-			: "- (none)";
-
-	return `## Errors to Fix
-
-${errorList}
-
-## Available dataRef Keys
-
-${keyList}
-
-## MDX Content to Repair
-
-${content}`;
-}
-
-async function attemptRepair(
-	content: string,
-	errors: string[],
-	dataStoreKeys: string[],
-	model: LanguageModel,
-): Promise<{ content: string; tokensUsed: number }> {
-	const userPrompt = buildRepairPrompt(content, errors, dataStoreKeys);
-
-	const result = await aiGenerateText({
-		model,
-		system: REPAIR_SYSTEM_PROMPT,
-		messages: [{ role: "user", content: userPrompt }],
-	});
-
+function buildProseFallback(
+	component: string,
+	dataRef: string,
+	reason: string,
+): ContentBlock {
 	return {
-		content: result.text,
-		tokensUsed: result.totalTokens,
+		type: "prose" as const,
+		content: `*${component} chart for "${dataRef}" was omitted: ${reason}.*`,
 	};
+}
+
+// =============================================================================
+// BLOCK VALIDATION
+// =============================================================================
+
+function validateAndFixBlocks(
+	blocks: ContentBlock[],
+	dataStore: DataStoreMap,
+	sectionHeading: string,
+	warnings: string[],
+): ContentBlock[] {
+	return blocks.map((block) => {
+		if (block.type !== "chart") {
+			return block;
+		}
+
+		const { component, dataRef } = block;
+		const entry = dataStore.get(dataRef);
+
+		// Check 1: dataRef exists in dataStore
+		if (!entry) {
+			const warning = `[${sectionHeading}] Chart block "${component}" references missing dataRef "${dataRef}" — replaced with prose fallback`;
+			warnings.push(warning);
+			return buildProseFallback(
+				component,
+				dataRef,
+				"the referenced dataset was not found in the gathered data",
+			);
+		}
+
+		const data = entry.data;
+
+		// Check 2: data shape is compatible with component
+		if (!isDataShapeCompatible(component, data)) {
+			const expectedShape =
+				component === "RMultipleChart"
+					? "{ buckets: array, stats: object }"
+					: component === "MonteCarloChart"
+						? "non-array object"
+						: "array";
+			const warning = `[${sectionHeading}] Chart block "${component}" dataRef "${dataRef}" has incompatible data shape (expected ${expectedShape}) — replaced with prose fallback`;
+			warnings.push(warning);
+			return buildProseFallback(
+				component,
+				dataRef,
+				`the data shape is incompatible (expected ${expectedShape})`,
+			);
+		}
+
+		// Check 3: data sufficiency
+		const count = getDataCount(component, data);
+		const insufficiency = checkDataSufficiency(dataRef, component, count);
+		if (insufficiency) {
+			const warning = `[${sectionHeading}] Chart block "${component}" dataRef "${dataRef}" has insufficient data (${count} points, need ${insufficiency.minimum}+) — replaced with prose fallback`;
+			warnings.push(warning);
+			return buildProseFallback(
+				component,
+				dataRef,
+				`only ${count} data point${count === 1 ? "" : "s"} available (need ${insufficiency.minimum}+ for a meaningful chart)`,
+			);
+		}
+
+		// All checks passed — keep the chart block
+		return block;
+	});
 }
 
 // =============================================================================
 // VALIDATOR PHASE
 // =============================================================================
 
-export async function runValidatorPhase(
-	options: ValidatorOptions,
-): Promise<ValidatorResult> {
-	const { content, dataStoreKeys, model } = options;
-	let totalTokensUsed = 0;
+export function runValidatorPhase(options: ValidatorOptions): ValidatorResult {
+	const { report, dataStore } = options;
+	const warnings: string[] = [];
 
-	// --- Static validation (component names + dataRef keys) ---
-	const staticErrors = runStaticValidation(content, dataStoreKeys);
+	// Validate and fix each section's blocks
+	const validatedSections: Section[] = report.sections.map((section) => ({
+		...section,
+		blocks: validateAndFixBlocks(
+			section.blocks,
+			dataStore,
+			section.heading,
+			warnings,
+		),
+	}));
 
-	// --- MDX compilation check ---
-	const compilationErrors = await validateMdxCompilation(content);
-
-	const allErrors = [...staticErrors, ...compilationErrors];
-
-	// If no errors, return immediately
-	if (allErrors.length === 0) {
-		return {
-			valid: true,
-			content,
-			errors: [],
-			tokensUsed: 0,
-		};
-	}
-
-	// --- Auto-repair loop ---
-	let currentContent = content;
-	let currentErrors = allErrors;
-
-	for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
-		const repair = await attemptRepair(
-			currentContent,
-			currentErrors,
-			dataStoreKeys,
-			model,
-		);
-		totalTokensUsed += repair.tokensUsed;
-		currentContent = repair.content;
-
-		// Re-validate after repair
-		const newStaticErrors = runStaticValidation(currentContent, dataStoreKeys);
-		const newCompilationErrors = await validateMdxCompilation(currentContent);
-		currentErrors = [...newStaticErrors, ...newCompilationErrors];
-
-		if (currentErrors.length === 0) {
-			return {
-				valid: true,
-				content: currentContent,
-				errors: [],
-				tokensUsed: totalTokensUsed,
-			};
-		}
-	}
-
-	// Repair failed after max attempts — graceful degradation
 	return {
-		valid: false,
-		content,
-		errors: currentErrors,
-		tokensUsed: totalTokensUsed,
+		report: {
+			...report,
+			sections: validatedSections,
+		},
+		warnings,
 	};
 }
