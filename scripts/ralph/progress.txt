@@ -116,3 +116,26 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - Data shape checking covers 3 categories: arrays (most charts), `{ buckets, stats }` (RMultipleChart), non-array objects (MonteCarloChart) — these match the patterns in `chart-wrappers.tsx`
   - Sufficiency checks use both dataRef patterns AND component name patterns to catch cases where naming doesn't match (e.g., custom dataRef names)
 ---
+
+## 2026-02-15 - US-008: Build JSON Report Renderer Component
+- Created `src/components/report/report-renderer.tsx` (client component)
+- `ReportRenderer` accepts `{ report: StructuredReport, dataArtifacts: Record<string, unknown> }`
+- Wraps content in `ReportDataProvider` (reuses existing provider from `src/components/mdx/provider.tsx`)
+- Renders `executiveSummary` as markdown via `ReactMarkdown` with `remarkGfm` and Terminal-styled `markdownComponents`
+- Each section gets an `<h2>` with `id` (from `toHeadingId`) for TOC anchor linking
+- `BlockRenderer` dispatches on discriminated union `type`:
+  - `prose`: ReactMarkdown with markdownComponents
+  - `metrics`: MetricGrid + MetricCard (with tooltip support)
+  - `chart`: CHART_COMPONENTS map reusing existing Mdx wrapper components
+  - `callout`: Callout component with ReactMarkdown content
+  - `image`: ChartImage component
+- `keyTakeaways` rendered as numbered `<ol>` with inline markdown per item
+- All rendered elements include `data-testid` attributes
+- Stable keys derived from block content fields (no array index keys — Biome lint compliance)
+- Files changed: `src/components/report/report-renderer.tsx` (new)
+- **Learnings for future iterations:**
+  - Biome strictly enforces `noArrayIndexKey` — derive keys from content fields (e.g., `block.type + block.dataRef` for chart blocks, `takeaway` string itself for list items)
+  - The `CHART_COMPONENTS` map mirrors `mdxComponents` but maps `ChartComponentName` → Mdx wrapper components directly (no `as never` needed since types match `{ dataRef: string; className?: string }`)
+  - `DataTable` from `src/components/mdx/data-table.tsx` uses `dataRef` prop (same interface as chart wrappers), so it fits in the CHART_COMPONENTS map
+  - For inline markdown in list items (keyTakeaways), use `p: ({ children }) => <span>{children}</span>` to avoid block-level `<p>` inside `<li>`
+---

@@ -157,8 +157,8 @@
         "Verify in browser"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/components/report/report-renderer.tsx as a client component. ReportRenderer accepts { report: StructuredReport, dataArtifacts: Record<string, unknown> }, wraps content in ReportDataProvider. Renders executiveSummary via ReactMarkdown with remarkGfm and Terminal-styled markdownComponents. Each section gets an h2 with id for TOC anchor linking. BlockRenderer dispatches on discriminated union type: prose (ReactMarkdown), metrics (MetricGrid + MetricCard with tooltip), chart (CHART_COMPONENTS map reusing existing Mdx wrappers), callout (Callout component with ReactMarkdown content), image (ChartImage). keyTakeaways rendered as numbered ol with inline markdown. All elements include data-testid attributes. Stable keys derived from block content (no array index keys)."
     },
     {
       "id": "US-009",
