@@ -84,4 +84,16 @@ Started: Sun Feb 15 03:12:29 WET 2026
 - Chat messages are stored in aiMessages table with role, content, model, tokensUsed, toolCalls (JSON)
 - Conversation status transitions: active → generating → complete/failed
 - Report status: queued → generating → complete/failed with progressStage tracking
+- Pre-existing build errors: Bun global type conflict (s3.ts vs generate-report-pdf.ts), TS narrowing on shared report page
+---
+
+## 2026-02-15 - US-001
+- Installed `ai@6.0.86` and `@openrouter/ai-sdk-provider@2.2.3`
+- Created `src/lib/ai/provider.ts` with `getModel()`, `getChatModel()`, `getReportModel()`
+- Fixed pre-existing build errors: Bun global type conflict, TS narrowing in share page
+- Files changed: `src/lib/ai/provider.ts` (new), `package.json`, `bun.lock`, `src/trigger/generate-report-pdf.ts`, `src/app/share/[token]/page.tsx`
+- **Learnings for future iterations:**
+  - `@openrouter/ai-sdk-provider` v2.2.3 uses `createOpenRouter({ apiKey })` — headers like HTTP-Referer/X-Title are handled by the provider automatically
+  - Pre-existing build errors can block story completion — fix them as part of the story
+  - Biome formatting is strict about single-line vs multi-line function signatures
 ---

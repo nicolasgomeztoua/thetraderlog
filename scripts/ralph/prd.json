@@ -35,8 +35,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Used @openrouter/ai-sdk-provider instead of @ai-sdk/openai. Fixed pre-existing build errors (Bun global type conflict, TS narrowing)."
     },
     {
       "id": "US-002",
