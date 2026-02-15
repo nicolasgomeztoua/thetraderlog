@@ -1,15 +1,13 @@
 import { runs } from "@trigger.dev/sdk/v3";
+import type { ModelMessage } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import {
-	type ChatMessage,
-	chatCompletion,
-	type ToolCall,
-} from "@/lib/ai/client";
+import { aiGenerateText } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
 import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
+import { getModel } from "@/lib/ai/provider";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
-import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
+import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
 import {
 	DEFAULT_CHAT_MODEL,
@@ -132,126 +130,68 @@ export const aiRouter = createTRPCRouter({
 				orderBy: [aiMessages.createdAt],
 			});
 
-			const chatMessages: ChatMessage[] = [
-				{ role: "system", content: systemPrompt },
-				...allMessages.map((msg) => ({
-					role: msg.role as ChatMessage["role"],
-					content: msg.content,
+			const messages: ModelMessage[] = allMessages.map((msg) => ({
+				role: msg.role as "user" | "assistant",
+				content: msg.content ?? "",
+			}));
+
+			const modelId = conversation.model ?? DEFAULT_CHAT_MODEL;
+
+			// Vercel AI SDK handles the tool-calling loop via maxSteps
+			const tools = getChatTools({
+				userId: ctx.user.id,
+				db: ctx.db,
+			});
+
+			const result = await aiGenerateText({
+				model: getModel(modelId),
+				system: systemPrompt,
+				messages,
+				tools,
+				maxSteps: MAX_TOOL_ROUNDS_CHAT,
+			});
+
+			// Collect tool calls from all steps for logging
+			const allToolCalls = result.steps.flatMap((step) =>
+				(step.toolCalls ?? []).map((tc) => ({
+					id: tc.toolCallId,
+					type: "function" as const,
+					function: {
+						name: tc.toolName,
+						arguments: JSON.stringify(tc.input),
+					},
 				})),
-			];
+			);
 
-			const model = conversation.model ?? DEFAULT_CHAT_MODEL;
-
-			// Tool-calling loop
-			let totalTokensUsed = 0;
-			let toolCallsSummary: ToolCall[] = [];
-
-			for (let round = 0; round < MAX_TOOL_ROUNDS_CHAT; round++) {
-				const response = await chatCompletion({
-					model,
-					messages: chatMessages,
-					tools: AI_TOOLS,
-					tool_choice: "auto",
-				});
-
-				totalTokensUsed += response.usage?.total_tokens ?? 0;
-
-				const choice = response.choices[0];
-				if (!choice) break;
-
-				const assistantMessage = choice.message;
-
-				// If no tool calls, we have the final text response
-				if (
-					!assistantMessage.tool_calls ||
-					assistantMessage.tool_calls.length === 0
-				) {
-					const finalContent = assistantMessage.content ?? "";
-
-					// Save assistant message
-					const [savedMessage] = await ctx.db
-						.insert(aiMessages)
-						.values({
-							conversationId: input.conversationId,
-							role: "assistant",
-							content: finalContent,
-							model,
-							tokensUsed: totalTokensUsed,
-							toolCalls:
-								toolCallsSummary.length > 0
-									? JSON.stringify(toolCallsSummary)
-									: null,
-						})
-						.returning();
-
-					// Update conversation title from first user message if not set
-					if (!conversation.title && input.content.length > 0) {
-						const title =
-							input.content.length > 100
-								? `${input.content.slice(0, 97)}...`
-								: input.content;
-						await ctx.db
-							.update(aiConversations)
-							.set({ title })
-							.where(eq(aiConversations.id, input.conversationId));
-					}
-
-					return savedMessage;
-				}
-
-				// Process tool calls
-				toolCallsSummary = [
-					...toolCallsSummary,
-					...assistantMessage.tool_calls,
-				];
-
-				// Add assistant message with tool calls to context
-				chatMessages.push({
-					role: "assistant",
-					content: assistantMessage.content,
-					tool_calls: assistantMessage.tool_calls,
-				});
-
-				// Execute each tool call and add results
-				for (const toolCall of assistantMessage.tool_calls) {
-					let args: Record<string, unknown>;
-					try {
-						args = JSON.parse(toolCall.function.arguments);
-					} catch {
-						args = {};
-					}
-
-					const result = await executeTool(toolCall.function.name, args, {
-						userId: ctx.user.id,
-						db: ctx.db,
-					});
-
-					chatMessages.push({
-						role: "tool",
-						content: JSON.stringify(result),
-						tool_call_id: toolCall.id,
-					});
-				}
-			}
-
-			// If we exhausted tool rounds, save whatever we have
-			const fallbackContent =
+			const finalContent =
+				result.text ||
 				"I apologize, but I was unable to complete the analysis within the allowed number of tool calls. Please try rephrasing your question or breaking it into smaller parts.";
 
+			// Save assistant message
 			const [savedMessage] = await ctx.db
 				.insert(aiMessages)
 				.values({
 					conversationId: input.conversationId,
 					role: "assistant",
-					content: fallbackContent,
-					model,
-					tokensUsed: totalTokensUsed,
+					content: finalContent,
+					model: modelId,
+					tokensUsed: result.totalTokens,
 					toolCalls:
-						toolCallsSummary.length > 0
-							? JSON.stringify(toolCallsSummary)
-							: null,
+						allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
 				})
 				.returning();
+
+			// Update conversation title from first user message if not set
+			if (!conversation.title && input.content.length > 0) {
+				const title =
+					input.content.length > 100
+						? `${input.content.slice(0, 97)}...`
+						: input.content;
+				await ctx.db
+					.update(aiConversations)
+					.set({ title })
+					.where(eq(aiConversations.id, input.conversationId));
+			}
 
 			return savedMessage;
 		}),
@@ -355,6 +295,8 @@ export const aiRouter = createTRPCRouter({
 				title: z.string().max(200).optional(),
 				dateRangeStart: z.string().datetime().optional(),
 				dateRangeEnd: z.string().datetime().optional(),
+				templateId: z.string().optional(),
+				accountId: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -421,6 +363,8 @@ export const aiRouter = createTRPCRouter({
 				model,
 				dateRangeStart: input.dateRangeStart,
 				dateRangeEnd: input.dateRangeEnd,
+				templateId: input.templateId,
+				accountId: input.accountId,
 			});
 
 			// Store the Trigger.dev task ID for tracking

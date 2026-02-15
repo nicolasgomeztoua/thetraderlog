@@ -1,39 +1,8 @@
 import { sql } from "drizzle-orm";
-import type { ToolDefinition } from "@/lib/ai/client";
 import { MAX_SQL_QUERY_ROWS } from "@/lib/constants/ai";
 import type { db as DbInstance } from "@/server/db";
 
 type Db = typeof DbInstance;
-
-// =============================================================================
-// TOOL DEFINITION
-// =============================================================================
-
-export const runQueryToolDefinition: ToolDefinition = {
-	type: "function",
-	function: {
-		name: "run_query",
-		description:
-			"Execute a read-only SQL SELECT query against the trading database. " +
-			"All queries are automatically scoped to the current user via CTEs. " +
-			"Use user_trades, user_accounts, user_tags, user_strategies, user_journals, " +
-			"user_executions, user_trade_tags as table aliases (they filter to the current user). " +
-			"P&L columns (realized_pnl, net_pnl, fees) are stored as decimal strings — use CAST(column AS NUMERIC) for aggregation. " +
-			"Always include deleted_at IS NULL for trade queries to exclude soft-deleted trades. " +
-			"Results are limited to 500 rows.",
-		parameters: {
-			type: "object",
-			properties: {
-				query: {
-					type: "string",
-					description:
-						"A SELECT SQL query. Use the user-scoped CTE aliases (user_trades, user_accounts, etc.) instead of raw table names. Example: SELECT symbol, COUNT(*) as trades, SUM(CAST(net_pnl AS NUMERIC)) as total_pnl FROM user_trades WHERE deleted_at IS NULL GROUP BY symbol ORDER BY total_pnl DESC LIMIT 20",
-				},
-			},
-			required: ["query"],
-		},
-	},
-};
 
 // =============================================================================
 // BLOCKED STATEMENTS
@@ -122,6 +91,7 @@ export async function executeRunQuery(
 	userId: string,
 	query: string,
 	db: Db,
+	accountId?: string,
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
 	const validationError = validateQuery(query);
 	if (validationError) {
@@ -129,7 +99,7 @@ export async function executeRunQuery(
 	}
 
 	try {
-		const scopedQuery = buildScopedQuery(userId, query);
+		const scopedQuery = buildScopedQuery(userId, query, accountId);
 
 		const result = await db.execute(sql.raw(scopedQuery));
 
@@ -198,9 +168,13 @@ function validateQuery(query: string): string | null {
 		return "Multiple SQL statements are not allowed. Send one SELECT query at a time.";
 	}
 
+	// Extract user-defined CTE names from WITH clauses so they're allowed as table refs.
+	// The AI commonly writes queries like: WITH my_agg AS (SELECT ... FROM user_trades ...) SELECT ... FROM my_agg
+	const userDefinedCTEs = extractCTENames(sanitized);
+
 	// Validate that all FROM/JOIN table references use allowed CTE aliases only.
 	// This prevents cross-tenant data access via raw table names.
-	const tableRefError = validateTableReferences(sanitized);
+	const tableRefError = validateTableReferences(sanitized, userDefinedCTEs);
 	if (tableRefError) {
 		return tableRefError;
 	}
@@ -209,25 +183,63 @@ function validateQuery(query: string): string | null {
 }
 
 /**
+ * Extract CTE names from WITH clauses in the user query.
+ * Handles: WITH cte1 AS (...), cte2 AS (...) SELECT ...
+ */
+function extractCTENames(sanitized: string): Set<string> {
+	const cteNames = new Set<string>();
+	// Match CTE definitions: WITH name AS or , name AS
+	const cteRegex = /\bWITH\s+(\w+)\s+AS\b/gi;
+	const commaCteRegex = /,\s*(\w+)\s+AS\s*\(/gi;
+
+	for (const match of sanitized.matchAll(cteRegex)) {
+		if (match[1]) cteNames.add(match[1].toLowerCase());
+	}
+	for (const match of sanitized.matchAll(commaCteRegex)) {
+		if (match[1]) cteNames.add(match[1].toLowerCase());
+	}
+
+	return cteNames;
+}
+
+/**
  * Validates that all table references in FROM and JOIN clauses use only
- * the user-scoped CTE aliases. Prevents direct access to raw tables
- * which would bypass user scoping and expose other users' data.
+ * the user-scoped CTE aliases (or user-defined CTEs within the query).
+ * Prevents direct access to raw tables which would bypass user scoping
+ * and expose other users' data.
  *
  * Also catches comma-separated table lists (e.g., FROM user_trades, trade)
  * and schema-qualified names (e.g., public.trade).
  */
-function validateTableReferences(sanitized: string): string | null {
-	// Block schema-qualified table names (e.g., public.trade, pg_catalog.pg_class)
-	if (/\b[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*\b/.test(sanitized)) {
+function validateTableReferences(
+	sanitized: string,
+	userDefinedCTEs?: Set<string>,
+): string | null {
+	// Block schema-qualified table names (e.g., public.trade, pg_catalog.pg_class).
+	// Only target known PostgreSQL schemas — NOT alias.column refs like t.symbol or s.name.
+	if (
+		/\b(?:public|pg_catalog|information_schema|pg_temp(?:_\d+)?)\s*\.\s*[a-zA-Z_]/i.test(
+			sanitized,
+		)
+	) {
 		return "Schema-qualified table names (e.g., public.tablename) are not allowed.";
 	}
+
+	// Strip SQL function uses of FROM before checking table references.
+	// EXTRACT(... FROM col), SUBSTRING(... FROM ...), TRIM(... FROM ...) use FROM
+	// as a keyword, NOT as a table reference. Remove them to prevent false positives.
+	const withoutFunctionFrom = sanitized
+		.replace(/\bEXTRACT\s*\([^)]*\bFROM\b[^)]*\)/gi, "EXTRACT(/*removed*/)")
+		.replace(/\bSUBSTRING\s*\([^)]*\bFROM\b[^)]*\)/gi, "SUBSTRING(/*removed*/)")
+		.replace(/\bTRIM\s*\([^)]*\bFROM\b[^)]*\)/gi, "TRIM(/*removed*/)")
+		.replace(/\bOVERLAY\s*\([^)]*\bFROM\b[^)]*\)/gi, "OVERLAY(/*removed*/)");
 
 	// Extract all table names from FROM and JOIN clauses, including comma-separated lists.
 	// Captures: FROM table1, table2, table3 and JOIN table_name
 	const fromJoinRegex =
 		/\b(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*)*)/gi;
 
-	for (const match of sanitized.matchAll(fromJoinRegex)) {
+	for (const match of withoutFunctionFrom.matchAll(fromJoinRegex)) {
 		const tableList = match[1];
 		if (!tableList) continue;
 
@@ -244,6 +256,9 @@ function validateTableReferences(sanitized: string): string | null {
 			// Skip SQL keywords that can appear after FROM/JOIN
 			if (tableName === "select" || tableName === "lateral") continue;
 
+			// Allow user-defined CTEs from the same query's WITH clause
+			if (userDefinedCTEs?.has(tableName)) continue;
+
 			if (!ALLOWED_TABLE_NAMES.has(tableName)) {
 				return `Table "${tableName}" is not allowed. Use the user-scoped aliases: ${[...ALLOWED_TABLE_NAMES].join(", ")}.`;
 			}
@@ -257,15 +272,32 @@ function validateTableReferences(sanitized: string): string | null {
 // SCOPED QUERY BUILDER
 // =============================================================================
 
-function buildScopedQuery(userId: string, userQuery: string): string {
-	// Escape single quotes in userId to prevent SQL injection
+function buildScopedQuery(
+	userId: string,
+	userQuery: string,
+	accountId?: string,
+): string {
+	// Escape single quotes in userId/accountId to prevent SQL injection
 	const safeUserId = userId.replace(/'/g, "''");
+	const safeAccountId = accountId?.replace(/'/g, "''");
+
+	// Account filter for trade-level CTEs:
+	// - If specific accountId provided, scope to that account
+	// - Otherwise, scope to all active accounts for the user
+	const accountFilter = safeAccountId
+		? `AND account_id = '${safeAccountId}'`
+		: `AND account_id IN (SELECT id FROM account WHERE user_id = '${safeUserId}' AND is_active = true)`;
+
+	// Same filter but using the joined trade alias (t.account_id)
+	const joinedAccountFilter = safeAccountId
+		? `AND t.account_id = '${safeAccountId}'`
+		: `AND t.account_id IN (SELECT id FROM account WHERE user_id = '${safeUserId}' AND is_active = true)`;
 
 	const ctes = `WITH user_trades AS (
-  SELECT * FROM trade WHERE user_id = '${safeUserId}'
+  SELECT * FROM trade WHERE user_id = '${safeUserId}' AND deleted_at IS NULL ${accountFilter}
 ),
 user_accounts AS (
-  SELECT * FROM account WHERE user_id = '${safeUserId}'
+  SELECT * FROM account WHERE user_id = '${safeUserId}' AND is_active = true
 ),
 user_account_groups AS (
   SELECT * FROM account_group WHERE user_id = '${safeUserId}'
@@ -284,12 +316,12 @@ user_strategy_rules AS (
 user_trade_tags AS (
   SELECT tt.* FROM trade_tag tt
   INNER JOIN trade t ON tt.trade_id = t.id
-  WHERE t.user_id = '${safeUserId}'
+  WHERE t.user_id = '${safeUserId}' AND t.deleted_at IS NULL ${joinedAccountFilter}
 ),
 user_executions AS (
   SELECT te.* FROM trade_execution te
   INNER JOIN trade t ON te.trade_id = t.id
-  WHERE t.user_id = '${safeUserId}'
+  WHERE t.user_id = '${safeUserId}' AND t.deleted_at IS NULL ${joinedAccountFilter}
 ),
 user_journals AS (
   SELECT * FROM daily_journal WHERE user_id = '${safeUserId}'
@@ -306,12 +338,12 @@ user_reports AS (
 user_trade_rule_checks AS (
   SELECT trc.* FROM trade_rule_check trc
   INNER JOIN trade t ON trc.trade_id = t.id
-  WHERE t.user_id = '${safeUserId}'
+  WHERE t.user_id = '${safeUserId}' AND t.deleted_at IS NULL ${joinedAccountFilter}
 ),
 user_trade_attachments AS (
   SELECT ta.* FROM trade_attachment ta
   INNER JOIN trade t ON ta.trade_id = t.id
-  WHERE t.user_id = '${safeUserId}'
+  WHERE t.user_id = '${safeUserId}' AND t.deleted_at IS NULL ${joinedAccountFilter}
 ),
 user_filter_presets AS (
   SELECT * FROM filter_preset WHERE user_id = '${safeUserId}'

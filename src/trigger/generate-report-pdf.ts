@@ -6,21 +6,13 @@ import { z } from "zod";
 // GENERATE REPORT PDF — Puppeteer-based server-side PDF rendering
 // =============================================================================
 
-// Bun S3Client type (same pattern as src/lib/storage/s3.ts)
-declare global {
-	var Bun:
-		| {
-				S3Client: new (
-					config: Record<string, unknown>,
-				) => {
-					write(
-						key: string,
-						data: Uint8Array | Buffer,
-						options?: Record<string, unknown>,
-					): Promise<number>;
-				};
-		  }
-		| undefined;
+// Bun S3Client type — uses the global declaration from src/lib/storage/s3.ts
+interface BunS3Client {
+	write(
+		key: string,
+		data: Uint8Array | Buffer,
+		options?: Record<string, unknown>,
+	): Promise<number>;
 }
 
 const inputSchema = z.object({
@@ -103,13 +95,19 @@ export const generateReportPdf = task({
 			// 5. Upload to S3 via Bun's native S3Client
 			const s3Key = `reports/${userId}/${reportId}/report.pdf`;
 
-			if (!globalThis.Bun?.S3Client) {
+			const BunGlobal = globalThis.Bun as
+				| {
+						S3Client: new (config: Record<string, unknown>) => BunS3Client;
+				  }
+				| undefined;
+
+			if (!BunGlobal?.S3Client) {
 				throw new Error(
 					"Bun.S3Client not available. Ensure trigger runtime is bun.",
 				);
 			}
 
-			const s3 = new globalThis.Bun.S3Client({
+			const s3 = new BunGlobal.S3Client({
 				endpoint: process.env.S3_ENDPOINT,
 				region: process.env.S3_REGION ?? "auto",
 				accessKeyId: process.env.S3_ACCESS_KEY_ID,

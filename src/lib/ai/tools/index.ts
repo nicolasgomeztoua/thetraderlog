@@ -1,50 +1,11 @@
-import type { ToolDefinition } from "@/lib/ai/client";
 import type { db as DbInstance } from "@/server/db";
-import {
-	callAnalyticsToolDefinition,
-	executeCallAnalytics,
-} from "./call-analytics";
-import {
-	executeGetMarketData,
-	getMarketDataToolDefinition,
-} from "./get-market-data";
-import { executeRunPython, runPythonToolDefinition } from "./run-python";
-import { executeRunQuery, runQueryToolDefinition } from "./run-query";
-import {
-	executeStoreReportData,
-	storeReportDataToolDefinition,
-} from "./store-report-data";
+import { executeCallAnalytics } from "./call-analytics";
+import { executeGetMarketData } from "./get-market-data";
+import { executeRunPython } from "./run-python";
+import { executeRunQuery } from "./run-query";
+import { executeStoreReportData } from "./store-report-data";
 
 type Db = typeof DbInstance;
-
-// =============================================================================
-// TOOL REGISTRY
-// =============================================================================
-
-/**
- * Base AI tool definitions available in all modes (chat + report).
- */
-export const AI_TOOLS: ToolDefinition[] = [
-	runQueryToolDefinition,
-	callAnalyticsToolDefinition,
-	getMarketDataToolDefinition,
-	runPythonToolDefinition,
-];
-
-/**
- * Report-only tools (store_report_data for MDX component data).
- */
-export const AI_REPORT_TOOLS: ToolDefinition[] = [
-	...AI_TOOLS,
-	storeReportDataToolDefinition,
-];
-
-/**
- * Get the appropriate tools array based on mode.
- */
-export function getToolsForMode(mode: "chat" | "report"): ToolDefinition[] {
-	return mode === "report" ? AI_REPORT_TOOLS : AI_TOOLS;
-}
 
 // =============================================================================
 // TOOL EXECUTOR
@@ -54,6 +15,7 @@ interface ToolContext {
 	userId: string;
 	db?: Db;
 	dataStore?: Map<string, unknown>;
+	accountId?: string;
 }
 
 /**
@@ -77,7 +39,12 @@ export async function executeTool(
 			if (!query) {
 				return { success: false, error: "Missing required parameter: query" };
 			}
-			return executeRunQuery(context.userId, query, context.db);
+			return executeRunQuery(
+				context.userId,
+				query,
+				context.db,
+				context.accountId,
+			);
 		}
 
 		case "call_analytics": {
@@ -90,11 +57,16 @@ export async function executeTool(
 				};
 			}
 			const input = (args.input as Record<string, unknown>) ?? undefined;
+			// Auto-inject accountId into analytics input when available
+			const mergedInput =
+				context.accountId && !input?.accountId
+					? { ...input, accountId: context.accountId }
+					: input;
 			return executeCallAnalytics(
 				context.userId,
 				router,
 				endpoint,
-				input,
+				mergedInput,
 				context.db,
 			);
 		}

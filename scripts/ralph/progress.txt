@@ -1,340 +1,316 @@
 # Ralph Progress Log
-Started: Fri Feb 13 21:03:05 WET 2026
+Started: Sun Feb 15 03:12:29 WET 2026
 ---
 
 ## Codebase Patterns
-- Analytics chart components are self-contained (data in, chart out) — ideal for MDX wrappers with dataRef
-- SessionChart, HourHeatmap, CalendarHeatmap depend on useSettingsStore() for timezone — MDX wrappers need to handle this
-- AI tools registry in src/lib/ai/tools/index.ts uses switch-case dispatcher pattern
-- Report mode system prompt is in REPORT_MODE_INSTRUCTIONS const in trading-analyst.ts
-- Trigger.dev task uses tool-calling loop with MAX_TOOL_ROUNDS_REPORT rounds
-- Email uses Resend API with raw HTML template — will replace with React Email
-- Report progress stages (post-MDX): queued → building_context → analyzing → complete
-- Schema uses createTable() helper, aiReports has pdfUrl/pdfKey columns to replace with content/dataArtifacts
-- MetricCard is inline props (no dataRef needed) — can pass through directly in MDX
-- React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
-- Email base layout lives at src/emails/components/base-layout.tsx — all transactional emails wrap in BaseLayout
-- MDX component library lives in src/components/mdx/ — mdxComponents map from components.tsx for next-mdx-remote
-- MDX wrappers use useReportData(dataRef) hook from provider.tsx to get data from ReportDataProvider context
-- Analytics chart components import from barrel @/components/analytics — all 11 chart wrappers available
+- Use `@openrouter/ai-sdk-provider` (not `@ai-sdk/openai`) for OpenRouter integration with Vercel AI SDK
+- Vercel AI SDK v5+ uses `stopWhen: stepCountIs(N)` instead of deprecated `maxSteps`
+- Tool definitions use `tool()` with Zod `inputSchema` and `execute` function
+- `generateText` returns `{ text, steps, toolCalls, toolResults, usage, totalUsage, response }`
+- `onStepFinish` callback available for progress tracking during tool loops
+- OpenRouter provider: `createOpenRouter({ apiKey })` then `provider('model/name')`
+- Existing tools have executor functions that can be reused — just wrap with Zod schemas
+- DataStore pattern (Map<string, unknown>) passes through tool context — reusable in SDK format
+- All AI constants live in `src/lib/constants/ai.ts` — update MAX_TOOL_ROUNDS references
+- Schema context is static (generateSchemaContext), user context is async (buildUserContext)
+- Report progress tracking uses fire-and-forget DB updates via updateProgress()
+- Chat tool loop: MAX_TOOL_ROUNDS_CHAT = 10, Report: MAX_TOOL_ROUNDS_REPORT = 20
+- System prompt built by buildSystemPrompt() in src/lib/ai/prompts/trading-analyst.ts
+- Tool executor pattern: executeTool() switch-case dispatches to individual executor functions
+- Report email sent via Resend after completion — unchanged in migration
 
+## 2026-02-15 - US-000
+- **Audited existing AI implementation:**
+
+### Files Inventory
+- `src/lib/ai/client.ts` — Hand-rolled OpenRouter client (chatCompletion, chatCompletionStream, retry logic, SSE parsing)
+- `src/lib/ai/tools/index.ts` — Tool registry (AI_TOOLS, AI_REPORT_TOOLS, executeTool dispatcher)
+- `src/lib/ai/tools/run-query.ts` — SQL query tool (user-scoped CTEs, validation, LIMIT 500)
+- `src/lib/ai/tools/call-analytics.ts` — tRPC endpoint tool (allowlisted analytics/trades endpoints)
+- `src/lib/ai/tools/get-market-data.ts` — OHLC market data tool (1000 bar limit)
+- `src/lib/ai/tools/run-python.ts` — Python sandbox tool (Daytona, matplotlib/plotly charts)
+- `src/lib/ai/tools/store-report-data.ts` — Report data store tool (Map-based, refId keying)
+- `src/lib/ai/context-builder.ts` — buildUserContext() — loads strategies, tags, accounts, settings, journals
+- `src/lib/ai/schema-context.ts` — generateSchemaContext() — static 565-line schema reference
+- `src/lib/ai/prompts/trading-analyst.ts` — buildSystemPrompt() — persona, tool instructions, MDX catalog
+- `src/lib/ai/report-email.ts` — sendReportEmail() — Resend API
+- `src/server/api/routers/ai.ts` — Chat/report tRPC procedures (sendMessage, startReport, etc.)
+- `src/trigger/generate-ai-report.ts` — Trigger.dev report generation task (20-round tool loop)
+- `src/lib/constants/ai.ts` — AI constants (models, limits, suggested prompts)
+
+### Current Types to Replace
+- `ChatMessage` — maps to Vercel AI SDK `CoreMessage`
+- `ToolCall` — handled natively by SDK
+- `ToolDefinition` — replaced by `tool()` with Zod
+- `ChatCompletionOptions/Response` — replaced by `generateText()` params/return
+- `StreamChunk` — replaced by `streamText()` stream parts
+- `OpenRouterError` — SDK handles errors internally
+
+### Migration Mapping
+| Current | Vercel AI SDK |
+|---------|---------------|
+| `chatCompletion(opts)` | `generateText({ model, system, messages, tools, stopWhen })` |
+| `chatCompletionStream(opts)` | `streamText({ model, system, messages, tools })` |
+| `for (round < MAX_ROUNDS)` | `stopWhen: stepCountIs(MAX_ROUNDS)` |
+| `ToolDefinition` JSON Schema | `tool({ description, inputSchema: z.object(...), execute })` |
+| `executeTool()` switch-case | Individual `execute` functions in tool definitions |
+| `response.usage.total_tokens` | `result.totalUsage.totalTokens` |
+| `response.choices[0].message` | `result.text` / `result.toolCalls` |
+| Manual tool result messages | Automatic — SDK handles tool result → model loop |
+| `buildHeaders()` | `createOpenRouter({ apiKey, headers })` |
+| `fetchWithRetry()` | SDK built-in retry via `maxRetries` param |
+| `MAX_TOOL_ROUNDS_CHAT = 10` | `stopWhen: stepCountIs(10)` |
+| `MAX_TOOL_ROUNDS_REPORT = 20` | `stopWhen: stepCountIs(20)` |
+
+### Vercel AI SDK Key Patterns
+1. **Provider setup:** `createOpenRouter({ apiKey: env.OPENROUTER_API_KEY })` from `@openrouter/ai-sdk-provider`
+2. **Model selection:** `provider('moonshotai/kimi-k2')` returns a model instance
+3. **Tool definition:** `tool({ description: '...', inputSchema: z.object({...}), execute: async (args) => {...} })`
+4. **Multi-step:** `generateText({ ..., tools, stopWhen: stepCountIs(10) })` — SDK handles the loop
+5. **Progress tracking:** `onStepFinish({ text, toolCalls, toolResults, usage, stepType })` callback
+6. **Token tracking:** `result.totalUsage` aggregates across all steps
+7. **Steps access:** `result.steps` array contains all intermediate tool calls/results
+8. **System prompt:** Separate `system` param (not first message)
+
+### Package Decision
+- PRD says `bun add ai @ai-sdk/openai` — but we need `@openrouter/ai-sdk-provider` for OpenRouter
+- Correct install: `bun add ai @openrouter/ai-sdk-provider`
+- The `@ai-sdk/openai` package targets OpenAI directly, NOT OpenRouter
+
+### Learnings for future iterations:
+- The existing tool executor functions (executeRunQuery, executeCallAnalytics, etc.) return `{ success, data?, error? }` — wrap these in SDK tool execute functions
+- The dataStore Map is passed through tool context and stored as JSONB via Object.fromEntries(dataStore)
+- Report progress uses fire-and-forget pattern — must preserve in pipeline phases
+- Chat messages are stored in aiMessages table with role, content, model, tokensUsed, toolCalls (JSON)
+- Conversation status transitions: active → generating → complete/failed
+- Report status: queued → generating → complete/failed with progressStage tracking
+- Pre-existing build errors: Bun global type conflict (s3.ts vs generate-report-pdf.ts), TS narrowing on shared report page
 ---
 
-## 2026-02-13 - US-000 Audit
-- Completed full codebase audit for MDX Report Viewer migration
-- Files audited:
-  - src/components/analytics/ — 39 components, cataloged prop interfaces and dependencies
-  - src/app/(protected)/ai/_components/message-renderer.tsx — uses react-markdown + remark-gfm
-  - src/trigger/generate-ai-report.ts — tool-calling loop, PDF generation, email sending
-  - src/lib/ai/report-pdf.ts — @react-pdf/renderer pipeline + S3 upload (765 lines, to be deleted)
-  - src/lib/ai/report-email.ts — raw HTML email with DOWNLOAD PDF button
-  - src/server/api/routers/ai.ts — 6 endpoints, pdfUrl referenced in getReport, listReports, getReportStatus
-  - src/lib/ai/prompts/trading-analyst.ts — report mode instructions, chart theming
-  - src/lib/ai/tools/index.ts — 4 tools (run_query, call_analytics, get_market_data, run_python)
-  - src/server/db/schema.ts — aiReports table with pdfUrl, pdfKey columns
-  - src/app/(protected)/ai/_components/report-interface.tsx — progress stages reference generating_pdf, uploading
-- Key findings:
-  - Chart components that need MDX wrappers: EquityCurve, MonthlyChart, SymbolDistributionChart, DayOfWeekChart, HourHeatmap, SessionChart, RMultipleChart, MonteCarloChart, CalendarHeatmap, DrawdownTable, SymbolTable
-  - MetricCard: inline props only (no dataRef needed)
-  - SessionChart uses useSettingsStore() — MDX wrapper needs to pass timezone as data
-  - No existing MDX dependencies in the project — need next-mdx-remote
-  - react-markdown already installed (used by message-renderer) — can be fallback for MDX render failures
-  - @react-pdf/renderer to be removed, html2canvas-pro + jspdf to be added for client-side PDF export
+## 2026-02-15 - US-001
+- Installed `ai@6.0.86` and `@openrouter/ai-sdk-provider@2.2.3`
+- Created `src/lib/ai/provider.ts` with `getModel()`, `getChatModel()`, `getReportModel()`
+- Fixed pre-existing build errors: Bun global type conflict, TS narrowing in share page
+- Files changed: `src/lib/ai/provider.ts` (new), `package.json`, `bun.lock`, `src/trigger/generate-report-pdf.ts`, `src/app/share/[token]/page.tsx`
 - **Learnings for future iterations:**
-  - Pre-existing Biome errors in the codebase (3 formatting errors) — not caused by our changes
-  - Build passes cleanly with Turbopack
-  - AG Charts used for all complex visualizations (not Recharts or Chart.js)
-  - Drizzle jsonb() column returns parsed object — no JSON.parse needed on read
+  - `@openrouter/ai-sdk-provider` v2.2.3 uses `createOpenRouter({ apiKey })` — headers like HTTP-Referer/X-Title are handled by the provider automatically
+  - Pre-existing build errors can block story completion — fix them as part of the story
+  - Biome formatting is strict about single-line vs multi-line function signatures
+  - z.record() in this project requires two args: z.record(z.string(), z.unknown()) — not z.record(z.unknown())
 ---
 
-## 2026-02-13 - US-001 Schema Changes
-- Added content (text) and dataArtifacts (jsonb) columns to aiReports
-- Removed pdfUrl and pdfKey columns from aiReports
-- Fixed all TypeScript references to removed columns:
-  - src/server/api/routers/ai.ts: removed pdfUrl from getReportStatus select
-  - src/app/(protected)/ai/_components/report-interface.tsx: replaced PDF download with View Report link
-  - src/trigger/generate-ai-report.ts: removed pdfUrl/pdfKey set() call, updated email to use viewer URL
-  - src/lib/ai/schema-context.ts: updated column docs
-  - tests/integration/ai.test.ts: removed pdfUrl assertion
-- Applied via direct SQL (drizzle-kit push has interactive prompts incompatible with CLI)
+## 2026-02-15 - US-002
+- Created `src/lib/ai/tools/definitions.ts` with 5 Vercel AI SDK tool definitions
+- Each tool wraps existing executor functions with Zod schemas
+- Exported `getChatTools(context)` and `getReportTools(context)` factory functions
+- Old `index.ts` exports preserved for backward compatibility
+- Files changed: `src/lib/ai/tools/definitions.ts` (new)
 - **Learnings for future iterations:**
-  - drizzle-kit push prompts interactively when columns are removed+added (asks if rename) — use direct SQL for CLI automation
-  - Schema column types auto-infer TypeScript types via $inferSelect/$inferInsert
-  - jsonb column needs $type<> for TypeScript typing: jsonb('data_artifacts').$type<Record<string, unknown>>()
+  - Zod `z.record()` requires both key and value schemas in this project (z.record(z.string(), z.unknown()))
+  - Biome auto-formats `z.string().describe(...)` chains into multi-line — use `bunx biome check --write` to fix
+  - AI SDK v6 type names differ from docs: `ModelMessage` (not `CoreMessage`), `maxOutputTokens` (not `maxTokens`), `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`)
+  - AI SDK v6 `generateText` uses `stopWhen: stepCountIs(N)` for multi-step tool calling
 ---
 
-## 2026-02-13 - US-002 AI Tool store_report_data
-- Created src/lib/ai/tools/store-report-data.ts with tool definition + executor
-- Updated src/lib/ai/tools/index.ts:
-  - Added AI_REPORT_TOOLS array (base tools + store_report_data)
-  - Added getToolsForMode() helper for mode-based tool selection
-  - Extended ToolContext with optional dataStore Map<string, unknown>
-  - Added store_report_data case to executeTool switch
+## 2026-02-15 - US-003
+- Created `src/lib/ai/client-v2.ts` wrapping Vercel AI SDK `generateText` and `streamText`
+- `aiGenerateText()` handles multi-step tool calling via `stopWhen: stepCountIs(maxSteps)`
+- `aiStreamText()` wraps `streamText()` for streaming responses
+- Error mapping preserves backward-compatible `OpenRouterError` format
+- Token usage extracted from `result.totalUsage.inputTokens + outputTokens`
+- Files changed: `src/lib/ai/client-v2.ts` (new)
 - **Learnings for future iterations:**
-  - Tool definitions follow OpenAI function-calling format: { type: "function", function: { name, description, parameters } }
-  - ToolContext is the shared context passed to all tool executors — extend it for new needs
-  - getToolsForMode() is the API for callers (trigger task, tRPC sendMessage) to get mode-specific tools
+  - AI SDK v6 renamed many types — always check `node_modules/ai/dist/index.d.ts` for actual exports
+  - `result.totalUsage` uses `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`)
+  - `maxOutputTokens` replaces `maxTokens` in the SDK config
+  - Tool call types: property is `input` (not `args`), `toolCallId` (not `id`), `toolName` (not `function.name`)
+  - Existing message format `{ role, content }` maps to `ModelMessage` — no conversion needed for simple role/content
 ---
 
-## 2026-02-13 - US-003 AI System Prompt MDX Catalog
-- Added MDX_COMPONENT_CATALOG const to src/lib/ai/prompts/trading-analyst.ts
-- Catalog documents 17 components across 3 categories:
-  - Chart components (8): EquityCurve, MonthlyChart, SymbolDistributionChart, DayOfWeekChart, HourHeatmap, SessionChart, RMultipleChart, MonteCarloChart
-  - Display components (5): CalendarHeatmap, DrawdownTable, SymbolTable, MetricCard, MetricGrid
-  - Report-specific (4): Callout, DataTable, ChartImage (+ MetricGrid as wrapper)
-- Each component documented with: JSX usage, dataRef pattern, full data shape table
-- Includes 2 complete examples showing full flow: call_analytics → store_report_data → MDX component usage
-- Updated REPORT_MODE_INSTRUCTIONS to prioritize MDX components over run_python
-- MDX_COMPONENT_CATALOG conditionally included only in report mode via spread in buildSystemPrompt sections array
+## 2026-02-15 - US-004
+- Migrated `sendMessage` procedure to use `aiGenerateText` from `client-v2.ts`
+- Replaced manual 10-round for-loop with `maxSteps: MAX_TOOL_ROUNDS_CHAT` — SDK handles loop
+- Tools provided via `getChatTools({ userId, db })` from new definitions
+- System prompt uses separate `system` parameter (not first message)
+- Tool calls extracted from `result.steps[].toolCalls[].{ toolCallId, toolName, input }`
+- Removed imports of old `chatCompletion`, `ChatMessage`, `ToolCall`, `AI_TOOLS`, `executeTool`
+- Files changed: `src/server/api/routers/ai.ts`
 - **Learnings for future iterations:**
-  - buildSystemPrompt uses a sections array joined with \n\n — add mode-specific sections via conditional spread
-  - RMultipleChart has a unique data shape: { buckets: [...], stats: {...} } — not a flat array
-  - MonteCarloChart takes a single result object, not an array
-  - MetricCard uses inline props (no dataRef) — tooltip is required with { what, why, benchmark }
+  - AI SDK tool call properties: `tc.input` (not `tc.args`), `tc.toolCallId` (not `tc.id`)
+  - The SDK handles the entire tool loop — no need for manual message array mutation
+  - 51 lines added, 111 removed — significant simplification
 ---
 
-## 2026-02-13 - US-004 Update Trigger.dev Task
-- Replaced PDF generation pipeline with MDX content + data artifacts storage
-- Changes to src/trigger/generate-ai-report.ts:
-  - Created dataStore Map<string, unknown> at start of task run
-  - Imported and used getToolsForMode('report') instead of AI_TOOLS for report-specific tools
-  - Passed dataStore to executeTool context so store_report_data can populate it
-  - Both normal completion and fallback paths now save content + dataArtifacts to aiReports
-  - Removed generateAndUploadPdf function and all PDF-related logic
-  - Removed extractChartUrls and extractCodeArtifacts helper functions
-  - Removed generateReportPdf import from report-pdf.ts
-  - Removed ERR_AI_PDF_FAILED from error mapping (no longer relevant)
-  - Created sendReportNotification helper (sends email with viewer URL)
-  - Progress stages now go: queued → building_context → analyzing → complete (no more generating_pdf/uploading)
-  - chartsGenerated now tracks dataStore.size (number of data artifacts)
+## 2026-02-15 - US-005
+- Created `src/lib/ai/report-pipeline/planner.ts` — the first phase of the 4-phase report pipeline
+- Planner uses `aiGenerateText` from `client-v2.ts` with NO tools (plan only, no execution)
+- System prompt includes: condensed user context, available analytics endpoints (names + descriptions), MDX component catalog (names + brief descriptions), structured planning instructions
+- Planner output is structured markdown with 5 sections: Request Analysis, Data Sources Needed, Report Sections, MDX Component Plan, Estimated Complexity
+- Accepts optional `templateHint` string (for template-driven reports in US-010/US-011)
+- Returns `{ plan: string, tokensUsed: number }`
+- Files changed: `src/lib/ai/report-pipeline/planner.ts` (new)
 - **Learnings for future iterations:**
-  - dataStore Map is the bridge between store_report_data tool calls and final persistence — Object.fromEntries(dataStore) gives the JSONB-ready object
-  - sendReportEmail still uses downloadUrl param name even though it's now a viewer URL — will be cleaned up in US-009 when React Email replaces the template
-  - Biome requires compact ternaries — don't split across 3 lines
+  - The `report-pipeline/` directory is new — created for this story
+  - Planner system prompt is intentionally smaller than the full report prompt — no schema context, no SQL syntax, no tool descriptions (only endpoint names)
+  - The `aiGenerateText` wrapper from `client-v2.ts` handles all the SDK complexity (model config, error mapping, token tracking)
+  - Simple `{ role: "user", content: prompt }` message works — no need for `ModelMessage` type conversion for basic use cases
 ---
 
-## 2026-02-13 - US-005 Update tRPC Endpoints
-- Added getReportContent query to ai.ts: returns id, title, content, dataArtifacts, status, createdAt, completedAt, model, tokensUsed, chartsGenerated, prompt
-- Validates user ownership via eq(aiReports.userId, ctx.user.id), throws ERR_REPORT_NOT_FOUND if not found/not owned
-- Updated listReports to map reports with hasContent boolean flag (content != null && content.length > 0)
-- getReport and getReportStatus already correct — pdfUrl/pdfKey columns removed in US-001, content/dataArtifacts auto-included via findFirst without column selection
-- Files changed: src/server/api/routers/ai.ts
+## 2026-02-15 - US-006
+- Created `src/lib/ai/report-pipeline/gatherer.ts` — the second phase of the 4-phase report pipeline
+- Gatherer uses `aiGenerateText` with ALL report tools via `getReportTools()` and `maxSteps: MAX_TOOL_ROUNDS_REPORT` (20)
+- System prompt includes: analysis plan from planner, user context, full schema context, data handling notes (timezone, breakeven, decimal casting, soft-delete)
+- Tools: `run_query`, `call_analytics`, `get_market_data`, `run_python`, `store_report_data`
+- Counts total tool calls by iterating `result.steps[].toolCalls`
+- Returns `{ tokensUsed, dataStoreKeys, totalToolCalls }`
+- Files changed: `src/lib/ai/report-pipeline/gatherer.ts` (new)
 - **Learnings for future iterations:**
-  - Drizzle findFirst without `columns` option returns ALL columns — no need to explicitly add new columns to existing queries that don't use column selection
-  - getReportStatus uses explicit `columns` selection — new columns must be explicitly added there if needed
-  - hasContent flag uses != null check (not !== null) to handle both null and undefined
+  - Gatherer needs schema context (unlike planner) because it executes SQL queries and needs to know table/column structure
+  - `result.steps` array contains all intermediate steps — iterate `step.toolCalls?.length ?? 0` to count total tool calls
+  - The `getReportTools()` factory binds userId, db, and dataStore into tool closures — no need to pass context through the prompt
+  - Data handling notes (decimal casting, soft-delete, CTE aliases) are critical for the gatherer since it writes SQL queries
 ---
 
-## 2026-02-13 - US-006 Integration Tests for Report Viewer Endpoints
-- Created tests/integration/report-viewer.test.ts with 10 tests across 3 describe blocks
-- Test coverage:
-  - getReportContent: returns content+dataArtifacts for completed report, response shape validation, null content for queued report, 404 for non-existent report, ownership rejection
-  - listReports hasContent: true for reports with content, false for reports without
-  - getReport content: includes content field, no pdfUrl/pdfKey fields, includes dataArtifacts
-- Used createTestUser (not setupTrader) since report tests only need users, not accounts/trades
-- Created helper function createCompletedReport() that uses startReport + direct DB update to simulate completed reports with content and dataArtifacts
-- Mocked same dependencies as ai.test.ts: OpenRouter client, context builders, Trigger.dev task
-- Files changed: tests/integration/report-viewer.test.ts (new)
+## 2026-02-15 - US-007
+- Created `src/lib/ai/report-pipeline/writer-context.ts` — condensed context builder for the writer phase
+- `buildWriterContext({ dataStore, plan })` generates context with 4 sections: analysis plan, data summary, MDX component catalog, formatting rules
+- Data summary: arrays show first 3 rows as JSON, objects show key fields (up to 8), handles null/empty gracefully
+- MDX catalog: condensed version of the full catalog from `trading-analyst.ts` — same components but with single-line data shape descriptions instead of full markdown tables
+- Formatting rules: same strict rules as `REPORT_MODE_INSTRUCTIONS` (no LaTeX, pipe tables, JSX inline)
+- **Excludes**: database schema, SQL syntax, tRPC endpoint docs, tool descriptions, data handling notes (these are only needed by the gatherer)
+- Files changed: `src/lib/ai/report-pipeline/writer-context.ts` (new)
 - **Learnings for future iterations:**
-  - To test report endpoints with content, you need to startReport() first (creates the conversation + report) then update the report directly via DB to set content, dataArtifacts, status: "complete"
-  - Biome enforces single-line imports when there's only one import — don't use multi-line for single imports
-  - Biome prefers single quotes for strings containing double quotes (avoids escaping)
-  - Docker/OrbStack must be running for integration tests (Testcontainers)
+  - The writer phase only needs data summaries, not full data — keep context small to maximize output quality
+  - Biome auto-formats ternary expressions onto multiple lines when they exceed ~80 chars
+  - The MDX catalog is repeated in multiple places (trading-analyst.ts, planner.ts, writer-context.ts) — consider extracting to shared constant in future cleanup
 ---
 
-## 2026-02-13 - US-007 React Email Setup
-- Installed @react-email/components@1.0.7
-- Created src/emails/components/base-layout.tsx with Terminal-themed BaseLayout component
-- Component uses: Html, Head, Body, Container, Section, Text, Hr, Preview from @react-email/components
-- Props: { preview: string, children: React.ReactNode }
-- Styling: dark bg (#050505), monospace fonts (Courier New fallback), chartreuse header border (#d4ff00)
-- Files changed: package.json, bun.lock, src/emails/components/base-layout.tsx (new)
+## 2026-02-15 - US-008
+- Created `src/lib/ai/report-pipeline/few-shot-examples.ts` — two curated report sections for the writer
+  - Performance Overview example: MetricGrid (4 MetricCards), EquityCurve, Callout, data-driven narrative
+  - Risk Analysis example: DrawdownTable, RMultipleChart, MetricGrid (4 MetricCards), MonteCarloChart, 2 Callouts
+  - Key patterns guidance: lead with narrative, cite specific numbers, use dataRef keys exactly, mix components naturally
+- Created `src/lib/ai/report-pipeline/writer.ts` — the third phase of the 4-phase report pipeline
+  - `runWriterPhase(options)` takes plan, writerContext, prompt, model, dataStoreKeys
+  - Uses `aiGenerateText` with NO tools — writer only writes, never calls tools
+  - System prompt includes: writer persona, writer context (from writer-context.ts), explicit dataRef key list, writing instructions, few-shot examples
+  - Returns `{ content: string, tokensUsed: number }`
+- Files changed: `src/lib/ai/report-pipeline/few-shot-examples.ts` (new), `src/lib/ai/report-pipeline/writer.ts` (new)
 - **Learnings for future iterations:**
-  - @react-email/components re-exports from individual packages (@react-email/body, @react-email/html, etc.)
-  - React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
-  - Import React types with `import type * as React from "react"` for CSSProperties (verbatimModuleSyntax requires type import)
+  - Writer system prompt layers: persona → writerContext (data summaries + MDX catalog + formatting rules) → writing instructions → few-shot examples
+  - The dataStoreKeys are explicitly listed in the writer prompt so the model knows exactly which dataRef values are valid — this prevents hallucinated dataRef keys
+  - Few-shot examples should demonstrate the exact MDX component syntax including tooltip format `{{ what, why, benchmark }}`
+  - Pre-existing Biome errors in archive JSON files and trigger.config.ts are not from pipeline changes — safe to ignore
 ---
 
-## 2026-02-13 - US-008 Report Completion Email Template
-- Created src/emails/report-complete.tsx using BaseLayout wrapper
-- Component: ReportCompleteEmail with props { reportTitle, reportUrl, metadata? }
-  - Preview text: "Your AI analysis report is ready — view it now"
-  - Report title displayed in ice blue (#00d4ff) monospace inside dark card
-  - VIEW REPORT Button component with chartreuse bg (#d4ff00), dark text
-  - Subtitle: "Your report is permanently available in EdgeJournal"
-  - Optional metadata section (generationTime, chartsGenerated) in dark card
-  - Fallback link text with reportUrl in ice blue
-- Exported async renderReportCompleteEmail() that returns HTML string via render() from @react-email/components
-- Files changed: src/emails/report-complete.tsx (new)
+## 2026-02-15 - US-009
+- Created `src/lib/ai/report-pipeline/validator.ts` — the fourth and final phase of the 4-phase report pipeline
+- Three validation checks:
+  1. **Component validation**: Parses all `<PascalCase ...>` tags in MDX, checks against `KNOWN_COMPONENTS` set (mirrors `mdxComponents` in `src/components/mdx/components.tsx`)
+  2. **DataRef validation**: Checks that dataRef-requiring components (charts, display) have a `dataRef` attribute and that its value exists in `dataStoreKeys`
+  3. **MDX compilation check**: Uses `compileMDX` from `next-mdx-remote/rsc` with `sanitizeMdxProse` preprocessing and `remarkGfm` — same pipeline as the report viewer page
+- Auto-repair: up to 2 attempts using `aiGenerateText` with a repair-specific system prompt listing specific errors and available dataRef keys
+- Graceful degradation: if repair fails after 2 attempts, returns original content with error list (report still usable via markdown fallback)
+- Returns `{ valid: boolean, content: string, errors: string[], tokensUsed: number }`
+- Files changed: `src/lib/ai/report-pipeline/validator.ts` (new)
 - **Learnings for future iterations:**
-  - Biome enforces alphabetical import ordering within named imports — use `Button, Link, render, Section, Text` not grouped by type
-  - React Email's render() is async (returns Promise<string>) — renderReportCompleteEmail must be async
-  - Button component from @react-email/components handles email-safe CTA buttons with href prop
-  - Link component from @react-email/components handles email-safe anchor links
+  - `compileMDX` from `next-mdx-remote/rsc` can be used headlessly (no components needed) for validation — just catches compilation errors
+  - `sanitizeMdxProse` must be applied before compilation to escape bare `<` and `{` in AI-generated prose
+  - The `KNOWN_COMPONENTS` set and `DATAREF_COMPONENTS` set must stay in sync with `src/components/mdx/components.tsx` — if new MDX components are added to the viewer, update both
+  - Regex-based component parsing (`<PascalCase ...>`) is sufficient for validation — no need for a full AST parser since we control the component naming convention
+  - The validator doesn't need React components registered in `compileMDX` for syntax validation — unknown components won't cause compilation errors in MDX (they're treated as custom elements)
 ---
 
-## 2026-02-13 - US-009 Update Email Delivery — Use React Email Template
-- Replaced raw HTML email template in report-email.ts with React Email renderReportCompleteEmail
-- Changes to src/lib/ai/report-email.ts:
-  - Removed buildReportEmailHtml function (entire raw HTML template — 80+ lines)
-  - Removed escapeHtml helper function (no longer needed — React Email handles escaping)
-  - Added import of renderReportCompleteEmail from @/emails/report-complete
-  - Updated sendReportEmail params: downloadUrl → reportUrl, added optional metadata param
-  - Now renders HTML via await renderReportCompleteEmail({ reportTitle, reportUrl, metadata })
-- Changes to src/trigger/generate-ai-report.ts:
-  - Updated sendReportNotification helper: added optional metadata param
-  - Both call sites (normal completion + fallback) now pass { chartsGenerated: dataStore.size } metadata
-- Files changed: src/lib/ai/report-email.ts, src/trigger/generate-ai-report.ts
+## 2026-02-15 - US-010
+- Created `src/lib/ai/report-templates/index.ts` — pre-defined report templates that augment the planner phase
+- `ReportTemplate` type: id, name, description, sections array, plannerHint string
+- 3 templates:
+  - **monthly-review**: equity curve, monthly P&L, win rate trends, symbol breakdown, behavioral patterns, recommendations
+  - **risk-audit**: drawdown analysis, position sizing, R-multiple distribution, Monte Carlo, risk of ruin, risk-adjusted returns
+  - **strategy-comparison**: per-strategy metrics, win rate/expectancy/profit factor comparison, SQL-based aggregation, recommendations
+- Each template section has: title, description, suggestedDataSources (endpoint names), suggestedComponents (MDX component names)
+- `plannerHint` is a structured string injected into the planner system prompt via the existing `templateHint` parameter
+- `getTemplate(id)` returns a single template by ID, `getAllTemplates()` returns all 3
+- Templates are data-only — no LLM calls, no tool execution
+- Files changed: `src/lib/ai/report-templates/index.ts` (new)
 - **Learnings for future iterations:**
-  - Biome enforces alphabetical ordering of imports — @/emails/report-complete comes before @/env
-  - renderReportCompleteEmail is async (React Email render() returns Promise<string>) — must await it
-  - React Email handles HTML escaping internally — no need for manual escapeHtml when using React components
+  - Templates use a Map for O(1) lookup by ID — same pattern as dataStore
+  - The `plannerHint` field maps directly to the `templateHint` parameter already accepted by `runPlannerPhase()` — no planner changes needed
+  - Strategy comparison template relies on `run_query` SQL because the analytics router doesn't have per-strategy endpoints
+  - Biome auto-formats arrays with 2+ string items longer than ~80 chars into multi-line format
 ---
 
-## 2026-02-13 - US-010 MDX Report Component Library
-- Created src/components/mdx/ directory with 7 files:
-  - provider.tsx: ReportDataProvider context + useReportData(refId) hook
-  - chart-wrappers.tsx: 11 wrapper components (MdxEquityCurve, MdxMonthlyChart, MdxSymbolDistributionChart, MdxDayOfWeekChart, MdxHourHeatmap, MdxSessionChart, MdxRMultipleChart, MdxMonteCarloChart, MdxCalendarHeatmap, MdxDrawdownTable, MdxSymbolTable)
-  - components.tsx: mdxComponents map exporting all 17 components for next-mdx-remote
-  - metric-grid.tsx: responsive grid (grid-cols-2 sm:3 lg:4 gap-2)
-  - callout.tsx: note/tip/warning/important with Terminal-styled borders, icons, colors
-  - data-table.tsx: auto-detects numeric columns for right-alignment, P&L coloring via formatCurrency
-  - chart-image.tsx: clickable lightbox with zoom-in/zoom-out cursor states
-- MetricCard passed through directly from @/components/analytics (inline props, no dataRef needed)
-- All chart wrappers use DataFallback component for missing data: "[ComponentName: data not available]"
-- RMultipleChart wrapper handles unique { buckets, stats } data shape (not a flat array)
-- MonteCarloChart wrapper handles single result object (not an array)
-- Used `as never` type assertions in mdxComponents map to satisfy Record<string, ComponentType> typing
-- Files changed: 7 new files in src/components/mdx/
+## 2026-02-15 - US-011
+- Rewired `src/trigger/generate-ai-report.ts` to use 4-phase pipeline instead of single tool-calling loop
+- **Old flow removed**: manual for-loop with `chatCompletion()`, `ChatMessage[]`, `ToolCall[]`, `executeTool()`, `getToolsForMode()`
+- **New flow**: sequential calls to `runPlannerPhase()` → `runGathererPhase()` → `runWriterPhase()` → `runValidatorPhase()`
+- Progress stages updated: `building_context` → `planning` → `gathering_data` → `writing` → `validating` → `complete`
+- Token usage aggregated across all 4 phases via `totalTokensUsed +=`
+- Tool call count from `gathererResult.totalToolCalls` saved to DB
+- `chartsGenerated` from `dataStore.size` (unchanged)
+- Template support: optional `templateId` in payload → `getTemplate(id)` → passes `plannerHint` to planner
+- Planner failure fallback: catches error, sets `plan = augmentedPrompt`, gatherer uses raw prompt
+- Validator failure: logs warning, saves content anyway (graceful degradation)
+- Old single-loop logic, content parts accumulation, tool call processing, fallback truncation — all removed
+- Uses `getModel(payload.model)` from provider.ts to create Vercel AI SDK model instance
+- 139 lines added, 218 lines removed — significant simplification
+- Files changed: `src/trigger/generate-ai-report.ts`
 - **Learnings for future iterations:**
-  - mdx/types module requires next-mdx-remote to be installed — use Record<string, ComponentType> until then
-  - Biome enforces sorted Tailwind classes — use its auto-fix with `--write`
-  - Biome flags `<img>` as lint/performance/noImgElement — suppress with biome-ignore for external URL images
-  - Biome prefers `<button>` over `<div role="button">` — use useSemanticElements
-  - `data[0]` in strict TS needs nullish coalescing even after length check — use `data[0] ?? {}`
-  - Analytics components import from barrel @/components/analytics — all 11 chart components available there
-  - SessionChart, HourHeatmap, CalendarHeatmap use useSettingsStore internally — MDX wrappers just pass data through, store handles timezone
+  - The Trigger.dev task payload type is inline in `run: async (payload: {...})` — add new fields there directly (no separate schema file)
+  - `getModel()` from `provider.ts` converts a string model ID to a Vercel AI SDK `LanguageModel` — all pipeline phases accept `LanguageModel`
+  - The `buildSystemPrompt()` function is no longer needed in the trigger task — each pipeline phase builds its own system prompt
+  - Biome auto-sorts imports alphabetically — always run `bunx biome check --write` after writing new imports
+  - Pre-existing Biome errors in archive JSON and trigger.config.ts are not from pipeline changes — safe to ignore
+  - The old flow had separate "normal completion" and "exhausted rounds fallback" paths — the new pipeline has a single linear path since the gatherer uses `maxSteps` internally
 ---
 
-## 2026-02-13 - US-011 Report Viewer Page
-- Created /ai/reports/[reportId] page with 3 files:
-  - page.tsx: Server component that fetches report via tRPC getReportContent, handles generating/failed/complete states, renders header with back button, title, model, date, action buttons
-  - _components/report-viewer-content.tsx: Client component that serializes MDX via next-mdx-remote/serialize, renders with MDXRemote client component inside ReportDataProvider, falls back to react-markdown on MDX failure
-  - _components/copy-link-button.tsx: Client component for copy-to-clipboard link functionality
-- Installed next-mdx-remote@6.0.0
-- Architecture: Server page fetches data → passes to client component → client serializes MDX on mount → renders with custom components from mdxComponents map
-- Table of Contents: extracts headings from markdown with regex, renders sticky sidebar on xl+ viewports, uses IntersectionObserver for active heading tracking
-- Error handling: MDX compile failure falls back to react-markdown, notFound() for missing reports, progress indicator for generating reports
-- Header: back link to /ai, report title, model badge, completion date, Download PDF placeholder (disabled, for US-012), Copy Link button
-- Files changed: package.json, bun.lock, 3 new page/component files
+## 2026-02-15 - US-012
+- Removed old hand-rolled OpenRouter client (`src/lib/ai/client.ts`) and consolidated to single Vercel AI SDK client
+- **Old client.ts removed**: `chatCompletion`, `chatCompletionStream`, `fetchWithRetry`, `buildHeaders`, `buildRequestBody`, and all old types (`ChatMessage`, `ToolCall`, `ToolDefinition`, `ChatCompletionOptions`, `ChatCompletionResponse`, `StreamChunk`, `TokenUsage`)
+- **OpenRouterError preserved**: Moved into the new client (was depended on by error mapping in the SDK wrapper)
+- **client-v2.ts → client.ts**: Renamed via `git mv` so all existing `@/lib/ai/client` imports now point to the Vercel AI SDK wrapper
+- **Old JSON Schema tool definitions removed** from all 5 tool files: `runQueryToolDefinition`, `callAnalyticsToolDefinition`, `getMarketDataToolDefinition`, `runPythonToolDefinition`, `storeReportDataToolDefinition`
+- **tools/index.ts cleaned**: Removed `AI_TOOLS`, `AI_REPORT_TOOLS`, `getToolsForMode` exports (all used old `ToolDefinition` format). Kept `executeTool` dispatcher (still used by `ai-tools.test.ts`)
+- **5 import updates**: `client-v2` → `client` in `planner.ts`, `gatherer.ts`, `writer.ts`, `validator.ts`, `ai.ts` (router)
+- **2 test mock updates**: `ai.test.ts` and `report-viewer.test.ts` now mock `aiGenerateText` (returns `{ text, totalTokens, steps, finishReason }`) instead of old `chatCompletion`
+- Files changed: `src/lib/ai/client.ts` (renamed + modified), `src/lib/ai/client-v2.ts` (deleted), 5 tool files, `tools/index.ts`, 4 pipeline files, `ai.ts` router, 2 test files
+- 185 additions, 683 deletions — significant cleanup
 - **Learnings for future iterations:**
-  - next-mdx-remote v6 has separate RSC (next-mdx-remote/rsc) and client (next-mdx-remote) APIs — use client API when MDX components need React context
-  - MDXRemote client requires pre-serialized source via serialize() — can't take raw MDX string directly
-  - serialize() is async and should be done client-side when components need context (can't wrap RSC MDXRemote in client context provider)
-  - Server page params in Next.js 15 are Promise — must await: `const { reportId } = await params`
-  - next-mdx-remote/serialize accepts remarkPlugins in mdxOptions — pass remark-gfm for GFM tables
-  - Biome auto-fix (`--write`) handles formatting issues like multi-line→single-line JSX
-  - notFound() from next/navigation triggers the closest not-found.tsx boundary
+  - When renaming files via `git mv`, the staged and unstaged changes need to be re-staged together — git sees the deletion + new file as separate operations
+  - Test mocks must match the actual module exports — after migrating from old `chatCompletion` to `aiGenerateText`, mocks need the new return shape `{ text, totalTokens, steps, finishReason }`
+  - The `executeTool` dispatcher in `tools/index.ts` is still useful for tests even after migrating to Vercel AI SDK tool definitions — it provides a simpler way to test individual tool executors without the SDK harness
+  - Pre-existing Biome errors in archive JSON files and `trigger.config.ts` remain from previous iterations — not caused by any pipeline changes
 ---
 
-## 2026-02-13 - US-012 Client-Side PDF Export
-- Installed html2canvas-pro@1.6.7 and jspdf@4.1.0
-- Created src/lib/export/pdf-export.ts with exportReportToPdf(element, title) function:
-  - Captures report content DOM element via html2canvas-pro (scale 2x, dark bg #050505, CORS enabled)
-  - Generates multi-page A4 PDF via jsPDF with page slicing (source canvas split into page-sized chunks)
-  - Branded header on first page: "EDGEJOURNAL // AI ANALYSIS REPORT" in chartreuse + report title
-  - Footer on each page: page number (centered, courier font)
-  - Downloads as {slug}-report.pdf (title slugified, max 50 chars)
-- Created download-pdf-button.tsx client component:
-  - Uses dynamic import() of pdf-export for lazy loading (large dependencies not loaded until needed)
-  - Queries DOM for [data-testid="report-viewer-content"] element
-  - Loading state: Loader2 spinner + "Generating..." text
-  - Silent catch on failure (html2canvas may not support all rendering features)
-- Updated page.tsx:
-  - Replaced disabled PDF placeholder button with DownloadPdfButton for completed reports
-  - Added showPdfDownload prop to ReportHeader (only shown for completed reports)
-  - DownloadPdfButton imported as new client component
-- Added print CSS to globals.css:
-  - @media print rules hiding ToC sidebar, header actions, and back button
-  - Content area max-width and padding reset for print
-  - Body background/color override for print
-- Added print:hidden Tailwind class to ToC sidebar wrapper and actions div
-- Files changed: package.json, bun.lock, src/lib/export/pdf-export.ts (new), download-pdf-button.tsx (new), page.tsx, report-viewer-content.tsx, globals.css
+## 2026-02-15 - US-013
+- Added template selection UI to the report creation form in `report-interface.tsx`
+- 3 template cards displayed above the prompt textarea: Monthly Review, Risk Audit, Strategy Comparison
+- Each card shows: template name, section count, and description
+- Selecting a template highlights it with chartreuse accent (`border-accent/50 bg-accent/10`) and auto-fills a default prompt
+- Deselecting (clicking again or "Clear template" button) removes the selection
+- `templateId` added to `startReport` tRPC mutation input schema and passed through to Trigger.dev task payload
+- Templates imported via `getAllTemplates()` from `src/lib/ai/report-templates/index.ts` — data-only, no SSR issues
+- Files changed: `src/app/(protected)/ai/_components/report-interface.tsx`, `src/server/api/routers/ai.ts`
+- 93 lines added across 2 files
 - **Learnings for future iterations:**
-  - html2canvas-pro captures DOM as canvas — scale: 2 gives good quality for PDF
-  - jsPDF addImage works with sliced canvases for multi-page — create temp canvas per page, draw slice from source
-  - Dynamic import() in button click handler is the right pattern for large client-only deps (html2canvas-pro + jspdf = ~800KB)
-  - Biome CSS lint flags !important — for print styles, use without !important or suppress per-line
-  - Biome enforces sorted Tailwind responsive/print variant classes — xl:block before print:hidden
-  - biome-ignore at @media level doesn't work for CSS properties — Biome requires per-line suppression for CSS
-  - Query DOM via data-testid attribute for reliable element selection from sibling components
+  - `getAllTemplates()` returns the template array synchronously — safe to call at module level in client components
+  - Template default prompts are stored as a `Record<string, string>` constant in the component file, keyed by template ID
+  - The `selectedTemplateId` state is cleared on successful report generation via `onSuccess` callback
+  - Lucide icons `LayoutTemplate` and `X` are available for template-related UI
 ---
 
-## 2026-02-13 - US-013 Update Report Interface
-- Updated report-interface.tsx to remove obsolete PDF-related progress stages
-- Changes:
-  - Removed `generating_pdf` and `uploading` from PROGRESS_STAGE_LABELS constant
-  - Removed `generating_pdf` (80%) and `uploading` (95%) cases from getProgressWidth function
-  - Updated `analyzing` stage to scale from 20% to 90% (was 20% to 70%) — fills the gap left by removed stages
-  - `complete` remains at 100%
-  - Removed `generating_pdf` chart count display from inline progress section
-  - View Report link to /ai/reports/[reportId] was already in place from US-001 schema changes
-  - No pdfUrl references remained in the component
-- Files changed: src/app/(protected)/ai/_components/report-interface.tsx
+## 2026-02-15 - US-014
+- Created `tests/integration/ai-report-pipeline.test.ts` with 19 tests across 3 describe blocks
+- **buildWriterContext tests (6):** data summaries with refIds, MDX component catalog present, formatting rules present, excludes schema/SQL/tRPC docs, empty dataStore handling, array preview truncation to 3 rows
+- **runValidatorPhase tests (6):** valid MDX returns `{ valid: true }`, missing dataRef detected, non-existent dataRef key detected, invalid component names detected, MDX compilation errors detected, tokensUsed: 0 when validation passes without repair
+- **Report template tests (7):** getTemplate returns correct structure for all 3 templates (monthly-review, risk-audit, strategy-comparison), unknown IDs return undefined, getAllTemplates returns 3, unique IDs, expected IDs present
+- Mocked `compileMDX` from `next-mdx-remote/rsc` (RSC-only module unavailable in vitest) and `aiGenerateText` for validator repair tests
+- For error detection tests, mocked `aiGenerateText` to return the same broken content (simulating failed repair) so errors persist through both repair attempts
+- Files changed: `tests/integration/ai-report-pipeline.test.ts` (new, 377 lines)
 - **Learnings for future iterations:**
-  - US-001 already handled most of the View Report link migration — this story was mostly about cleaning up progress stage labels/percentages
-  - Progress bar scale math: `20 + Math.min(round/totalRounds, 1) * 70` gives 20% to 90% range for analyzing stage
----
-
-## 2026-02-13 - US-014 Remove Old PDF Generation Code
-- Deleted src/lib/ai/report-pdf.ts (765 lines of @react-pdf/renderer pipeline + S3 upload)
-- Uninstalled @react-pdf/renderer dependency
-- Removed ERR_AI_PDF_FAILED from src/lib/constants/errors.ts
-- Updated src/server/db/AGENTS.md to reflect MDX-based report system instead of PDF references
-- Verified no remaining imports of generateReportPdf or report-pdf anywhere in src/
-- Previous stories (US-004, US-013) had already cleaned up:
-  - generateReportPdf import in generate-ai-report.ts
-  - ERR_AI_PDF_FAILED error mapping in generate-ai-report.ts
-  - generating_pdf/uploading progress stages in report-interface.tsx
-- Files changed: src/lib/ai/report-pdf.ts (deleted), package.json, bun.lock, src/lib/constants/errors.ts, src/server/db/AGENTS.md
-- **Learnings for future iterations:**
-  - When removing a feature, prior stories in the same PRD may have already cleaned up most references — always grep first to avoid no-op changes
-  - S3 upload logic was self-contained in report-pdf.ts — no shared S3 utils needed cleanup
-  - AGENTS.md files should be updated when the architecture they describe changes
----
-
-## 2026-02-13 - US-015 E2E Tests for Report Viewer Page
-- Updated tests/e2e/report-viewer.spec.ts with 3 additional MDX component tests
-- Added tests:
-  - MetricCard/MetricGrid render verification (checks for mdx-metric-grid testid)
-  - Callout component styling validation (checks border-l-2 class for left border indicator)
-  - DataTable row rendering (checks for mdx-data-table testid and tr elements)
-- All 3 tests are best-effort: verify components if present in report content, skip silently if not
-- Total test count: 13 tests across 3 describe blocks (Not Found, Unauthenticated, Authenticated)
-- Existing tests already covered: page structure, title/metadata, back button navigation, MDX headings, action buttons, PDF download, ToC responsive, 404, auth redirect
-- All data-testid attributes were already in place from US-010 (MDX components), US-011 (viewer page), US-012 (PDF button)
-- Files changed: tests/e2e/report-viewer.spec.ts
-- **Learnings for future iterations:**
-  - MDX component E2E tests depend on AI-generated content — use best-effort pattern (check count > 0, skip if absent)
-  - Biome requires compact function signatures — single-parameter destructuring goes on one line: `async ({ page }, testInfo) =>`
-  - data-testid attributes on MDX components (mdx-callout-{type}, mdx-data-table, mdx-metric-grid) enable reliable E2E selection
----
-
-## 2026-02-13 - US-016 E2E Tests for Updated Report Interface
-- Created tests/e2e/report-interface-update.spec.ts with 6 tests across 3 describe blocks
-- Test coverage:
-  - View Report Flow (2 tests): completed reports show View Report button not Download PDF, View Report navigates to /ai/reports/[reportId]
-  - Progress Stages (3 tests): no "Compiling report"/"Finalizing" labels present, progress bar renders without PDF-related stages, status labels are valid (QUEUED/GENERATING/COMPLETE/FAILED only)
-  - Unauthenticated (1 test): redirects to sign-in
-- Added data-testid attributes to report-interface.tsx:
-  - `report-progress-${report.id}` on progress container
-  - `report-progress-stage-${report.id}` on progress stage label
-  - `report-progress-bar-${report.id}` on progress bar container
-- Helper function navigateToReportInterface() shared across tests for DRY navigation
-- Files changed: src/app/(protected)/ai/_components/report-interface.tsx, tests/e2e/report-interface-update.spec.ts (new)
-- **Learnings for future iterations:**
-  - Edit tool in Claude Code struggles with tab-indented files — use python3 string replace for reliable edits in tab-indented TSX
-  - Biome auto-fix (`--write`) handles multi-line→single-line formatting for compact expressions
-  - Progress-related data-testid attributes use dynamic report.id suffix to support multiple active reports simultaneously
-  - E2E tests for progress stages are best-effort since active reports may not be present — tests pass gracefully when no active reports exist
+  - `compileMDX` from `next-mdx-remote/rsc` cannot be used in vitest (RSC-only) — must be mocked
+  - When testing validator error detection, the default mock returning empty string causes "valid" results because empty content has no components to validate — must mock repair to return the same broken content
+  - `vi.mocked(compileMDX)` allows per-test control of compilation behavior (`.mockRejectedValueOnce()` to simulate compilation errors)
+  - The main vitest config requires Docker for Testcontainers — use a standalone config for pure function tests that don't need DB
+  - Biome auto-sorts imports alphabetically — always run `bunx biome check --write` after writing new imports
 ---

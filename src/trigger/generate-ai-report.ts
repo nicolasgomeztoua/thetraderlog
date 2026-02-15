@@ -1,16 +1,15 @@
 import { task } from "@trigger.dev/sdk/v3";
 import { and, eq } from "drizzle-orm";
-import {
-	type ChatMessage,
-	chatCompletion,
-	type ToolCall,
-} from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
-import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
+import { getModel } from "@/lib/ai/provider";
 import { sendReportEmail } from "@/lib/ai/report-email";
+import { runGathererPhase } from "@/lib/ai/report-pipeline/gatherer";
+import { runPlannerPhase } from "@/lib/ai/report-pipeline/planner";
+import { runValidatorPhase } from "@/lib/ai/report-pipeline/validator";
+import { runWriterPhase } from "@/lib/ai/report-pipeline/writer";
+import { buildWriterContext } from "@/lib/ai/report-pipeline/writer-context";
+import { getTemplate } from "@/lib/ai/report-templates";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
-import { executeTool, getToolsForMode } from "@/lib/ai/tools";
-import { MAX_TOOL_ROUNDS_REPORT } from "@/lib/constants/ai";
 import {
 	ERR_AI_CONNECTION,
 	ERR_AI_CONTENT_FILTER,
@@ -152,12 +151,11 @@ async function sendReportNotification(
 
 /**
  * Trigger.dev task for generating AI reports.
- * Orchestrates multi-turn tool-calling with the AI model, saves messages,
- * and updates report status.
+ * Uses a 4-phase pipeline: Plan → Gather → Write → Validate.
  */
 export const generateAiReport = task({
 	id: "generate-ai-report",
-	// AI report generation involves multi-turn LLM tool-calling (up to 20 rounds),
+	// AI report generation involves 4 LLM phases with multi-turn tool-calling,
 	// SQL queries, Python sandbox execution, and email delivery.
 	// 5 min global default is insufficient — allow up to 30 minutes.
 	maxDuration: 1800,
@@ -216,6 +214,8 @@ export const generateAiReport = task({
 		model: string;
 		dateRangeStart?: string;
 		dateRangeEnd?: string;
+		templateId?: string;
+		accountId?: string;
 	}) => {
 		try {
 			// Verify ownership: ensure the userId in the payload matches the report and conversation records.
@@ -246,11 +246,6 @@ export const generateAiReport = task({
 				);
 			}
 
-			// Emit progress: building context
-			await updateProgress(payload.reportId, {
-				progressStage: "building_context",
-			});
-
 			// Update report status to generating
 			await db
 				.update(aiReports)
@@ -273,13 +268,17 @@ export const generateAiReport = task({
 					),
 				);
 
-			// Build system prompt with schema + user context
+			// Build context
+			await updateProgress(payload.reportId, {
+				progressStage: "building_context",
+			});
+
 			const [schemaContext, userContext] = await Promise.all([
 				Promise.resolve(generateSchemaContext()),
 				buildUserContext(payload.userId, dbReadOnly),
 			]);
 
-			// Add date range context to the prompt if provided
+			// Augment prompt with date range if provided
 			let augmentedPrompt = payload.prompt;
 			if (payload.dateRangeStart || payload.dateRangeEnd) {
 				const dateRange = [
@@ -291,227 +290,154 @@ export const generateAiReport = task({
 				augmentedPrompt = `${payload.prompt}\n\n[Date range for analysis: ${dateRange}]`;
 			}
 
-			const systemPrompt = buildSystemPrompt({
-				schemaContext,
-				userContext,
-				mode: "report",
-			});
-
-			// Build initial message history
-			const chatMessages: ChatMessage[] = [
-				{ role: "system", content: systemPrompt },
-				{ role: "user", content: augmentedPrompt },
-			];
-
-			// Tool-calling loop
+			const model = getModel(payload.model);
 			let totalTokensUsed = 0;
-			const allToolCalls: ToolCall[] = [];
-			const contentParts: string[] = [];
-			const dataStore = new Map<string, unknown>();
-			const reportTools = getToolsForMode("report");
 
-			// Emit progress: analyzing starts
-			await updateProgress(payload.reportId, {
-				progressStage: "analyzing",
-				currentRound: 0,
-			});
-
-			for (let round = 0; round < MAX_TOOL_ROUNDS_REPORT; round++) {
-				console.log(
-					`[report:${payload.reportId}] Round ${round + 1}/${MAX_TOOL_ROUNDS_REPORT}`,
-				);
-
-				const response = await chatCompletion({
-					model: payload.model,
-					messages: chatMessages,
-					tools: reportTools,
-					tool_choice: "auto",
-				});
-
-				totalTokensUsed += response.usage?.total_tokens ?? 0;
-
-				const choice = response.choices[0];
-				if (!choice) break;
-
-				const assistantMessage = choice.message;
-
-				// If no tool calls, we have the final text response
-				if (
-					!assistantMessage.tool_calls ||
-					assistantMessage.tool_calls.length === 0
-				) {
-					if (assistantMessage.content) {
-						contentParts.push(assistantMessage.content);
-					}
-					const finalContent = contentParts.join("\n\n");
-
-					// Diagnostic: log dataStore state and MDX component usage
-					const mdxComponentPattern =
-						/<(EquityCurve|MonthlyChart|SymbolDistributionChart|DayOfWeekChart|HourHeatmap|SessionChart|RMultipleChart|MonteCarloChart|CalendarHeatmap|DrawdownTable|SymbolTable|DataTable)\b([^>]*)\/?>/g;
-					const componentRefs: string[] = [];
-					let match: RegExpExecArray | null =
-						mdxComponentPattern.exec(finalContent);
-					while (match !== null) {
-						const tag = match[1];
-						const attrs = match[2] ?? "";
-						const dataRefMatch = /dataRef="([^"]*)"/.exec(attrs);
-						componentRefs.push(
-							`${tag}${dataRefMatch ? ` dataRef="${dataRefMatch[1]}"` : " (NO dataRef!)"}`,
-						);
-						match = mdxComponentPattern.exec(finalContent);
-					}
-					console.log(
-						`[report:${payload.reportId}] Generation complete — dataStore keys: [${[...dataStore.keys()].join(", ")}], MDX components found: [${componentRefs.join(", ")}]`,
-					);
-					if (componentRefs.some((r) => r.includes("NO dataRef"))) {
-						console.warn(
-							`[report:${payload.reportId}] WARNING: MDX components without dataRef detected — charts will show fallback`,
-						);
-					}
-					const dataArtifacts =
-						dataStore.size > 0 ? Object.fromEntries(dataStore) : null;
-
-					// Save assistant message to conversation
-					await db.insert(aiMessages).values({
-						conversationId: payload.conversationId,
-						role: "assistant",
-						content: finalContent,
-						model: payload.model,
-						tokensUsed: totalTokensUsed,
-						toolCalls:
-							allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
-					});
-
-					// Update report as complete with MDX content and data artifacts
-					const reportRecord = await db.query.aiReports.findFirst({
-						where: eq(aiReports.id, payload.reportId),
-						columns: { title: true },
-					});
-					await db
-						.update(aiReports)
-						.set({
-							status: "complete",
-							progressStage: "complete",
-							content: finalContent,
-							dataArtifacts,
-							tokensUsed: totalTokensUsed,
-							chartsGenerated: dataStore.size,
-							completedAt: new Date(),
-						})
-						.where(eq(aiReports.id, payload.reportId));
-
-					// Update conversation status
-					await db
-						.update(aiConversations)
-						.set({ status: "complete" })
-						.where(eq(aiConversations.id, payload.conversationId));
-
-					// Send email notification with viewer link
-					await sendReportNotification(
-						payload.reportId,
-						reportRecord?.title ?? payload.prompt,
-						payload.userId,
-						{ chartsGenerated: dataStore.size },
-					);
-
-					return {
-						reportId: payload.reportId,
-						success: true,
-						tokensUsed: totalTokensUsed,
-						toolCallsCount: allToolCalls.length,
-					};
+			// Resolve template hint if templateId is provided
+			let templateHint: string | undefined;
+			if (payload.templateId) {
+				const template = getTemplate(payload.templateId);
+				if (template) {
+					templateHint = template.plannerHint;
 				}
-
-				// Process tool calls
-				allToolCalls.push(...assistantMessage.tool_calls);
-
-				// Add assistant message with tool calls to context
-				chatMessages.push({
-					role: "assistant",
-					content: assistantMessage.content,
-					tool_calls: assistantMessage.tool_calls,
-				});
-
-				if (assistantMessage.content) {
-					contentParts.push(assistantMessage.content);
-				}
-
-				// Execute each tool call and add results
-				let lastToolName = "";
-				for (const toolCall of assistantMessage.tool_calls) {
-					lastToolName = toolCall.function.name;
-					let args: Record<string, unknown>;
-					try {
-						args = JSON.parse(toolCall.function.arguments);
-					} catch {
-						args = {};
-					}
-
-					// Log tool call with key args (avoid logging full data payloads)
-					const logArgs =
-						toolCall.function.name === "store_report_data"
-							? { refId: args.refId, description: args.description }
-							: toolCall.function.name === "call_analytics"
-								? { router: args.router, endpoint: args.endpoint }
-								: toolCall.function.name === "run_query"
-									? {
-											query:
-												typeof args.query === "string"
-													? args.query.slice(0, 120)
-													: args.query,
-										}
-									: { keys: Object.keys(args) };
-					console.log(
-						`[report:${payload.reportId}] Tool call: ${toolCall.function.name}`,
-						JSON.stringify(logArgs),
-					);
-
-					const result = await executeTool(toolCall.function.name, args, {
-						userId: payload.userId,
-						db: dbReadOnly,
-						dataStore,
-					});
-
-					if (!result.success) {
-						console.warn(
-							`[report:${payload.reportId}] Tool FAILED: ${toolCall.function.name} — ${result.error}`,
-						);
-					}
-
-					chatMessages.push({
-						role: "tool",
-						content: JSON.stringify(result),
-						tool_call_id: toolCall.id,
-					});
-				}
-
-				// Emit progress after each round with the last tool name
-				await updateProgress(payload.reportId, {
-					currentRound: round + 1,
-					totalToolCalls: allToolCalls.length,
-					progressDetail: lastToolName,
-				});
 			}
 
-			// If we exhausted tool rounds, save fallback content and mark complete
-			const accumulatedContent = contentParts.join("\n\n");
-			const fallbackContent = accumulatedContent
-				? `${accumulatedContent}\n\n---\n\n*Note: This report reached the maximum analysis rounds. Results above represent the completed analysis.*`
-				: "The report analysis reached the maximum number of tool-calling rounds.";
-			const fallbackDataArtifacts =
+			// =====================================================================
+			// PHASE 1: PLANNING
+			// =====================================================================
+			await updateProgress(payload.reportId, {
+				progressStage: "planning",
+			});
+
+			let plan: string;
+			try {
+				console.log(
+					`[report:${payload.reportId}] Phase 1: Planning${templateHint ? ` (template: ${payload.templateId})` : ""}`,
+				);
+				const plannerResult = await runPlannerPhase({
+					prompt: augmentedPrompt,
+					userContext,
+					model,
+					templateHint,
+				});
+				plan = plannerResult.plan;
+				totalTokensUsed += plannerResult.tokensUsed;
+				console.log(
+					`[report:${payload.reportId}] Planning complete — ${plannerResult.tokensUsed} tokens`,
+				);
+				console.log(
+					`[report:${payload.reportId}] Planner output (${plan.length} chars):\n${plan.slice(0, 1000)}`,
+				);
+			} catch (error) {
+				// Planner failure fallback: gatherer will use the raw user prompt
+				console.warn(
+					`[report:${payload.reportId}] Planner failed, falling back to raw prompt: ${error instanceof Error ? error.message : String(error)}`,
+				);
+				plan = augmentedPrompt;
+			}
+
+			// =====================================================================
+			// PHASE 2: DATA GATHERING
+			// =====================================================================
+			await updateProgress(payload.reportId, {
+				progressStage: "gathering_data",
+			});
+
+			const dataStore = new Map<string, unknown>();
+			console.log(`[report:${payload.reportId}] Phase 2: Gathering data`);
+
+			const gathererResult = await runGathererPhase({
+				plan,
+				prompt: augmentedPrompt,
+				userContext,
+				schemaContext,
+				model,
+				userId: payload.userId,
+				db: dbReadOnly,
+				dataStore,
+				reportId: payload.reportId,
+				accountId: payload.accountId,
+			});
+
+			totalTokensUsed += gathererResult.tokensUsed;
+			console.log(
+				`[report:${payload.reportId}] Gathering complete — ${gathererResult.totalToolCalls} tool calls, ${gathererResult.dataStoreKeys.length} datasets, ${gathererResult.tokensUsed} tokens`,
+			);
+
+			await updateProgress(payload.reportId, {
+				totalToolCalls: gathererResult.totalToolCalls,
+				chartsGenerated: dataStore.size,
+			});
+
+			// =====================================================================
+			// PHASE 3: WRITING
+			// =====================================================================
+			await updateProgress(payload.reportId, {
+				progressStage: "writing",
+			});
+
+			const writerContext = buildWriterContext({ dataStore, plan });
+			console.log(`[report:${payload.reportId}] Phase 3: Writing report`);
+
+			const writerResult = await runWriterPhase({
+				plan,
+				writerContext,
+				prompt: augmentedPrompt,
+				model,
+				dataStoreKeys: gathererResult.dataStoreKeys,
+			});
+
+			totalTokensUsed += writerResult.tokensUsed;
+			console.log(
+				`[report:${payload.reportId}] Writing complete — ${writerResult.tokensUsed} tokens, ${writerResult.content.length} chars`,
+			);
+
+			// =====================================================================
+			// PHASE 4: VALIDATION
+			// =====================================================================
+			await updateProgress(payload.reportId, {
+				progressStage: "validating",
+			});
+
+			console.log(`[report:${payload.reportId}] Phase 4: Validating MDX`);
+
+			const validatorResult = await runValidatorPhase({
+				content: writerResult.content,
+				dataStoreKeys: gathererResult.dataStoreKeys,
+				model,
+			});
+
+			totalTokensUsed += validatorResult.tokensUsed;
+
+			// Use validated content (may be repaired), or original if repair failed
+			const finalContent = validatorResult.content;
+
+			if (validatorResult.valid) {
+				console.log(
+					`[report:${payload.reportId}] Validation passed — ${validatorResult.tokensUsed} tokens`,
+				);
+			} else {
+				console.warn(
+					`[report:${payload.reportId}] Validation failed after repair attempts — saving content anyway. Errors: ${validatorResult.errors.join("; ")}`,
+				);
+			}
+
+			// =====================================================================
+			// SAVE RESULTS
+			// =====================================================================
+			const dataArtifacts =
 				dataStore.size > 0 ? Object.fromEntries(dataStore) : null;
 
+			// Save assistant message to conversation
 			await db.insert(aiMessages).values({
 				conversationId: payload.conversationId,
 				role: "assistant",
-				content: fallbackContent,
+				content: finalContent,
 				model: payload.model,
 				tokensUsed: totalTokensUsed,
-				toolCalls:
-					allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
 			});
 
-			// Update report as complete with MDX content and data artifacts (fallback path)
+			// Update report as complete
 			const reportRecord = await db.query.aiReports.findFirst({
 				where: eq(aiReports.id, payload.reportId),
 				columns: { title: true },
@@ -521,20 +447,22 @@ export const generateAiReport = task({
 				.set({
 					status: "complete",
 					progressStage: "complete",
-					content: fallbackContent,
-					dataArtifacts: fallbackDataArtifacts,
+					content: finalContent,
+					dataArtifacts,
 					tokensUsed: totalTokensUsed,
+					totalToolCalls: gathererResult.totalToolCalls,
 					chartsGenerated: dataStore.size,
 					completedAt: new Date(),
 				})
 				.where(eq(aiReports.id, payload.reportId));
 
+			// Update conversation status
 			await db
 				.update(aiConversations)
 				.set({ status: "complete" })
 				.where(eq(aiConversations.id, payload.conversationId));
 
-			// Send email notification with viewer link (fallback path)
+			// Send email notification with viewer link
 			await sendReportNotification(
 				payload.reportId,
 				reportRecord?.title ?? payload.prompt,
@@ -546,8 +474,7 @@ export const generateAiReport = task({
 				reportId: payload.reportId,
 				success: true,
 				tokensUsed: totalTokensUsed,
-				toolCallsCount: allToolCalls.length,
-				truncated: true,
+				toolCallsCount: gathererResult.totalToolCalls,
 			};
 		} catch (error) {
 			// Update report status to failed
