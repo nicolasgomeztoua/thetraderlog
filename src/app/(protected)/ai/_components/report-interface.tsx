@@ -50,6 +50,10 @@ const CHAR_WARN_THRESHOLD = 2000;
 const PROGRESS_STAGE_LABELS: Record<string, string> = {
 	queued: "Waiting in queue...",
 	building_context: "Loading your trading profile...",
+	planning: "Planning analysis...",
+	gathering_data: "Gathering your data...",
+	writing: "Writing report...",
+	validating: "Validating output...",
 	analyzing: "Analyzing your data...",
 	complete: "Complete",
 	failed: "Failed",
@@ -71,8 +75,19 @@ function getProgressWidth(
 		case "queued":
 			return 5;
 		case "building_context":
-			return 15;
+			return 10;
+		case "planning":
+			return 20;
+		case "gathering_data": {
+			const round = currentRound ?? 0;
+			return 30 + Math.min(round / totalRounds, 1) * 40;
+		}
+		case "writing":
+			return 75;
+		case "validating":
+			return 90;
 		case "analyzing": {
+			// Legacy stage name (kept for backward compat)
 			const round = currentRound ?? 0;
 			return 20 + Math.min(round / totalRounds, 1) * 70;
 		}
@@ -531,10 +546,11 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 														className="font-mono text-[11px] text-accent"
 														data-testid={`report-progress-stage-${report.id}`}
 													>
-														{report.progressStage === "analyzing" &&
+														{(report.progressStage === "analyzing" ||
+															report.progressStage === "gathering_data") &&
 														report.progressDetail
 															? (TOOL_DETAIL_LABELS[report.progressDetail] ??
-																"Analyzing your data...")
+																"Gathering your data...")
 															: (PROGRESS_STAGE_LABELS[
 																	report.progressStage ?? "queued"
 																] ?? "Processing")}
@@ -551,7 +567,8 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 														}}
 													/>
 												</div>
-												{report.progressStage === "analyzing" && (
+												{(report.progressStage === "analyzing" ||
+													report.progressStage === "gathering_data") && (
 													<div className="mt-1.5 flex gap-3 font-mono text-[10px] text-muted-foreground/50">
 														{report.currentRound != null &&
 															report.currentRound > 0 && (
