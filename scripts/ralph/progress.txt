@@ -108,4 +108,19 @@ Started: Sun Feb 15 03:12:29 WET 2026
 - **Learnings for future iterations:**
   - Zod `z.record()` requires both key and value schemas in this project (z.record(z.string(), z.unknown()))
   - Biome auto-formats `z.string().describe(...)` chains into multi-line — use `bunx biome check --write` to fix
+  - AI SDK v6 type names differ from docs: `ModelMessage` (not `CoreMessage`), `maxOutputTokens` (not `maxTokens`), `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`)
+  - AI SDK v6 `generateText` uses `stopWhen: stepCountIs(N)` for multi-step tool calling
+---
+
+## 2026-02-15 - US-003
+- Created `src/lib/ai/client-v2.ts` wrapping Vercel AI SDK `generateText` and `streamText`
+- `aiGenerateText()` handles multi-step tool calling via `stopWhen: stepCountIs(maxSteps)`
+- `aiStreamText()` wraps `streamText()` for streaming responses
+- Error mapping preserves backward-compatible `OpenRouterError` format
+- Token usage extracted from `result.totalUsage.inputTokens + outputTokens`
+- Files changed: `src/lib/ai/client-v2.ts` (new)
+- **Learnings for future iterations:**
+  - AI SDK v6 renamed many types — always check `node_modules/ai/dist/index.d.ts` for actual exports
+  - `result.totalUsage` uses `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`)
+  - `maxOutputTokens` replaces `maxTokens` in the SDK config
 ---

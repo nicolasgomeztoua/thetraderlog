@@ -71,8 +71,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "AI SDK v6 uses ModelMessage (not CoreMessage), maxOutputTokens (not maxTokens), inputTokens/outputTokens (not promptTokens/completionTokens)."
     },
     {
       "id": "US-004",
