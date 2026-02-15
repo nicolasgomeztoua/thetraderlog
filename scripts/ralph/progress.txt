@@ -239,3 +239,27 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - Strategy comparison template relies on `run_query` SQL because the analytics router doesn't have per-strategy endpoints
   - Biome auto-formats arrays with 2+ string items longer than ~80 chars into multi-line format
 ---
+
+## 2026-02-15 - US-011
+- Rewired `src/trigger/generate-ai-report.ts` to use 4-phase pipeline instead of single tool-calling loop
+- **Old flow removed**: manual for-loop with `chatCompletion()`, `ChatMessage[]`, `ToolCall[]`, `executeTool()`, `getToolsForMode()`
+- **New flow**: sequential calls to `runPlannerPhase()` → `runGathererPhase()` → `runWriterPhase()` → `runValidatorPhase()`
+- Progress stages updated: `building_context` → `planning` → `gathering_data` → `writing` → `validating` → `complete`
+- Token usage aggregated across all 4 phases via `totalTokensUsed +=`
+- Tool call count from `gathererResult.totalToolCalls` saved to DB
+- `chartsGenerated` from `dataStore.size` (unchanged)
+- Template support: optional `templateId` in payload → `getTemplate(id)` → passes `plannerHint` to planner
+- Planner failure fallback: catches error, sets `plan = augmentedPrompt`, gatherer uses raw prompt
+- Validator failure: logs warning, saves content anyway (graceful degradation)
+- Old single-loop logic, content parts accumulation, tool call processing, fallback truncation — all removed
+- Uses `getModel(payload.model)` from provider.ts to create Vercel AI SDK model instance
+- 139 lines added, 218 lines removed — significant simplification
+- Files changed: `src/trigger/generate-ai-report.ts`
+- **Learnings for future iterations:**
+  - The Trigger.dev task payload type is inline in `run: async (payload: {...})` — add new fields there directly (no separate schema file)
+  - `getModel()` from `provider.ts` converts a string model ID to a Vercel AI SDK `LanguageModel` — all pipeline phases accept `LanguageModel`
+  - The `buildSystemPrompt()` function is no longer needed in the trigger task — each pipeline phase builds its own system prompt
+  - Biome auto-sorts imports alphabetically — always run `bunx biome check --write` after writing new imports
+  - Pre-existing Biome errors in archive JSON and trigger.config.ts are not from pipeline changes — safe to ignore
+  - The old flow had separate "normal completion" and "exhausted rounds fallback" paths — the new pipeline has a single linear path since the gatherer uses `maxSteps` internally
+---

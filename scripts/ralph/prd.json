@@ -229,8 +229,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Rewired src/trigger/generate-ai-report.ts to use 4-phase pipeline: Plan → Gather → Write → Validate. Replaced old single tool-calling loop entirely. New progress stages: building_context → planning → gathering_data → writing → validating → complete. Token usage aggregated across all 4 phases. Planner failure fallback uses raw prompt. Validator failure saves content with logged warnings. Template support via optional templateId in payload → getTemplate() → plannerHint. Old imports (chatCompletion, ChatMessage, ToolCall, executeTool, getToolsForMode, buildSystemPrompt) removed. New imports: getModel, pipeline phases, buildWriterContext, getTemplate. 139 lines added, 218 removed."
     },
     {
       "id": "US-012",
