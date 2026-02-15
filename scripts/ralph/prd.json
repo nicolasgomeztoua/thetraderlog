@@ -180,8 +180,8 @@
         "Verify in browser"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated report viewer page (page.tsx) and ReportViewerContent component. Removed compileMDX, sanitizeMdxProse, and mdxComponents imports. Page now parses report.content as JSON into StructuredReport type with try/catch fallback to ReactMarkdown for legacy content. ReportViewerContent no longer accepts mdxFailed/children props — accepts report: StructuredReport instead. TOC now extracts headings from report.sections[].heading via extractHeadingsFromSections() instead of regex on raw content. IntersectionObserver active heading tracking preserved. ReportRenderer handles all rendering via ReportDataProvider."
     },
     {
       "id": "US-010",

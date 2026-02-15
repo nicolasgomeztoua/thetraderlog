@@ -139,3 +139,25 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - `DataTable` from `src/components/mdx/data-table.tsx` uses `dataRef` prop (same interface as chart wrappers), so it fits in the CHART_COMPONENTS map
   - For inline markdown in list items (keyTakeaways), use `p: ({ children }) => <span>{children}</span>` to avoid block-level `<p>` inside `<li>`
 ---
+
+## 2026-02-15 - US-009: Update Report Viewer Page for JSON Rendering
+- Updated `src/app/(protected)/ai/reports/[reportId]/page.tsx`:
+  - Removed `compileMDX` import from `next-mdx-remote/rsc`
+  - Removed `sanitizeMdxProse` import
+  - Removed `mdxComponents` import
+  - Added JSON.parse with try/catch + basic shape check (sections array, executiveSummary string)
+  - Falls back to ReactMarkdown for legacy MDX/markdown content
+  - Passes parsed `StructuredReport` to `ReportViewerContent`
+- Updated `src/app/(protected)/ai/reports/[reportId]/_components/report-viewer-content.tsx`:
+  - Removed `mdxFailed`, `children`, `content` props
+  - Added `report: StructuredReport` prop
+  - Replaced regex-based `extractHeadings(content)` with `extractHeadingsFromSections(sections)` that reads from `report.sections[].heading`
+  - Removed `ReactMarkdown` and `ReportDataProvider` imports (delegated to `ReportRenderer`)
+  - Renders via `<ReportRenderer>` instead of inline MDX/markdown
+  - TOC and IntersectionObserver heading tracking preserved
+- Files changed: `page.tsx`, `report-viewer-content.tsx`
+- **Learnings for future iterations:**
+  - When migrating from MDX to JSON rendering, always add a legacy fallback (JSON.parse try/catch → ReactMarkdown) since existing reports in the DB are still MDX strings
+  - The `toHeadingId` function is duplicated in `report-renderer.tsx`, `report-viewer-content.tsx`, and `markdown-components.tsx` — each needs to stay in sync
+  - The shape check (`Array.isArray(sections) && typeof executiveSummary === 'string'`) is a quick guard against non-report JSON content; full Zod parsing would be heavier but more correct
+---
