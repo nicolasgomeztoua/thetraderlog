@@ -196,3 +196,24 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - The trigger task (`generate-ai-report.ts`) is the central orchestrator — changes to any pipeline phase's interface (writer, validator, context) require updating it, which is why it was already modified by US-003, US-005, and US-007
   - Pre-existing Biome errors in archived JSON files and trigger.config.ts are not blocking and should be ignored
 ---
+
+## 2026-02-15 - US-012: Clean Up Deprecated MDX Infrastructure
+- Removed `src/lib/mdx/sanitize.ts` (sanitizeMdxProse — no remaining imports in src/)
+- Removed `src/components/mdx/components.tsx` (mdxComponents map — JSON renderer uses CHART_COMPONENTS in report-renderer.tsx)
+- Removed `next-mdx-remote` from dependencies (no remaining imports in src/)
+- Updated `tests/integration/ai-report-pipeline.test.ts`:
+  - Removed stale MDX validator tests (runValidatorPhase now takes `{ report, dataStore }` not `{ content, dataStoreKeys, model }`)
+  - Removed MDX-related mocks (compileMDX, remark-gfm, aiGenerateText)
+  - Updated buildWriterContext tests to use `DataStoreMap` type from report-schema.ts
+  - Removed MDX catalog test (writer context no longer includes catalog)
+  - Added component type hint test and small-array full-data test
+- Updated `markdown-components.tsx` comment to remove compileMDX reference
+- Updated `AGENTS.md` to reflect JSON renderer pattern instead of MDX components map
+- Kept: `chart-wrappers.tsx`, `provider.tsx`, `data-table.tsx`, `markdown-components.tsx`, `callout.tsx`, `chart-image.tsx`, `metric-grid.tsx` (all reused by JSON renderer)
+- Files changed: `sanitize.ts` (deleted), `components.tsx` (deleted), `package.json`, `bun.lock`, `ai-report-pipeline.test.ts`, `markdown-components.tsx`, `AGENTS.md`
+- **Learnings for future iterations:**
+  - The `buildWriterContext` tests use `DataStoreMap` (not `Map<string, unknown>`) — each entry is `{ data, description, component? }`
+  - `FULL_DATA_THRESHOLD = 15` in writer-context.ts — arrays ≤15 items show full data (not truncated to 3 rows)
+  - The `src/components/mdx/` directory still exists with chart-wrappers, provider, data-table, etc. — only `components.tsx` was removed
+  - When removing a package, verify with `grep` across ALL files (src/, tests/, etc.) not just src/
+---

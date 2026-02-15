@@ -237,8 +237,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed src/lib/mdx/sanitize.ts (sanitizeMdxProse no longer used). Removed src/components/mdx/components.tsx (mdxComponents map no longer used — JSON renderer uses its own CHART_COMPONENTS map in report-renderer.tsx). Removed next-mdx-remote from dependencies (no remaining imports in src/). Updated tests/integration/ai-report-pipeline.test.ts: removed stale MDX validator tests (old API), removed MDX-related mocks, updated buildWriterContext tests to use DataStoreMap type, added component type hint test. Updated markdown-components.tsx comment to remove compileMDX reference. Updated AGENTS.md to reflect JSON renderer instead of MDX components map. Kept chart-wrappers.tsx, provider.tsx, data-table.tsx, markdown-components.tsx (all reused by JSON renderer)."
     },
     {
       "id": "US-013",
