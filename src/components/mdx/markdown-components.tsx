@@ -1,6 +1,6 @@
 /**
- * Terminal-styled markdown components shared between server (compileMDX)
- * and client (ReactMarkdown fallback). No hooks — pure styled elements.
+ * Terminal-styled markdown components for ReactMarkdown rendering.
+ * No hooks — pure styled elements.
  */
 
 function toHeadingId(children: React.ReactNode): string {

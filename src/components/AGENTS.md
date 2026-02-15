@@ -299,18 +299,17 @@ if (isLoading || !data) {
 
 **Critical:** Always check `|| !data` in loading state, not just `isLoading`. The query may not be loading but data hasn't arrived yet after remount.
 
-### MDX Report Component Wrappers
-**When:** Adding new chart components to the MDX report system
+### Report Chart Component Wrappers
+**When:** Adding new chart components to the JSON report renderer
 **How:**
 1. Create wrapper in `src/components/mdx/chart-wrappers.tsx` using `useReportData(dataRef)` hook
-2. Add to `mdxComponents` map in `src/components/mdx/components.tsx`
+2. Add to `CHART_COMPONENTS` map in `src/components/report/report-renderer.tsx`
 3. All wrappers follow the pattern: get data → null check → render real component or DataFallback
-4. Use `as never` for type assertions in mdxComponents map entries
-5. Components using `useSettingsStore` (SessionChart, HourHeatmap, CalendarHeatmap) work as-is — the store provides timezone data at render time
+4. Components using `useSettingsStore` (SessionChart, HourHeatmap, CalendarHeatmap) work as-is — the store provides timezone data at render time
 
 **Key files:**
 - `src/components/mdx/provider.tsx` — ReportDataProvider context + useReportData hook
-- `src/components/mdx/components.tsx` — mdxComponents map for next-mdx-remote
+- `src/components/report/report-renderer.tsx` — JSON report renderer with CHART_COMPONENTS map
 - `src/components/mdx/chart-wrappers.tsx` — 11 chart wrapper components
 
 ## Gotchas

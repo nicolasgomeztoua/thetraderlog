@@ -1,52 +1,17 @@
 /**
- * Integration tests for the AI report pipeline phases.
+ * Integration tests for the AI report pipeline.
  *
- * Tests buildWriterContext, runValidatorPhase (component + dataRef validation),
- * and report template functions (getTemplate, getAllTemplates).
+ * Tests buildWriterContext and report template functions (getTemplate, getAllTemplates).
  *
- * Uses mocked compileMDX (RSC-only module) and mocked aiGenerateText
- * to test validator behavior in isolation.
+ * Note: Structured report schema validation, deterministic validator, and
+ * store_report_data tests are covered in structured-report.test.ts (US-013).
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-// =============================================================================
-// MOCKS — Must be declared before module imports that use them
-// =============================================================================
-
-// Mock next-mdx-remote/rsc — compileMDX requires React Server Components
-// which are unavailable in vitest. Default: compilation succeeds.
-vi.mock("next-mdx-remote/rsc", () => ({
-	compileMDX: vi.fn().mockResolvedValue({ content: null, frontmatter: {} }),
-}));
-
-// Mock remark-gfm (imported by validator)
-vi.mock("remark-gfm", () => ({ default: [] }));
-
-// Mock AI client — only needed if validator triggers auto-repair.
-// Default mock returns the original content unchanged (simulating failed repair).
-vi.mock("@/lib/ai/client", () => ({
-	aiGenerateText: vi.fn().mockResolvedValue({
-		text: "",
-		totalTokens: 50,
-		steps: [],
-		finishReason: "stop",
-	}),
-}));
-
-// =============================================================================
-// IMPORTS — After mocks
-// =============================================================================
-
-import { compileMDX } from "next-mdx-remote/rsc";
-import { aiGenerateText } from "@/lib/ai/client";
-import { runValidatorPhase } from "@/lib/ai/report-pipeline/validator";
+import type { DataStoreMap } from "@/lib/ai/report-pipeline/report-schema";
 import { buildWriterContext } from "@/lib/ai/report-pipeline/writer-context";
 import { getAllTemplates, getTemplate } from "@/lib/ai/report-templates/index";
-
-// Fake LanguageModel for validator (never actually called when validation passes)
-const fakeModel = {} as import("ai").LanguageModel;
-const mockAiGenerateText = vi.mocked(aiGenerateText);
 
 // =============================================================================
 // buildWriterContext
@@ -54,15 +19,25 @@ const mockAiGenerateText = vi.mocked(aiGenerateText);
 
 describe("buildWriterContext", () => {
 	it("should include data summaries for dataStore entries", () => {
-		const dataStore = new Map<string, unknown>([
+		const dataStore: DataStoreMap = new Map([
 			[
 				"equity-data",
-				[
-					{ date: "2025-01-01", equity: 10000 },
-					{ date: "2025-01-02", equity: 10500 },
-				],
+				{
+					data: [
+						{ date: "2025-01-01", equity: 10000 },
+						{ date: "2025-01-02", equity: 10500 },
+					],
+					description: "Equity curve data",
+					component: "EquityCurve",
+				},
 			],
-			["overview-stats", { winRate: 58.3, totalPnl: 1234.56 }],
+			[
+				"overview-stats",
+				{
+					data: { winRate: 58.3, totalPnl: 1234.56 },
+					description: "Overview statistics",
+				},
+			],
 		]);
 
 		const result = buildWriterContext({
@@ -82,34 +57,24 @@ describe("buildWriterContext", () => {
 		expect(result).toContain("totalPnl");
 	});
 
-	it("should include the MDX component catalog", () => {
-		const result = buildWriterContext({
-			dataStore: new Map(),
-			plan: "Test plan",
-		});
+	it("should include JSON formatting rules", () => {
+		const dataStore: DataStoreMap = new Map();
 
-		expect(result).toContain("MDX Component Catalog");
-		expect(result).toContain("EquityCurve");
-		expect(result).toContain("MetricGrid");
-		expect(result).toContain("MetricCard");
-		expect(result).toContain("Callout");
-		expect(result).toContain("MonteCarloChart");
-	});
-
-	it("should include formatting rules", () => {
 		const result = buildWriterContext({
-			dataStore: new Map(),
+			dataStore,
 			plan: "Test plan",
 		});
 
 		expect(result).toContain("Formatting Rules");
 		expect(result).toContain("NO LaTeX");
-		expect(result).toContain("pipe-delimited markdown tables");
+		expect(result).toContain("DataRef Accuracy");
 	});
 
 	it("should exclude database schema and SQL docs", () => {
+		const dataStore: DataStoreMap = new Map();
+
 		const result = buildWriterContext({
-			dataStore: new Map(),
+			dataStore,
 			plan: "Test plan",
 		});
 
@@ -120,20 +85,54 @@ describe("buildWriterContext", () => {
 	});
 
 	it("should handle empty dataStore gracefully", () => {
+		const dataStore: DataStoreMap = new Map();
+
 		const result = buildWriterContext({
-			dataStore: new Map(),
+			dataStore,
 			plan: "Test plan",
 		});
 
 		expect(result).toContain("No datasets were gathered");
 	});
 
-	it("should truncate array previews to 3 rows", () => {
-		const largeArray = Array.from({ length: 10 }, (_, i) => ({
+	it("should truncate array previews to 3 rows for large arrays", () => {
+		const largeArray = Array.from({ length: 20 }, (_, i) => ({
 			day: i,
 			pnl: i * 100,
 		}));
-		const dataStore = new Map<string, unknown>([["large-data", largeArray]]);
+		const dataStore: DataStoreMap = new Map([
+			[
+				"large-data",
+				{
+					data: largeArray,
+					description: "Large dataset",
+				},
+			],
+		]);
+
+		const result = buildWriterContext({
+			dataStore,
+			plan: "Test plan",
+		});
+
+		expect(result).toContain("array of 20 items");
+		expect(result).toContain("17 more rows");
+	});
+
+	it("should show full data for small arrays", () => {
+		const smallArray = Array.from({ length: 10 }, (_, i) => ({
+			day: i,
+			pnl: i * 100,
+		}));
+		const dataStore: DataStoreMap = new Map([
+			[
+				"small-data",
+				{
+					data: smallArray,
+					description: "Small dataset",
+				},
+			],
+		]);
 
 		const result = buildWriterContext({
 			dataStore,
@@ -141,163 +140,28 @@ describe("buildWriterContext", () => {
 		});
 
 		expect(result).toContain("array of 10 items");
-		expect(result).toContain("7 more rows");
-	});
-});
-
-// =============================================================================
-// runValidatorPhase
-// =============================================================================
-
-describe("runValidatorPhase", () => {
-	it("should return valid for correct MDX with known components and valid dataRefs", async () => {
-		const content = `# Performance Report
-
-<MetricGrid>
-  <MetricCard title="Win Rate" value="58.3%" tooltip={{ what: "Win percentage", why: "Core metric", benchmark: "Above 50%" }} />
-</MetricGrid>
-
-<EquityCurve dataRef="equity-data" />
-
-<Callout type="tip">Your best day is Tuesday.</Callout>`;
-
-		const result = await runValidatorPhase({
-			content,
-			dataStoreKeys: ["equity-data"],
-			model: fakeModel,
-		});
-
-		expect(result.valid).toBe(true);
-		expect(result.errors).toHaveLength(0);
-		expect(result.content).toBe(content);
+		expect(result).toContain("FULL DATA");
 	});
 
-	it("should detect missing dataRef on chart components", async () => {
-		const content = `# Report
+	it("should show component type hints when available", () => {
+		const dataStore: DataStoreMap = new Map([
+			[
+				"equity-data",
+				{
+					data: [{ date: "2025-01-01", equity: 10000 }],
+					description: "Equity curve",
+					component: "EquityCurve",
+				},
+			],
+		]);
 
-<EquityCurve />`;
-
-		// Mock repair to return the same broken content (repair fails to fix)
-		mockAiGenerateText.mockResolvedValue({
-			text: content,
-			totalTokens: 50,
-			steps: [],
-			finishReason: "stop",
-		} as Awaited<ReturnType<typeof aiGenerateText>>);
-
-		const result = await runValidatorPhase({
-			content,
-			dataStoreKeys: ["equity-data"],
-			model: fakeModel,
+		const result = buildWriterContext({
+			dataStore,
+			plan: "Test plan",
 		});
 
-		expect(result.valid).toBe(false);
-		expect(result.errors.length).toBeGreaterThan(0);
-		expect(
-			result.errors.some((e) => e.includes("missing required dataRef")),
-		).toBe(true);
-	});
-
-	it("should detect non-existent dataRef keys", async () => {
-		const content = `# Report
-
-<EquityCurve dataRef="non-existent-key" />`;
-
-		// Mock repair to return the same broken content
-		mockAiGenerateText.mockResolvedValue({
-			text: content,
-			totalTokens: 50,
-			steps: [],
-			finishReason: "stop",
-		} as Awaited<ReturnType<typeof aiGenerateText>>);
-
-		const result = await runValidatorPhase({
-			content,
-			dataStoreKeys: ["equity-data", "monthly-data"],
-			model: fakeModel,
-		});
-
-		expect(result.valid).toBe(false);
-		expect(result.errors.length).toBeGreaterThan(0);
-		expect(result.errors.some((e) => e.includes("non-existent data key"))).toBe(
-			true,
-		);
-	});
-
-	it("should detect invalid component names", async () => {
-		const content = `# Report
-
-<FakeComponent dataRef="equity-data" />
-<AnotherFake />`;
-
-		// Mock repair to return the same broken content
-		mockAiGenerateText.mockResolvedValue({
-			text: content,
-			totalTokens: 50,
-			steps: [],
-			finishReason: "stop",
-		} as Awaited<ReturnType<typeof aiGenerateText>>);
-
-		const result = await runValidatorPhase({
-			content,
-			dataStoreKeys: ["equity-data"],
-			model: fakeModel,
-		});
-
-		expect(result.valid).toBe(false);
-		expect(result.errors.length).toBeGreaterThan(0);
-		expect(result.errors.some((e) => e.includes("Unknown MDX component"))).toBe(
-			true,
-		);
-		expect(result.errors.some((e) => e.includes("FakeComponent"))).toBe(true);
-	});
-
-	it("should detect MDX compilation errors", async () => {
-		// Make compileMDX throw for this test and all repair re-validation attempts
-		const mockCompileMDX = vi.mocked(compileMDX);
-		mockCompileMDX
-			.mockRejectedValueOnce(new Error("Unexpected token in MDX"))
-			.mockRejectedValueOnce(new Error("Unexpected token in MDX"))
-			.mockRejectedValueOnce(new Error("Unexpected token in MDX"));
-
-		const content = `# Report
-
-<Callout type="tip">Valid content</Callout>`;
-
-		// Mock repair to return content that still fails compilation
-		mockAiGenerateText.mockResolvedValue({
-			text: content,
-			totalTokens: 50,
-			steps: [],
-			finishReason: "stop",
-		} as Awaited<ReturnType<typeof aiGenerateText>>);
-
-		const result = await runValidatorPhase({
-			content,
-			dataStoreKeys: [],
-			model: fakeModel,
-		});
-
-		expect(result.valid).toBe(false);
-		expect(result.errors.length).toBeGreaterThan(0);
-		expect(result.errors.some((e) => e.includes("MDX compilation error"))).toBe(
-			true,
-		);
-	});
-
-	it("should return tokensUsed: 0 when validation passes without repair", async () => {
-		const content = `# Report
-
-<Callout type="tip">All good</Callout>`;
-
-		const result = await runValidatorPhase({
-			content,
-			dataStoreKeys: [],
-			model: fakeModel,
-		});
-
-		expect(result.valid).toBe(true);
-		expect(result.tokensUsed).toBe(0);
+		expect(result).toContain("equity-data");
+		expect(result).toContain("EquityCurve");
 	});
 });
 
