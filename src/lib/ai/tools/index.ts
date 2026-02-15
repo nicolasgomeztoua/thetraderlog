@@ -22,6 +22,11 @@ interface ToolContext {
 /**
  * Dispatches a tool call to the correct executor.
  * Returns a standardized result object.
+ *
+ * Note: The production chat and report pipelines use Vercel AI SDK tool
+ * definitions (getChatTools / getReportTools in definitions.ts) which call
+ * the individual executor functions directly. This dispatcher is kept as
+ * a convenience for integration tests.
  */
 export async function executeTool(
 	toolName: string,
