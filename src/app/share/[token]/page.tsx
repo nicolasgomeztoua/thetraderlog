@@ -3,13 +3,11 @@ import { Clock, Cpu, Lock, TimerOff } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { compileMDX } from "next-mdx-remote/rsc";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { mdxComponents } from "@/components/mdx/components";
 import { markdownComponents } from "@/components/mdx/markdown-components";
-import { ReportDataProvider } from "@/components/mdx/provider";
-import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
+import { ReportRenderer } from "@/components/report/report-renderer";
+import type { StructuredReport } from "@/lib/ai/report-pipeline/report-schema";
 import { db } from "@/server/db";
 import { aiReports, shareLinks } from "@/server/db/schema";
 
@@ -114,7 +112,7 @@ export default async function SharePage({ params }: SharePageProps) {
 // SHARED REPORT RENDERER
 // =============================================================================
 
-async function SharedReport({
+function SharedReport({
 	report,
 }: {
 	report: {
@@ -128,26 +126,21 @@ async function SharedReport({
 }) {
 	const dataArtifacts = (report.dataArtifacts as Record<string, unknown>) ?? {};
 	const rawContent = report.content;
-	const sanitizedContent = sanitizeMdxProse(rawContent);
-	const allComponents = { ...markdownComponents, ...mdxComponents };
 
-	let mdxContent: React.ReactNode = null;
-	let mdxFailed = false;
+	// Parse content as structured JSON report, fall back to markdown for legacy
+	let parsedReport: StructuredReport | null = null;
 	try {
-		const { content: compiled } = await compileMDX({
-			source: sanitizedContent,
-			components: allComponents as never,
-			options: {
-				mdxOptions: {
-					remarkPlugins: [remarkGfm],
-					format: "mdx",
-				},
-			},
-		});
-		mdxContent = compiled;
-	} catch (e) {
-		console.error("[Share] MDX compilation failed, using markdown:", e);
-		mdxFailed = true;
+		parsedReport = JSON.parse(rawContent) as StructuredReport;
+		if (
+			!parsedReport ||
+			!Array.isArray(parsedReport.sections) ||
+			typeof parsedReport.executiveSummary !== "string"
+		) {
+			parsedReport = null;
+		}
+	} catch {
+		// Not valid JSON — legacy MDX/markdown content
+		parsedReport = null;
 	}
 
 	const displayTitle = report.prompt ?? report.title;
@@ -161,63 +154,64 @@ async function SharedReport({
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
-			<ReportDataProvider data={dataArtifacts}>
-				<div className="mx-auto max-w-4xl px-6 py-8">
-					{/* Branded header */}
-					<div className="mb-6 border-white/10 border-b pb-4">
-						<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
-							<span className="font-bold text-primary">EDGEJOURNAL</span>
-							<span className="text-muted-foreground">{"// "}</span>
-							<span className="text-muted-foreground">SHARED REPORT</span>
-						</div>
-						<h1 className="mt-3 font-mono text-base text-foreground leading-relaxed">
-							{displayTitle}
-						</h1>
-						<div className="mt-2 flex items-center gap-3">
-							{report.model && (
-								<span className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-									<Cpu className="size-2.5" />
-									{report.model}
-								</span>
-							)}
-							{formattedDate && (
-								<span className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-									<Clock className="size-2.5" />
-									{formattedDate}
-								</span>
-							)}
-						</div>
+			<div className="mx-auto max-w-4xl px-6 py-8">
+				{/* Branded header */}
+				<div className="mb-6 border-white/10 border-b pb-4">
+					<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
+						<span className="font-bold text-primary">EDGEJOURNAL</span>
+						<span className="text-muted-foreground">{"// "}</span>
+						<span className="text-muted-foreground">SHARED REPORT</span>
 					</div>
-
-					{/* Report content */}
-					<article>
-						{!mdxFailed ? (
-							mdxContent
-						) : (
-							<ReactMarkdown
-								components={markdownComponents as never}
-								remarkPlugins={[remarkGfm]}
-							>
-								{rawContent}
-							</ReactMarkdown>
+					<h1 className="mt-3 font-mono text-base text-foreground leading-relaxed">
+						{displayTitle}
+					</h1>
+					<div className="mt-2 flex items-center gap-3">
+						{report.model && (
+							<span className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+								<Cpu className="size-2.5" />
+								{report.model}
+							</span>
 						)}
-					</article>
-
-					{/* Footer CTA */}
-					<div className="mt-12 border-white/10 border-t pt-6 text-center">
-						<p className="font-mono text-[10px] text-muted-foreground">
-							Generated with{" "}
-							<Link
-								className="text-primary transition-colors hover:text-accent"
-								href="/"
-							>
-								EdgeJournal
-							</Link>{" "}
-							— AI-powered trading analytics
-						</p>
+						{formattedDate && (
+							<span className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+								<Clock className="size-2.5" />
+								{formattedDate}
+							</span>
+						)}
 					</div>
 				</div>
-			</ReportDataProvider>
+
+				{/* Report content */}
+				<article>
+					{parsedReport ? (
+						<ReportRenderer
+							dataArtifacts={dataArtifacts}
+							report={parsedReport}
+						/>
+					) : (
+						<ReactMarkdown
+							components={markdownComponents as never}
+							remarkPlugins={[remarkGfm]}
+						>
+							{rawContent}
+						</ReactMarkdown>
+					)}
+				</article>
+
+				{/* Footer CTA */}
+				<div className="mt-12 border-white/10 border-t pt-6 text-center">
+					<p className="font-mono text-[10px] text-muted-foreground">
+						Generated with{" "}
+						<Link
+							className="text-primary transition-colors hover:text-accent"
+							href="/"
+						>
+							EdgeJournal
+						</Link>{" "}
+						— AI-powered trading analytics
+					</p>
+				</div>
+			</div>
 		</div>
 	);
 }

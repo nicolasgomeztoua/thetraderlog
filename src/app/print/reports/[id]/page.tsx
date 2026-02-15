@@ -1,13 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { compileMDX } from "next-mdx-remote/rsc";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { mdxComponents } from "@/components/mdx/components";
 import { markdownComponents } from "@/components/mdx/markdown-components";
-import { ReportDataProvider } from "@/components/mdx/provider";
+import { ReportRenderer } from "@/components/report/report-renderer";
+import type { StructuredReport } from "@/lib/ai/report-pipeline/report-schema";
 import { verifyPdfToken } from "@/lib/auth/pdf-token";
-import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
 import { db } from "@/server/db";
 import { aiReports, userSettings } from "@/server/db/schema";
 import { PdfReadySignal } from "./_components/pdf-ready-signal";
@@ -62,26 +60,21 @@ export default async function PrintReportPage({
 	const dataArtifacts =
 		(report.dataArtifacts as Record<string, unknown> | null) ?? {};
 	const rawContent = report.content;
-	const sanitizedContent = sanitizeMdxProse(rawContent);
-	const allComponents = { ...markdownComponents, ...mdxComponents };
 
-	let mdxContent: React.ReactNode = null;
-	let mdxFailed = false;
+	// Parse content as structured JSON report, fall back to markdown for legacy
+	let parsedReport: StructuredReport | null = null;
 	try {
-		const { content: compiled } = await compileMDX({
-			source: sanitizedContent,
-			components: allComponents as never,
-			options: {
-				mdxOptions: {
-					remarkPlugins: [remarkGfm],
-					format: "mdx",
-				},
-			},
-		});
-		mdxContent = compiled;
-	} catch (e) {
-		console.error("[PDF Print] MDX compilation failed, using markdown:", e);
-		mdxFailed = true;
+		parsedReport = JSON.parse(rawContent) as StructuredReport;
+		if (
+			!parsedReport ||
+			!Array.isArray(parsedReport.sections) ||
+			typeof parsedReport.executiveSummary !== "string"
+		) {
+			parsedReport = null;
+		}
+	} catch {
+		// Not valid JSON — legacy MDX/markdown content
+		parsedReport = null;
 	}
 
 	const displayTitle = report.prompt ?? report.title;
@@ -93,56 +86,57 @@ export default async function PrintReportPage({
 
 	return (
 		<div className={`${themeClass} bg-background text-foreground`}>
-			<ReportDataProvider data={dataArtifacts}>
-				<div className="mx-auto max-w-4xl px-8 py-6">
-					{/* Branded header */}
-					<div className="mb-6 border-white/10 border-b pb-4">
-						<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
-							<span className="font-bold text-primary">EDGEJOURNAL</span>
-							<span className="text-muted-foreground">{"// "}</span>
-							<span className="text-muted-foreground">AI ANALYSIS REPORT</span>
-						</div>
-						<h1 className="mt-2 font-mono text-base text-foreground leading-relaxed">
-							{displayTitle}
-						</h1>
-						<p className="mt-1 font-mono text-[10px] text-muted-foreground">
-							{formattedDate}
-						</p>
+			<div className="mx-auto max-w-4xl px-8 py-6">
+				{/* Branded header */}
+				<div className="mb-6 border-white/10 border-b pb-4">
+					<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
+						<span className="font-bold text-primary">EDGEJOURNAL</span>
+						<span className="text-muted-foreground">{"// "}</span>
+						<span className="text-muted-foreground">AI ANALYSIS REPORT</span>
 					</div>
-
-					{/* Report content */}
-					<article className="pdf-content">
-						{!mdxFailed ? (
-							mdxContent
-						) : (
-							<ReactMarkdown
-								components={markdownComponents as never}
-								remarkPlugins={[remarkGfm]}
-							>
-								{rawContent}
-							</ReactMarkdown>
-						)}
-					</article>
+					<h1 className="mt-2 font-mono text-base text-foreground leading-relaxed">
+						{displayTitle}
+					</h1>
+					<p className="mt-1 font-mono text-[10px] text-muted-foreground">
+						{formattedDate}
+					</p>
 				</div>
 
-				{/* Signal to Puppeteer that the page is ready */}
-				<PdfReadySignal />
+				{/* Report content */}
+				<article className="pdf-content">
+					{parsedReport ? (
+						<ReportRenderer
+							dataArtifacts={dataArtifacts}
+							report={parsedReport}
+						/>
+					) : (
+						<ReactMarkdown
+							components={markdownComponents as never}
+							remarkPlugins={[remarkGfm]}
+						>
+							{rawContent}
+						</ReactMarkdown>
+					)}
+				</article>
+			</div>
 
-				{/* Print-specific CSS */}
-				<style
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS string
-					dangerouslySetInnerHTML={{
-						__html: `
-							.pdf-content > * {
-								page-break-inside: avoid;
-							}
-							@media print {
-								body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-							}
-						`,
-					}}
-				/>
-			</ReportDataProvider>
+			{/* Signal to Puppeteer that the page is ready */}
+			<PdfReadySignal />
+
+			{/* Print-specific CSS */}
+			<style
+				// biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS string
+				dangerouslySetInnerHTML={{
+					__html: `
+						.pdf-content > * {
+							page-break-inside: avoid;
+						}
+						@media print {
+							body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+						}
+					`,
+				}}
+			/>
 		</div>
 	);
 }
