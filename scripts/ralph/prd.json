@@ -288,8 +288,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created tests/integration/ai-report-pipeline.test.ts with 19 tests across 3 describe blocks. Tests: buildWriterContext (6 tests — data summaries, MDX catalog, formatting rules, excludes schema/SQL, empty dataStore, array truncation), runValidatorPhase (6 tests — valid MDX passes, missing dataRef detected, non-existent dataRef detected, invalid component names detected, MDX compilation errors detected, tokensUsed:0 when valid), Report Templates (7 tests — getTemplate structure for all 3 templates, unknown IDs return undefined, getAllTemplates returns 3, unique IDs, expected IDs present). Mocked compileMDX (RSC module) and aiGenerateText for validator tests."
     }
   ]
 }

@@ -298,3 +298,19 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - The `selectedTemplateId` state is cleared on successful report generation via `onSuccess` callback
   - Lucide icons `LayoutTemplate` and `X` are available for template-related UI
 ---
+
+## 2026-02-15 - US-014
+- Created `tests/integration/ai-report-pipeline.test.ts` with 19 tests across 3 describe blocks
+- **buildWriterContext tests (6):** data summaries with refIds, MDX component catalog present, formatting rules present, excludes schema/SQL/tRPC docs, empty dataStore handling, array preview truncation to 3 rows
+- **runValidatorPhase tests (6):** valid MDX returns `{ valid: true }`, missing dataRef detected, non-existent dataRef key detected, invalid component names detected, MDX compilation errors detected, tokensUsed: 0 when validation passes without repair
+- **Report template tests (7):** getTemplate returns correct structure for all 3 templates (monthly-review, risk-audit, strategy-comparison), unknown IDs return undefined, getAllTemplates returns 3, unique IDs, expected IDs present
+- Mocked `compileMDX` from `next-mdx-remote/rsc` (RSC-only module unavailable in vitest) and `aiGenerateText` for validator repair tests
+- For error detection tests, mocked `aiGenerateText` to return the same broken content (simulating failed repair) so errors persist through both repair attempts
+- Files changed: `tests/integration/ai-report-pipeline.test.ts` (new, 377 lines)
+- **Learnings for future iterations:**
+  - `compileMDX` from `next-mdx-remote/rsc` cannot be used in vitest (RSC-only) — must be mocked
+  - When testing validator error detection, the default mock returning empty string causes "valid" results because empty content has no components to validate — must mock repair to return the same broken content
+  - `vi.mocked(compileMDX)` allows per-test control of compilation behavior (`.mockRejectedValueOnce()` to simulate compilation errors)
+  - The main vitest config requires Docker for Testcontainers — use a standalone config for pure function tests that don't need DB
+  - Biome auto-sorts imports alphabetically — always run `bunx biome check --write` after writing new imports
+---
