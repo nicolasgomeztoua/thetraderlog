@@ -91,8 +91,6 @@ describe("executeRunQuery", () => {
 		});
 
 		it("should support queries across multiple user-scoped CTEs", async () => {
-			// Note: table.column dot notation is blocked by the schema-qualified
-			// name validator, so cross-CTE queries must use subqueries instead of JOINs
 			const result = await executeRunQuery(
 				userA.id,
 				"SELECT COUNT(*) as trade_count FROM user_trades WHERE account_id IN (SELECT id FROM user_accounts) AND deleted_at IS NULL",
@@ -103,6 +101,18 @@ describe("executeRunQuery", () => {
 			const rows = result.data as Array<{ trade_count: string }>;
 			expect(rows).toHaveLength(1);
 			expect(rows[0]?.trade_count).toBe("7");
+		});
+
+		it("should allow table alias dot notation in JOINs (t.column, s.column)", async () => {
+			const result = await executeRunQuery(
+				userA.id,
+				"SELECT t.symbol, t.direction, CAST(t.net_pnl AS NUMERIC) AS pnl FROM user_trades t WHERE t.deleted_at IS NULL ORDER BY t.entry_time DESC LIMIT 5",
+				db,
+			);
+
+			expect(result.success).toBe(true);
+			const rows = result.data as Array<{ symbol: string }>;
+			expect(rows.length).toBeGreaterThan(0);
 		});
 
 		it("should handle trailing semicolons gracefully", async () => {
@@ -209,6 +219,61 @@ describe("executeRunQuery", () => {
 			const result = await executeRunQuery(
 				userA.id,
 				"SELECT * FROM user_trades, trade",
+				db,
+			);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain("not allowed");
+		});
+
+		it("should allow user-defined CTEs that reference user-scoped tables", async () => {
+			const result = await executeRunQuery(
+				userA.id,
+				"WITH winning_trades AS (SELECT * FROM user_trades WHERE CAST(net_pnl AS NUMERIC) > 0 AND deleted_at IS NULL) SELECT COUNT(*) as cnt FROM winning_trades",
+				db,
+			);
+
+			expect(result.success).toBe(true);
+			const rows = result.data as Array<{ cnt: string }>;
+			expect(Number(rows[0]?.cnt)).toBeGreaterThan(0);
+		});
+
+		it("should allow multiple user-defined CTEs", async () => {
+			const result = await executeRunQuery(
+				userA.id,
+				"WITH wins AS (SELECT * FROM user_trades WHERE CAST(net_pnl AS NUMERIC) > 0 AND deleted_at IS NULL), losses AS (SELECT * FROM user_trades WHERE CAST(net_pnl AS NUMERIC) < 0 AND deleted_at IS NULL) SELECT (SELECT COUNT(*) FROM wins) as win_count, (SELECT COUNT(*) FROM losses) as loss_count",
+				db,
+			);
+
+			expect(result.success).toBe(true);
+		});
+
+		it("should allow EXTRACT(... FROM column) without false positive", async () => {
+			const result = await executeRunQuery(
+				userA.id,
+				"SELECT EXTRACT(HOUR FROM entry_time) AS entry_hour, COUNT(*) AS cnt FROM user_trades GROUP BY entry_hour",
+				db,
+			);
+
+			expect(result.success).toBe(true);
+			const rows = result.data as Array<{ entry_hour: number; cnt: string }>;
+			expect(rows.length).toBeGreaterThan(0);
+		});
+
+		it("should allow EXTRACT with table alias (EXTRACT FROM t.column)", async () => {
+			const result = await executeRunQuery(
+				userA.id,
+				"SELECT EXTRACT(HOUR FROM t.entry_time) AS entry_hour, t.symbol FROM user_trades t GROUP BY entry_hour, t.symbol",
+				db,
+			);
+
+			expect(result.success).toBe(true);
+		});
+
+		it("should reject user-defined CTEs that reference raw tables inside", async () => {
+			const result = await executeRunQuery(
+				userA.id,
+				"WITH evil AS (SELECT * FROM trade) SELECT * FROM evil",
 				db,
 			);
 

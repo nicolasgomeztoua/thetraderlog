@@ -15,6 +15,7 @@ interface ToolContext {
 	userId: string;
 	db?: Db;
 	dataStore?: Map<string, unknown>;
+	accountId?: string;
 }
 
 /**
@@ -38,7 +39,12 @@ export async function executeTool(
 			if (!query) {
 				return { success: false, error: "Missing required parameter: query" };
 			}
-			return executeRunQuery(context.userId, query, context.db);
+			return executeRunQuery(
+				context.userId,
+				query,
+				context.db,
+				context.accountId,
+			);
 		}
 
 		case "call_analytics": {
@@ -51,11 +57,16 @@ export async function executeTool(
 				};
 			}
 			const input = (args.input as Record<string, unknown>) ?? undefined;
+			// Auto-inject accountId into analytics input when available
+			const mergedInput =
+				context.accountId && !input?.accountId
+					? { ...input, accountId: context.accountId }
+					: input;
 			return executeCallAnalytics(
 				context.userId,
 				router,
 				endpoint,
-				input,
+				mergedInput,
 				context.db,
 			);
 		}

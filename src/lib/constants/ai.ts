@@ -54,7 +54,7 @@ export const MAX_TOOL_ROUNDS_CHAT = 10;
 /**
  * Maximum tool-calling rounds per report generation (more than chat)
  */
-export const MAX_TOOL_ROUNDS_REPORT = 20;
+export const MAX_TOOL_ROUNDS_REPORT = 100;
 
 /**
  * Maximum rows returned from AI SQL queries

@@ -4,6 +4,7 @@ import { ArrowRight, FileText, Loader2, RefreshCw, Send } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAccount } from "@/contexts/account-context";
 import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
 import { ERR_VALIDATION_DATE_RANGE } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
@@ -119,6 +120,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const [dateRangeEnd, setDateRangeEnd] = useState("");
 	const [dateError, setDateError] = useState("");
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const { selectedAccountId } = useAccount();
 
 	const utils = api.useUtils();
 
@@ -172,6 +174,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 			...(dateRangeEnd && {
 				dateRangeEnd: new Date(dateRangeEnd).toISOString(),
 			}),
+			...(selectedAccountId && { accountId: selectedAccountId }),
 		});
 	};
 
@@ -366,7 +369,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 						</button>
 					</div>
 
-					<ScrollArea className="flex-1">
+					<ScrollArea className="min-h-0 flex-1">
 						<div className="p-2 sm:p-3">
 							{/* Loading skeletons */}
 							{isReportsLoading &&

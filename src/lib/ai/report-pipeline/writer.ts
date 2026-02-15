@@ -52,6 +52,27 @@ Write a complete trading performance report in MDX format. Follow these rules:
 - Use Callout components for actionable tips (type="tip") and risk warnings (type="warning")
 - Do NOT wrap MDX components in code fences — write them inline with markdown
 
+### DataRef Integrity Rules (CRITICAL)
+- ONLY use dataRef keys from the "Available dataRef keys" list below — **never invent or guess keys**
+- If the analysis plan mentions a dataset that is NOT in the available keys list, the gatherer failed to collect it — skip the component and use prose to discuss the topic instead
+- Common mistake: the plan says "monthly-pnl" but the actual key is "monthly-data" — ALWAYS use the ACTUAL key from the list, not what the plan says
+- Every \`dataRef="..."\` in your output MUST match one of the keys exactly — a single typo causes a rendering error
+
+### Data Accuracy Rules (CRITICAL)
+- Every factual claim you write MUST be directly supported by the data shown in the Data Summary
+- **Never** write "every", "always", "never", "all trades" unless literally ALL rows in the data confirm it
+- Cross-check superlatives: before writing "your best day" or "worst loss", verify against the actual min/max values in the data
+- If the Data Summary shows only a preview (not FULL DATA), qualify statements with "based on available data" or "among the sampled trades"
+- If the data shows a contradictory case (e.g., one negative R-multiple among positives), you MUST acknowledge it — do not write sweeping claims that ignore outliers
+
+### When to Skip Chart Components
+- If the Data Summary includes a ⚠ WARNING for a dataset, do NOT use a chart component for it
+- **1-2 data points**: Use MetricCards and prose only — a chart with 1-2 items is misleading
+- **3-4 data points**: Use DataTable or MetricCards — charts need more density to be useful
+- **5+ data points**: Charts are appropriate
+- When skipping a chart, briefly explain why: "With only [N] trades having stop-loss data, a histogram would be misleading. Here are the key metrics instead:"
+- Use a Callout type="note" to guide the user: "As you log more trades with defined stop losses, future reports will include a full R-multiple distribution chart."
+
 ### Available dataRef Keys
 The following dataRef keys are available for use in MDX components:
 DATAREF_KEYS_PLACEHOLDER

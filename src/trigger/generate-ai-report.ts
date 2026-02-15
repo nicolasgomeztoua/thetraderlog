@@ -215,6 +215,7 @@ export const generateAiReport = task({
 		dateRangeStart?: string;
 		dateRangeEnd?: string;
 		templateId?: string;
+		accountId?: string;
 	}) => {
 		try {
 			// Verify ownership: ensure the userId in the payload matches the report and conversation records.
@@ -324,6 +325,9 @@ export const generateAiReport = task({
 				console.log(
 					`[report:${payload.reportId}] Planning complete — ${plannerResult.tokensUsed} tokens`,
 				);
+				console.log(
+					`[report:${payload.reportId}] Planner output (${plan.length} chars):\n${plan.slice(0, 1000)}`,
+				);
 			} catch (error) {
 				// Planner failure fallback: gatherer will use the raw user prompt
 				console.warn(
@@ -351,6 +355,8 @@ export const generateAiReport = task({
 				userId: payload.userId,
 				db: dbReadOnly,
 				dataStore,
+				reportId: payload.reportId,
+				accountId: payload.accountId,
 			});
 
 			totalTokensUsed += gathererResult.tokensUsed;

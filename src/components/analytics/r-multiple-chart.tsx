@@ -185,7 +185,7 @@ export function RMultipleChart({
 						)}
 					>
 						{hasData
-							? `${stats.avgRMultiple >= 0 ? "+" : ""}${stats.avgRMultiple.toFixed(2)}R`
+							? `${(stats.avgRMultiple ?? 0) >= 0 ? "+" : ""}${(stats.avgRMultiple ?? 0).toFixed(2)}R`
 							: "—"}
 					</div>
 					<div className="font-mono text-[10px] text-muted-foreground">
@@ -224,7 +224,7 @@ export function RMultipleChart({
 							</span>
 						</div>
 						<div className="font-bold font-mono text-profit text-sm">
-							+{stats.avgWinR.toFixed(2)}R
+							+{(stats.avgWinR ?? 0).toFixed(2)}R
 						</div>
 					</div>
 					<div className="rounded border border-border bg-secondary/30 p-2 text-center">
@@ -235,7 +235,7 @@ export function RMultipleChart({
 							</span>
 						</div>
 						<div className="font-bold font-mono text-loss text-sm">
-							{stats.avgLossR.toFixed(2)}R
+							{(stats.avgLossR ?? 0).toFixed(2)}R
 						</div>
 					</div>
 					<div className="rounded border border-border bg-secondary/30 p-2 text-center">
@@ -243,7 +243,7 @@ export function RMultipleChart({
 							Best
 						</div>
 						<div className="font-bold font-mono text-profit text-sm">
-							+{stats.maxR.toFixed(2)}R
+							+{(stats.maxR ?? 0).toFixed(2)}R
 						</div>
 					</div>
 					<div className="rounded border border-border bg-secondary/30 p-2 text-center">
@@ -251,7 +251,7 @@ export function RMultipleChart({
 							Worst
 						</div>
 						<div className="font-bold font-mono text-loss text-sm">
-							{stats.minR.toFixed(2)}R
+							{(stats.minR ?? 0).toFixed(2)}R
 						</div>
 					</div>
 				</div>

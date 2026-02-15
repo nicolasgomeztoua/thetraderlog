@@ -58,6 +58,25 @@ The Monte Carlo simulation projects a 94% probability of profit over the next 10
 <Callout type="tip">Your risk of ruin at 0.3% is excellent. You have significant room to increase position size gradually — consider moving from 1 to 1.25 contracts on your A+ setups only.</Callout>
 \`\`\``;
 
+const SPARSE_DATA_EXAMPLE = `### Example Section: Handling Sparse Data (R-Multiple with 1 trade)
+
+\`\`\`mdx
+## Risk-Adjusted Returns
+
+Only 1 of your 23 trades had a defined stop loss, so we can't yet build a full R-multiple distribution. Here's what that single trade tells us:
+
+<MetricGrid>
+  <MetricCard title="Trades with Stop Loss" value="1 of 23" tooltip={{ what: "Number of trades where initial risk (stop loss) was defined", why: "R-multiples require a stop loss to calculate risk-adjusted return", benchmark: "Aim for 100% — every trade should have a defined stop" }} colorClass="text-loss" />
+  <MetricCard title="R-Multiple" value="-3.54R" tooltip={{ what: "How many times your initial risk you gained or lost", why: "Negative R means the loss exceeded the planned risk", benchmark: "Losses should stay near -1R; above -2R needs investigation" }} colorClass="text-loss" />
+</MetricGrid>
+
+That single R-multiple of -3.54 is concerning — it means the trade lost 3.5x the amount you planned to risk. This typically happens when a stop loss is moved or ignored during the trade.
+
+<Callout type="note">As you log more trades with defined stop losses, future reports will include a full R-multiple distribution chart showing your risk-adjusted performance across all trades.</Callout>
+
+<Callout type="warning">A -3.54R loss suggests a stop-loss violation. Review whether the stop was moved during the trade or if the original stop was too tight for the instrument's volatility.</Callout>
+\`\`\``;
+
 export const WRITER_FEW_SHOT_EXAMPLES = `## Few-Shot Examples
 
 Study these examples carefully. They demonstrate the expected quality, formatting, and MDX component usage for your report output.
@@ -70,7 +89,10 @@ Key patterns to follow:
 - **Callouts at the end of sections** — use "tip" for actionable recommendations, "warning" for risk alerts
 - **MetricGrid groups** of 3-5 MetricCards for key stats at the top of major sections
 - **Tooltip format**: always include all three fields (what, why, benchmark) for MetricCard tooltips
+- **Handle sparse data gracefully** — use MetricCards and prose instead of charts when data is limited (see sparse data example below)
 
 ${PERFORMANCE_OVERVIEW_EXAMPLE}
 
-${RISK_ANALYSIS_EXAMPLE}`;
+${RISK_ANALYSIS_EXAMPLE}
+
+${SPARSE_DATA_EXAMPLE}`;

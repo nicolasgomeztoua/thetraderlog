@@ -296,6 +296,7 @@ export const aiRouter = createTRPCRouter({
 				dateRangeStart: z.string().datetime().optional(),
 				dateRangeEnd: z.string().datetime().optional(),
 				templateId: z.string().optional(),
+				accountId: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -363,6 +364,7 @@ export const aiRouter = createTRPCRouter({
 				dateRangeStart: input.dateRangeStart,
 				dateRangeEnd: input.dateRangeEnd,
 				templateId: input.templateId,
+				accountId: input.accountId,
 			});
 
 			// Store the Trigger.dev task ID for tracking

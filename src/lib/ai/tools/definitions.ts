@@ -17,6 +17,7 @@ interface ToolContext {
 	userId: string;
 	db?: Db;
 	dataStore?: Map<string, unknown>;
+	accountId?: string;
 }
 
 // =============================================================================
@@ -28,17 +29,17 @@ function createRunQueryTool(context: ToolContext) {
 		description:
 			"Execute a read-only SQL SELECT query against the trading database. " +
 			"All queries are automatically scoped to the current user via CTEs. " +
+			"Soft-deleted trades and inactive accounts are automatically excluded at the CTE level. " +
 			"Use user_trades, user_accounts, user_tags, user_strategies, user_journals, " +
 			"user_executions, user_trade_tags as table aliases (they filter to the current user). " +
 			"P&L columns (realized_pnl, net_pnl, fees) are stored as decimal strings — use CAST(column AS NUMERIC) for aggregation. " +
-			"Always include deleted_at IS NULL for trade queries to exclude soft-deleted trades. " +
 			"Results are limited to 500 rows.",
 		inputSchema: z.object({
 			query: z
 				.string()
 				.describe(
 					"A SELECT SQL query. Use the user-scoped CTE aliases (user_trades, user_accounts, etc.) instead of raw table names. " +
-						"Example: SELECT symbol, COUNT(*) as trades, SUM(CAST(net_pnl AS NUMERIC)) as total_pnl FROM user_trades WHERE deleted_at IS NULL GROUP BY symbol ORDER BY total_pnl DESC LIMIT 20",
+						"Example: SELECT symbol, COUNT(*) as trades, SUM(CAST(net_pnl AS NUMERIC)) as total_pnl FROM user_trades GROUP BY symbol ORDER BY total_pnl DESC LIMIT 20",
 				),
 		}),
 		execute: async ({ query }) => {
@@ -48,7 +49,12 @@ function createRunQueryTool(context: ToolContext) {
 					error: "Database instance required for run_query tool",
 				};
 			}
-			return executeRunQuery(context.userId, query, context.db);
+			return executeRunQuery(
+				context.userId,
+				query,
+				context.db,
+				context.accountId,
+			);
 		},
 	});
 }
@@ -84,11 +90,16 @@ function createCallAnalyticsTool(context: ToolContext) {
 				),
 		}),
 		execute: async ({ router, endpoint, input }) => {
+			// Auto-inject accountId into analytics input when available
+			const mergedInput =
+				context.accountId && !input?.accountId
+					? { ...input, accountId: context.accountId }
+					: input;
 			return executeCallAnalytics(
 				context.userId,
 				router,
 				endpoint,
-				input,
+				mergedInput,
 				context.db,
 			);
 		},
