@@ -170,3 +170,17 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - The `getReportTools()` factory binds userId, db, and dataStore into tool closures — no need to pass context through the prompt
   - Data handling notes (decimal casting, soft-delete, CTE aliases) are critical for the gatherer since it writes SQL queries
 ---
+
+## 2026-02-15 - US-007
+- Created `src/lib/ai/report-pipeline/writer-context.ts` — condensed context builder for the writer phase
+- `buildWriterContext({ dataStore, plan })` generates context with 4 sections: analysis plan, data summary, MDX component catalog, formatting rules
+- Data summary: arrays show first 3 rows as JSON, objects show key fields (up to 8), handles null/empty gracefully
+- MDX catalog: condensed version of the full catalog from `trading-analyst.ts` — same components but with single-line data shape descriptions instead of full markdown tables
+- Formatting rules: same strict rules as `REPORT_MODE_INSTRUCTIONS` (no LaTeX, pipe tables, JSX inline)
+- **Excludes**: database schema, SQL syntax, tRPC endpoint docs, tool descriptions, data handling notes (these are only needed by the gatherer)
+- Files changed: `src/lib/ai/report-pipeline/writer-context.ts` (new)
+- **Learnings for future iterations:**
+  - The writer phase only needs data summaries, not full data — keep context small to maximize output quality
+  - Biome auto-formats ternary expressions onto multiple lines when they exceed ~80 chars
+  - The MDX catalog is repeated in multiple places (trading-analyst.ts, planner.ts, writer-context.ts) — consider extracting to shared constant in future cleanup
+---
