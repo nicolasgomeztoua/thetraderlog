@@ -3,19 +3,19 @@
  * No hooks — pure styled elements.
  */
 
-function toHeadingId(children: React.ReactNode): string {
-	const text = typeof children === "string" ? children : String(children ?? "");
-	return text
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/(^-|-$)/g, "");
+import { toHeadingId } from "@/lib/ai/report-pipeline/report-schema";
+
+function headingId(children: React.ReactNode): string {
+	return toHeadingId(
+		typeof children === "string" ? children : String(children ?? ""),
+	);
 }
 
 export const markdownComponents = {
 	h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
 		<h1
 			className="mt-8 mb-4 font-bold font-mono text-foreground text-xl first:mt-0"
-			id={toHeadingId(children)}
+			id={headingId(children)}
 			{...props}
 		>
 			{children}
@@ -24,7 +24,7 @@ export const markdownComponents = {
 	h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
 		<h2
 			className="mt-6 mb-3 font-bold font-mono text-foreground text-lg first:mt-0"
-			id={toHeadingId(children)}
+			id={headingId(children)}
 			{...props}
 		>
 			{children}
@@ -33,7 +33,7 @@ export const markdownComponents = {
 	h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
 		<h3
 			className="mt-4 mb-2 font-mono font-semibold text-base text-foreground first:mt-0"
-			id={toHeadingId(children)}
+			id={headingId(children)}
 			{...props}
 		>
 			{children}
