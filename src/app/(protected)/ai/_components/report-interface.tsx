@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	ArrowRight,
-	Download,
-	FileText,
-	Loader2,
-	RefreshCw,
-	Send,
-} from "lucide-react";
+import { ArrowRight, FileText, Loader2, RefreshCw, Send } from "lucide-react";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,8 +31,6 @@ const PROGRESS_STAGE_LABELS: Record<string, string> = {
 	queued: "Waiting in queue...",
 	building_context: "Loading your trading profile...",
 	analyzing: "Analyzing your data...",
-	generating_pdf: "Compiling report...",
-	uploading: "Finalizing...",
 	complete: "Complete",
 	failed: "Failed",
 };
@@ -63,12 +54,8 @@ function getProgressWidth(
 			return 15;
 		case "analyzing": {
 			const round = currentRound ?? 0;
-			return 20 + Math.min(round / totalRounds, 1) * 50;
+			return 20 + Math.min(round / totalRounds, 1) * 70;
 		}
-		case "generating_pdf":
-			return 80;
-		case "uploading":
-			return 95;
 		case "complete":
 			return 100;
 		default:
@@ -430,26 +417,30 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 													)}
 												</div>
 											</div>
-											{isComplete && report.pdfUrl && (
+											{isComplete && (
 												<a
-													className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[10px] text-foreground transition-colors hover:border-primary/30 hover:text-primary"
-													data-testid={`report-download-${report.id}`}
-													href={report.pdfUrl}
-													rel="noopener noreferrer"
-													target="_blank"
+													className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[10px] text-foreground transition-colors hover:border-accent/30 hover:text-accent"
+													data-testid={`report-view-${report.id}`}
+													href={`/ai/reports/${report.id}`}
 												>
-													<Download className="size-3" />
-													PDF
+													<ArrowRight className="size-3" />
+													View Report
 												</a>
 											)}
 										</div>
 
 										{/* Inline progress for active reports */}
 										{isActive && (
-											<div className="mt-2">
+											<div
+												className="mt-2"
+												data-testid={`report-progress-${report.id}`}
+											>
 												<div className="flex items-center gap-2">
 													<Loader2 className="size-3 animate-spin text-accent" />
-													<span className="font-mono text-[11px] text-accent">
+													<span
+														className="font-mono text-[11px] text-accent"
+														data-testid={`report-progress-stage-${report.id}`}
+													>
 														{report.progressStage === "analyzing" &&
 														report.progressDetail
 															? (TOOL_DETAIL_LABELS[report.progressDetail] ??
@@ -457,13 +448,12 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 															: (PROGRESS_STAGE_LABELS[
 																	report.progressStage ?? "queued"
 																] ?? "Processing")}
-														{report.progressStage === "generating_pdf" &&
-															report.chartsGenerated != null &&
-															report.chartsGenerated > 0 &&
-															` — ${report.chartsGenerated.toString()} charts`}
 													</span>
 												</div>
-												<div className="mt-1.5 h-1 overflow-hidden rounded-full bg-accent/10">
+												<div
+													className="mt-1.5 h-1 overflow-hidden rounded-full bg-accent/10"
+													data-testid={`report-progress-bar-${report.id}`}
+												>
 													<div
 														className="h-full rounded-full bg-accent/50 transition-all duration-700"
 														style={{

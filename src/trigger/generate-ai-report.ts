@@ -8,9 +8,8 @@ import {
 import { buildUserContext } from "@/lib/ai/context-builder";
 import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
 import { sendReportEmail } from "@/lib/ai/report-email";
-import { generateReportPdf } from "@/lib/ai/report-pdf";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
-import { AI_TOOLS, executeTool } from "@/lib/ai/tools";
+import { executeTool, getToolsForMode } from "@/lib/ai/tools";
 import { MAX_TOOL_ROUNDS_REPORT } from "@/lib/constants/ai";
 import {
 	ERR_AI_CONNECTION,
@@ -20,14 +19,13 @@ import {
 	ERR_AI_NO_DATA,
 	ERR_AI_NOT_FOUND,
 	ERR_AI_OWNERSHIP,
-	ERR_AI_PDF_FAILED,
 	ERR_AI_QUOTA,
 	ERR_AI_RATE_LIMIT,
 	ERR_AI_REPORT_FALLBACK,
 	ERR_AI_TIMEOUT,
 	ERR_AI_UNAVAILABLE,
 } from "@/lib/constants/errors";
-import { db } from "@/server/db";
+import { db, dbReadOnly } from "@/server/db";
 import {
 	aiConversations,
 	aiMessages,
@@ -83,9 +81,6 @@ function getUserFriendlyErrorMessage(error: unknown): string {
 	if (lower.includes("context_length") || lower.includes("maximum context"))
 		return ERR_AI_CONTEXT_LENGTH;
 
-	// PDF generation
-	if (lower.includes("pdf")) return ERR_AI_PDF_FAILED;
-
 	// Auth / ownership (should be rare for real users)
 	if (lower.includes("ownership") || lower.includes("does not belong"))
 		return ERR_AI_OWNERSHIP;
@@ -121,99 +116,33 @@ async function updateProgress(
 }
 
 /**
- * Extract chart image URLs from tool call results in the message history.
- * Charts are produced by run_python tool and stored in the result's data.images array.
+ * Send email notification with link to the in-app report viewer.
  */
-function extractChartUrls(messages: ChatMessage[]): string[] {
-	const urls: string[] = [];
-	for (const msg of messages) {
-		if (msg.role !== "tool") continue;
-		try {
-			const parsed = JSON.parse(msg.content ?? "{}");
-			if (parsed.data?.images && Array.isArray(parsed.data.images)) {
-				for (const url of parsed.data.images) {
-					if (typeof url === "string" && url.length > 0) {
-						urls.push(url);
-					}
-				}
-			}
-		} catch {
-			// Not valid JSON, skip
-		}
-	}
-	return urls;
-}
-
-/**
- * Extract code artifacts from tool call results (run_python stdout output).
- */
-function extractCodeArtifacts(messages: ChatMessage[]): string[] {
-	const artifacts: string[] = [];
-	for (const msg of messages) {
-		if (msg.role !== "tool") continue;
-		try {
-			const parsed = JSON.parse(msg.content ?? "{}");
-			if (
-				parsed.data?.artifacts &&
-				Array.isArray(parsed.data.artifacts) &&
-				parsed.data.artifacts.length > 0
-			) {
-				artifacts.push(...parsed.data.artifacts);
-			}
-		} catch {
-			// Not valid JSON, skip
-		}
-	}
-	return artifacts;
-}
-
-/**
- * Generate PDF, update the report record, and send email notification.
- */
-async function generateAndUploadPdf(
+async function sendReportNotification(
 	reportId: string,
 	title: string,
-	content: string,
-	chatMessages: ChatMessage[],
 	userId: string,
-	dateRange?: { start?: string; end?: string },
+	metadata?: {
+		generationTime?: string;
+		chartsGenerated?: number;
+	},
 ): Promise<void> {
-	const charts = extractChartUrls(chatMessages);
-	const codeArtifacts = extractCodeArtifacts(chatMessages);
-
-	const result = await generateReportPdf({
-		title,
-		content,
-		charts,
-		codeArtifacts,
-		dateRange,
-	});
-
-	if (result) {
-		// Emit progress: uploading
-		await updateProgress(reportId, { progressStage: "uploading" });
-
-		await db
-			.update(aiReports)
-			.set({ pdfUrl: result.pdfUrl, pdfKey: result.pdfKey })
-			.where(eq(aiReports.id, reportId));
-
-		// Send email notification with download link
-		try {
-			const user = await db.query.users.findFirst({
-				where: eq(users.id, userId),
-				columns: { email: true },
+	try {
+		const user = await db.query.users.findFirst({
+			where: eq(users.id, userId),
+			columns: { email: true },
+		});
+		if (user?.email) {
+			const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://edgejournal.com"}/ai/reports/${reportId}`;
+			await sendReportEmail({
+				to: user.email,
+				reportTitle: title,
+				reportUrl,
+				metadata,
 			});
-			if (user?.email) {
-				await sendReportEmail({
-					to: user.email,
-					reportTitle: title,
-					downloadUrl: result.pdfUrl,
-				});
-			}
-		} catch {
-			// Email delivery failure should not fail the report generation
 		}
+	} catch {
+		// Email delivery failure should not fail the report generation
 	}
 }
 
@@ -229,7 +158,7 @@ async function generateAndUploadPdf(
 export const generateAiReport = task({
 	id: "generate-ai-report",
 	// AI report generation involves multi-turn LLM tool-calling (up to 20 rounds),
-	// SQL queries, Python sandbox execution, PDF generation, and email delivery.
+	// SQL queries, Python sandbox execution, and email delivery.
 	// 5 min global default is insufficient — allow up to 30 minutes.
 	maxDuration: 1800,
 	queue: {
@@ -347,7 +276,7 @@ export const generateAiReport = task({
 			// Build system prompt with schema + user context
 			const [schemaContext, userContext] = await Promise.all([
 				Promise.resolve(generateSchemaContext()),
-				buildUserContext(payload.userId, db),
+				buildUserContext(payload.userId, dbReadOnly),
 			]);
 
 			// Add date range context to the prompt if provided
@@ -378,6 +307,8 @@ export const generateAiReport = task({
 			let totalTokensUsed = 0;
 			const allToolCalls: ToolCall[] = [];
 			const contentParts: string[] = [];
+			const dataStore = new Map<string, unknown>();
+			const reportTools = getToolsForMode("report");
 
 			// Emit progress: analyzing starts
 			await updateProgress(payload.reportId, {
@@ -386,10 +317,14 @@ export const generateAiReport = task({
 			});
 
 			for (let round = 0; round < MAX_TOOL_ROUNDS_REPORT; round++) {
+				console.log(
+					`[report:${payload.reportId}] Round ${round + 1}/${MAX_TOOL_ROUNDS_REPORT}`,
+				);
+
 				const response = await chatCompletion({
 					model: payload.model,
 					messages: chatMessages,
-					tools: AI_TOOLS,
+					tools: reportTools,
 					tool_choice: "auto",
 				});
 
@@ -410,6 +345,32 @@ export const generateAiReport = task({
 					}
 					const finalContent = contentParts.join("\n\n");
 
+					// Diagnostic: log dataStore state and MDX component usage
+					const mdxComponentPattern =
+						/<(EquityCurve|MonthlyChart|SymbolDistributionChart|DayOfWeekChart|HourHeatmap|SessionChart|RMultipleChart|MonteCarloChart|CalendarHeatmap|DrawdownTable|SymbolTable|DataTable)\b([^>]*)\/?>/g;
+					const componentRefs: string[] = [];
+					let match: RegExpExecArray | null =
+						mdxComponentPattern.exec(finalContent);
+					while (match !== null) {
+						const tag = match[1];
+						const attrs = match[2] ?? "";
+						const dataRefMatch = /dataRef="([^"]*)"/.exec(attrs);
+						componentRefs.push(
+							`${tag}${dataRefMatch ? ` dataRef="${dataRefMatch[1]}"` : " (NO dataRef!)"}`,
+						);
+						match = mdxComponentPattern.exec(finalContent);
+					}
+					console.log(
+						`[report:${payload.reportId}] Generation complete — dataStore keys: [${[...dataStore.keys()].join(", ")}], MDX components found: [${componentRefs.join(", ")}]`,
+					);
+					if (componentRefs.some((r) => r.includes("NO dataRef"))) {
+						console.warn(
+							`[report:${payload.reportId}] WARNING: MDX components without dataRef detected — charts will show fallback`,
+						);
+					}
+					const dataArtifacts =
+						dataStore.size > 0 ? Object.fromEntries(dataStore) : null;
+
 					// Save assistant message to conversation
 					await db.insert(aiMessages).values({
 						conversationId: payload.conversationId,
@@ -421,37 +382,20 @@ export const generateAiReport = task({
 							allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
 					});
 
-					// Emit progress: generating PDF
-					const charts = extractChartUrls(chatMessages);
-					await updateProgress(payload.reportId, {
-						progressStage: "generating_pdf",
-						chartsGenerated: charts.length,
-					});
-
-					// Generate PDF from report content
+					// Update report as complete with MDX content and data artifacts
 					const reportRecord = await db.query.aiReports.findFirst({
 						where: eq(aiReports.id, payload.reportId),
 						columns: { title: true },
 					});
-					await generateAndUploadPdf(
-						payload.reportId,
-						reportRecord?.title ?? payload.prompt,
-						finalContent,
-						chatMessages,
-						payload.userId,
-						{
-							start: payload.dateRangeStart,
-							end: payload.dateRangeEnd,
-						},
-					);
-
-					// Update report as complete
 					await db
 						.update(aiReports)
 						.set({
 							status: "complete",
 							progressStage: "complete",
+							content: finalContent,
+							dataArtifacts,
 							tokensUsed: totalTokensUsed,
+							chartsGenerated: dataStore.size,
 							completedAt: new Date(),
 						})
 						.where(eq(aiReports.id, payload.reportId));
@@ -461,6 +405,14 @@ export const generateAiReport = task({
 						.update(aiConversations)
 						.set({ status: "complete" })
 						.where(eq(aiConversations.id, payload.conversationId));
+
+					// Send email notification with viewer link
+					await sendReportNotification(
+						payload.reportId,
+						reportRecord?.title ?? payload.prompt,
+						payload.userId,
+						{ chartsGenerated: dataStore.size },
+					);
 
 					return {
 						reportId: payload.reportId,
@@ -495,10 +447,36 @@ export const generateAiReport = task({
 						args = {};
 					}
 
+					// Log tool call with key args (avoid logging full data payloads)
+					const logArgs =
+						toolCall.function.name === "store_report_data"
+							? { refId: args.refId, description: args.description }
+							: toolCall.function.name === "call_analytics"
+								? { router: args.router, endpoint: args.endpoint }
+								: toolCall.function.name === "run_query"
+									? {
+											query:
+												typeof args.query === "string"
+													? args.query.slice(0, 120)
+													: args.query,
+										}
+									: { keys: Object.keys(args) };
+					console.log(
+						`[report:${payload.reportId}] Tool call: ${toolCall.function.name}`,
+						JSON.stringify(logArgs),
+					);
+
 					const result = await executeTool(toolCall.function.name, args, {
 						userId: payload.userId,
-						db,
+						db: dbReadOnly,
+						dataStore,
 					});
+
+					if (!result.success) {
+						console.warn(
+							`[report:${payload.reportId}] Tool FAILED: ${toolCall.function.name} — ${result.error}`,
+						);
+					}
 
 					chatMessages.push({
 						role: "tool",
@@ -515,11 +493,13 @@ export const generateAiReport = task({
 				});
 			}
 
-			// If we exhausted tool rounds, save fallback and mark complete
+			// If we exhausted tool rounds, save fallback content and mark complete
 			const accumulatedContent = contentParts.join("\n\n");
 			const fallbackContent = accumulatedContent
 				? `${accumulatedContent}\n\n---\n\n*Note: This report reached the maximum analysis rounds. Results above represent the completed analysis.*`
 				: "The report analysis reached the maximum number of tool-calling rounds.";
+			const fallbackDataArtifacts =
+				dataStore.size > 0 ? Object.fromEntries(dataStore) : null;
 
 			await db.insert(aiMessages).values({
 				conversationId: payload.conversationId,
@@ -531,37 +511,20 @@ export const generateAiReport = task({
 					allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
 			});
 
-			// Emit progress: generating PDF (fallback path)
-			const fallbackCharts = extractChartUrls(chatMessages);
-			await updateProgress(payload.reportId, {
-				progressStage: "generating_pdf",
-				chartsGenerated: fallbackCharts.length,
-			});
-
-			// Generate PDF from fallback content
+			// Update report as complete with MDX content and data artifacts (fallback path)
 			const reportRecord = await db.query.aiReports.findFirst({
 				where: eq(aiReports.id, payload.reportId),
 				columns: { title: true },
 			});
-			await generateAndUploadPdf(
-				payload.reportId,
-				reportRecord?.title ?? payload.prompt,
-				fallbackContent,
-				chatMessages,
-				payload.userId,
-				{
-					start: payload.dateRangeStart,
-					end: payload.dateRangeEnd,
-				},
-			);
-
-			// Still mark as complete since we have partial results
 			await db
 				.update(aiReports)
 				.set({
 					status: "complete",
 					progressStage: "complete",
+					content: fallbackContent,
+					dataArtifacts: fallbackDataArtifacts,
 					tokensUsed: totalTokensUsed,
+					chartsGenerated: dataStore.size,
 					completedAt: new Date(),
 				})
 				.where(eq(aiReports.id, payload.reportId));
@@ -570,6 +533,14 @@ export const generateAiReport = task({
 				.update(aiConversations)
 				.set({ status: "complete" })
 				.where(eq(aiConversations.id, payload.conversationId));
+
+			// Send email notification with viewer link (fallback path)
+			await sendReportNotification(
+				payload.reportId,
+				reportRecord?.title ?? payload.prompt,
+				payload.userId,
+				{ chartsGenerated: dataStore.size },
+			);
 
 			return {
 				reportId: payload.reportId,

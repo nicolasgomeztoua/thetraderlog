@@ -419,7 +419,6 @@ describe("ai router", () => {
 			expect(status).toBeDefined();
 			expect(status.id).toBe(created.id);
 			expect(status.status).toBe("queued");
-			expect(status.pdfUrl).toBeNull();
 			expect(status.completedAt).toBeNull();
 		});
 

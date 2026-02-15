@@ -1,275 +1,340 @@
 # Ralph Progress Log
-Started: Thu Feb 12 12:52:05 WET 2026
+Started: Fri Feb 13 21:03:05 WET 2026
 ---
 
 ## Codebase Patterns
-- Sheet (shadcn) is already installed at src/components/ui/sheet.tsx — no need to install for mobile drawer
-- Tooltip is available at src/components/ui/tooltip.tsx — already used in chat-message.tsx
-- ScrollArea is available at src/components/ui/scroll-area.tsx — used by chat-interface, chat-sidebar, report-interface
-- Skeleton is available at src/components/ui/skeleton.tsx — used for loading states
-- Button is available at src/components/ui/button.tsx — standard button component
-- Dialog is available at src/components/ui/dialog.tsx — for modals
-- `animate-blink` class used in chat-message.tsx but NOT defined in globals.css — cursor-blink is defined via `.cursor-blink::after` pseudo-element only
-- Hardcoded #00d4ff appears in: chat-message.tsx (tool badges, loading), report-interface.tsx (progress, status, focus borders), message-renderer.tsx (links). These should become text-accent / bg-accent CSS variables.
-- SUGGESTED_CHAT_QUERIES and SUGGESTED_REPORT_PROMPTS are in src/lib/constants/ai.ts
-- useMobile hook available at src/hooks/use-mobile.ts for responsive breakpoints
-- Pre-existing Biome errors: 1) archive JSON formatting, 2) role="button" in chat-sidebar.tsx (a11y)
+- Analytics chart components are self-contained (data in, chart out) — ideal for MDX wrappers with dataRef
+- SessionChart, HourHeatmap, CalendarHeatmap depend on useSettingsStore() for timezone — MDX wrappers need to handle this
+- AI tools registry in src/lib/ai/tools/index.ts uses switch-case dispatcher pattern
+- Report mode system prompt is in REPORT_MODE_INSTRUCTIONS const in trading-analyst.ts
+- Trigger.dev task uses tool-calling loop with MAX_TOOL_ROUNDS_REPORT rounds
+- Email uses Resend API with raw HTML template — will replace with React Email
+- Report progress stages (post-MDX): queued → building_context → analyzing → complete
+- Schema uses createTable() helper, aiReports has pdfUrl/pdfKey columns to replace with content/dataArtifacts
+- MetricCard is inline props (no dataRef needed) — can pass through directly in MDX
+- React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
+- Email base layout lives at src/emails/components/base-layout.tsx — all transactional emails wrap in BaseLayout
+- MDX component library lives in src/components/mdx/ — mdxComponents map from components.tsx for next-mdx-remote
+- MDX wrappers use useReportData(dataRef) hook from provider.tsx to get data from ReportDataProvider context
+- Analytics chart components import from barrel @/components/analytics — all 11 chart wrappers available
 
-## 2026-02-12 - US-000
-- **What was implemented:** Comprehensive audit of all AI section components and shared utilities
-- **Files examined (no changes):**
-  - src/app/(protected)/ai/page.tsx — top-level page, toggles between ChatInterface and ReportInterface
-  - src/app/(protected)/ai/_components/chat-interface.tsx — main chat container with sidebar, messages, input
-  - src/app/(protected)/ai/_components/chat-input.tsx — textarea + send button
-  - src/app/(protected)/ai/_components/chat-message.tsx — message display, tool badges, loading indicator, pending message
-  - src/app/(protected)/ai/_components/chat-sidebar.tsx — conversation list with CRUD
-  - src/app/(protected)/ai/_components/message-renderer.tsx — markdown rendering (react-markdown + remark-gfm)
-  - src/app/(protected)/ai/_components/model-selector.tsx — chat/report mode toggle
-  - src/app/(protected)/ai/_components/report-interface.tsx — report form + history list
-  - src/lib/constants/ai.ts — AI models, modes, limits, suggested queries/prompts
-  - src/styles/globals.css — all existing keyframes and animation utilities
-  - src/components/ui/ — all available shadcn components
-  - src/hooks/ — all available shared hooks
-
-### AI Components Catalog
-
-| Component | File | Props | Styling Notes |
-|-----------|------|-------|---------------|
-| ChatInterface | chat-interface.tsx | mode, onModeChange | Uses ScrollArea, integrates sidebar+messages+input |
-| ChatInput | chat-input.tsx | value, onChange, onSubmit, disabled | Textarea with auto-resize, Send button |
-| ChatMessage | chat-message.tsx | message: {id, role, content, toolCalls?} | $ prefix for user, → for AI, tool badges, copy button |
-| ChatLoadingIndicator | chat-message.tsx | none | Loader2 spinner + "Analyzing trades_" with animate-blink |
-| ChatPendingMessage | chat-message.tsx | content: string | User message at text-primary/60 opacity |
-| ChatSidebar | chat-sidebar.tsx | conversations, activeId, isLoading, onSelect, onNew, onDelete | w-56, hidden on mobile (sm:flex) |
-| ModelSelector | model-selector.tsx | mode, onModeChange | Chat/Report toggle buttons |
-| MessageRenderer | message-renderer.tsx | content: string | ReactMarkdown with custom components, memoized |
-| ReportInterface | report-interface.tsx | mode, onModeChange | Form + history panel, polls active report status |
-
-### Available Shadcn UI Components
-
-Already installed: alert-dialog, tabs, slider, popover, sheet, scroll-area, resizable, label, sonner, tooltip, alert, avatar, dialog, sidebar, table, separator, dropdown-menu, select, textarea, form, badge, button, calendar, card, checkbox, input, skeleton, switch
-
-**Key for redesign:** Sheet (mobile drawer), Tooltip (hover hints), ScrollArea (scrollable panels), Skeleton (loading), Badge (status pills), Dialog (lightbox)
-
-### Existing Animation Keyframes (globals.css)
-
-| Keyframe | Duration | Usage |
-|----------|----------|-------|
-| rotate-border | 4s linear infinite | Rotating gradient borders |
-| ticker | 30s linear infinite | Marquee ticker scroll |
-| pulse-dot | 2s ease-in-out infinite | Pulsing status dots |
-| fade-in-up | 0.3s ease-out | Page entrance animations |
-| fade-in-up-subtle | 0.25s ease-out | Subtle section entrance |
-| blink | 1s step-end infinite | Cursor blink (used as .cursor-blink::after) |
-| glitch | 0.3s cubic-bezier | Hover glitch effect |
-| count-up | same as fade-in-up | Stats counter animation |
-| marquee | 25s linear infinite | Logo scrolling |
-| image-enter | 0.3s ease-out | Tiptap image load animation |
-
-**Utility classes available:** .animate-fade-in-up, .stagger-children (1-12 delays), .stagger-sections (1-8 delays), .cursor-blink, .pulse-dot, .glitch-hover, .animate-marquee, .terminal-card, .focus-ring
-
-**prefers-reduced-motion:** Already handled for .stagger-children, .stagger-sections, .animate-fade-in-up
-
-### Missing Animations (needed by PRD)
-
-| Animation | Keyframe | Utility Class | Status |
-|-----------|----------|---------------|--------|
-| shimmer | shimmer (translateX) | .animate-shimmer | MISSING — US-013 |
-| fade-out | fade-out (opacity 1→0) | .animate-fade-out | MISSING — US-013 |
-| slide-out-left | slide-out-left | .animate-slide-out-left | MISSING — US-013 |
-| shake | shake (translateX ±4px) | .animate-shake | MISSING — US-013 |
-| cursor-blink for typewriter | Already exists | .cursor-blink | EXISTS (verify for typewriter cursor) |
-
-### Shared Hooks Available
-
-| Hook | File | Purpose |
-|------|------|---------|
-| useMobile | use-mobile.ts | Responsive breakpoint detection |
-| useTimezone | use-timezone.ts | User timezone preferences |
-| useInfiniteScroll | use-infinite-scroll.ts | Infinite scroll pagination |
-| useImageUpload | use-image-upload.ts | Image upload to S3 |
-| useDebouncedMutation | use-debounced-mutation.ts | Debounced tRPC mutations |
-| useImportProgress | use-import-progress.ts | Import progress tracking |
-| useTradingContext | use-trading-context.ts | Active account context |
-
-### Issues to Fix During Redesign
-
-1. **Hardcoded #00d4ff** — appears in chat-message.tsx, report-interface.tsx, message-renderer.tsx. Should use text-accent/bg-accent CSS variables.
-2. **No mobile sidebar** — ChatSidebar uses `hidden sm:flex`, needs Sheet drawer for mobile (US-007)
-3. **Fake progress bar** — report-interface.tsx uses hardcoded 15%/60% widths. Needs real pipeline data (US-010A-D)
-4. **No typewriter effect** — AI messages render instantly (US-004)
-5. **Basic empty state** — chat uses simple Brain icon + text, needs richer branded welcome (US-001)
-6. **No message animations** — messages appear without transitions (US-002)
-7. **No mode transition animation** — chat/report switches are instant (US-014)
-8. **animate-blink used but not defined** — chat-message.tsx uses `animate-blink` class but globals.css only defines `.cursor-blink::after` with blink keyframe
-
-- **Learnings for future iterations:**
-  - Sheet component is already installed — don't waste time installing it
-  - animate-blink is used in chat but NOT as a Tailwind class — it's a custom `.cursor-blink::after` pattern. New bounce dots (US-002) need a different approach using Tailwind's built-in animate-bounce with stagger delays
-  - The existing stagger-children pattern in globals.css can be reused for empty state card entrance animations
-  - All suggested queries/prompts come from src/lib/constants/ai.ts — never hardcode
-  - The message-renderer.tsx uses react-markdown with remark-gfm — custom components for each HTML element
-  - Pre-existing Biome errors won't block us as they're in unrelated files (archive JSON + a11y in sidebar)
-- New animation utilities available: .animate-shimmer, .animate-fade-out, .animate-slide-out-left, .animate-shake
-- All new animations respect prefers-reduced-motion (duration: 0.01ms)
 ---
 
-## 2026-02-12 - US-013
-- What was implemented: Added shimmer, fade-out, slide-out-left, shake keyframes and utility classes to globals.css. Updated prefers-reduced-motion to cover all new animations.
-- Files changed: src/styles/globals.css
+## 2026-02-13 - US-000 Audit
+- Completed full codebase audit for MDX Report Viewer migration
+- Files audited:
+  - src/components/analytics/ — 39 components, cataloged prop interfaces and dependencies
+  - src/app/(protected)/ai/_components/message-renderer.tsx — uses react-markdown + remark-gfm
+  - src/trigger/generate-ai-report.ts — tool-calling loop, PDF generation, email sending
+  - src/lib/ai/report-pdf.ts — @react-pdf/renderer pipeline + S3 upload (765 lines, to be deleted)
+  - src/lib/ai/report-email.ts — raw HTML email with DOWNLOAD PDF button
+  - src/server/api/routers/ai.ts — 6 endpoints, pdfUrl referenced in getReport, listReports, getReportStatus
+  - src/lib/ai/prompts/trading-analyst.ts — report mode instructions, chart theming
+  - src/lib/ai/tools/index.ts — 4 tools (run_query, call_analytics, get_market_data, run_python)
+  - src/server/db/schema.ts — aiReports table with pdfUrl, pdfKey columns
+  - src/app/(protected)/ai/_components/report-interface.tsx — progress stages reference generating_pdf, uploading
+- Key findings:
+  - Chart components that need MDX wrappers: EquityCurve, MonthlyChart, SymbolDistributionChart, DayOfWeekChart, HourHeatmap, SessionChart, RMultipleChart, MonteCarloChart, CalendarHeatmap, DrawdownTable, SymbolTable
+  - MetricCard: inline props only (no dataRef needed)
+  - SessionChart uses useSettingsStore() — MDX wrapper needs to pass timezone as data
+  - No existing MDX dependencies in the project — need next-mdx-remote
+  - react-markdown already installed (used by message-renderer) — can be fallback for MDX render failures
+  - @react-pdf/renderer to be removed, html2canvas-pro + jspdf to be added for client-side PDF export
 - **Learnings for future iterations:**
-  - Existing fade-in-up uses translateY(20px), not 8px as PRD specifies. Kept as-is since 20px is the established project standard. Individual stories can adjust with inline styles if needed.
-  - cursor-blink is a pseudo-element class (.cursor-blink::after), not a standard animation class. The typewriter story (US-004) should use this class directly on a span.
-  - prefers-reduced-motion: using `animation-duration: 0.01ms !important` instead of `animation: none` for new classes, to allow animation-fill-mode: forwards to still apply final state.
+  - Pre-existing Biome errors in the codebase (3 formatting errors) — not caused by our changes
+  - Build passes cleanly with Turbopack
+  - AG Charts used for all complex visualizations (not Recharts or Chart.js)
+  - Drizzle jsonb() column returns parsed object — no JSON.parse needed on read
 ---
 
-## 2026-02-12 - US-010A
-- What was implemented: Added 4 new columns to aiReports table: progressStage, currentRound, totalToolCalls, chartsGenerated. Ran db:push.
-- Files changed: src/server/db/schema.ts
+## 2026-02-13 - US-001 Schema Changes
+- Added content (text) and dataArtifacts (jsonb) columns to aiReports
+- Removed pdfUrl and pdfKey columns from aiReports
+- Fixed all TypeScript references to removed columns:
+  - src/server/api/routers/ai.ts: removed pdfUrl from getReportStatus select
+  - src/app/(protected)/ai/_components/report-interface.tsx: replaced PDF download with View Report link
+  - src/trigger/generate-ai-report.ts: removed pdfUrl/pdfKey set() call, updated email to use viewer URL
+  - src/lib/ai/schema-context.ts: updated column docs
+  - tests/integration/ai.test.ts: removed pdfUrl assertion
+- Applied via direct SQL (drizzle-kit push has interactive prompts incompatible with CLI)
 - **Learnings for future iterations:**
-  - progressStage is a free-text column (not enum) — values are: queued, building_context, analyzing, generating_pdf, uploading, complete, failed
-  - The NOTICE about truncated FK identifier is expected (per AGENTS.md) — safe to ignore
+  - drizzle-kit push prompts interactively when columns are removed+added (asks if rename) — use direct SQL for CLI automation
+  - Schema column types auto-infer TypeScript types via $inferSelect/$inferInsert
+  - jsonb column needs $type<> for TypeScript typing: jsonb('data_artifacts').$type<Record<string, unknown>>()
 ---
 
-## 2026-02-12 - US-010B
-- What was implemented: Added updateProgress helper and 7 progress emission points in generate-ai-report.ts task. Covers building_context, analyzing, per-round, generating_pdf, uploading, complete, and failed stages.
-- Files changed: src/trigger/generate-ai-report.ts
+## 2026-02-13 - US-002 AI Tool store_report_data
+- Created src/lib/ai/tools/store-report-data.ts with tool definition + executor
+- Updated src/lib/ai/tools/index.ts:
+  - Added AI_REPORT_TOOLS array (base tools + store_report_data)
+  - Added getToolsForMode() helper for mode-based tool selection
+  - Extended ToolContext with optional dataStore Map<string, unknown>
+  - Added store_report_data case to executeTool switch
 - **Learnings for future iterations:**
-  - generateAndUploadPdf is a helper that handles both PDF generation and S3 upload + email. The uploading progress is emitted inside this function after generateReportPdf returns.
-  - Both normal completion and fallback (max rounds) paths need progress updates — don't forget the fallback path
-  - The updateProgress helper uses a fire-and-forget pattern with empty catch — this ensures pipeline never blocks on progress tracking
+  - Tool definitions follow OpenAI function-calling format: { type: "function", function: { name, description, parameters } }
+  - ToolContext is the shared context passed to all tool executors — extend it for new needs
+  - getToolsForMode() is the API for callers (trigger task, tRPC sendMessage) to get mode-specific tools
 ---
 
-## 2026-02-12 - US-010C
-- What was implemented: Added 4 new progress columns to getReportStatus query: progressStage, currentRound, totalToolCalls, chartsGenerated.
+## 2026-02-13 - US-003 AI System Prompt MDX Catalog
+- Added MDX_COMPONENT_CATALOG const to src/lib/ai/prompts/trading-analyst.ts
+- Catalog documents 17 components across 3 categories:
+  - Chart components (8): EquityCurve, MonthlyChart, SymbolDistributionChart, DayOfWeekChart, HourHeatmap, SessionChart, RMultipleChart, MonteCarloChart
+  - Display components (5): CalendarHeatmap, DrawdownTable, SymbolTable, MetricCard, MetricGrid
+  - Report-specific (4): Callout, DataTable, ChartImage (+ MetricGrid as wrapper)
+- Each component documented with: JSX usage, dataRef pattern, full data shape table
+- Includes 2 complete examples showing full flow: call_analytics → store_report_data → MDX component usage
+- Updated REPORT_MODE_INSTRUCTIONS to prioritize MDX components over run_python
+- MDX_COMPONENT_CATALOG conditionally included only in report mode via spread in buildSystemPrompt sections array
+- **Learnings for future iterations:**
+  - buildSystemPrompt uses a sections array joined with \n\n — add mode-specific sections via conditional spread
+  - RMultipleChart has a unique data shape: { buckets: [...], stats: {...} } — not a flat array
+  - MonteCarloChart takes a single result object, not an array
+  - MetricCard uses inline props (no dataRef) — tooltip is required with { what, why, benchmark }
+---
+
+## 2026-02-13 - US-004 Update Trigger.dev Task
+- Replaced PDF generation pipeline with MDX content + data artifacts storage
+- Changes to src/trigger/generate-ai-report.ts:
+  - Created dataStore Map<string, unknown> at start of task run
+  - Imported and used getToolsForMode('report') instead of AI_TOOLS for report-specific tools
+  - Passed dataStore to executeTool context so store_report_data can populate it
+  - Both normal completion and fallback paths now save content + dataArtifacts to aiReports
+  - Removed generateAndUploadPdf function and all PDF-related logic
+  - Removed extractChartUrls and extractCodeArtifacts helper functions
+  - Removed generateReportPdf import from report-pdf.ts
+  - Removed ERR_AI_PDF_FAILED from error mapping (no longer relevant)
+  - Created sendReportNotification helper (sends email with viewer URL)
+  - Progress stages now go: queued → building_context → analyzing → complete (no more generating_pdf/uploading)
+  - chartsGenerated now tracks dataStore.size (number of data artifacts)
+- **Learnings for future iterations:**
+  - dataStore Map is the bridge between store_report_data tool calls and final persistence — Object.fromEntries(dataStore) gives the JSONB-ready object
+  - sendReportEmail still uses downloadUrl param name even though it's now a viewer URL — will be cleaned up in US-009 when React Email replaces the template
+  - Biome requires compact ternaries — don't split across 3 lines
+---
+
+## 2026-02-13 - US-005 Update tRPC Endpoints
+- Added getReportContent query to ai.ts: returns id, title, content, dataArtifacts, status, createdAt, completedAt, model, tokensUsed, chartsGenerated, prompt
+- Validates user ownership via eq(aiReports.userId, ctx.user.id), throws ERR_REPORT_NOT_FOUND if not found/not owned
+- Updated listReports to map reports with hasContent boolean flag (content != null && content.length > 0)
+- getReport and getReportStatus already correct — pdfUrl/pdfKey columns removed in US-001, content/dataArtifacts auto-included via findFirst without column selection
 - Files changed: src/server/api/routers/ai.ts
 - **Learnings for future iterations:**
-  - getReportStatus uses columns: {} selection pattern — just add the column name with true value
-  - Polling interval is already 5s in the frontend (report-interface.tsx)
+  - Drizzle findFirst without `columns` option returns ALL columns — no need to explicitly add new columns to existing queries that don't use column selection
+  - getReportStatus uses explicit `columns` selection — new columns must be explicitly added there if needed
+  - hasContent flag uses != null check (not !== null) to handle both null and undefined
 ---
 
-## 2026-02-12 - US-010D
-- What was implemented: Added 2 integration tests for report progress fields in existing ai.test.ts: default values test and response shape test.
-- Files changed: tests/integration/ai.test.ts
+## 2026-02-13 - US-006 Integration Tests for Report Viewer Endpoints
+- Created tests/integration/report-viewer.test.ts with 10 tests across 3 describe blocks
+- Test coverage:
+  - getReportContent: returns content+dataArtifacts for completed report, response shape validation, null content for queued report, 404 for non-existent report, ownership rejection
+  - listReports hasContent: true for reports with content, false for reports without
+  - getReport content: includes content field, no pdfUrl/pdfKey fields, includes dataArtifacts
+- Used createTestUser (not setupTrader) since report tests only need users, not accounts/trades
+- Created helper function createCompletedReport() that uses startReport + direct DB update to simulate completed reports with content and dataArtifacts
+- Mocked same dependencies as ai.test.ts: OpenRouter client, context builders, Trigger.dev task
+- Files changed: tests/integration/report-viewer.test.ts (new)
 - **Learnings for future iterations:**
-  - Pre-existing test failure: "should use default report model when none specified" expects DEFAULT_CHAT_MODEL but startReport uses DEFAULT_REPORT_MODEL. Not related to our changes.
-  - Tests use startReport which creates a report in "queued" state — perfect for testing defaults
-  - Add tests to existing describe blocks rather than creating new test files when possible
+  - To test report endpoints with content, you need to startReport() first (creates the conversation + report) then update the report directly via DB to set content, dataArtifacts, status: "complete"
+  - Biome enforces single-line imports when there's only one import — don't use multi-line for single imports
+  - Biome prefers single quotes for strings containing double quotes (avoids escaping)
+  - Docker/OrbStack must be running for integration tests (Testcontainers)
 ---
 
-## 2026-02-12 - US-001
-- What was implemented: Redesigned chat empty state with Sparkles icon, time-aware greeting (Clerk firstName), capability pills, polished suggested query cards with icons and ArrowRight hover, keyboard shortcut hint.
-- Files changed: src/app/(protected)/ai/_components/chat-interface.tsx
+## 2026-02-13 - US-007 React Email Setup
+- Installed @react-email/components@1.0.7
+- Created src/emails/components/base-layout.tsx with Terminal-themed BaseLayout component
+- Component uses: Html, Head, Body, Container, Section, Text, Hr, Preview from @react-email/components
+- Props: { preview: string, children: React.ReactNode }
+- Styling: dark bg (#050505), monospace fonts (Courier New fallback), chartreuse header border (#d4ff00)
+- Files changed: package.json, bun.lock, src/emails/components/base-layout.tsx (new)
 - **Learnings for future iterations:**
-  - useUser() from @clerk/nextjs gives access to user.firstName for personalization
-  - SUGGESTED_CHAT_QUERIES is a readonly array — indexing returns string | undefined. Use nullish coalescing with fallback strings.
-  - For animation-delay on staggered elements, use inline style={{ animationDelay: "Nms" }} rather than custom classes when each element has a unique delay
-  - bg-white/[0.02] is the Tailwind v4 way to do very subtle white backgrounds (2% opacity)
+  - @react-email/components re-exports from individual packages (@react-email/body, @react-email/html, etc.)
+  - React Email uses inline CSS objects (React.CSSProperties), not className — email clients don't support CSS classes
+  - Import React types with `import type * as React from "react"` for CSSProperties (verbatimModuleSyntax requires type import)
 ---
 
-## 2026-02-12 - US-002
-- What was implemented: Redesigned chat messages — user with left border + $ prefix, AI in subtle cards with → prefix + accent. Bouncing dots loading. Copy button in card footer. Pending at opacity-70. animate-fade-in-up. Removed all hardcoded #00d4ff from chat-message.tsx.
-- Files changed: src/app/(protected)/ai/_components/chat-message.tsx, src/app/(protected)/ai/_components/chat-interface.tsx, src/styles/globals.css
+## 2026-02-13 - US-008 Report Completion Email Template
+- Created src/emails/report-complete.tsx using BaseLayout wrapper
+- Component: ReportCompleteEmail with props { reportTitle, reportUrl, metadata? }
+  - Preview text: "Your AI analysis report is ready — view it now"
+  - Report title displayed in ice blue (#00d4ff) monospace inside dark card
+  - VIEW REPORT Button component with chartreuse bg (#d4ff00), dark text
+  - Subtitle: "Your report is permanently available in EdgeJournal"
+  - Optional metadata section (generationTime, chartsGenerated) in dark card
+  - Fallback link text with reportUrl in ice blue
+- Exported async renderReportCompleteEmail() that returns HTML string via render() from @react-email/components
+- Files changed: src/emails/report-complete.tsx (new)
 - **Learnings for future iterations:**
-  - Biome `useSortedClasses` rule auto-fixes class ordering. Run `bunx biome check --write` after manual edits.
-  - Don't use `!important` in CSS — Biome's `noImportantStyles` rule rejects it. Use `animation: none` instead of `animation-duration: 0.01ms !important` for reduced motion.
-  - Removed Tooltip/TooltipProvider from chat-message.tsx — copy button now shows text label directly. Simpler and fewer deps.
-  - The existing Loader2 spinner was replaced with 3 bouncing dots for the thinking state — matches terminal aesthetic better.
+  - Biome enforces alphabetical import ordering within named imports — use `Button, Link, render, Section, Text` not grouped by type
+  - React Email's render() is async (returns Promise<string>) — renderReportCompleteEmail must be async
+  - Button component from @react-email/components handles email-safe CTA buttons with href prop
+  - Link component from @react-email/components handles email-safe anchor links
 ---
 
-## 2026-02-12 - US-003
-- What was implemented: Extracted ToolBadges component with overflow handling, Check icon for completed state, uppercase tracking-wider styling.
-- Files changed: src/app/(protected)/ai/_components/chat-message.tsx
+## 2026-02-13 - US-009 Update Email Delivery — Use React Email Template
+- Replaced raw HTML email template in report-email.ts with React Email renderReportCompleteEmail
+- Changes to src/lib/ai/report-email.ts:
+  - Removed buildReportEmailHtml function (entire raw HTML template — 80+ lines)
+  - Removed escapeHtml helper function (no longer needed — React Email handles escaping)
+  - Added import of renderReportCompleteEmail from @/emails/report-complete
+  - Updated sendReportEmail params: downloadUrl → reportUrl, added optional metadata param
+  - Now renders HTML via await renderReportCompleteEmail({ reportTitle, reportUrl, metadata })
+- Changes to src/trigger/generate-ai-report.ts:
+  - Updated sendReportNotification helper: added optional metadata param
+  - Both call sites (normal completion + fallback) now pass { chartsGenerated: dataStore.size } metadata
+- Files changed: src/lib/ai/report-email.ts, src/trigger/generate-ai-report.ts
 - **Learnings for future iterations:**
-  - Tool badges are always "completed" state since they're stored after AI response. Running state only relevant during streaming.
-  - MAX_VISIBLE_TOOLS = 3 with "+N more" expandable button handles overflow cleanly.
+  - Biome enforces alphabetical ordering of imports — @/emails/report-complete comes before @/env
+  - renderReportCompleteEmail is async (React Email render() returns Promise<string>) — must await it
+  - React Email handles HTML escaping internally — no need for manual escapeHtml when using React components
 ---
 
-## 2026-02-12 - US-004
-- What was implemented: Created useTypewriter hook with adaptive speed (4ms first 50 chars, 8ms base), instant code block rendering, 50ms markdown heading pauses, Escape/click to skip. Integrated into ChatMessage with isLatest/isFromHistory props. Blinking cursor via cursor-blink class.
-- Files changed: src/app/(protected)/ai/_hooks/use-typewriter.ts (new), src/app/(protected)/ai/_components/chat-message.tsx, src/app/(protected)/ai/_components/chat-interface.tsx
+## 2026-02-13 - US-010 MDX Report Component Library
+- Created src/components/mdx/ directory with 7 files:
+  - provider.tsx: ReportDataProvider context + useReportData(refId) hook
+  - chart-wrappers.tsx: 11 wrapper components (MdxEquityCurve, MdxMonthlyChart, MdxSymbolDistributionChart, MdxDayOfWeekChart, MdxHourHeatmap, MdxSessionChart, MdxRMultipleChart, MdxMonteCarloChart, MdxCalendarHeatmap, MdxDrawdownTable, MdxSymbolTable)
+  - components.tsx: mdxComponents map exporting all 17 components for next-mdx-remote
+  - metric-grid.tsx: responsive grid (grid-cols-2 sm:3 lg:4 gap-2)
+  - callout.tsx: note/tip/warning/important with Terminal-styled borders, icons, colors
+  - data-table.tsx: auto-detects numeric columns for right-alignment, P&L coloring via formatCurrency
+  - chart-image.tsx: clickable lightbox with zoom-in/zoom-out cursor states
+- MetricCard passed through directly from @/components/analytics (inline props, no dataRef needed)
+- All chart wrappers use DataFallback component for missing data: "[ComponentName: data not available]"
+- RMultipleChart wrapper handles unique { buckets, stats } data shape (not a flat array)
+- MonteCarloChart wrapper handles single result object (not an array)
+- Used `as never` type assertions in mdxComponents map to satisfy Record<string, ComponentType> typing
+- Files changed: 7 new files in src/components/mdx/
 - **Learnings for future iterations:**
-  - useTypewriter hook returns { displayedText, isComplete, skip } — pass displayedText to MessageRenderer instead of raw content
-  - Track "isFromHistory" via a lastSentAt timestamp: 0 means loaded from history, >0 means user just sent a message. Reset to 0 on conversation switch/new conversation.
-  - Biome has both `useKeyWithClickEvents` and `noStaticElementInteractions` rules — both need suppression for click-to-skip on a div
-  - The cursor-blink class is a pseudo-element (.cursor-blink::after) but we use it directly on a span with bg-accent for the block cursor
+  - mdx/types module requires next-mdx-remote to be installed — use Record<string, ComponentType> until then
+  - Biome enforces sorted Tailwind classes — use its auto-fix with `--write`
+  - Biome flags `<img>` as lint/performance/noImgElement — suppress with biome-ignore for external URL images
+  - Biome prefers `<button>` over `<div role="button">` — use useSemanticElements
+  - `data[0]` in strict TS needs nullish coalescing even after length check — use `data[0] ?? {}`
+  - Analytics components import from barrel @/components/analytics — all 11 chart components available there
+  - SessionChart, HourHeatmap, CalendarHeatmap use useSettingsStore internally — MDX wrappers just pass data through, store handles timezone
 ---
 
-## 2026-02-12 - US-005
-- What was implemented: Redesigned ChatInput as composer-style container. Focus border transition, animate-pulse shimmer during loading, send/stop button crossfade, Cmd/Ctrl+Enter, auto-focus, global / shortcut, keyboard hints, character count.
-- Files changed: src/app/(protected)/ai/_components/chat-input.tsx, src/app/(protected)/ai/_components/chat-interface.tsx
+## 2026-02-13 - US-011 Report Viewer Page
+- Created /ai/reports/[reportId] page with 3 files:
+  - page.tsx: Server component that fetches report via tRPC getReportContent, handles generating/failed/complete states, renders header with back button, title, model, date, action buttons
+  - _components/report-viewer-content.tsx: Client component that serializes MDX via next-mdx-remote/serialize, renders with MDXRemote client component inside ReportDataProvider, falls back to react-markdown on MDX failure
+  - _components/copy-link-button.tsx: Client component for copy-to-clipboard link functionality
+- Installed next-mdx-remote@6.0.0
+- Architecture: Server page fetches data → passes to client component → client serializes MDX on mount → renders with custom components from mdxComponents map
+- Table of Contents: extracts headings from markdown with regex, renders sticky sidebar on xl+ viewports, uses IntersectionObserver for active heading tracking
+- Error handling: MDX compile failure falls back to react-markdown, notFound() for missing reports, progress indicator for generating reports
+- Header: back link to /ai, report title, model badge, completion date, Download PDF placeholder (disabled, for US-012), Copy Link button
+- Files changed: package.json, bun.lock, 3 new page/component files
 - **Learnings for future iterations:**
-  - ChatInput props expanded: added isLoading and onStop. Replaced disabled prop with isLoading for send/stop toggle.
-  - The / shortcut listener checks document.activeElement to avoid capturing when input already focused
-  - transition-[height] duration-150 on textarea handles smooth paste expansion
+  - next-mdx-remote v6 has separate RSC (next-mdx-remote/rsc) and client (next-mdx-remote) APIs — use client API when MDX components need React context
+  - MDXRemote client requires pre-serialized source via serialize() — can't take raw MDX string directly
+  - serialize() is async and should be done client-side when components need context (can't wrap RSC MDXRemote in client context provider)
+  - Server page params in Next.js 15 are Promise — must await: `const { reportId } = await params`
+  - next-mdx-remote/serialize accepts remarkPlugins in mdxOptions — pass remark-gfm for GFM tables
+  - Biome auto-fix (`--write`) handles formatting issues like multi-line→single-line JSX
+  - notFound() from next/navigation triggers the closest not-found.tsx boundary
 ---
 
-## 2026-02-12 - US-006
-- What was implemented: Redesigned ChatSidebar with w-64, date grouping, Plus icon button with Tooltip, empty state with MessageSquare, active border highlight, proper button elements for a11y.
-- Files changed: src/app/(protected)/ai/_components/chat-sidebar.tsx
+## 2026-02-13 - US-012 Client-Side PDF Export
+- Installed html2canvas-pro@1.6.7 and jspdf@4.1.0
+- Created src/lib/export/pdf-export.ts with exportReportToPdf(element, title) function:
+  - Captures report content DOM element via html2canvas-pro (scale 2x, dark bg #050505, CORS enabled)
+  - Generates multi-page A4 PDF via jsPDF with page slicing (source canvas split into page-sized chunks)
+  - Branded header on first page: "EDGEJOURNAL // AI ANALYSIS REPORT" in chartreuse + report title
+  - Footer on each page: page number (centered, courier font)
+  - Downloads as {slug}-report.pdf (title slugified, max 50 chars)
+- Created download-pdf-button.tsx client component:
+  - Uses dynamic import() of pdf-export for lazy loading (large dependencies not loaded until needed)
+  - Queries DOM for [data-testid="report-viewer-content"] element
+  - Loading state: Loader2 spinner + "Generating..." text
+  - Silent catch on failure (html2canvas may not support all rendering features)
+- Updated page.tsx:
+  - Replaced disabled PDF placeholder button with DownloadPdfButton for completed reports
+  - Added showPdfDownload prop to ReportHeader (only shown for completed reports)
+  - DownloadPdfButton imported as new client component
+- Added print CSS to globals.css:
+  - @media print rules hiding ToC sidebar, header actions, and back button
+  - Content area max-width and padding reset for print
+  - Body background/color override for print
+- Added print:hidden Tailwind class to ToC sidebar wrapper and actions div
+- Files changed: package.json, bun.lock, src/lib/export/pdf-export.ts (new), download-pdf-button.tsx (new), page.tsx, report-viewer-content.tsx, globals.css
 - **Learnings for future iterations:**
-  - Biome's useSemanticElements rule rejects role="button" on div — convert to actual button elements
-  - Nested interactive elements (delete button inside conversation button) require span with role="button" + biome-ignore
-  - Date grouping uses getDateGroup helper comparing against today/yesterday/weekAgo dates
-  - Conversation Drizzle query returns createdAt from the table, no schema changes needed
+  - html2canvas-pro captures DOM as canvas — scale: 2 gives good quality for PDF
+  - jsPDF addImage works with sliced canvases for multi-page — create temp canvas per page, draw slice from source
+  - Dynamic import() in button click handler is the right pattern for large client-only deps (html2canvas-pro + jspdf = ~800KB)
+  - Biome CSS lint flags !important — for print styles, use without !important or suppress per-line
+  - Biome enforces sorted Tailwind responsive/print variant classes — xl:block before print:hidden
+  - biome-ignore at @media level doesn't work for CSS properties — Biome requires per-line suppression for CSS
+  - Query DOM via data-testid attribute for reliable element selection from sibling components
 ---
 
-## 2026-02-12 - US-007
-- What was implemented: Mobile sidebar drawer using Sheet component from left side. Hamburger button in ModelSelector header (sm:hidden). ChatSidebar reused with isMobile prop.
-- Files changed: src/app/(protected)/ai/_components/chat-interface.tsx, src/app/(protected)/ai/_components/chat-sidebar.tsx, src/app/(protected)/ai/_components/model-selector.tsx
-- **Learnings for future iterations:**
-  - Sheet component accepts side="left" prop for left drawer
-  - ChatSidebar isMobile prop removes hidden sm:flex and border/rounded to fill Sheet content
-  - setTimeout 100ms delay before closing drawer lets user see selection highlight first
-  - ModelSelector now accepts onMenuClick prop for mobile menu
----
-
-## 2026-02-12 - US-008
-- What was implemented: Redesigned ModelSelector toggle with MessageSquare/FileText icons, border-white/10 container, bg-white/[0.01], transition-all.
-- Files changed: src/app/(protected)/ai/_components/model-selector.tsx
-- **Learnings for future iterations:**
-  - ModelSelector is used by both ChatInterface and ReportInterface — keep onMenuClick optional
-  - Active report count badge on Reports tab is deferred to US-011 when report history is built
----
-
-## 2026-02-12 - US-009
-- What was implemented: Polished message renderer — code block header with language label + copy, tables with alternating rows + hover, links with text-accent + ExternalLink icon, blockquotes with accent bg, inline code bg-white/5.
-- Files changed: src/app/(protected)/ai/_components/message-renderer.tsx
-- **Learnings for future iterations:**
-  - Accessing children.props in ReactMarkdown's pre component requires type narrowing: check typeof children === "object" && "props" in children, then cast props as {className?: string}
-  - Removed all hardcoded #00d4ff from links — now uses text-accent
-  - marker:text-accent/50 on ordered lists colors the list numbers
----
-
-## 2026-02-12 - US-010/011/012
-- What was implemented: Complete report interface redesign — form section, history panel, and responsive layout all in one pass since they share the same file.
+## 2026-02-13 - US-013 Update Report Interface
+- Updated report-interface.tsx to remove obsolete PDF-related progress stages
+- Changes:
+  - Removed `generating_pdf` and `uploading` from PROGRESS_STAGE_LABELS constant
+  - Removed `generating_pdf` (80%) and `uploading` (95%) cases from getProgressWidth function
+  - Updated `analyzing` stage to scale from 20% to 90% (was 20% to 70%) — fills the gap left by removed stages
+  - `complete` remains at 100%
+  - Removed `generating_pdf` chart count display from inline progress section
+  - View Report link to /ai/reports/[reportId] was already in place from US-001 schema changes
+  - No pdfUrl references remained in the component
 - Files changed: src/app/(protected)/ai/_components/report-interface.tsx
 - **Learnings for future iterations:**
-  - QUICK_DATE_PRESETS helper uses getDatePreset() to compute start/end dates. "This month" uses days=0, "Last month" uses days=-1.
-  - getProgressWidth maps pipeline stages to 0-100%. analyzing stage scales linearly with currentRound/totalRounds between 20-70%.
-  - Removed Button shadcn dependency — using native button elements with custom Tailwind classes is simpler and matches design system better
-  - Date validation clears on any date input change to avoid stale error messages
-  - RefreshCw spin: use isRefreshing state with setTimeout(500ms) to auto-stop the animation
-  - All hardcoded #00d4ff replaced with text-accent/bg-accent in report interface
+  - US-001 already handled most of the View Report link migration — this story was mostly about cleaning up progress stage labels/percentages
+  - Progress bar scale math: `20 + Math.min(round/totalRounds, 1) * 70` gives 20% to 90% range for analyzing stage
 ---
 
-## 2026-02-12 - US-014
-- What was implemented: Overall layout polish — overflow-hidden on page.tsx to prevent double scrollbars, thin 4px scrollbar styling scoped to [data-testid="ai-page"] in globals.css.
-- Files changed: src/app/(protected)/ai/page.tsx, src/styles/globals.css
+## 2026-02-13 - US-014 Remove Old PDF Generation Code
+- Deleted src/lib/ai/report-pdf.ts (765 lines of @react-pdf/renderer pipeline + S3 upload)
+- Uninstalled @react-pdf/renderer dependency
+- Removed ERR_AI_PDF_FAILED from src/lib/constants/errors.ts
+- Updated src/server/db/AGENTS.md to reflect MDX-based report system instead of PDF references
+- Verified no remaining imports of generateReportPdf or report-pdf anywhere in src/
+- Previous stories (US-004, US-013) had already cleaned up:
+  - generateReportPdf import in generate-ai-report.ts
+  - ERR_AI_PDF_FAILED error mapping in generate-ai-report.ts
+  - generating_pdf/uploading progress stages in report-interface.tsx
+- Files changed: src/lib/ai/report-pdf.ts (deleted), package.json, bun.lock, src/lib/constants/errors.ts, src/server/db/AGENTS.md
 - **Learnings for future iterations:**
-  - Scope custom scrollbar CSS using data-testid selectors to avoid polluting global styles
-  - ::-webkit-scrollbar pseudo-elements need three parts: ::-webkit-scrollbar (width), ::-webkit-scrollbar-track (background), ::-webkit-scrollbar-thumb (handle)
-  - Most polish items (/ shortcut, loading skeletons, #00d4ff removal) were already done in prior stories
+  - When removing a feature, prior stories in the same PRD may have already cleaned up most references — always grep first to avoid no-op changes
+  - S3 upload logic was self-contained in report-pdf.ts — no shared S3 utils needed cleanup
+  - AGENTS.md files should be updated when the architecture they describe changes
 ---
 
-## 2026-02-12 - US-015/016
-- What was implemented: Updated E2E tests for both chat and report interfaces. Added new smoke tests for redesigned elements.
-- Files changed: tests/e2e/ai-chat.spec.ts, tests/e2e/ai-report.spec.ts
-- **New chat tests:** greeting regex (Good morning/afternoon/evening), capability pills visibility, / keyboard shortcut focuses input, sidebar empty state, mobile hamburger opens drawer
-- **New report tests:** quick date presets fill date fields, suggested prompts populate textarea (not send), form shows all sections, history visible with empty state check
+## 2026-02-13 - US-015 E2E Tests for Report Viewer Page
+- Updated tests/e2e/report-viewer.spec.ts with 3 additional MDX component tests
+- Added tests:
+  - MetricCard/MetricGrid render verification (checks for mdx-metric-grid testid)
+  - Callout component styling validation (checks border-l-2 class for left border indicator)
+  - DataTable row rendering (checks for mdx-data-table testid and tr elements)
+- All 3 tests are best-effort: verify components if present in report content, skip silently if not
+- Total test count: 13 tests across 3 describe blocks (Not Found, Unauthenticated, Authenticated)
+- Existing tests already covered: page structure, title/metadata, back button navigation, MDX headings, action buttons, PDF download, ToC responsive, 404, auth redirect
+- All data-testid attributes were already in place from US-010 (MDX components), US-011 (viewer page), US-012 (PDF button)
+- Files changed: tests/e2e/report-viewer.spec.ts
 - **Learnings for future iterations:**
-  - Follow AGENTS.md: E2E tests are smoke tests only. Don't test styling details, validation states, or specific UI element appearances.
-  - Mobile viewport testing: use page.setViewportSize({ width: 375, height: 812 }) before navigation
-  - For Sheet/drawer content, use .nth(1) to get the second instance of a testid (first is desktop, second is mobile drawer)
-  - Use graceful skip pattern: check count of elements, only assert if present, otherwise pass
+  - MDX component E2E tests depend on AI-generated content — use best-effort pattern (check count > 0, skip if absent)
+  - Biome requires compact function signatures — single-parameter destructuring goes on one line: `async ({ page }, testInfo) =>`
+  - data-testid attributes on MDX components (mdx-callout-{type}, mdx-data-table, mdx-metric-grid) enable reliable E2E selection
+---
+
+## 2026-02-13 - US-016 E2E Tests for Updated Report Interface
+- Created tests/e2e/report-interface-update.spec.ts with 6 tests across 3 describe blocks
+- Test coverage:
+  - View Report Flow (2 tests): completed reports show View Report button not Download PDF, View Report navigates to /ai/reports/[reportId]
+  - Progress Stages (3 tests): no "Compiling report"/"Finalizing" labels present, progress bar renders without PDF-related stages, status labels are valid (QUEUED/GENERATING/COMPLETE/FAILED only)
+  - Unauthenticated (1 test): redirects to sign-in
+- Added data-testid attributes to report-interface.tsx:
+  - `report-progress-${report.id}` on progress container
+  - `report-progress-stage-${report.id}` on progress stage label
+  - `report-progress-bar-${report.id}` on progress bar container
+- Helper function navigateToReportInterface() shared across tests for DRY navigation
+- Files changed: src/app/(protected)/ai/_components/report-interface.tsx, tests/e2e/report-interface-update.spec.ts (new)
+- **Learnings for future iterations:**
+  - Edit tool in Claude Code struggles with tab-indented files — use python3 string replace for reliable edits in tab-indented TSX
+  - Biome auto-fix (`--write`) handles multi-line→single-line formatting for compact expressions
+  - Progress-related data-testid attributes use dynamic report.id suffix to support multiple active reports simultaneously
+  - E2E tests for progress stages are best-effort since active reports may not be present — tests pass gracefully when no active reports exist
 ---

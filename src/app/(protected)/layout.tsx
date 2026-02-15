@@ -27,7 +27,7 @@ export default async function ProtectedLayout({
 				<ImportProgressProvider>
 					<SidebarProvider>
 						<AppSidebar />
-						<SidebarInset className="bg-background">
+						<SidebarInset className="min-w-0 overflow-hidden bg-background">
 							<header className="relative flex h-12 shrink-0 items-center gap-2 border-border bg-secondary/50 px-4">
 								{/* Subtle grid pattern */}
 								<div className="grid-bg pointer-events-none absolute inset-0 opacity-30" />

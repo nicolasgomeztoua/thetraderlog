@@ -10,9 +10,15 @@ import * as schema from "./schema";
  */
 const globalForDb = globalThis as unknown as {
 	conn: postgres.Sql | undefined;
+	readConn: postgres.Sql | undefined;
 };
 
 const conn = globalForDb.conn ?? postgres(env.DATABASE_URL);
 if (env.NODE_ENV !== "production") globalForDb.conn = conn;
 
+const readConn =
+	globalForDb.readConn ?? postgres(env.DATABASE_READ_URL ?? env.DATABASE_URL);
+if (env.NODE_ENV !== "production") globalForDb.readConn = readConn;
+
 export const db = drizzle(conn, { schema });
+export const dbReadOnly = drizzle(readConn, { schema });

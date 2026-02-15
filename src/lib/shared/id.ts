@@ -6,6 +6,9 @@ const nanoid = customAlphabet(alphabet, 16);
 
 export const createId = (prefix: string) => `${prefix}-${nanoid()}`;
 
+/** Generate a raw 24-char token for shareable links (no prefix) */
+export const generateShareToken = customAlphabet(alphabet, 24);
+
 // Typed helpers for each entity
 export const ids = {
 	user: () => createId("us"),
@@ -29,4 +32,5 @@ export const ids = {
 	attachment: () => createId("at"),
 	tradeAttachment: () => createId("ta"),
 	aiReport: () => createId("ar"),
+	shareLink: () => createId("sl"),
 };

@@ -163,8 +163,6 @@ export const ERR_AI_CONTENT_FILTER =
 	"The request was flagged by content filters. Try rephrasing your prompt.";
 export const ERR_AI_CONTEXT_LENGTH =
 	"Too much data for the AI to process at once. Try a narrower date range.";
-export const ERR_AI_PDF_FAILED =
-	"The report was generated but the PDF could not be created. Please retry.";
 export const ERR_AI_OWNERSHIP =
 	"This report could not be found. It may have been deleted.";
 export const ERR_AI_NOT_FOUND =
@@ -175,6 +173,19 @@ export const ERR_AI_GENERIC =
 	"Something went wrong while generating your report. Please try again.";
 export const ERR_AI_REPORT_FALLBACK =
 	"Report generation failed. Please try again or contact support if the issue persists.";
+
+// =============================================================================
+// SHARING
+// =============================================================================
+
+export const ERR_SHARE_LINK_NOT_FOUND = "Share link not found";
+export const ERR_SHARE_LINK_EXPIRED = "This share link has expired";
+export const ERR_SHARE_LINK_REVOKED = "This share link has been revoked";
+export const ERR_SHARE_LINK_LIMIT_REACHED =
+	"Maximum number of share links reached for this resource";
+export const ERR_SHARE_RESOURCE_NOT_FOUND = "Shared resource not found";
+export const ERR_SHARE_RESOURCE_NOT_COMPLETE =
+	"Resource must be complete before sharing";
 
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(

@@ -8,6 +8,7 @@ export const env = createEnv({
 	 */
 	server: {
 		DATABASE_URL: z.url(),
+		DATABASE_READ_URL: z.url().optional(),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
@@ -44,6 +45,7 @@ export const env = createEnv({
 		NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().default("/sign-up"),
 		NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: z.string().default("/dashboard"),
 		NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: z.string().default("/dashboard"),
+		NEXT_PUBLIC_APP_URL: z.string().url().optional(),
 	},
 
 	/**
@@ -52,6 +54,7 @@ export const env = createEnv({
 	 */
 	runtimeEnv: {
 		DATABASE_URL: process.env.DATABASE_URL,
+		DATABASE_READ_URL: process.env.DATABASE_READ_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
 		CLERK_WEBHOOK_SECRET: process.env.CLERK_WEBHOOK_SECRET,
@@ -64,6 +67,7 @@ export const env = createEnv({
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL,
 		NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL:
 			process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
+		NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 		DATABENTO_API_KEY: process.env.DATABENTO_API_KEY,
 		TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,

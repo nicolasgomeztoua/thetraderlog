@@ -27,7 +27,7 @@ export interface MetricCardProps {
 	/** Optional description below the value */
 	description?: string;
 	/** Tooltip content explaining the metric */
-	tooltip: MetricTooltip;
+	tooltip?: MetricTooltip;
 	/** Optional icon to display */
 	icon?: LucideIcon;
 	/** Optional color class for the value */
@@ -62,38 +62,44 @@ export function MetricCard({
 					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						{title}
 					</span>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<button
-								aria-label={`Learn more about ${title}`}
-								className="text-muted-foreground/60 transition-colors hover:text-primary"
-								type="button"
+					{tooltip && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									aria-label={`Learn more about ${title}`}
+									className="text-muted-foreground/60 transition-colors hover:text-primary"
+									type="button"
+								>
+									<Info className="h-3 w-3" />
+								</button>
+							</TooltipTrigger>
+							<TooltipContent
+								className="max-w-[280px] space-y-2 border border-border bg-card p-3 text-foreground"
+								side="top"
 							>
-								<Info className="h-3 w-3" />
-							</button>
-						</TooltipTrigger>
-						<TooltipContent
-							className="max-w-[280px] space-y-2 border border-border bg-card p-3 text-foreground"
-							side="top"
-						>
-							<div>
-								<span className="font-medium text-primary text-xs">What:</span>
-								<p className="text-muted-foreground text-xs">{tooltip.what}</p>
-							</div>
-							<div>
-								<span className="font-medium text-primary text-xs">Why:</span>
-								<p className="text-muted-foreground text-xs">{tooltip.why}</p>
-							</div>
-							<div>
-								<span className="font-medium text-primary text-xs">
-									Benchmark:
-								</span>
-								<p className="text-muted-foreground text-xs">
-									{tooltip.benchmark}
-								</p>
-							</div>
-						</TooltipContent>
-					</Tooltip>
+								<div>
+									<span className="font-medium text-primary text-xs">
+										What:
+									</span>
+									<p className="text-muted-foreground text-xs">
+										{tooltip.what}
+									</p>
+								</div>
+								<div>
+									<span className="font-medium text-primary text-xs">Why:</span>
+									<p className="text-muted-foreground text-xs">{tooltip.why}</p>
+								</div>
+								<div>
+									<span className="font-medium text-primary text-xs">
+										Benchmark:
+									</span>
+									<p className="text-muted-foreground text-xs">
+										{tooltip.benchmark}
+									</p>
+								</div>
+							</TooltipContent>
+						</Tooltip>
+					)}
 				</div>
 				{Icon && <Icon className="h-3 w-3 text-muted-foreground" />}
 			</div>
