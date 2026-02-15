@@ -1,4 +1,5 @@
 import {
+	generateObject,
 	generateText,
 	type LanguageModel,
 	type ModelMessage,
@@ -7,6 +8,7 @@ import {
 	streamText,
 	type ToolSet,
 } from "ai";
+import type { z } from "zod";
 
 // =============================================================================
 // ERROR CLASS
@@ -56,6 +58,21 @@ interface AiStreamTextOptions {
 	temperature?: number;
 	maxOutputTokens?: number;
 	onStepFinish?: (step: StepResult<ToolSet>) => void | Promise<void>;
+}
+
+interface AiGenerateObjectOptions<T extends z.ZodType> {
+	model: LanguageModel;
+	system?: string;
+	messages: ModelMessage[];
+	schema: T;
+	maxRetries?: number;
+	temperature?: number;
+	maxOutputTokens?: number;
+}
+
+interface AiGenerateObjectResult<T> {
+	object: T;
+	totalTokens: number;
 }
 
 // =============================================================================
@@ -116,6 +133,38 @@ export function aiStreamText(options: AiStreamTextOptions) {
 			maxOutputTokens: options.maxOutputTokens,
 			onStepFinish: options.onStepFinish,
 		});
+	} catch (error) {
+		throw mapToOpenRouterError(error);
+	}
+}
+
+// =============================================================================
+// GENERATE OBJECT (STRUCTURED OUTPUT)
+// =============================================================================
+
+/**
+ * Wrapper around Vercel AI SDK generateObject().
+ * Produces validated structured JSON output from a Zod schema.
+ */
+export async function aiGenerateObject<T extends z.ZodType>(
+	options: AiGenerateObjectOptions<T>,
+): Promise<AiGenerateObjectResult<z.infer<T>>> {
+	try {
+		const result = await generateObject({
+			model: options.model,
+			system: options.system,
+			messages: options.messages,
+			schema: options.schema,
+			maxRetries: options.maxRetries ?? 3,
+			temperature: options.temperature,
+			maxOutputTokens: options.maxOutputTokens,
+		});
+
+		return {
+			object: result.object as z.infer<T>,
+			totalTokens:
+				(result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0),
+		};
 	} catch (error) {
 		throw mapToOpenRouterError(error);
 	}
