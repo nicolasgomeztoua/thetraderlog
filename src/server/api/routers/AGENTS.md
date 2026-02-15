@@ -85,6 +85,12 @@ const trades = await ctx.db.query.trades.findMany({
 - `src/hooks/use-image-upload.ts` - Generic upload hook (returns presigned URL)
 - `src/hooks/use-tiptap-image-handlers.ts` - Paste/drop handlers with blob preview
 
+### Vercel AI SDK Integration (ai.ts router)
+**When:** Working with the AI chat sendMessage procedure
+**How:** Uses `aiGenerateText` from `client-v2.ts` with `getChatTools` from `tools/definitions.ts`. System prompt is a separate `system` param. SDK handles tool loop via `maxSteps`. Tool calls extracted from `result.steps[].toolCalls[]` — properties are `toolCallId`, `toolName`, `input` (not `id`, `name`, `args`).
+
 ## Decisions
 
-<!-- Architectural decisions and rationale -->
+### AI SDK v6 Type Names
+**Choice:** Use AI SDK v6 naming conventions
+**Why:** Package `ai@6.0.86` uses `ModelMessage` (not `CoreMessage`), `maxOutputTokens` (not `maxTokens`), `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`), `tc.input` (not `tc.args`)

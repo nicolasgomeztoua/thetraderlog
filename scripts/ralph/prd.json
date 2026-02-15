@@ -92,8 +92,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Tool call property is 'input' not 'args'. toolCallId for id. Biome reorders imports alphabetically."
     },
     {
       "id": "US-005",

@@ -123,4 +123,20 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - AI SDK v6 renamed many types — always check `node_modules/ai/dist/index.d.ts` for actual exports
   - `result.totalUsage` uses `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`)
   - `maxOutputTokens` replaces `maxTokens` in the SDK config
+  - Tool call types: property is `input` (not `args`), `toolCallId` (not `id`), `toolName` (not `function.name`)
+  - Existing message format `{ role, content }` maps to `ModelMessage` — no conversion needed for simple role/content
+---
+
+## 2026-02-15 - US-004
+- Migrated `sendMessage` procedure to use `aiGenerateText` from `client-v2.ts`
+- Replaced manual 10-round for-loop with `maxSteps: MAX_TOOL_ROUNDS_CHAT` — SDK handles loop
+- Tools provided via `getChatTools({ userId, db })` from new definitions
+- System prompt uses separate `system` parameter (not first message)
+- Tool calls extracted from `result.steps[].toolCalls[].{ toolCallId, toolName, input }`
+- Removed imports of old `chatCompletion`, `ChatMessage`, `ToolCall`, `AI_TOOLS`, `executeTool`
+- Files changed: `src/server/api/routers/ai.ts`
+- **Learnings for future iterations:**
+  - AI SDK tool call properties: `tc.input` (not `tc.args`), `tc.toolCallId` (not `tc.id`)
+  - The SDK handles the entire tool loop — no need for manual message array mutation
+  - 51 lines added, 111 removed — significant simplification
 ---
