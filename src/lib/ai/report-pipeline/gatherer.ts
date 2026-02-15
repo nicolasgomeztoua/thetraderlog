@@ -1,5 +1,6 @@
 import type { LanguageModel } from "ai";
 import { aiGenerateText } from "@/lib/ai/client";
+import type { DataStoreMap } from "@/lib/ai/report-pipeline/report-schema";
 import { getReportTools } from "@/lib/ai/tools/definitions";
 import { MAX_TOOL_ROUNDS_REPORT } from "@/lib/constants/ai";
 import type { db as DbInstance } from "@/server/db";
@@ -18,7 +19,7 @@ interface GathererOptions {
 	model: LanguageModel;
 	userId: string;
 	db: Db;
-	dataStore: Map<string, unknown>;
+	dataStore: DataStoreMap;
 	reportId?: string;
 	accountId?: string;
 }
@@ -44,6 +45,7 @@ CRITICAL RULES:
 You MUST:
 - Follow the analysis plan and call the tools listed in it
 - Use store_report_data to register each dataset with a unique refId IMMEDIATELY after getting results
+- ALWAYS specify the "component" field when calling store_report_data to indicate which chart component this data is intended for (e.g. "EquityCurve", "MonthlyChart", "SymbolTable", "DataTable")
 - Match the tool to the data need: call_analytics for aggregate stats, run_query for trade-level detail and custom analysis, get_market_data for price context and entry/exit quality
 - When the plan calls for price-related analysis (entry quality, market structure, trends), proactively use get_market_data combined with run_query
 

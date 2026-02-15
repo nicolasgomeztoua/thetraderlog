@@ -23,8 +23,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/report-pipeline/report-schema.ts with Zod discriminated union for 5 block types (prose, metrics, chart, callout, image), ChartComponent enum with all 12 components, and top-level structuredReportSchema. All types exported via z.infer."
     },
     {
       "id": "US-002",
@@ -40,8 +40,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added aiGenerateObject<T> wrapper to src/lib/ai/client.ts. Imports generateObject from 'ai' and z from 'zod'. Generic AiGenerateObjectOptions<T extends z.ZodType> with model, system, messages, schema, maxRetries, temperature, maxOutputTokens. Returns { object: z.infer<T>, totalTokens: number }. Uses same mapToOpenRouterError error handling. Required 'as z.infer<T>' cast on result.object due to complex SDK conditional types."
     },
     {
       "id": "US-003",
@@ -57,8 +57,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added DataStoreEntry interface and DataStoreMap type to report-schema.ts. Updated store_report_data tool with optional component field in input schema. Changed dataStore type from Map<string, unknown> to DataStoreMap across definitions.ts, index.ts, gatherer.ts, writer-context.ts, and generate-ai-report.ts. Updated executeStoreReportData to store { data, component?, description } entries. Updated trigger task serialization to extract only data field for DB persistence. Updated gatherer prompt to instruct AI to always specify component field. Updated buildDataSummary to show component type hints (e.g. equity-data -> EquityCurve)."
     },
     {
       "id": "US-004",

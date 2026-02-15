@@ -5,6 +5,7 @@ import { getModel } from "@/lib/ai/provider";
 import { sendReportEmail } from "@/lib/ai/report-email";
 import { runGathererPhase } from "@/lib/ai/report-pipeline/gatherer";
 import { runPlannerPhase } from "@/lib/ai/report-pipeline/planner";
+import type { DataStoreMap } from "@/lib/ai/report-pipeline/report-schema";
 import { runValidatorPhase } from "@/lib/ai/report-pipeline/validator";
 import { runWriterPhase } from "@/lib/ai/report-pipeline/writer";
 import { buildWriterContext } from "@/lib/ai/report-pipeline/writer-context";
@@ -343,7 +344,7 @@ export const generateAiReport = task({
 				progressStage: "gathering_data",
 			});
 
-			const dataStore = new Map<string, unknown>();
+			const dataStore: DataStoreMap = new Map();
 			console.log(`[report:${payload.reportId}] Phase 2: Gathering data`);
 
 			const gathererResult = await runGathererPhase({
@@ -425,8 +426,14 @@ export const generateAiReport = task({
 			// =====================================================================
 			// SAVE RESULTS
 			// =====================================================================
+			// Serialize only the data field from each dataStore entry into dataArtifacts.
+			// Component metadata and description are used during generation but not persisted.
 			const dataArtifacts =
-				dataStore.size > 0 ? Object.fromEntries(dataStore) : null;
+				dataStore.size > 0
+					? Object.fromEntries(
+							[...dataStore.entries()].map(([key, entry]) => [key, entry.data]),
+						)
+					: null;
 
 			// Save assistant message to conversation
 			await db.insert(aiMessages).values({

@@ -8,12 +8,14 @@
 // Excludes: database schema, SQL syntax, tRPC endpoint docs, tool descriptions
 // =============================================================================
 
+import type { DataStoreMap } from "@/lib/ai/report-pipeline/report-schema";
+
 // =============================================================================
 // TYPES
 // =============================================================================
 
 interface BuildWriterContextOptions {
-	dataStore: Map<string, unknown>;
+	dataStore: DataStoreMap;
 	plan: string;
 }
 
@@ -307,16 +309,24 @@ function summarizeDataEntry(refId: string, value: unknown): string {
 	return `- **${refId}**: ${String(value)}`;
 }
 
-function buildDataSummary(dataStore: Map<string, unknown>): string {
+function buildDataSummary(dataStore: DataStoreMap): string {
 	if (dataStore.size === 0) {
 		return "## Data Summary\n\nNo datasets were gathered. Write the report using only the analysis plan context.";
 	}
 
 	const allKeys = [...dataStore.keys()];
-	const keyList = allKeys.map((k) => `\`${k}\``).join(", ");
+	const keyList = allKeys
+		.map((k) => {
+			const entry = dataStore.get(k);
+			if (entry?.component) {
+				return `\`${k}\` -> ${entry.component}`;
+			}
+			return `\`${k}\``;
+		})
+		.join(", ");
 
 	const entries = [...dataStore.entries()]
-		.map(([refId, value]) => summarizeDataEntry(refId, value))
+		.map(([refId, entry]) => summarizeDataEntry(refId, entry.data))
 		.join("\n\n");
 
 	return `## Data Summary

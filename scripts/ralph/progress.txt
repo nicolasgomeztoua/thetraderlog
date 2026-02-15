@@ -1,3 +1,45 @@
 # Ralph Progress Log
 Started: Sun Feb 15 17:43:56 WET 2026
 ---
+
+## 2026-02-15 - US-001: Define Structured Report Zod Schema
+- Created `src/lib/ai/report-pipeline/report-schema.ts`
+- Zod discriminated union on `type` field for 5 content block types: prose, metrics, chart, callout, image
+- ChartComponent enum with all 12 chart/display components matching `src/components/mdx/components.tsx`
+- MetricItem includes tooltip with what/why/benchmark, optional colorClass and description
+- Top-level structuredReportSchema: executiveSummary, sections[], keyTakeaways[]
+- All types exported via `z.infer<typeof schema>`
+- Files changed: `src/lib/ai/report-pipeline/report-schema.ts` (new)
+- **Learnings for future iterations:**
+  - The ChartComponent enum must stay in sync with KNOWN_COMPONENTS in validator.ts and mdxComponents in components.tsx
+  - RMultipleChart expects `{ buckets, stats }` shape, MonteCarloChart expects an object — other chart components expect arrays (see chart-wrappers.tsx)
+  - Pre-existing Biome errors in prd.json and trigger.config.ts — not blocking
+---
+
+## 2026-02-15 - US-002: Add aiGenerateObject Wrapper to AI Client
+- Added `aiGenerateObject<T>` wrapper function to `src/lib/ai/client.ts`
+- Imported `generateObject` from `ai` and `type { z }` from `zod`
+- New interfaces: `AiGenerateObjectOptions<T extends z.ZodType>` and `AiGenerateObjectResult<T>`
+- Returns `{ object: z.infer<T>, totalTokens: number }` with same `mapToOpenRouterError` handling
+- Files changed: `src/lib/ai/client.ts`
+- **Learnings for future iterations:**
+  - The AI SDK `generateObject` uses complex conditional return types (`InferSchema<T>`) that don't directly compose with `z.infer<T>` — use `as z.infer<T>` cast on `result.object`
+  - `generateObject` result has `usage` (not `totalUsage` like `generateText`) — access via `result.usage?.inputTokens`
+  - The wrapper follows the same pattern as `aiGenerateText` but without `tools`, `maxSteps`, `stopWhen`, or `onStepFinish` (not applicable to object generation)
+---
+
+## 2026-02-15 - US-003: Enhance store_report_data with Component Type Metadata
+- Added `DataStoreEntry` interface and `DataStoreMap` type to `src/lib/ai/report-pipeline/report-schema.ts`
+- Added optional `component` field to `store_report_data` tool input schema in `definitions.ts`
+- Updated `executeStoreReportData` in `store-report-data.ts` to store `{ data, component?, description }` entries
+- Changed `dataStore` type from `Map<string, unknown>` to `DataStoreMap` in: `definitions.ts`, `index.ts`, `gatherer.ts`, `writer-context.ts`, `generate-ai-report.ts`
+- Updated `Object.fromEntries(dataStore)` serialization in trigger task to extract only the `data` field for DB persistence
+- Updated `buildDataSummary` in `writer-context.ts` to show component type hints: `equity-data -> EquityCurve` instead of just `equity-data`
+- Updated gatherer system prompt to instruct AI to always specify the `component` field
+- Files changed: `report-schema.ts`, `definitions.ts`, `index.ts`, `store-report-data.ts`, `gatherer.ts`, `writer-context.ts`, `generate-ai-report.ts`
+- **Learnings for future iterations:**
+  - The `DataStoreEntry` and `DataStoreMap` types are in `report-schema.ts` — import from `@/lib/ai/report-pipeline/report-schema`
+  - When accessing data from the enhanced dataStore, use `entry.data` for the actual data and `entry.component` for the component hint
+  - The DB schema for `dataArtifacts` is unchanged — only the `data` field is serialized, component metadata is used during generation only
+  - The `src/lib/ai/tools/index.ts` legacy dispatcher also needs updating when the dataStore type changes (easy to miss)
+---

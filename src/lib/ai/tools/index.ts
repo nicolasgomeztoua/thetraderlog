@@ -1,3 +1,4 @@
+import type { DataStoreMap } from "@/lib/ai/report-pipeline/report-schema";
 import type { db as DbInstance } from "@/server/db";
 import { executeCallAnalytics } from "./call-analytics";
 import { executeGetMarketData } from "./get-market-data";
@@ -14,7 +15,7 @@ type Db = typeof DbInstance;
 interface ToolContext {
 	userId: string;
 	db?: Db;
-	dataStore?: Map<string, unknown>;
+	dataStore?: DataStoreMap;
 	accountId?: string;
 }
 
@@ -106,6 +107,7 @@ export async function executeTool(
 			const refId = args.refId as string;
 			const description = args.description as string;
 			const data = args.data;
+			const component = args.component as string | undefined;
 			if (!refId || !description || data === undefined) {
 				return {
 					success: false,
@@ -117,6 +119,7 @@ export async function executeTool(
 				description,
 				data,
 				context.dataStore,
+				component,
 			);
 		}
 

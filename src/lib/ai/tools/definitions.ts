@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import type { DataStoreMap } from "@/lib/ai/report-pipeline/report-schema";
 import type { db as DbInstance } from "@/server/db";
 import { executeCallAnalytics } from "./call-analytics";
 import { executeGetMarketData } from "./get-market-data";
@@ -16,7 +17,7 @@ type Db = typeof DbInstance;
 interface ToolContext {
 	userId: string;
 	db?: Db;
-	dataStore?: Map<string, unknown>;
+	dataStore?: DataStoreMap;
 	accountId?: string;
 }
 
@@ -186,16 +187,17 @@ function createRunPythonTool() {
 function createStoreReportDataTool(context: ToolContext) {
 	return tool({
 		description:
-			"Register a dataset with a unique reference ID so that MDX components in the report can access it at render time via their dataRef prop. " +
-			"Call this BEFORE referencing a dataRef in any MDX component. " +
+			"Register a dataset with a unique reference ID so that chart components in the report can access it at render time via their dataRef prop. " +
+			"Call this BEFORE referencing a dataRef in any chart block. " +
 			"Each refId must be unique within the report. " +
-			"The data can be any shape — arrays for charts/tables, objects for single values.",
+			"The data can be any shape — arrays for charts/tables, objects for single values. " +
+			"Always specify the component field to indicate which chart component this data is intended for.",
 		inputSchema: z.object({
 			refId: z
 				.string()
 				.describe(
 					"A unique reference ID for this dataset (e.g. 'equity-data', 'monthly-pnl', 'symbol-breakdown'). " +
-						"Used as the dataRef prop on MDX components.",
+						"Used as the dataRef in chart blocks.",
 				),
 			description: z
 				.string()
@@ -207,8 +209,15 @@ function createStoreReportDataTool(context: ToolContext) {
 				.describe(
 					"The actual data to store. Can be an array of objects (for charts/tables) or a single object (for display components).",
 				),
+			component: z
+				.string()
+				.optional()
+				.describe(
+					"The chart component this data is intended for (e.g. 'EquityCurve', 'MonthlyChart', 'SymbolTable'). " +
+						"Helps the writer and validator match data to the correct chart component.",
+				),
 		}),
-		execute: async ({ refId, description, data }) => {
+		execute: async ({ refId, description, data, component }) => {
 			if (!context.dataStore) {
 				return {
 					success: false,
@@ -221,6 +230,7 @@ function createStoreReportDataTool(context: ToolContext) {
 				description,
 				data,
 				context.dataStore,
+				component,
 			);
 		},
 	});

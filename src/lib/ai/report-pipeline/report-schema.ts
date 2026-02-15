@@ -106,6 +106,19 @@ export const structuredReportSchema = z.object({
 });
 
 // =============================================================================
+// DATA STORE ENTRY TYPE
+// =============================================================================
+
+/** Enhanced data store entry with component metadata from the gatherer phase */
+export interface DataStoreEntry {
+	data: unknown;
+	component?: string;
+	description: string;
+}
+
+export type DataStoreMap = Map<string, DataStoreEntry>;
+
+// =============================================================================
 // INFERRED TYPES
 // =============================================================================
 
