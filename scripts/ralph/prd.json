@@ -167,8 +167,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/report-pipeline/writer.ts and src/lib/ai/report-pipeline/few-shot-examples.ts. Writer uses aiGenerateText with NO tools. System prompt includes writer context, dataRef key list, writing instructions, and two curated few-shot examples (performance overview with MetricGrid/EquityCurve/Callout, risk analysis with DrawdownTable/RMultipleChart/MonteCarloChart). Returns { content, tokensUsed }."
     },
     {
       "id": "US-009",

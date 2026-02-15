@@ -184,3 +184,21 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - Biome auto-formats ternary expressions onto multiple lines when they exceed ~80 chars
   - The MDX catalog is repeated in multiple places (trading-analyst.ts, planner.ts, writer-context.ts) — consider extracting to shared constant in future cleanup
 ---
+
+## 2026-02-15 - US-008
+- Created `src/lib/ai/report-pipeline/few-shot-examples.ts` — two curated report sections for the writer
+  - Performance Overview example: MetricGrid (4 MetricCards), EquityCurve, Callout, data-driven narrative
+  - Risk Analysis example: DrawdownTable, RMultipleChart, MetricGrid (4 MetricCards), MonteCarloChart, 2 Callouts
+  - Key patterns guidance: lead with narrative, cite specific numbers, use dataRef keys exactly, mix components naturally
+- Created `src/lib/ai/report-pipeline/writer.ts` — the third phase of the 4-phase report pipeline
+  - `runWriterPhase(options)` takes plan, writerContext, prompt, model, dataStoreKeys
+  - Uses `aiGenerateText` with NO tools — writer only writes, never calls tools
+  - System prompt includes: writer persona, writer context (from writer-context.ts), explicit dataRef key list, writing instructions, few-shot examples
+  - Returns `{ content: string, tokensUsed: number }`
+- Files changed: `src/lib/ai/report-pipeline/few-shot-examples.ts` (new), `src/lib/ai/report-pipeline/writer.ts` (new)
+- **Learnings for future iterations:**
+  - Writer system prompt layers: persona → writerContext (data summaries + MDX catalog + formatting rules) → writing instructions → few-shot examples
+  - The dataStoreKeys are explicitly listed in the writer prompt so the model knows exactly which dataRef values are valid — this prevents hallucinated dataRef keys
+  - Few-shot examples should demonstrate the exact MDX component syntax including tooltip format `{{ what, why, benchmark }}`
+  - Pre-existing Biome errors in archive JSON files and trigger.config.ts are not from pipeline changes — safe to ignore
+---
