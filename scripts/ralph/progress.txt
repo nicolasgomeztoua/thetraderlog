@@ -43,3 +43,18 @@ Started: Sun Feb 15 17:43:56 WET 2026
   - The DB schema for `dataArtifacts` is unchanged — only the `data` field is serialized, component metadata is used during generation only
   - The `src/lib/ai/tools/index.ts` legacy dispatcher also needs updating when the dataStore type changes (easy to miss)
 ---
+
+## 2026-02-15 - US-004: Update Writer Context for Structured JSON Output
+- Rewrote `src/lib/ai/report-pipeline/writer-context.ts`
+- Removed `MDX_CATALOG` constant entirely — the Zod schema (from US-001) defines available components, so a catalog is redundant
+- Removed MDX-specific formatting rules (LaTeX escaping, pipe tables, code fences, MDX component instructions)
+- Added JSON-specific formatting rules: markdown in prose blocks, no HTML tags, data citation rules, dataRef accuracy rules
+- Kept Data Summary section unchanged (already enhanced with component type hints in US-003)
+- Exported `COMPONENT_MINIMUMS` for reuse by the deterministic validator (US-007)
+- Removed `MDX_CATALOG` from the `buildWriterContext` sections array — context is now ~60% smaller
+- Files changed: `src/lib/ai/report-pipeline/writer-context.ts`
+- **Learnings for future iterations:**
+  - `COMPONENT_MINIMUMS` is now exported from `writer-context.ts` — the validator (US-007) should import it from there rather than duplicating thresholds
+  - The writer context is now much smaller: Analysis Plan + Data Summary + Formatting Rules (no catalog)
+  - Warning messages in `getDataSufficiencyWarning` were updated to say "metrics block or prose" instead of "MetricCards or prose" to match JSON schema terminology
+---

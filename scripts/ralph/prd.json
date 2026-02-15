@@ -76,8 +76,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Rewrote writer-context.ts: removed MDX_CATALOG constant entirely (Zod schema now defines available components), replaced MDX-specific formatting rules with JSON-specific rules (markdown in prose blocks, no HTML tags, data citation, dataRef accuracy), kept Data Summary section with component type hints from US-003, exported COMPONENT_MINIMUMS for use by validator (US-007). Function signature unchanged (already accepts DataStoreMap from US-003)."
     },
     {
       "id": "US-005",
