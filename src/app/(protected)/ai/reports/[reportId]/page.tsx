@@ -1,12 +1,11 @@
 import { ArrowLeft, Clock, Cpu, FileText, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { compileMDX } from "next-mdx-remote/rsc";
 import { Suspense } from "react";
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { mdxComponents } from "@/components/mdx/components";
 import { markdownComponents } from "@/components/mdx/markdown-components";
-import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
+import type { StructuredReport } from "@/lib/ai/report-pipeline/report-schema";
 import { api, HydrateClient } from "@/trpc/server";
 import { DownloadPdfButton } from "./_components/download-pdf-button";
 import { ReportViewerContent } from "./_components/report-viewer-content";
@@ -96,28 +95,22 @@ export default async function ReportViewerPage({
 	const dataArtifacts =
 		(report.dataArtifacts as Record<string, unknown> | null) ?? {};
 
-	// Compile MDX on the server using next-mdx-remote/rsc
+	// Parse content as structured JSON report, fall back to markdown for legacy
 	const rawContent = report.content ?? "";
-	const sanitizedContent = sanitizeMdxProse(rawContent);
-	const allComponents = { ...markdownComponents, ...mdxComponents };
-
-	let mdxContent: React.ReactNode = null;
-	let mdxFailed = false;
+	let parsedReport: StructuredReport | null = null;
 	try {
-		const { content: compiled } = await compileMDX({
-			source: sanitizedContent,
-			components: allComponents as never,
-			options: {
-				mdxOptions: {
-					remarkPlugins: [remarkGfm],
-					format: "mdx",
-				},
-			},
-		});
-		mdxContent = compiled;
-	} catch (e) {
-		console.error("[MDX] Compilation failed, falling back to markdown:", e);
-		mdxFailed = true;
+		parsedReport = JSON.parse(rawContent) as StructuredReport;
+		// Basic shape check: must have sections array
+		if (
+			!parsedReport ||
+			!Array.isArray(parsedReport.sections) ||
+			typeof parsedReport.executiveSummary !== "string"
+		) {
+			parsedReport = null;
+		}
+	} catch {
+		// Not valid JSON — legacy MDX/markdown content
+		parsedReport = null;
 	}
 
 	return (
@@ -142,13 +135,26 @@ export default async function ReportViewerPage({
 							</div>
 						}
 					>
-						<ReportViewerContent
-							content={rawContent}
-							dataArtifacts={dataArtifacts}
-							mdxFailed={mdxFailed}
-						>
-							{mdxContent}
-						</ReportViewerContent>
+						{parsedReport ? (
+							<ReportViewerContent
+								dataArtifacts={dataArtifacts}
+								report={parsedReport}
+							/>
+						) : (
+							<div className="min-w-0 flex-1 overflow-auto">
+								<article
+									className="mx-auto max-w-4xl px-6 py-8"
+									data-testid="report-viewer-content"
+								>
+									<ReactMarkdown
+										components={markdownComponents as never}
+										remarkPlugins={[remarkGfm]}
+									>
+										{rawContent}
+									</ReactMarkdown>
+								</article>
+							</div>
+						)}
 					</Suspense>
 				</div>
 			</div>

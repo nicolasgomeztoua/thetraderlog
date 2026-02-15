@@ -1,17 +1,11 @@
 "use client";
 
-import {
-	type ReactNode,
-	type RefObject,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { markdownComponents } from "@/components/mdx/markdown-components";
-import { ReportDataProvider } from "@/components/mdx/provider";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { ReportRenderer } from "@/components/report/report-renderer";
+import type {
+	Section,
+	StructuredReport,
+} from "@/lib/ai/report-pipeline/report-schema";
 
 // =============================================================================
 // TYPES
@@ -24,35 +18,30 @@ interface TocItem {
 }
 
 interface ReportViewerContentProps {
-	/** Raw markdown/MDX string (used for TOC extraction and markdown fallback) */
-	content: string;
+	/** Parsed structured report */
+	report: StructuredReport;
 	/** Data artifacts from store_report_data tool */
 	dataArtifacts: Record<string, unknown>;
-	/** Whether MDX compilation failed on the server */
-	mdxFailed: boolean;
-	/** Server-compiled MDX content (from compileMDX) */
-	children: ReactNode;
 }
 
 // =============================================================================
 // TABLE OF CONTENTS
 // =============================================================================
 
-function extractHeadings(content: string): TocItem[] {
-	const headingRegex = /^(#{1,3})\s+(.+)$/gm;
-	const items: TocItem[] = [];
-	let match = headingRegex.exec(content);
-	while (match) {
-		const level = match[1]?.length ?? 1;
-		const text = match[2]?.trim() ?? "";
-		const id = text
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, "-")
-			.replace(/(^-|-$)/g, "");
-		items.push({ id, text, level });
-		match = headingRegex.exec(content);
-	}
-	return items;
+/** Derive heading id the same way as report-renderer.tsx */
+function toHeadingId(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/(^-|-$)/g, "");
+}
+
+function extractHeadingsFromSections(sections: Section[]): TocItem[] {
+	return sections.map((section) => ({
+		id: toHeadingId(section.heading),
+		text: section.heading,
+		level: 2,
+	}));
 }
 
 function TableOfContents({
@@ -136,42 +125,32 @@ function useActiveHeading(
 // =============================================================================
 
 export function ReportViewerContent({
-	content,
+	report,
 	dataArtifacts,
-	mdxFailed,
-	children,
 }: ReportViewerContentProps) {
-	const headings = useMemo(() => extractHeadings(content), [content]);
+	const headings = useMemo(
+		() => extractHeadingsFromSections(report.sections),
+		[report.sections],
+	);
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const activeId = useActiveHeading(headings, scrollRef);
 
 	return (
-		<ReportDataProvider data={dataArtifacts}>
-			<div className="flex min-h-0 min-w-0 flex-1">
-				{/* Scrollable content area */}
-				<div className="min-w-0 flex-1 overflow-auto" ref={scrollRef}>
-					<article
-						className="mx-auto max-w-4xl px-6 py-8"
-						data-testid="report-viewer-content"
-					>
-						{!mdxFailed ? (
-							children
-						) : (
-							<ReactMarkdown
-								components={markdownComponents as never}
-								remarkPlugins={[remarkGfm]}
-							>
-								{content}
-							</ReactMarkdown>
-						)}
-					</article>
-				</div>
-
-				{/* Table of Contents sidebar — stays in place, desktop xl+ only */}
-				<div className="hidden shrink-0 py-8 pr-6 xl:block print:hidden">
-					<TableOfContents activeId={activeId} items={headings} />
-				</div>
+		<div className="flex min-h-0 min-w-0 flex-1">
+			{/* Scrollable content area */}
+			<div className="min-w-0 flex-1 overflow-auto" ref={scrollRef}>
+				<article
+					className="mx-auto max-w-4xl px-6 py-8"
+					data-testid="report-viewer-content"
+				>
+					<ReportRenderer dataArtifacts={dataArtifacts} report={report} />
+				</article>
 			</div>
-		</ReportDataProvider>
+
+			{/* Table of Contents sidebar — stays in place, desktop xl+ only */}
+			<div className="hidden shrink-0 py-8 pr-6 xl:block print:hidden">
+				<TableOfContents activeId={activeId} items={headings} />
+			</div>
+		</div>
 	);
 }
