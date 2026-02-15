@@ -202,3 +202,21 @@ Started: Sun Feb 15 03:12:29 WET 2026
   - Few-shot examples should demonstrate the exact MDX component syntax including tooltip format `{{ what, why, benchmark }}`
   - Pre-existing Biome errors in archive JSON files and trigger.config.ts are not from pipeline changes — safe to ignore
 ---
+
+## 2026-02-15 - US-009
+- Created `src/lib/ai/report-pipeline/validator.ts` — the fourth and final phase of the 4-phase report pipeline
+- Three validation checks:
+  1. **Component validation**: Parses all `<PascalCase ...>` tags in MDX, checks against `KNOWN_COMPONENTS` set (mirrors `mdxComponents` in `src/components/mdx/components.tsx`)
+  2. **DataRef validation**: Checks that dataRef-requiring components (charts, display) have a `dataRef` attribute and that its value exists in `dataStoreKeys`
+  3. **MDX compilation check**: Uses `compileMDX` from `next-mdx-remote/rsc` with `sanitizeMdxProse` preprocessing and `remarkGfm` — same pipeline as the report viewer page
+- Auto-repair: up to 2 attempts using `aiGenerateText` with a repair-specific system prompt listing specific errors and available dataRef keys
+- Graceful degradation: if repair fails after 2 attempts, returns original content with error list (report still usable via markdown fallback)
+- Returns `{ valid: boolean, content: string, errors: string[], tokensUsed: number }`
+- Files changed: `src/lib/ai/report-pipeline/validator.ts` (new)
+- **Learnings for future iterations:**
+  - `compileMDX` from `next-mdx-remote/rsc` can be used headlessly (no components needed) for validation — just catches compilation errors
+  - `sanitizeMdxProse` must be applied before compilation to escape bare `<` and `{` in AI-generated prose
+  - The `KNOWN_COMPONENTS` set and `DATAREF_COMPONENTS` set must stay in sync with `src/components/mdx/components.tsx` — if new MDX components are added to the viewer, update both
+  - Regex-based component parsing (`<PascalCase ...>`) is sufficient for validation — no need for a full AST parser since we control the component naming convention
+  - The validator doesn't need React components registered in `compileMDX` for syntax validation — unknown components won't cause compilation errors in MDX (they're treated as custom elements)
+---

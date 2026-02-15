@@ -187,8 +187,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created src/lib/ai/report-pipeline/validator.ts. Exports runValidatorPhase(options) taking content, dataStoreKeys, and model. Three validation checks: (1) component name validation against KNOWN_COMPONENTS set matching mdxComponents registry, (2) dataRef validation checking existence in dataStoreKeys and required dataRef for chart/display components, (3) MDX compilation check using compileMDX from next-mdx-remote/rsc with sanitizeMdxProse. Auto-repair: up to 2 attempts using aiGenerateText with a repair-specific prompt listing errors and available keys. Graceful degradation: returns original content with errors if repair fails. Returns { valid, content, errors, tokensUsed }."
     },
     {
       "id": "US-010",
