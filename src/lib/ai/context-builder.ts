@@ -1,4 +1,8 @@
 import { and, desc, eq, gte } from "drizzle-orm";
+import {
+	getTimezoneAbbreviation,
+	utcHourToLocalHour,
+} from "@/lib/shared/timezone";
 import type { db as DbType } from "@/server/db";
 import {
 	accounts,
@@ -220,9 +224,15 @@ function formatSettings(settings: SettingsRow): string {
 		try {
 			const sessions = JSON.parse(settings.tradingSessions);
 			if (Array.isArray(sessions) && sessions.length > 0) {
+				const tz = settings.timezone ?? "UTC";
+				const tzAbbr = getTimezoneAbbreviation(tz);
 				lines.push("- Trading sessions:");
 				for (const s of sessions) {
-					lines.push(`  - ${s.name}: ${s.startHour}:00–${s.endHour}:00 UTC`);
+					const localStart = utcHourToLocalHour(s.startHour, tz);
+					const localEnd = utcHourToLocalHour(s.endHour, tz);
+					lines.push(
+						`  - ${s.name}: ${localStart}:00–${localEnd}:00 ${tzAbbr} (UTC ${s.startHour}:00–${s.endHour}:00)`,
+					);
 				}
 			}
 		} catch {

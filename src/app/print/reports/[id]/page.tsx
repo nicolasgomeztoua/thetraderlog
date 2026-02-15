@@ -100,9 +100,7 @@ export default async function PrintReportPage({
 						<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
 							<span className="font-bold text-primary">EDGEJOURNAL</span>
 							<span className="text-muted-foreground">{"// "}</span>
-							<span className="text-muted-foreground">
-								AI ANALYSIS REPORT
-							</span>
+							<span className="text-muted-foreground">AI ANALYSIS REPORT</span>
 						</div>
 						<h1 className="mt-2 font-mono text-base text-foreground leading-relaxed">
 							{displayTitle}

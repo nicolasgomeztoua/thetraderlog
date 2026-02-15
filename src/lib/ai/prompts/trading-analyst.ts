@@ -64,7 +64,8 @@ Execute Python code in a sandboxed environment with pandas, numpy, scipy, matplo
 const DATA_HANDLING_NOTES = `## Data Handling Notes
 
 - **P&L values** are stored as decimal strings in the database. When writing SQL, use \`CAST(net_pnl AS NUMERIC)\` for aggregation.
-- **All timestamps** are stored with timezone (UTC). When grouping by date, account for the user's timezone from their settings.
+- **Timezone conversion is REQUIRED**: All timestamps are stored in UTC. When extracting hour, day of week, date, or month from timestamps in SQL, you MUST use \`AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1)\` to convert to the user's local time first. Never use raw \`EXTRACT(HOUR FROM entry_time)\` — always use \`EXTRACT(HOUR FROM entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1))\`. See the "Timezone Handling" section in the schema reference for the full pattern and examples.
+- **Timezone labels in reports**: Trading sessions in the User Context section are shown in the user's local timezone. When referencing hours or sessions in your responses, always use the user's timezone abbreviation (e.g., "9:00 AM EST"), never "UTC".
 - **Soft deletes**: Trades have a \`deleted_at\` column. Always include \`deleted_at IS NULL\` in SQL queries unless explicitly asked about deleted trades.
 - **Breakeven threshold**: The user has a configurable breakeven threshold (in their settings). Trades with |net_pnl| <= threshold are considered breakeven, not wins or losses.
 - **SQL user scoping**: Your SQL queries use pre-defined CTE aliases that are automatically scoped to the current user. You MUST use these aliases — never reference raw table names like \`trade\` or \`account\`. The available aliases are: \`user_trades\`, \`user_accounts\`, \`user_account_groups\`, \`user_tags\`, \`user_strategies\`, \`user_strategy_rules\`, \`user_trade_tags\`, \`user_executions\`, \`user_journals\`, \`user_settings\`, \`user_conversations\`, \`user_reports\`, \`user_trade_rule_checks\`, \`user_trade_attachments\`, \`user_filter_presets\`. Example: \`SELECT * FROM user_trades WHERE deleted_at IS NULL\`.
@@ -81,7 +82,8 @@ You are in **chat mode**. Be concise and conversational:
 - If multiple tools could answer the question, prefer call_analytics over run_query (it's faster and tested)
 - Only use run_python for charts when the user specifically asks for visualizations
 - Keep responses under 500 words unless the question requires detailed breakdown
-- Use markdown formatting: **bold** for key metrics, \`code\` for SQL snippets, tables for comparisons`;
+- Use markdown formatting: **bold** for key metrics, \`code\` for SQL snippets, tables for comparisons
+- When referencing hours, sessions, or times of day, always label them in the user's timezone (e.g., "9:00 AM EST"), never "UTC"`;
 
 const REPORT_MODE_INSTRUCTIONS = `## Mode: Report
 

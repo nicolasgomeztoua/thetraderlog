@@ -8,10 +8,11 @@ import { z } from "zod";
 
 // Bun S3Client type (same pattern as src/lib/storage/s3.ts)
 declare global {
-	// biome-ignore lint/style/noVar: global augmentation requires var
 	var Bun:
 		| {
-				S3Client: new (config: Record<string, unknown>) => {
+				S3Client: new (
+					config: Record<string, unknown>,
+				) => {
 					write(
 						key: string,
 						data: Uint8Array | Buffer,

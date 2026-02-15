@@ -371,6 +371,31 @@ const SCHEMA_CONTEXT = `
 - **User scoping**: All queries use user-scoped CTE aliases (user_trades, user_accounts, etc.) that automatically filter to the current user. NEVER use raw table names like \`trade\` or \`account\` — always use \`user_trades\`, \`user_accounts\`, etc.
 - **Breakeven threshold**: User-configurable via user_settings.breakeven_threshold (default $3). Trades with |net_pnl| <= threshold are considered breakeven.
 
+## Timezone Handling
+
+**CRITICAL**: All timestamps are stored in UTC. When extracting date/time parts (hour, day of week, month, date), you MUST convert to the user's timezone first using \`AT TIME ZONE\`. The user's timezone is available in the \`user_settings\` CTE.
+
+### Pattern
+\`\`\`sql
+-- Convert to user's timezone before extracting date/time parts
+EXTRACT(HOUR FROM entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1))
+EXTRACT(DOW FROM entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1))
+TO_CHAR(entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1), 'YYYY-MM')
+\`\`\`
+
+### Common Mistake
+\`\`\`sql
+-- WRONG: Extracts hour/day in UTC — will misclassify sessions and days
+EXTRACT(HOUR FROM entry_time)
+EXTRACT(DOW FROM entry_time)
+TO_CHAR(entry_time, 'YYYY-MM')
+
+-- RIGHT: Converts to user's local time first
+EXTRACT(HOUR FROM entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1))
+EXTRACT(DOW FROM entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1))
+TO_CHAR(entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1), 'YYYY-MM')
+\`\`\`
+
 ## Example SQL Queries
 
 **IMPORTANT**: Always use the user-scoped CTE aliases (user_trades, user_accounts, etc.) — NEVER raw table names. You do NOT need WHERE user_id clauses; the CTEs already filter to the current user.
@@ -378,7 +403,7 @@ const SCHEMA_CONTEXT = `
 ### P&L by Day of Week
 \`\`\`sql
 SELECT
-  EXTRACT(DOW FROM entry_time) AS day_of_week,
+  EXTRACT(DOW FROM entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1)) AS day_of_week,
   COUNT(*) AS trades,
   SUM(CAST(net_pnl AS NUMERIC)) AS total_pnl,
   AVG(CAST(net_pnl AS NUMERIC)) AS avg_pnl
@@ -446,7 +471,7 @@ ORDER BY exit_time;
 ### Monthly Performance
 \`\`\`sql
 SELECT
-  TO_CHAR(entry_time, 'YYYY-MM') AS month,
+  TO_CHAR(entry_time AT TIME ZONE (SELECT timezone FROM user_settings LIMIT 1), 'YYYY-MM') AS month,
   COUNT(*) AS trades,
   SUM(CAST(net_pnl AS NUMERIC)) AS total_pnl,
   AVG(CAST(net_pnl AS NUMERIC)) AS avg_pnl,

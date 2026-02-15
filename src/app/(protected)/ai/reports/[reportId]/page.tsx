@@ -241,4 +241,3 @@ function ReportHeader({
 		</div>
 	);
 }
-

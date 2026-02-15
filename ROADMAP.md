@@ -4,7 +4,7 @@
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
-> **Last Updated:** January 16, 2026 (Phase 10 AI Analytics added)
+> **Last Updated:** February 15, 2026 (Final status update)
 
 ---
 
@@ -176,50 +176,7 @@ Document and track trading strategies with clear rules.
 
 > **Priority:** MEDIUM | **Dependencies:** Phase 1 | **Estimate:** 2-3 weeks
 >
-> **Sub-plan:** [./plans/phase-3-dashboard.md](./plans/phase-3-dashboard.md)
-
-### Goal
-Make the dashboard fully customizable with drag-and-drop widgets like TradeZella.
-
-### Tasks
-
-#### 3.1 Widget System Architecture
-- [ ] Create widget registry/config
-- [ ] Widget wrapper component
-- [ ] User dashboard layouts in DB
-- [ ] Drag-and-drop (dnd-kit or react-grid-layout)
-- [ ] Widget settings modal
-
-#### 3.2 Upper Section Widgets (KPI Cards)
-- [ ] Net P&L widget *(existing)*
-- [ ] Win Rate widget *(existing)*
-- [ ] Profit Factor widget *(existing)*
-- [ ] Account Balance widget
-- [ ] Day Win Percentage widget
-- [ ] Daily Goal Progress widget
-- [ ] Trades Today widget
-
-#### 3.3 Lower Section Widgets (Charts/Data)
-- [ ] Analytics chart widget *(existing charts)*
-- [ ] Calendar widget (trading calendar heatmap)
-- [ ] Recent trades widget
-- [ ] Notes/reminder widget
-- [ ] Performance streak widget
-- [ ] Top symbols widget
-
-#### 3.4 Dashboard Views
-- [ ] Dollars view (default)
-- [ ] Percentage view
-- [ ] Privacy view (blur sensitive data)
-- [ ] R-Multiple view
-- [ ] Ticks view (futures)
-- [ ] Pips view (forex)
-- [ ] Points view (futures)
-
-#### 3.5 Dashboard Templates
-- [ ] Save current layout as template
-- [ ] Load template
-- [ ] Preset templates (Scalper, Swing, Day Trader)
+> **Status:** ❌ Scrapped — Not pursuing dashboard widget customization. Current dashboard is sufficient.
 
 ---
 
@@ -487,8 +444,9 @@ Direct broker connections for auto-sync.
 ### Tasks
 
 #### 8.1 CSV Parser Expansion
-- [ ] MT4 parser (complete existing)
-- [ ] MT5 parser
+- [x] ProjectX parser *(fully implemented)*
+- [ ] MT4 parser *(stub exists — header validation only)*
+- [ ] MT5 parser *(stub exists — header validation only)*
 - [ ] NinjaTrader parser
 - [ ] cTrader parser
 - [ ] TradingView parser
@@ -519,27 +477,7 @@ Direct broker connections for auto-sync.
 
 > **Priority:** LOW | **Dependencies:** None | **Estimate:** 2 weeks
 >
-> **Sub-plan:** [./plans/phase-9-mobile.md](./plans/phase-9-mobile.md)
-
-### Goal
-Full mobile experience.
-
-### Tasks
-
-#### 9.1 Responsive Improvements
-- [ ] Audit all pages for mobile
-- [ ] Mobile navigation improvements
-- [ ] Mobile trade entry form
-- [ ] Mobile-friendly charts
-- [ ] Touch-friendly controls
-- [ ] Swipe gestures
-
-#### 9.2 PWA Features
-- [ ] Service worker setup
-- [ ] Offline support
-- [ ] Install prompt
-- [ ] App icons and manifest
-- [ ] Push notifications (trade reminders)
+> **Status:** ✅ Complete — Responsive design implemented across all pages.
 
 ---
 
@@ -547,81 +485,131 @@ Full mobile experience.
 
 > **Priority:** HIGHEST | **Dependencies:** Phase 3 | **Estimate:** 10-15 weeks
 >
-> **Sub-plan:** [./plans/phase-10-ai-analytics.md](./plans/phase-10-ai-analytics.md)
+> **Sub-plan:** [./plans/phase-10-ai-analytics.md](./plans/phase-10-ai-analytics.md), [./plans/prd-ai-analytics.md](./plans/prd-ai-analytics.md), [./plans/prd-mdx-report-viewer-emails.md](./plans/prd-mdx-report-viewer-emails.md), [./plans/prd-ai-ui-redesign.md](./plans/prd-ai-ui-redesign.md)
+>
+> **Status:** ✅ Complete
 
 ### Goal
-Deep AI-powered analysis reports. Users ask ANY question, get professional-grade PDF reports with charts and case studies. 5 reports/month. This is the core differentiator over TradeZella.
+Deep AI-powered analysis. Users ask ANY question via chat or get professional-grade reports with interactive charts. This is the core differentiator over TradeZella.
 
-### Architecture
-- **Hybrid Database**: Neon (shared: users, candle_cache) + Turso (per-user: trades, journals, strategies)
-- **AI Execution**: Trigger.dev orchestration + Daytona sandboxes for Python
-- **Python Sandbox**: matplotlib, pandas, scipy, plotly for custom analysis & charts
-- **Models**: OpenRouter for Opus/GPT-4.5 flexibility
-- **Output**: PDF reports with custom visualizations, emailed to user
-- **Business Model**: Subscription (you pay API costs)
+### Completed Features
+
+#### AI Infrastructure ✅
+- [x] OpenRouter integration (model flexibility — Kimi K2 for chat, GLM-5 for reports)
+- [x] AI service with streaming and non-streaming support
+- [x] `aiConversations`, `aiMessages`, `aiReports` tables
+- [x] Schema context generator (auto-documents all tables, columns, relationships)
+- [x] User context builder (loads strategies, tags, sessions, accounts, journals)
+- [x] Trading analyst system prompt (chat + report modes)
+
+#### AI Tools ✅
+- [x] `run_query` — read-only SQL with automatic user scoping
+- [x] `call_analytics` — invoke 22+ tRPC analytics endpoints
+- [x] `get_market_data` — fetch OHLC candle data
+- [x] `run_python` — Python sandbox execution (pandas, matplotlib, etc.)
+- [x] `store_report_data` — register datasets for MDX component rendering
+- [x] Tool registry with mode-aware selection (chat vs report)
+
+#### Chat Mode ✅
+- [x] Multi-turn tool-calling conversation loop
+- [x] Streaming responses
+- [x] Conversation CRUD (create, list, delete)
+- [x] Polished chat UI with typewriter effect, tool badges, mobile drawer
+- [x] Suggested queries for empty state
+
+#### Report Mode ✅
+- [x] Trigger.dev background task for long-running reports (30min timeout, 20 tool rounds)
+- [x] MDX report viewer at `/ai/reports/[reportId]` (replaces PDF pipeline)
+- [x] 12 interactive chart components via MDX (EquityCurve, MonthlyChart, HourHeatmap, etc.)
+- [x] Display components (MetricCard, MetricGrid, Callout, DataTable, ChartImage)
+- [x] Data artifacts stored as JSONB, hydrated via React context
+- [x] Client-side PDF export (html2canvas + jsPDF)
+- [x] Print and share functionality
+- [x] Granular progress tracking (real pipeline stages, not fake percentages)
+- [x] Report history with status badges
+
+#### Email System ✅
+- [x] React Email system in `src/emails/` with Terminal-themed base layout
+- [x] Report completion email with viewer link (permanent, no expiring URLs)
+- [x] Resend integration for delivery
+
+#### AI UI Redesign ✅
+- [x] Polished chat interface (empty state, message layout, tool badges, input area)
+- [x] Typewriter streaming effect with blinking cursor
+- [x] Mobile sidebar drawer
+- [x] Mode toggle (Chat / Reports) with active indicator
+- [x] Enhanced message renderer (code blocks, tables, images, blockquotes)
+- [x] Report form with quick date presets and suggested prompts
+- [x] Report history panel with real progress tracking
+
+---
+
+## Phase 11: Payments & Billing
+
+> **Priority:** HIGHEST | **Dependencies:** None | **Estimate:** 3-5 days
+>
+> **Status:** ⏳ Pending
+
+### Goal
+Monetize EdgeJournal with a simple Free → Pro subscription model using Clerk Billing (built on Stripe). Launch with unlimited AI for paid users, add caps later only if needed.
+
+### Pricing
+
+| | Free | Pro ($24/mo · $199/yr) |
+|---|------|------------------------|
+| AI Chat | No | Unlimited |
+| AI Reports | No | Unlimited |
+| Trades | 25/month | Unlimited |
+| Accounts | 1 | Unlimited |
+| Analytics | Overview tab only | All 5 tabs |
+| Daily Journal | No | Yes |
+| Trade Replay | No | Yes |
+| CSV Export | No | Yes |
+
+### Cost Analysis
+- AI costs per user: $0.86 (light) – $4.28 (heavy) per month
+- Kimi K2 for chat, GLM-5 for reports — 90%+ margins at $24/mo
+- Infrastructure (DB, email, storage) covered by free tiers
+- Transaction fees: Stripe 2.9% + $0.30 + Clerk Billing 0.7% (same as Stripe Billing)
 
 ### Tasks
 
-#### 10.1 Database Migration (Neon → Turso per-user)
-- [ ] Set up Turso account and parent schema database
-- [ ] Create Clerk webhook to provision user DB on signup
-- [ ] Set up Drizzle for Turso (libsql driver)
-- [ ] Migrate existing user data from Neon to Turso
-- [ ] Update all routers to use user's Turso DB
+#### 11.1 Clerk Billing Setup
+- [ ] Connect Stripe account in Clerk Dashboard
+- [ ] Create "Free" plan with feature flags
+- [ ] Create "Pro" plan at $24/mo and $199/yr
+- [ ] Define feature flags: `ai_chat`, `ai_reports`, `unlimited_trades`, `full_analytics`, `daily_journal`, `trade_replay`, `csv_export`
 
-#### 10.2 AI Infrastructure
-- [ ] OpenRouter integration (Opus, GPT-4.5)
-- [ ] AI service with streaming support
-- [ ] Credit tracking (5 reports/month, monthly reset)
-- [ ] `ai_reports` and `ai_conversations` tables
+#### 11.2 Feature Gating — Middleware & Server
+- [ ] Update `src/middleware.ts` — gate `/ai` routes behind Pro plan
+- [ ] Add `has({ plan: 'pro' })` checks to AI tRPC router
+- [ ] Add trade count enforcement for free tier (25/month limit)
+- [ ] Gate analytics tabs (free = Overview only)
+- [ ] Gate daily journal, trade replay, CSV export routes
+- [ ] Add `<Protect plan="pro">` wrappers on client-side UI where needed
 
-#### 10.3 Context Builder & Tools
-- [ ] Context builder (loads strategies, tags, journals)
-- [ ] SQL tools for AI:
-  - `run_query` - read-only SQL on user's Turso
-  - `get_market_data` - candles from shared Neon
-  - `get_trade_details` - deep dive on trades
-- [ ] Tool execution layer (validates read-only)
+#### 11.3 Pricing Page
+- [ ] Create `/pricing` page with `<PricingTable />` component
+- [ ] Terminal design styling (dark bg, monospace, chartreuse accents)
+- [ ] Annual/monthly toggle
+- [ ] Feature comparison list
+- [ ] CTA from free tier upgrade prompts → pricing page
 
-#### 10.4 Daytona Python Sandbox
-- [ ] Daytona account and SDK integration
-- [ ] Python environment with pre-installed packages:
-  - pandas, numpy, scipy (data analysis)
-  - matplotlib, plotly, seaborn (visualization)
-  - statsmodels (statistical modeling)
-- [ ] `run_python` tool for AI to execute code
-- [ ] Chart output capture (save as images)
-- [ ] Code artifact storage (save code with report)
-- [ ] Sandbox resource limits and timeouts
+#### 11.4 Free Tier Upgrade Prompts
+- [ ] AI page: show upgrade prompt instead of chat/report interface
+- [ ] Trade limit: show "25/25 trades used this month — upgrade for unlimited"
+- [ ] Analytics: locked tab indicators with upgrade CTA
+- [ ] Journal/Replay: upgrade gate with preview of what they're missing
 
-#### 10.5 Conversation & Clarification
-- [ ] Multi-turn conversation (AI asks clarifying questions)
-- [ ] User can reference specific trades
-- [ ] Conversation persisted in DB
-- [ ] Transition from clarifying → generating report
+#### 11.5 Grandfather Early Users
+- [ ] Identify existing beta users
+- [ ] Assign Pro plan via Clerk Backend API (custom $0 price or extended trial)
+- [ ] Ensure existing users retain full access
 
-#### 10.6 Report Generation Pipeline
-- [ ] Trigger.dev task for long-running reports
-- [ ] Compile Python-generated charts into report
-- [ ] PDF compilation (Puppeteer HTML→PDF)
-- [ ] Include code artifacts as appendix
-- [ ] Upload to S3
-- [ ] Email via Resend
-
-#### 10.7 Frontend UI
-- [ ] Redesign `/ai` page
-- [ ] Conversation interface
-- [ ] Report progress indicator (with live updates)
-- [ ] Report history with downloads
-- [ ] Credit usage display (X/5)
-- [ ] Model selection
-- [ ] View code artifacts from reports
-
-#### 10.8 Subscription & Costs
-- [ ] Define pricing tiers
-- [ ] Estimate API costs per report (LLM + Daytona compute)
-- [ ] Stripe integration for subscriptions
-- [ ] Overage handling
+#### 11.6 Billing Management
+- [ ] Add billing section to `/settings` page
+- [ ] Show current plan, next billing date, manage subscription link
+- [ ] Cancel/downgrade flow (Clerk handles this, just link to portal)
 
 ---
 
@@ -683,16 +671,17 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 |-------|------|----------|--------|
 | 1 | Enhanced Trade Log | 2-3 weeks | ✅ Complete |
 | 2 | Strategy System | 2 weeks | ✅ Complete (2.5 Monte Carlo ⏳) |
-| 3 | Dashboard Customization | 2-3 weeks | ⏳ Pending |
+| 3 | Dashboard Customization | — | ❌ Scrapped |
 | 4 | Advanced Analytics | 6-8 weeks | ✅ Complete (5 tabs + cross-filtering + query builder + presets + export) |
 | 5 | Trade Detail Enhancements | 2 weeks | ✅ Complete |
 | 6 | Daily Journal System | 3 weeks | ✅ Complete (39 stories, search ⏳) |
 | 7 | Trade Replay | 3-4 weeks | ✅ Complete |
-| 8 | Broker Integrations | 1-2 weeks per parser | ⏳ Pending |
-| 9 | Mobile Optimization | 2 weeks | ⏳ Pending |
-| 10 | AI Analytics (Core Differentiator) | 8-13 weeks | ⏳ Pending |
+| 8 | Broker Integrations | 1-2 weeks per parser | ⏳ Pending (ProjectX done, others pending) |
+| 9 | Mobile Optimization | 2 weeks | ✅ Complete |
+| 10 | AI Analytics (Core Differentiator) | 10-15 weeks | ✅ Complete (chat + MDX reports + email + UI redesign) |
+| **11** | **Payments & Billing** | **3-5 days** | **⏳ Next up** |
 
-**Total: 6-9 months for full feature parity**
+**8 of 9 original phases complete. Phase 11 (Payments via Clerk Billing) is next.**
 
 ---
 

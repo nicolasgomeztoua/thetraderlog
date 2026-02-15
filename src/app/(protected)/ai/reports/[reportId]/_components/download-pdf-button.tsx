@@ -19,7 +19,7 @@ export function DownloadPdfButton({ reportId }: { reportId: string }) {
 
 	// Poll for status using tRPC useQuery with refetchInterval
 	const statusQuery = api.ai.getPdfStatus.useQuery(
-		{ runId: runId! },
+		{ runId: runId ?? "" },
 		{
 			enabled: !!runId,
 			refetchInterval: 2000,

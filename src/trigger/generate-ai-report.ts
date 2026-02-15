@@ -349,14 +349,16 @@ export const generateAiReport = task({
 					const mdxComponentPattern =
 						/<(EquityCurve|MonthlyChart|SymbolDistributionChart|DayOfWeekChart|HourHeatmap|SessionChart|RMultipleChart|MonteCarloChart|CalendarHeatmap|DrawdownTable|SymbolTable|DataTable)\b([^>]*)\/?>/g;
 					const componentRefs: string[] = [];
-					let match: RegExpExecArray | null;
-					while ((match = mdxComponentPattern.exec(finalContent)) !== null) {
+					let match: RegExpExecArray | null =
+						mdxComponentPattern.exec(finalContent);
+					while (match !== null) {
 						const tag = match[1];
 						const attrs = match[2] ?? "";
 						const dataRefMatch = /dataRef="([^"]*)"/.exec(attrs);
 						componentRefs.push(
 							`${tag}${dataRefMatch ? ` dataRef="${dataRefMatch[1]}"` : " (NO dataRef!)"}`,
 						);
+						match = mdxComponentPattern.exec(finalContent);
 					}
 					console.log(
 						`[report:${payload.reportId}] Generation complete — dataStore keys: [${[...dataStore.keys()].join(", ")}], MDX components found: [${componentRefs.join(", ")}]`,

@@ -65,10 +65,7 @@ function TableOfContents({
 	if (items.length === 0) return null;
 
 	return (
-		<nav
-			className="sticky top-8 w-56 shrink-0"
-			data-testid="report-viewer-toc"
-		>
+		<nav className="sticky top-8 w-56 shrink-0" data-testid="report-viewer-toc">
 			<div className="border-white/5 border-l pl-4">
 				<span className="mb-3 block font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 					Contents
