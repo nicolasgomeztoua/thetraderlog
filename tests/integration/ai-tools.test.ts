@@ -87,7 +87,7 @@ describe("executeRunQuery", () => {
 			expect(result.success).toBe(true);
 			const rows = result.data as Array<{ total_pnl: string }>;
 			expect(rows).toHaveLength(1);
-			expect(Number.parseFloat(rows[0]?.total_pnl)).toBeCloseTo(4263, 0);
+			expect(Number.parseFloat(rows[0]?.total_pnl ?? "0")).toBeCloseTo(4263, 0);
 		});
 
 		it("should support queries across multiple user-scoped CTEs", async () => {

@@ -129,7 +129,7 @@ describe("buildWriterContext", () => {
 	});
 
 	it("should truncate array previews to 3 rows", () => {
-		const largeArray = Array.from({ length: 10 }, (_, i) => ({
+		const largeArray = Array.from({ length: 20 }, (_, i) => ({
 			day: i,
 			pnl: i * 100,
 		}));
@@ -140,8 +140,8 @@ describe("buildWriterContext", () => {
 			plan: "Test plan",
 		});
 
-		expect(result).toContain("array of 10 items");
-		expect(result).toContain("7 more rows");
+		expect(result).toContain("array of 20 items");
+		expect(result).toContain("17 more rows");
 	});
 });
 

@@ -160,7 +160,7 @@ test.describe("Report Interface - Progress Stages", () => {
 
 			// Width should be a percentage between 0 and 100
 			const widthMatch = style?.match(/width:\s*([\d.]+)%/);
-			if (widthMatch) {
+			if (widthMatch?.[1]) {
 				const width = Number.parseFloat(widthMatch[1]);
 				expect(width).toBeGreaterThanOrEqual(0);
 				expect(width).toBeLessThanOrEqual(100);
