@@ -6,7 +6,7 @@ export default defineConfig({
 	runtime: "bun",
 	logLevel: "log",
 	// Maximum compute time for tasks (5 minutes should be plenty for MAE/MFE)
-	maxDuration: 300, 
+	maxDuration: 300,
 	build: {
 		extensions: [puppeteer()],
 	},
