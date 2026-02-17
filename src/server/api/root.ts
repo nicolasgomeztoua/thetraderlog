@@ -4,6 +4,7 @@ import { analyticsRouter } from "@/server/api/routers/analytics";
 import { dailyJournalRouter } from "@/server/api/routers/dailyJournal";
 import { filterPresetsRouter } from "@/server/api/routers/filterPresets";
 import { marketDataRouter } from "@/server/api/routers/marketData";
+import { propFirmRouter } from "@/server/api/routers/propFirm";
 import { settingsRouter } from "@/server/api/routers/settings";
 import { sharingRouter } from "@/server/api/routers/sharing";
 import { storageRouter } from "@/server/api/routers/storage";
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
 	tags: tagsRouter,
 	strategies: strategiesRouter,
 	analytics: analyticsRouter,
+	propFirm: propFirmRouter,
 	dailyJournal: dailyJournalRouter,
 	storage: storageRouter,
 	ai: aiRouter,
