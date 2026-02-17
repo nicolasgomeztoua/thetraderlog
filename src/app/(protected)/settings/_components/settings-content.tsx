@@ -1683,6 +1683,7 @@ export function SettingsContent() {
 														{selectedTemplateSize && (
 															<Button
 																className="h-7 font-mono text-[10px]"
+																data-testid="account-form-button-reset-template"
 																onClick={handleResetToTemplate}
 																size="sm"
 																type="button"
@@ -1702,7 +1703,7 @@ export function SettingsContent() {
 																onValueChange={handleSelectPropFirm}
 																value={accountForm.propFirmId || "none"}
 															>
-																<SelectTrigger>
+																<SelectTrigger data-testid="account-form-select-prop-firm">
 																	<SelectValue placeholder="Select firm" />
 																</SelectTrigger>
 																<SelectContent>
@@ -1731,7 +1732,7 @@ export function SettingsContent() {
 																		onValueChange={handleSelectAccountSize}
 																		value={selectedTemplateSize?.label ?? ""}
 																	>
-																		<SelectTrigger>
+																		<SelectTrigger data-testid="account-form-select-account-size">
 																			<SelectValue placeholder="Select size" />
 																		</SelectTrigger>
 																		<SelectContent>
@@ -1755,6 +1756,7 @@ export function SettingsContent() {
 														<div className="space-y-2">
 															<Label>Max Drawdown ($)</Label>
 															<Input
+																data-testid="account-form-input-max-drawdown"
 																onChange={(e) =>
 																	setAccountForm({
 																		...accountForm,
@@ -1803,6 +1805,7 @@ export function SettingsContent() {
 																</span>
 															</Label>
 															<Input
+																data-testid="account-form-input-daily-loss"
 																onChange={(e) =>
 																	setAccountForm({
 																		...accountForm,
@@ -1823,6 +1826,7 @@ export function SettingsContent() {
 																</span>
 															</Label>
 															<Input
+																data-testid="account-form-input-max-position"
 																onChange={(e) =>
 																	setAccountForm({
 																		...accountForm,
@@ -1846,6 +1850,7 @@ export function SettingsContent() {
 																</span>
 															</Label>
 															<Input
+																data-testid="account-form-input-consistency"
 																onChange={(e) =>
 																	setAccountForm({
 																		...accountForm,

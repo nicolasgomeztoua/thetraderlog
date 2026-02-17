@@ -1,12 +1,25 @@
 #!/bin/bash
 # Ralph - Long-running Claude Code agent loop
 # Adapted from https://github.com/snarktank/ralph for Claude Code CLI
-# Usage: ./ralph.sh [max_iterations] [pr_review_cycles]
+# Usage: ./ralph.sh [max_iterations] [pr_review_cycles] [--target <branch>] [--branch <branch>]
+# Non-interactive mode: pass --target and --branch to skip branch selection menus
 
 set -e
 
 MAX_ITERATIONS=${1:-30}
 PR_REVIEW_CYCLES=${2:-10}
+
+# Parse optional flags (after positional args)
+PR_BASE_OVERRIDE=""
+WORK_BRANCH_OVERRIDE=""
+shift 2 2>/dev/null || true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --target) PR_BASE_OVERRIDE="$2"; shift 2 ;;
+        --branch) WORK_BRANCH_OVERRIDE="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
 PR_REVIEW_INITIAL_WAIT=480   # 8 minutes — give Greptile time to finish
 PR_REVIEW_INTERVAL=300       # 5 minutes between subsequent checks
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -112,19 +125,29 @@ show_branch_menu() {
     fi
 }
 
-# ---- 1. Which branch to PR into? (ask first so we can branch from it) ----
+# ---- 1. Which branch to PR into? ----
 echo ""
 echo -e "${CYAN}Branch Setup${NC}"
 echo -e "  Current git branch: ${GREEN}$GIT_BRANCH${NC}"
 [ -n "$PRD_BRANCH" ] && echo -e "  Branch in prd.json: ${GREEN}$PRD_BRANCH${NC}"
 
-show_branch_menu "Which branch should the PR target?" "main"
-PR_BASE_BRANCH="$SELECTED_BRANCH"
+if [ -n "$PR_BASE_OVERRIDE" ]; then
+    PR_BASE_BRANCH="$PR_BASE_OVERRIDE"
+    echo -e "  PR target (CLI): ${GREEN}$PR_BASE_BRANCH${NC}"
+else
+    show_branch_menu "Which branch should the PR target?" "main"
+    PR_BASE_BRANCH="$SELECTED_BRANCH"
+fi
 
-# ---- 2. Which branch to work on? (default = prd.json branch) ----
-WORK_DEFAULT="${PRD_BRANCH:-$GIT_BRANCH}"
-show_branch_menu "Which branch should Ralph work on?" "$WORK_DEFAULT"
-WORK_BRANCH="$SELECTED_BRANCH"
+# ---- 2. Which branch to work on? ----
+if [ -n "$WORK_BRANCH_OVERRIDE" ]; then
+    WORK_BRANCH="$WORK_BRANCH_OVERRIDE"
+    echo -e "  Work branch (CLI): ${GREEN}$WORK_BRANCH${NC}"
+else
+    WORK_DEFAULT="${PRD_BRANCH:-$GIT_BRANCH}"
+    show_branch_menu "Which branch should Ralph work on?" "$WORK_DEFAULT"
+    WORK_BRANCH="$SELECTED_BRANCH"
+fi
 
 # ---- 3. Create / switch to the working branch ----
 BRANCH_EXISTS=$(git branch --list "$WORK_BRANCH" 2>/dev/null | tr -d ' ')
