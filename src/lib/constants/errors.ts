@@ -61,6 +61,13 @@ export const ERR_REPORT_ONLY_FAILED_RETRY =
 export const ERR_CHECKLIST_AUTO_CALCULATED =
 	"Cannot toggle this item - it is auto-calculated";
 export const ERR_ACCESS_DENIED = "Access denied";
+export const ERR_NOT_PROP_ACCOUNT =
+	"Account is not a prop challenge or prop funded account";
+export const ERR_PROP_ACCOUNT_NOT_FOUND = "Prop firm account not found";
+
+/** Dynamic: Prop firm calculation error */
+export const errPropFirmCalculation = (detail: string) =>
+	`Prop firm calculation failed: ${detail}`;
 
 /** Dynamic: Template {id} not found or not owned by user */
 export const errTemplateNotOwned = (id: string) =>

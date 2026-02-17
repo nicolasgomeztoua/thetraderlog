@@ -1,7 +1,10 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { ERR_ACCOUNT_NOT_FOUND } from "@/lib/constants/errors";
+import {
+	ERR_NOT_PROP_ACCOUNT,
+	ERR_PROP_ACCOUNT_NOT_FOUND,
+} from "@/lib/constants/errors";
 import { PROP_FIRM_TEMPLATES } from "@/lib/constants/prop-firms";
 import { calculatePropFirmStatus } from "@/lib/prop-firm/calculator";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
@@ -24,14 +27,14 @@ export const propFirmRouter = createTRPCRouter({
 			});
 
 			if (!account) {
-				throw new Error(ERR_ACCOUNT_NOT_FOUND);
+				throw new Error(ERR_PROP_ACCOUNT_NOT_FOUND);
 			}
 
 			if (
 				account.accountType !== "prop_challenge" &&
 				account.accountType !== "prop_funded"
 			) {
-				throw new Error(ERR_ACCOUNT_NOT_FOUND);
+				throw new Error(ERR_NOT_PROP_ACCOUNT);
 			}
 
 			// Fetch all closed trades for this account, sorted by entry time
