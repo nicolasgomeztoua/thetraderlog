@@ -1,3 +1,93 @@
 # Ralph Progress Log
 Started: Tue Feb 17 01:13:05 WET 2026
 ---
+
+## Codebase Patterns
+- Prop firm rules use dollar amounts (not percentages) for maxDrawdown, dailyLossLimit, profitTarget
+- DrawdownType reuses the existing enum from schemas.ts: "trailing" | "static" | "eod"
+- Constants files follow pattern: types at top, exported const array at bottom, `as const` not used on mutable arrays
+- All constants go in src/lib/constants/ and are re-exported from index.ts
+- propFieldsSchema (shared/schemas.ts) is merged into both create and update account schemas — add new prop firm fields there
+- Account types are auto-inferred from Drizzle schema — no manual type updates needed
+
+## 2026-02-17 - US-001
+- What was implemented: PropFirmRules, AccountSize, PropFirmTemplate types and PROP_FIRM_TEMPLATES constant with 5 firms (Topstep, Apex, FTMO, MFF, Custom)
+- Files changed: src/lib/constants/prop-firms.ts (new), src/lib/constants/index.ts (updated exports)
+- **Learnings for future iterations:**
+  - Prop firm rules use absolute dollar amounts, not percentages — e.g., maxDrawdown: 2000 means $2,000, not 20%
+  - The DrawdownType from shared/schemas.ts ("trailing" | "static" | "eod") maps directly to prop firm drawdown tracking
+  - Custom template has a single size entry with zeroes — user fills in all values manually
+---
+
+## 2026-02-17 - US-002
+- What was implemented: Added maxPositionSize (integer, nullable) and propFirmId (text, nullable) to accounts table in schema.ts. Updated propFieldsSchema in shared/schemas.ts to include both new fields. Ran db:push successfully.
+- Files changed: src/server/db/schema.ts (added 2 columns), src/lib/shared/schemas.ts (added 2 fields to propFieldsSchema)
+- **Learnings for future iterations:**
+  - propFieldsSchema in shared/schemas.ts is the single source of truth for account create/update validation — both createAccountSchema and updateAccountSchema merge it via `.merge(propFieldsSchema)`
+  - Account type exports are auto-inferred from the Drizzle schema via `$inferSelect` / `$inferInsert` — no manual type updates needed when adding columns
+  - db:push NOTICE about truncated FK names is safe to ignore (documented in AGENTS.md)
+---
+
+## 2026-02-17 - US-003
+- What was implemented: Created src/lib/prop-firm/calculator.ts with three pure drawdown calculation functions: calculateStaticDrawdown, calculateTrailingDrawdown, calculateEodTrailingDrawdown
+- Files changed: src/lib/prop-firm/calculator.ts (new)
+- **Learnings for future iterations:**
+  - CalcTrade interface uses `netPnl: string | null` and `fees: string | null` to match Drizzle decimal-as-string pattern
+  - EOD trailing drawdown groups trades by exit day (falls back to entry day), sorts days chronologically, and only updates peak at EOD
+  - Use `?? []` instead of `!` non-null assertion to satisfy Biome linting
+  - Calculator functions take `maxDrawdownLimit` as a separate param (dollar amount from prop firm rules), not embedded in trades
+---
+
+## 2026-02-17 - US-004
+- What was implemented: Added 6 calculator functions to src/lib/prop-firm/calculator.ts: calculateDailyPnl, calculateProfitTarget, calculateConsistencyRule, calculateMinTradingDays, calculateMaxPosition, calculateDaysRemaining
+- Files changed: src/lib/prop-firm/calculator.ts (extended with new types and functions)
+- **Learnings for future iterations:**
+  - CalcTrade.quantity is optional (string | null) — defaults to 1 if not provided, matching existing trades that may not set it
+  - calculateMaxPosition uses sweep line algorithm: +qty at entry, -qty at exit, track running max
+  - calculateProfitTarget doesn't need initialBalance param — progress is just totalPnl/targetAmount
+  - Consistency rule checks each day's P&L as % of total profit — days exceeding maxDayPercent are violating
+  - getTradingDayInTimezone helper uses Intl.DateTimeFormat with "en-CA" locale for YYYY-MM-DD format in any timezone
+  - DaysUrgency type: "danger" at >=90% elapsed or <=3 days, "warning" at >=75% or <=7 days
+---
+
+## 2026-02-17 - US-005
+- What was implemented: Created calculatePropFirmStatus(account, trades) aggregator function that combines all individual rule checks into a single PropFirmStatus object. Added types: RuleStatus, PropFirmRule, PropFirmStatus, StatusAccount.
+- Files changed: src/lib/prop-firm/calculator.ts (extended with aggregator types and function)
+- **Learnings for future iterations:**
+  - StatusAccount interface uses `string | null` for decimal DB fields (initialBalance, maxDrawdown, etc.) to match Drizzle output
+  - Status thresholds: safe (<80%), warning (80-90%), danger (90-100%), violated (>=100%) — applied via getRuleStatus helper
+  - Profit target and min trading days are "positive progress" rules — their status is always "safe" since reaching the limit is good
+  - Daily loss uses today's date (UTC) — `new Date().toISOString().slice(0, 10)`
+  - Locked accounts (challengeStatus passed/failed) return empty rules array with isLocked: true
+  - Days remaining maps urgency from calculateDaysRemaining directly to RuleStatus
+---
+
+## 2026-02-17 - US-006
+- What was implemented: 48 unit tests for all prop firm calculator functions in tests/unit/prop-firm-calculator.test.ts
+- Files changed: tests/unit/prop-firm-calculator.test.ts (new)
+- **Test coverage:**
+  - Static drawdown: 5 tests (empty, losing, recovery, violated, winning)
+  - Trailing drawdown: 4 tests (empty, trailing floor, losing streak, single trade)
+  - EOD trailing drawdown: 4 tests (empty, intraday vs EOD, multi-day, losing streak)
+  - Daily P&L: 4 tests (empty, sum, timezone, no trades day)
+  - Profit target: 5 tests (empty, progress, met, exceeded, negative)
+  - Consistency rule: 5 tests (empty, single trade, violating, compliant, all losses)
+  - Min trading days: 3 tests (empty, unique days, single)
+  - Max position: 6 tests (empty, non-overlapping, 3 concurrent, quantities, open position, null qty)
+  - Days remaining: 5 tests (30-day challenge, past end, danger, warning, safe urgency)
+  - Status aggregator: 7 tests (passed lock, failed lock, Topstep $50K full, Apex skip rules, trailing DD status, empty trades, position size)
+- **Learnings for future iterations:**
+  - Calculator tests are unit tests — use `vitest.config.unit.ts` (no DB/Docker needed), place in `tests/unit/`
+  - calculateDaysRemaining uses Math.ceil for elapsed days, so `daysElapsed` can exceed `daysTotal` for past challenges — don't assert `elapsed + remaining == total`
+  - Biome requires alphabetically sorted imports — run `bunx biome check --write` after creating test files
+---
+
+## 2026-02-17 - US-007
+- What was implemented: Created src/server/api/routers/propFirm.ts with two tRPC procedures: getStatus (fetches account, validates ownership + prop type, queries closed trades, runs calculatePropFirmStatus) and getTemplates (returns PROP_FIRM_TEMPLATES). Registered propFirm router in src/server/api/root.ts.
+- Files changed: src/server/api/routers/propFirm.ts (new), src/server/api/root.ts (added propFirm router)
+- **Learnings for future iterations:**
+  - When querying trades for prop firm calculations, always include `isNull(trades.deletedAt)` to exclude soft-deleted trades
+  - Router uses `asc(trades.entryTime)` ordering since calculator functions expect chronologically sorted trades
+  - Non-prop accounts (live/demo) get ERR_ACCOUNT_NOT_FOUND to avoid leaking account type info — same pattern as validate child ownership through parent
+  - getTemplates is a simple query returning the constant — no input needed, just protectedProcedure
+---

@@ -121,6 +121,10 @@ await expect(hero).toBeVisible({ timeout: 10000 });
 **Problem:** Tests timeout or fail to connect
 **Solution:** The Playwright config auto-starts the dev server, but ensure port 3000 is free
 
+### calculateDaysRemaining Elapsed Days
+**Problem:** `daysElapsed` uses `Math.ceil` and is not capped at `daysTotal`, so for past challenges `daysElapsed > daysTotal` while `daysRemaining` is clamped to 0.
+**Solution:** Don't assert `elapsed + remaining == total`. Instead check each independently.
+
 ## Decisions
 
 <!-- Architectural decisions and rationale -->

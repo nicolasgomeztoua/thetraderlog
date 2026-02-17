@@ -14,6 +14,7 @@ import {
 	Link2,
 	Loader2,
 	Plus,
+	RotateCcw,
 	Save,
 	Shield,
 	Sparkles,
@@ -71,6 +72,8 @@ import {
 	ERR_VALIDATION_ACCOUNT_NAME_REQUIRED,
 	ERR_VALIDATION_GROUP_NAME_REQUIRED,
 } from "@/lib/constants/errors";
+import type { AccountSize, PropFirmTemplate } from "@/lib/constants/prop-firms";
+import { PROP_FIRM_TEMPLATES } from "@/lib/constants/prop-firms";
 import {
 	ACCOUNT_TYPE_COLORS,
 	cn,
@@ -189,12 +192,14 @@ interface AccountFormState {
 	notes: string;
 	color: string;
 	// Prop firm fields
+	propFirmId: string;
 	maxDrawdown: string;
 	drawdownType: DrawdownType | "";
 	dailyLossLimit: string;
 	profitTarget: string;
 	consistencyRule: string;
 	minTradingDays: string;
+	maxPositionSize: string;
 	challengeStartDate: string;
 	challengeEndDate: string;
 	profitSplit: string;
@@ -213,12 +218,14 @@ const defaultAccountForm: AccountFormState = {
 	notes: "",
 	color: "#6366f1",
 	// Prop firm defaults
+	propFirmId: "",
 	maxDrawdown: "",
 	drawdownType: "",
 	dailyLossLimit: "",
 	profitTarget: "",
 	consistencyRule: "",
 	minTradingDays: "",
+	maxPositionSize: "",
 	challengeStartDate: "",
 	challengeEndDate: "",
 	profitSplit: "",
@@ -263,6 +270,10 @@ export function SettingsContent() {
 		description: "",
 		color: "#6366f1",
 	});
+
+	// Template selector state
+	const [selectedTemplateSize, setSelectedTemplateSize] =
+		useState<AccountSize | null>(null);
 
 	const { refetchAccounts, setSelectedAccountId } = useAccount();
 	const {
@@ -481,6 +492,57 @@ export function SettingsContent() {
 
 	const resetAccountForm = () => {
 		setAccountForm(defaultAccountForm);
+		setSelectedTemplateSize(null);
+	};
+
+	const selectedTemplate: PropFirmTemplate | undefined = accountForm.propFirmId
+		? PROP_FIRM_TEMPLATES.find((t) => t.id === accountForm.propFirmId)
+		: undefined;
+
+	const handleSelectPropFirm = (firmId: string) => {
+		const template = PROP_FIRM_TEMPLATES.find((t) => t.id === firmId);
+		setAccountForm((prev) => ({
+			...prev,
+			propFirmId: firmId === "none" ? "" : firmId,
+		}));
+		// Reset size selection when firm changes
+		setSelectedTemplateSize(null);
+		// If template has only one size (Custom), auto-select it
+		if (template && template.sizes.length === 1 && template.sizes[0]) {
+			applyTemplateSize(template, template.sizes[0]);
+		}
+	};
+
+	const handleSelectAccountSize = (sizeLabel: string) => {
+		if (!selectedTemplate) return;
+		const size = selectedTemplate.sizes.find((s) => s.label === sizeLabel);
+		if (!size) return;
+		applyTemplateSize(selectedTemplate, size);
+	};
+
+	const applyTemplateSize = (template: PropFirmTemplate, size: AccountSize) => {
+		setSelectedTemplateSize(size);
+		setAccountForm((prev) => ({
+			...prev,
+			initialBalance:
+				size.initialBalance > 0
+					? size.initialBalance.toString()
+					: prev.initialBalance,
+			maxDrawdown:
+				size.rules.maxDrawdown > 0 ? size.rules.maxDrawdown.toString() : "",
+			drawdownType: size.rules.drawdownType,
+			dailyLossLimit: size.rules.dailyLossLimit?.toString() ?? "",
+			profitTarget: size.rules.profitTarget?.toString() ?? "",
+			consistencyRule: size.rules.consistencyRule?.toString() ?? "",
+			minTradingDays: size.rules.minTradingDays?.toString() ?? "",
+			maxPositionSize: size.rules.maxPositionSize?.toString() ?? "",
+			profitSplit: template.profitSplit?.toString() ?? prev.profitSplit,
+		}));
+	};
+
+	const handleResetToTemplate = () => {
+		if (!selectedTemplate || !selectedTemplateSize) return;
+		applyTemplateSize(selectedTemplate, selectedTemplateSize);
 	};
 
 	const resetGroupForm = () => {
@@ -493,7 +555,7 @@ export function SettingsContent() {
 
 	const openEditAccount = (account: (typeof accounts)[0]) => {
 		setEditingAccount(account.id);
-		setAccountForm({
+		const form: AccountFormState = {
 			name: account.name,
 			broker: account.broker ?? "",
 			platform: account.platform ?? "other",
@@ -504,12 +566,14 @@ export function SettingsContent() {
 			notes: account.notes ?? "",
 			color: account.color ?? "#6366f1",
 			// Prop firm fields
+			propFirmId: account.propFirmId ?? "",
 			maxDrawdown: account.maxDrawdown ?? "",
 			drawdownType: (account.drawdownType as DrawdownType) ?? "",
 			dailyLossLimit: account.dailyLossLimit ?? "",
 			profitTarget: account.profitTarget ?? "",
 			consistencyRule: account.consistencyRule ?? "",
 			minTradingDays: account.minTradingDays?.toString() ?? "",
+			maxPositionSize: account.maxPositionSize?.toString() ?? "",
 			challengeStartDate: account.challengeStartDate
 				? (new Date(account.challengeStartDate).toISOString().split("T")[0] ??
 					"")
@@ -520,7 +584,20 @@ export function SettingsContent() {
 			profitSplit: account.profitSplit ?? "",
 			payoutFrequency: (account.payoutFrequency as PayoutFrequency) ?? "",
 			groupId: account.groupId?.toString() ?? "",
-		});
+		};
+		setAccountForm(form);
+		// Set selected template size if propFirmId is set
+		if (account.propFirmId) {
+			const template = PROP_FIRM_TEMPLATES.find(
+				(t) => t.id === account.propFirmId,
+			);
+			if (template) {
+				const sizeMatch = template.sizes.find(
+					(s) => s.initialBalance.toString() === (account.initialBalance ?? ""),
+				);
+				setSelectedTemplateSize(sizeMatch ?? null);
+			}
+		}
 		setIsAccountDialogOpen(true);
 	};
 
@@ -556,6 +633,7 @@ export function SettingsContent() {
 			notes: accountForm.notes || undefined,
 			color: accountForm.color || undefined,
 			// Prop fields (only include if set)
+			propFirmId: accountForm.propFirmId || undefined,
 			maxDrawdown: accountForm.maxDrawdown || undefined,
 			drawdownType: accountForm.drawdownType || undefined,
 			dailyLossLimit: accountForm.dailyLossLimit || undefined,
@@ -563,6 +641,9 @@ export function SettingsContent() {
 			consistencyRule: accountForm.consistencyRule || undefined,
 			minTradingDays: accountForm.minTradingDays
 				? parseInt(accountForm.minTradingDays, 10)
+				: undefined,
+			maxPositionSize: accountForm.maxPositionSize
+				? parseInt(accountForm.maxPositionSize, 10)
 				: undefined,
 			challengeStartDate: accountForm.challengeStartDate || undefined,
 			challengeEndDate: accountForm.challengeEndDate || undefined,
@@ -1590,18 +1671,89 @@ export function SettingsContent() {
 											{isPropAccount && (
 												<>
 													<Separator />
-													<div className="space-y-1">
-														<h4 className="font-medium text-sm">
-															Prop Firm Rules
-														</h4>
-														<p className="text-muted-foreground text-xs">
-															Configure your prop firm account parameters
-														</p>
+													<div className="flex items-center justify-between">
+														<div className="space-y-1">
+															<h4 className="font-medium text-sm">
+																Prop Firm Rules
+															</h4>
+															<p className="text-muted-foreground text-xs">
+																Select a template or configure manually
+															</p>
+														</div>
+														{selectedTemplateSize && (
+															<Button
+																className="h-7 font-mono text-[10px]"
+																onClick={handleResetToTemplate}
+																size="sm"
+																type="button"
+																variant="outline"
+															>
+																<RotateCcw className="mr-1 h-3 w-3" />
+																Reset to Default
+															</Button>
+														)}
+													</div>
+
+													{/* Template Selector */}
+													<div className="grid gap-4 sm:grid-cols-2">
+														<div className="space-y-2">
+															<Label>Prop Firm</Label>
+															<Select
+																onValueChange={handleSelectPropFirm}
+																value={accountForm.propFirmId || "none"}
+															>
+																<SelectTrigger>
+																	<SelectValue placeholder="Select firm" />
+																</SelectTrigger>
+																<SelectContent>
+																	<SelectItem value="none">
+																		None (Manual)
+																	</SelectItem>
+																	{PROP_FIRM_TEMPLATES.filter(
+																		(t) => t.id !== "custom",
+																	).map((template) => (
+																		<SelectItem
+																			key={template.id}
+																			value={template.id}
+																		>
+																			{template.name}
+																		</SelectItem>
+																	))}
+																	<SelectItem value="custom">Custom</SelectItem>
+																</SelectContent>
+															</Select>
+														</div>
+														{selectedTemplate &&
+															selectedTemplate.sizes.length > 1 && (
+																<div className="space-y-2">
+																	<Label>Account Size</Label>
+																	<Select
+																		onValueChange={handleSelectAccountSize}
+																		value={selectedTemplateSize?.label ?? ""}
+																	>
+																		<SelectTrigger>
+																			<SelectValue placeholder="Select size" />
+																		</SelectTrigger>
+																		<SelectContent>
+																			{selectedTemplate.sizes.map((size) => (
+																				<SelectItem
+																					key={size.label}
+																					value={size.label}
+																				>
+																					{size.label} ($
+																					{size.initialBalance.toLocaleString()}
+																					)
+																				</SelectItem>
+																			))}
+																		</SelectContent>
+																	</Select>
+																</div>
+															)}
 													</div>
 
 													<div className="grid gap-4 sm:grid-cols-2">
 														<div className="space-y-2">
-															<Label>Max Drawdown (%)</Label>
+															<Label>Max Drawdown ($)</Label>
 															<Input
 																onChange={(e) =>
 																	setAccountForm({
@@ -1609,7 +1761,7 @@ export function SettingsContent() {
 																		maxDrawdown: e.target.value,
 																	})
 																}
-																placeholder="6.00"
+																placeholder="2000"
 																step="0.01"
 																type="number"
 																value={accountForm.maxDrawdown}
@@ -1645,7 +1797,7 @@ export function SettingsContent() {
 													<div className="grid gap-4 sm:grid-cols-2">
 														<div className="space-y-2">
 															<Label>
-																Daily Loss Limit (%){" "}
+																Daily Loss Limit ($){" "}
 																<span className="font-normal text-muted-foreground">
 																	(optional)
 																</span>
@@ -1657,12 +1809,35 @@ export function SettingsContent() {
 																		dailyLossLimit: e.target.value,
 																	})
 																}
-																placeholder="3.00"
+																placeholder="1000"
 																step="0.01"
 																type="number"
 																value={accountForm.dailyLossLimit}
 															/>
 														</div>
+														<div className="space-y-2">
+															<Label>
+																Max Position Size{" "}
+																<span className="font-normal text-muted-foreground">
+																	(contracts, optional)
+																</span>
+															</Label>
+															<Input
+																onChange={(e) =>
+																	setAccountForm({
+																		...accountForm,
+																		maxPositionSize: e.target.value,
+																	})
+																}
+																placeholder="5"
+																step="1"
+																type="number"
+																value={accountForm.maxPositionSize}
+															/>
+														</div>
+													</div>
+
+													<div className="grid gap-4 sm:grid-cols-2">
 														<div className="space-y-2">
 															<Label>
 																Consistency Rule (%){" "}
@@ -1686,55 +1861,53 @@ export function SettingsContent() {
 																Max single day profit as % of target
 															</p>
 														</div>
+														<div className="space-y-2">
+															<Label>
+																Min Trading Days{" "}
+																<span className="font-normal text-muted-foreground">
+																	(optional)
+																</span>
+															</Label>
+															<Input
+																onChange={(e) =>
+																	setAccountForm({
+																		...accountForm,
+																		minTradingDays: e.target.value,
+																	})
+																}
+																placeholder="5"
+																type="number"
+																value={accountForm.minTradingDays}
+															/>
+														</div>
 													</div>
 
 													{/* Challenge-specific fields */}
 													{isChallenge && (
-														<>
-															<div className="grid gap-4 sm:grid-cols-2">
-																<div className="space-y-2">
-																	<Label>Profit Target (%)</Label>
-																	<Input
-																		onChange={(e) =>
-																			setAccountForm({
-																				...accountForm,
-																				profitTarget: e.target.value,
-																			})
-																		}
-																		placeholder="8.00"
-																		step="0.01"
-																		type="number"
-																		value={accountForm.profitTarget}
-																	/>
-																</div>
-																<div className="space-y-2">
-																	<Label>
-																		Min Trading Days{" "}
-																		<span className="font-normal text-muted-foreground">
-																			(optional)
-																		</span>
-																	</Label>
-																	<Input
-																		onChange={(e) =>
-																			setAccountForm({
-																				...accountForm,
-																				minTradingDays: e.target.value,
-																			})
-																		}
-																		placeholder="5"
-																		type="number"
-																		value={accountForm.minTradingDays}
-																	/>
-																</div>
+														<div className="grid gap-4 sm:grid-cols-2">
+															<div className="space-y-2">
+																<Label>Profit Target ($)</Label>
+																<Input
+																	onChange={(e) =>
+																		setAccountForm({
+																			...accountForm,
+																			profitTarget: e.target.value,
+																		})
+																	}
+																	placeholder="3000"
+																	step="0.01"
+																	type="number"
+																	value={accountForm.profitTarget}
+																/>
 															</div>
-															<div className="grid gap-4 sm:grid-cols-2">
-																<div className="space-y-2">
-																	<Label>
-																		Start Date{" "}
-																		<span className="font-normal text-muted-foreground">
-																			(optional)
-																		</span>
-																	</Label>
+															<div className="space-y-2">
+																<Label>
+																	Challenge Dates{" "}
+																	<span className="font-normal text-muted-foreground">
+																		(optional)
+																	</span>
+																</Label>
+																<div className="flex gap-2">
 																	<Input
 																		onChange={(e) =>
 																			setAccountForm({
@@ -1742,17 +1915,10 @@ export function SettingsContent() {
 																				challengeStartDate: e.target.value,
 																			})
 																		}
+																		placeholder="Start"
 																		type="date"
 																		value={accountForm.challengeStartDate}
 																	/>
-																</div>
-																<div className="space-y-2">
-																	<Label>
-																		End Date{" "}
-																		<span className="font-normal text-muted-foreground">
-																			(optional)
-																		</span>
-																	</Label>
 																	<Input
 																		onChange={(e) =>
 																			setAccountForm({
@@ -1760,12 +1926,13 @@ export function SettingsContent() {
 																				challengeEndDate: e.target.value,
 																			})
 																		}
+																		placeholder="End"
 																		type="date"
 																		value={accountForm.challengeEndDate}
 																	/>
 																</div>
 															</div>
-														</>
+														</div>
 													)}
 
 													{/* Funded-specific fields */}

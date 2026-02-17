@@ -9,7 +9,7 @@
       "description": "Define TypeScript constants and types for prop firm templates. Create src/lib/constants/prop-firms.ts with template definitions. Include types: PropFirm, PropFirmTemplate, AccountSize, PropFirmRules. Include all 4 firms (Topstep, Apex, FTMO, MFF) + Custom with their account sizes and rules. Export PROP_FIRM_TEMPLATES constant array. Topstep rules: $50K (trailing DD $2000, daily loss $1000, PT $3000, max 5 contracts), $100K (trailing DD $3000, daily loss $2000, PT $6000, max 10), $150K (trailing DD $4500, daily loss $3000, PT $9000, max 15), consistency 50%, min 5 days. Apex: $50K (EOD trailing DD $2500, PT $3000, max 4), $100K (EOD trailing DD $3000, PT $6000, max 12), $150K (EOD trailing DD $5000, PT $9000, max 14), $300K (EOD trailing DD $7500, PT $20000, max 25), no daily loss, no consistency. FTMO: 10K-200K all 10% static DD, 5% daily DD, 10% PT challenge / 5% verification, 30/60 day limits, min 4 days, 80% split. MFF: $50K (EOD trailing DD $2000, daily loss $1000), $100K (EOD trailing DD $3000, daily loss $2000), consistency 35%, min 3 days, no explicit PT.",
       "acceptanceCriteria": "Importing PROP_FIRM_TEMPLATES returns array of 5 firms. Each firm has id, name, sizes[] with rules per size including maxDrawdown, drawdownType, dailyLossLimit, profitTarget, consistencyRule, minTradingDays, maxPositionSize.",
       "priority": 1,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-002",
@@ -17,7 +17,7 @@
       "description": "Add maxPositionSize (integer, nullable) and propFirmId (text, nullable) fields to the accounts table in src/server/db/schema.ts. maxPositionSize tracks maximum allowed contracts. propFirmId stores which template was used (e.g., 'topstep', 'apex'). Update the Account type exports. Run db:push to apply. Also update propFieldsSchema in src/lib/shared to include the new fields.",
       "acceptanceCriteria": "Schema has new fields. bun run db:push succeeds. Account type includes maxPositionSize and propFirmId.",
       "priority": 2,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-003",
@@ -25,7 +25,7 @@
       "description": "Create src/lib/prop-firm/calculator.ts with pure calculation functions for max drawdown. Three types: (1) calculateStaticDrawdown(trades, initialBalance) — DD measured from initial balance only, returns currentEquity, maxDrawdownAmount, drawdownFloor, currentDrawdownPercent. (2) calculateTrailingDrawdown(trades, initialBalance) — DD trails from peak equity, if equity reaches $103K on $100K account, floor moves to $100K (with $3K DD limit). Returns currentEquity, peakEquity, drawdownFloor, currentDrawdown. (3) calculateEodTrailingDrawdown(trades, initialBalance) — same as trailing but floor only updates at end of day, intraday peaks don't move the floor. All functions accept sorted trades array with netPnl and fees fields. Handle partial exits correctly.",
       "acceptanceCriteria": "Functions return correct values for test scenarios. Pure functions with no DB access. Handle edge cases: empty trades array returns initial balance with 0 drawdown.",
       "priority": 3,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-004",
@@ -33,7 +33,7 @@
       "description": "Add remaining calculation functions to src/lib/prop-firm/calculator.ts. (1) calculateDailyPnl(trades, date, timezone) — sum P&L for trades on given date, returns dailyPnl and dailyPnlPercent. (2) calculateProfitTarget(trades, initialBalance, targetAmount) — returns totalPnl, progress percentage, isComplete boolean. (3) calculateConsistencyRule(trades, maxDayPercent) — group trades by day, find best day's P&L as % of total, returns bestDayPnl, bestDayPercent, isCompliant, violatingDays array. (4) calculateMinTradingDays(trades) — count unique trading days from trade entry times. (5) calculateMaxPosition(trades) — from overlapping entry/exit times, find max concurrent contracts at any point. (6) calculateDaysRemaining(startDate, endDate) — returns daysTotal, daysRemaining, daysElapsed, urgency ('safe'|'warning'|'danger').",
       "acceptanceCriteria": "Functions return correct values. Edge cases handled: no trades returns zeroes, midnight-spanning trades use correct day, consistency with single trade returns compliant.",
       "priority": 4,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-005",
@@ -41,7 +41,7 @@
       "description": "Create calculatePropFirmStatus(account, trades) function that aggregates all rule checks into PropFirmStatus. PropFirmStatus type has rules[] array where each rule has { type: string, label: string, currentValue: number, limit: number, percentage: number, status: 'safe'|'warning'|'danger'|'violated' }. Thresholds: safe (<80%), warning (80-90%), danger (90%+), violated (>=100%). Skip rules that don't apply (e.g., Apex has no daily loss limit). Include days remaining if challengeEndDate is set. Include profit target progress. For daily loss, calculate for today's date. Account fields used: maxDrawdown, drawdownType, dailyLossLimit, profitTarget, consistencyRule, minTradingDays, maxPositionSize, challengeStartDate, challengeEndDate, initialBalance. If challengeStatus is 'passed' or 'failed', return locked status.",
       "acceptanceCriteria": "Returns complete PropFirmStatus object. Status colors match thresholds. Skips inapplicable rules. Locked for passed/failed.",
       "priority": 5,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-006",
@@ -49,7 +49,7 @@
       "description": "Write integration tests in tests/integration/prop-firm-calculator.test.ts. Test each drawdown type (static, trailing, EOD trailing) with realistic trade sequences — winning streaks, losing streaks, recovery. Test edge cases: no trades, single trade, trades with fees, partial exits via tradeExecutions. Test daily loss across midnight boundary. Test consistency rule with a violating day (one day > threshold). Test max position with overlapping trades (3 concurrent positions). Test status aggregator end-to-end with a Topstep $50K account. Use existing test fixtures (createTestUser, setupTrader). These are unit tests on pure functions — no DB needed, just call functions with mock trade arrays.",
       "acceptanceCriteria": "All tests pass. At least 15 test cases covering all calculator functions and edge cases.",
       "priority": 6,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-007",
@@ -57,7 +57,7 @@
       "description": "Create src/server/api/routers/propFirm.ts with tRPC router. getStatus procedure: takes accountId string, fetches account (validate belongs to user, is prop_challenge or prop_funded), fetches all closed trades for that account sorted by entryTime, runs calculatePropFirmStatus, returns PropFirmStatus. getTemplates procedure: returns PROP_FIRM_TEMPLATES constant. Register propFirm router in src/server/api/root.ts. Follow existing router patterns from accounts.ts and analytics.ts — use protectedProcedure, validate user ownership.",
       "acceptanceCriteria": "propFirm.getStatus returns status for a prop account with correct rule calculations. propFirm.getTemplates returns all 5 templates. Router registered and accessible.",
       "priority": 7,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-008",
