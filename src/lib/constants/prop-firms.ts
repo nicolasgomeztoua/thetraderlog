@@ -29,6 +29,13 @@ export interface PropFirmTemplate {
 }
 
 // =============================================================================
+// PROP FIRM LOCKED REASONS
+// =============================================================================
+
+export const PROP_FIRM_LOCKED_PASSED = "Challenge Passed";
+export const PROP_FIRM_LOCKED_FAILED = "Challenge Failed";
+
+// =============================================================================
 // PROP FIRM TEMPLATES
 // =============================================================================
 

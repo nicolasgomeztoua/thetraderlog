@@ -3,6 +3,12 @@
 // No DB access — operates on sorted trade arrays
 // =============================================================================
 
+import {
+	PROP_FIRM_LOCKED_FAILED,
+	PROP_FIRM_LOCKED_PASSED,
+} from "@/lib/constants/prop-firms";
+import { MS_PER_DAY } from "@/lib/shared";
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -451,14 +457,13 @@ export function calculateDaysRemaining(
 	endDate: Date,
 ): DaysRemainingResult {
 	const now = new Date();
-	const msPerDay = 86400000;
 
 	const daysTotal = Math.ceil(
-		(endDate.getTime() - startDate.getTime()) / msPerDay,
+		(endDate.getTime() - startDate.getTime()) / MS_PER_DAY,
 	);
 	const daysElapsed = Math.max(
 		0,
-		Math.ceil((now.getTime() - startDate.getTime()) / msPerDay),
+		Math.ceil((now.getTime() - startDate.getTime()) / MS_PER_DAY),
 	);
 	const daysRemaining = Math.max(0, daysTotal - daysElapsed);
 
@@ -508,14 +513,14 @@ export function calculatePropFirmStatus(
 	if (account.challengeStatus === "passed") {
 		return {
 			isLocked: true,
-			lockedReason: "Challenge Passed",
+			lockedReason: PROP_FIRM_LOCKED_PASSED,
 			rules: [],
 		};
 	}
 	if (account.challengeStatus === "failed") {
 		return {
 			isLocked: true,
-			lockedReason: "Challenge Failed",
+			lockedReason: PROP_FIRM_LOCKED_FAILED,
 			rules: [],
 		};
 	}
@@ -605,7 +610,7 @@ export function calculatePropFirmStatus(
 				currentValue: ptResult.totalPnl,
 				limit: profitTargetAmount,
 				percentage: Math.max(0, ptResult.progress),
-				status: ptResult.isComplete ? "safe" : "safe",
+				status: "safe",
 			});
 		}
 	}
@@ -650,7 +655,7 @@ export function calculatePropFirmStatus(
 			currentValue: tradingDays,
 			limit: account.minTradingDays,
 			percentage: Math.min(100, percentage),
-			status: tradingDays >= account.minTradingDays ? "safe" : "safe",
+			status: "safe",
 		});
 	}
 

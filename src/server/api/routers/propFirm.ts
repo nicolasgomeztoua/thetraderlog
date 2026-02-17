@@ -16,7 +16,7 @@ export const propFirmRouter = createTRPCRouter({
 	 * Account must belong to the user and be a prop_challenge or prop_funded type.
 	 */
 	getStatus: protectedProcedure
-		.input(z.object({ accountId: z.string() }))
+		.input(z.object({ accountId: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
 			// Fetch account and validate ownership + type
 			const account = await ctx.db.query.accounts.findFirst({

@@ -9,6 +9,10 @@
  */
 
 import { describe, expect, it } from "vitest";
+import {
+	PROP_FIRM_LOCKED_FAILED,
+	PROP_FIRM_LOCKED_PASSED,
+} from "@/lib/constants/prop-firms";
 import type { CalcTrade, StatusAccount } from "@/lib/prop-firm/calculator";
 import {
 	calculateConsistencyRule,
@@ -543,7 +547,7 @@ describe("calculatePropFirmStatus", () => {
 		};
 		const result = calculatePropFirmStatus(account, []);
 		expect(result.isLocked).toBe(true);
-		expect(result.lockedReason).toBe("Challenge Passed");
+		expect(result.lockedReason).toBe(PROP_FIRM_LOCKED_PASSED);
 		expect(result.rules).toHaveLength(0);
 	});
 
@@ -563,7 +567,7 @@ describe("calculatePropFirmStatus", () => {
 		};
 		const result = calculatePropFirmStatus(account, []);
 		expect(result.isLocked).toBe(true);
-		expect(result.lockedReason).toBe("Challenge Failed");
+		expect(result.lockedReason).toBe(PROP_FIRM_LOCKED_FAILED);
 		expect(result.rules).toHaveLength(0);
 	});
 

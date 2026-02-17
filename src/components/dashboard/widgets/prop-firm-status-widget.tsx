@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { useAccount } from "@/contexts/account-context";
+import { PROP_FIRM_LOCKED_PASSED } from "@/lib/constants/prop-firms";
 import type { PropFirmRule, RuleStatus } from "@/lib/prop-firm/calculator";
 import { cn, formatCurrency } from "@/lib/shared";
 import { api } from "@/trpc/react";
@@ -131,7 +132,7 @@ function LockedState({
 	reason: string;
 	testIdPrefix: string;
 }) {
-	const isPassed = reason === "Challenge Passed";
+	const isPassed = reason === PROP_FIRM_LOCKED_PASSED;
 	return (
 		<div
 			className="flex h-full flex-col items-center justify-center gap-2 py-4"
