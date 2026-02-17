@@ -119,12 +119,14 @@ export const tradeBaseFields = {
  * Prop firm fields schema (for account creation/update)
  */
 export const propFieldsSchema = z.object({
+	propFirmId: z.string().optional(),
 	maxDrawdown: z.string().optional(),
 	drawdownType: drawdownTypeEnum.optional(),
 	dailyLossLimit: z.string().optional(),
 	profitTarget: z.string().optional(),
 	consistencyRule: z.string().optional(),
 	minTradingDays: z.number().optional(),
+	maxPositionSize: z.number().optional(),
 	challengeStartDate: z.string().optional(),
 	challengeEndDate: z.string().optional(),
 	challengeStatus: challengeStatusEnum.optional(),

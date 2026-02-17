@@ -203,6 +203,8 @@ export const accounts = createTable(
 		color: text("color").default("#6366f1"), // For UI distinction
 
 		// ========== PROP FIRM FIELDS ==========
+		propFirmId: text("prop_firm_id"), // Template ID (e.g., 'topstep', 'apex', 'ftmo', 'mff', 'custom')
+
 		// Drawdown rules
 		maxDrawdown: decimal("max_drawdown", { precision: 10, scale: 2 }), // Max drawdown % (e.g., 6.00 for 6%)
 		drawdownType: drawdownTypeEnum("drawdown_type"), // trailing, static, or eod
@@ -212,6 +214,8 @@ export const accounts = createTable(
 		profitTarget: decimal("profit_target", { precision: 10, scale: 2 }), // Profit target %
 		consistencyRule: decimal("consistency_rule", { precision: 10, scale: 2 }), // Max single day profit as % of target
 		minTradingDays: integer("min_trading_days"), // Minimum required trading days
+		maxPositionSize: integer("max_position_size"), // Maximum allowed contracts/lots
+
 		challengeStartDate: timestamp("challenge_start_date", {
 			withTimezone: true,
 		}), // When challenge started
