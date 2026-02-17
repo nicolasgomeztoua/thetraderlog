@@ -100,3 +100,25 @@ Started: Tue Feb 17 01:13:05 WET 2026
   - E2E test files can accumulate unused variables from iterative development — run `bun run check` to catch these
   - The template selector pattern: propFirmId → firm dropdown, selectedTemplateSize → size dropdown, applyTemplateSize → auto-fill form fields
 ---
+
+## 2026-02-17 - US-009
+- What was implemented: Created src/components/dashboard/widgets/prop-firm-status-widget.tsx with full prop firm rule monitoring UI. Features: overall status badge (safe/warning/danger/violated), color-coded progress bars per rule, compact view with key metrics (drawdown, daily loss, profit target), expandable detail section for additional rules (consistency, min trading days, max position, days remaining), account selector dropdown for multiple prop accounts, locked state for passed/failed challenges, empty state with settings link. Also created E2E test file tests/e2e/prop-firm-status-widget.spec.ts.
+- Files changed: src/components/dashboard/widgets/prop-firm-status-widget.tsx (new), tests/e2e/prop-firm-status-widget.spec.ts (new)
+- **Learnings for future iterations:**
+  - DashboardWidget component from ../dashboard-widget.tsx provides consistent terminal-chrome styling with loading skeleton support — use it for all widgets
+  - Widget pattern: use useAccount() for account context, filter prop accounts from accounts array, use api.propFirm.getStatus.useQuery with enabled flag
+  - STATUS_COLORS map pattern: define Record<RuleStatus, {text, bg, border}> for consistent color coding across elements
+  - Compact vs expanded rules pattern: categorize rules into "key metrics" (shown always) and "details" (behind expand toggle) for data-dense but non-overwhelming UI
+  - getWorstStatus helper: iterate through rules checking violated→danger→warning→safe to determine overall badge color
+  - Biome requires formatting with `bunx biome check --write` after creating components — catches class order and line length issues
+---
+
+## 2026-02-17 - US-010
+- What was implemented: Wired PropFirmStatusWidget into dashboard page with conditional rendering. Added propFirmId and maxPositionSize to Account interface in account-context.tsx. Widget is shown prominently after Today's Performance when user has prop accounts, hidden otherwise.
+- Files changed: src/app/(protected)/dashboard/page.tsx (import + conditional render), src/contexts/account-context.tsx (Account interface updated)
+- **Learnings for future iterations:**
+  - Drizzle's findMany returns ALL columns by default — no need to update getAll/getActive queries when schema columns are added
+  - propFieldsSchema is merged into both createAccountSchema and updateAccountSchema — adding fields there automatically makes them accepted by both mutations
+  - Account context interface is manually defined (not auto-inferred from Drizzle) — must be updated separately when schema columns are added
+  - Biome enforces multiline arrow function formatting when line exceeds limit
+---

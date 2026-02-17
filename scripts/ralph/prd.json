@@ -73,7 +73,7 @@
       "description": "Create src/components/dashboard/widgets/prop-firm-status-widget.tsx. Shows each rule as a labeled progress bar with color coding: green (<80%), yellow (80-90%), red (90%+). Compact view shows account name, overall status badge (worst rule's status), and key metrics (current DD, daily P&L, PT progress). Click to expand shows all rules with detailed breakdown. If no prop accounts, show 'No prop firm accounts configured' with link to /settings. If multiple prop accounts, show a selector dropdown. Include days remaining countdown with color-coded urgency. Use Terminal design system: monospace font, dark bg (#050505), chartreuse (#d4ff00) for primary accent, green (#00ff88) for safe, red (#ff3b3b) for danger. Use tRPC query propFirm.getStatus. Show loading skeleton while fetching.",
       "acceptanceCriteria": "Widget renders for prop accounts with correct colors matching thresholds. Links to settings when no prop accounts. Loading state shown.",
       "priority": 9,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-010",
@@ -81,7 +81,7 @@
       "description": "Wire PropFirmStatusWidget into the main dashboard page at src/app/(protected)/dashboard/page.tsx. Only show if user has at least one prop_challenge or prop_funded account (use accounts.getAll query). Position prominently when visible. Update accounts router getAll to include propFirmId and maxPositionSize in response. Update updateAccountSchema in accounts router to accept the new fields. Ensure the widget appears in the dashboard grid layout.",
       "acceptanceCriteria": "Widget appears on dashboard for users with prop accounts. Hidden for users without prop accounts. New account fields returned by getAll.",
       "priority": 10,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-011",

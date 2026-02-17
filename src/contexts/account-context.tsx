@@ -34,6 +34,8 @@ interface Account {
 	payoutFrequency: "weekly" | "bi_weekly" | "monthly" | null;
 	linkedAccountId: string | null;
 	groupId: string | null;
+	propFirmId: string | null;
+	maxPositionSize: number | null;
 }
 
 interface AccountContextType {

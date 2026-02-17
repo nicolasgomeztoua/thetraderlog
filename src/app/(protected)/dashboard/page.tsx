@@ -9,6 +9,7 @@ import { JournalExcerptsWidget } from "@/components/dashboard/widgets/journal-ex
 import { JournalStatusWidget } from "@/components/dashboard/widgets/journal-status-widget";
 import { JournalStreakWidget } from "@/components/dashboard/widgets/journal-streak-widget";
 import { PnLCalendarWidget } from "@/components/dashboard/widgets/pnl-calendar-widget";
+import { PropFirmStatusWidget } from "@/components/dashboard/widgets/prop-firm-status-widget";
 import { RuleComplianceWidget } from "@/components/dashboard/widgets/rule-compliance-widget";
 import { StrategiesSnapshotWidget } from "@/components/dashboard/widgets/strategies-snapshot-widget";
 import { TodayPerformanceWidget } from "@/components/dashboard/widgets/today-performance-widget";
@@ -26,7 +27,12 @@ import { useAccount } from "@/contexts/account-context";
  * Row 5: [Journal Excerpts (wide)                      ]
  */
 export default function DashboardPage() {
-	const { selectedAccount } = useAccount();
+	const { selectedAccount, accounts } = useAccount();
+
+	const hasPropAccounts = accounts.some(
+		(a) =>
+			a.accountType === "prop_challenge" || a.accountType === "prop_funded",
+	);
 
 	return (
 		<div className="space-y-6">
@@ -62,6 +68,13 @@ export default function DashboardPage() {
 				<GridItem size="md">
 					<TodayPerformanceWidget />
 				</GridItem>
+
+				{/* Prop Firm Status — shown prominently when user has prop accounts */}
+				{hasPropAccounts && (
+					<GridItem size="sm">
+						<PropFirmStatusWidget />
+					</GridItem>
+				)}
 
 				{/* Row 2-4 Left Column: Journal widgets + Rule Compliance */}
 				<GridItem size="sm">
