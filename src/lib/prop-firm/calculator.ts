@@ -68,6 +68,41 @@ export interface DaysRemainingResult {
 	urgency: DaysUrgency;
 }
 
+export type RuleStatus = "safe" | "warning" | "danger" | "violated";
+
+export interface PropFirmRule {
+	type: string;
+	label: string;
+	currentValue: number;
+	limit: number;
+	percentage: number;
+	status: RuleStatus;
+}
+
+export interface PropFirmStatus {
+	isLocked: boolean;
+	lockedReason: string | null;
+	rules: PropFirmRule[];
+}
+
+/**
+ * Account fields needed by the status aggregator.
+ * All decimal fields are strings (matching Drizzle's decimal output).
+ */
+export interface StatusAccount {
+	initialBalance: string | null;
+	maxDrawdown: string | null;
+	drawdownType: "trailing" | "static" | "eod" | null;
+	dailyLossLimit: string | null;
+	profitTarget: string | null;
+	consistencyRule: string | null;
+	minTradingDays: number | null;
+	maxPositionSize: number | null;
+	challengeStartDate: Date | null;
+	challengeEndDate: Date | null;
+	challengeStatus: "active" | "passed" | "failed" | null;
+}
+
 // =============================================================================
 // HELPERS
 // =============================================================================
@@ -442,5 +477,233 @@ export function calculateDaysRemaining(
 		daysRemaining,
 		daysElapsed,
 		urgency,
+	};
+}
+
+// =============================================================================
+// STATUS AGGREGATOR
+// =============================================================================
+
+/**
+ * Determine rule status from percentage of limit consumed.
+ * safe: <80%, warning: 80-90%, danger: 90-100%, violated: >=100%
+ */
+function getRuleStatus(percentage: number): RuleStatus {
+	if (percentage >= 100) return "violated";
+	if (percentage >= 90) return "danger";
+	if (percentage >= 80) return "warning";
+	return "safe";
+}
+
+/**
+ * Aggregate all prop firm rule checks into a single PropFirmStatus object.
+ * Skips rules that don't apply (null values in the account).
+ * Returns locked status for passed/failed challenges.
+ */
+export function calculatePropFirmStatus(
+	account: StatusAccount,
+	trades: CalcTrade[],
+): PropFirmStatus {
+	// Handle locked accounts (passed or failed challenges)
+	if (account.challengeStatus === "passed") {
+		return {
+			isLocked: true,
+			lockedReason: "Challenge Passed",
+			rules: [],
+		};
+	}
+	if (account.challengeStatus === "failed") {
+		return {
+			isLocked: true,
+			lockedReason: "Challenge Failed",
+			rules: [],
+		};
+	}
+
+	const rules: PropFirmRule[] = [];
+	const initialBalance = parseFloat(account.initialBalance ?? "0") || 0;
+
+	// --- Max Drawdown ---
+	if (account.maxDrawdown != null && account.drawdownType != null) {
+		const maxDrawdownLimit = parseFloat(account.maxDrawdown) || 0;
+		if (maxDrawdownLimit > 0) {
+			let currentDrawdown = 0;
+
+			if (account.drawdownType === "static") {
+				const result = calculateStaticDrawdown(
+					trades,
+					initialBalance,
+					maxDrawdownLimit,
+				);
+				currentDrawdown = initialBalance - result.currentEquity;
+			} else if (account.drawdownType === "trailing") {
+				const result = calculateTrailingDrawdown(
+					trades,
+					initialBalance,
+					maxDrawdownLimit,
+				);
+				currentDrawdown = result.currentDrawdown;
+			} else {
+				// eod
+				const result = calculateEodTrailingDrawdown(
+					trades,
+					initialBalance,
+					maxDrawdownLimit,
+				);
+				currentDrawdown = result.currentDrawdown;
+			}
+
+			// Drawdown is negative equity change — use absolute value
+			const absDrawdown = Math.max(0, currentDrawdown);
+			const percentage =
+				maxDrawdownLimit > 0 ? (absDrawdown / maxDrawdownLimit) * 100 : 0;
+
+			rules.push({
+				type: "max_drawdown",
+				label: "Max Drawdown",
+				currentValue: absDrawdown,
+				limit: maxDrawdownLimit,
+				percentage,
+				status: getRuleStatus(percentage),
+			});
+		}
+	}
+
+	// --- Daily Loss Limit ---
+	if (account.dailyLossLimit != null) {
+		const dailyLossLimit = parseFloat(account.dailyLossLimit) || 0;
+		if (dailyLossLimit > 0) {
+			const today = new Date().toISOString().slice(0, 10);
+			const dailyResult = calculateDailyPnl(trades, today);
+			// Daily loss is negative P&L — we want the absolute loss
+			const absLoss = Math.max(0, -dailyResult.dailyPnl);
+			const percentage =
+				dailyLossLimit > 0 ? (absLoss / dailyLossLimit) * 100 : 0;
+
+			rules.push({
+				type: "daily_loss",
+				label: "Daily Loss Limit",
+				currentValue: absLoss,
+				limit: dailyLossLimit,
+				percentage,
+				status: getRuleStatus(percentage),
+			});
+		}
+	}
+
+	// --- Profit Target ---
+	if (account.profitTarget != null) {
+		const profitTargetAmount = parseFloat(account.profitTarget) || 0;
+		if (profitTargetAmount > 0) {
+			const ptResult = calculateProfitTarget(trades, profitTargetAmount);
+			// Profit target is inverted — higher progress is GOOD
+			// Progress 0% = just started (safe-ish), 100% = target met
+			// We show progress as-is but status is always "safe" unless completed
+			rules.push({
+				type: "profit_target",
+				label: "Profit Target",
+				currentValue: ptResult.totalPnl,
+				limit: profitTargetAmount,
+				percentage: Math.max(0, ptResult.progress),
+				status: ptResult.isComplete ? "safe" : "safe",
+			});
+		}
+	}
+
+	// --- Consistency Rule ---
+	if (account.consistencyRule != null) {
+		const maxDayPercent = parseFloat(account.consistencyRule) || 0;
+		if (maxDayPercent > 0) {
+			const consistencyResult = calculateConsistencyRule(trades, maxDayPercent);
+			// Percentage is best day's share of total profit
+			// Violated if bestDayPercent > maxDayPercent
+			const percentage =
+				maxDayPercent > 0
+					? (consistencyResult.bestDayPercent / maxDayPercent) * 100
+					: 0;
+
+			rules.push({
+				type: "consistency",
+				label: "Consistency Rule",
+				currentValue: consistencyResult.bestDayPercent,
+				limit: maxDayPercent,
+				percentage,
+				status: consistencyResult.isCompliant
+					? getRuleStatus(percentage)
+					: "violated",
+			});
+		}
+	}
+
+	// --- Min Trading Days ---
+	if (account.minTradingDays != null && account.minTradingDays > 0) {
+		const tradingDays = calculateMinTradingDays(trades);
+		// Progress toward requirement — inverted (more days = better)
+		const percentage =
+			account.minTradingDays > 0
+				? (tradingDays / account.minTradingDays) * 100
+				: 0;
+
+		rules.push({
+			type: "min_trading_days",
+			label: "Min Trading Days",
+			currentValue: tradingDays,
+			limit: account.minTradingDays,
+			percentage: Math.min(100, percentage),
+			status: tradingDays >= account.minTradingDays ? "safe" : "safe",
+		});
+	}
+
+	// --- Max Position Size ---
+	if (account.maxPositionSize != null && account.maxPositionSize > 0) {
+		const positionResult = calculateMaxPosition(trades);
+		const percentage =
+			account.maxPositionSize > 0
+				? (positionResult.maxConcurrentContracts / account.maxPositionSize) *
+					100
+				: 0;
+
+		rules.push({
+			type: "max_position_size",
+			label: "Max Position Size",
+			currentValue: positionResult.maxConcurrentContracts,
+			limit: account.maxPositionSize,
+			percentage,
+			status: getRuleStatus(percentage),
+		});
+	}
+
+	// --- Days Remaining ---
+	if (account.challengeStartDate != null && account.challengeEndDate != null) {
+		const daysResult = calculateDaysRemaining(
+			account.challengeStartDate,
+			account.challengeEndDate,
+		);
+
+		// Percentage elapsed (higher = more time consumed = more urgent)
+		const percentage =
+			daysResult.daysTotal > 0
+				? (daysResult.daysElapsed / daysResult.daysTotal) * 100
+				: 0;
+
+		rules.push({
+			type: "days_remaining",
+			label: "Days Remaining",
+			currentValue: daysResult.daysRemaining,
+			limit: daysResult.daysTotal,
+			percentage,
+			status:
+				daysResult.urgency === "danger"
+					? "danger"
+					: daysResult.urgency === "warning"
+						? "warning"
+						: "safe",
+		});
+	}
+
+	return {
+		isLocked: false,
+		lockedReason: null,
+		rules,
 	};
 }
