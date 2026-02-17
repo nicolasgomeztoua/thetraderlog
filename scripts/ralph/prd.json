@@ -65,7 +65,7 @@
       "description": "Enhance the account creation/edit form in src/app/(protected)/settings/_components/settings-content.tsx. When accountType is prop_challenge or prop_funded, show a 'Prop Firm' select dropdown populated from PROP_FIRM_TEMPLATES. Selecting a firm shows a second 'Account Size' dropdown with available sizes. Selecting size auto-fills: maxDrawdown, drawdownType, dailyLossLimit, profitTarget, consistencyRule, minTradingDays, maxPositionSize. All fields remain editable after template fill. Add 'Reset to Default' button that restores template values. Save propFirmId to account. Update createAccountSchema and updateAccountSchema to include maxPositionSize and propFirmId fields. Follow Terminal design system: monospace, dark bg, chartreuse accents.",
       "acceptanceCriteria": "Selecting Topstep $50K auto-fills all rule fields correctly. Fields are editable after fill. Reset button works. propFirmId saved to account.",
       "priority": 8,
-      "passes": false
+      "passes": true
     },
     {
       "id": "US-009",

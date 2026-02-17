@@ -91,3 +91,12 @@ Started: Tue Feb 17 01:13:05 WET 2026
   - Non-prop accounts (live/demo) get ERR_ACCOUNT_NOT_FOUND to avoid leaking account type info — same pattern as validate child ownership through parent
   - getTemplates is a simple query returning the constant — no input needed, just protectedProcedure
 ---
+
+## 2026-02-17 - US-008
+- What was implemented: Verified that US-008 (Account Form — Template Selector) was already fully implemented by prior iterations. All template selector UI, schema updates, data-testid attributes, and E2E tests were in place. Fixed a minor Biome warning (unused variable in E2E test file).
+- Files changed: tests/e2e/settings-account-form.spec.ts (removed unused variable)
+- **Learnings for future iterations:**
+  - Prior iterations may have implemented features ahead of their story — always check existing code before writing new code
+  - E2E test files can accumulate unused variables from iterative development — run `bun run check` to catch these
+  - The template selector pattern: propFirmId → firm dropdown, selectedTemplateSize → size dropdown, applyTemplateSize → auto-fill form fields
+---

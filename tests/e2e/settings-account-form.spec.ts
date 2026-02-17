@@ -36,9 +36,6 @@ test.describe("Settings Account Form - Template Selector", () => {
 		).toBeVisible();
 
 		// Select "Prop Challenge" account type
-		const accountTypeSelect = page
-			.locator('[data-slot="select-trigger"]')
-			.first();
 		// The account type is the first select in the grid
 		const accountTypeContainer = page.locator(".space-y-2").filter({
 			has: page.getByText("Account Type"),
