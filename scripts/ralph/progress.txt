@@ -514,3 +514,25 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - `SUGGESTED_CHAT_QUERIES` and `SUGGESTED_REPORT_PROMPTS` are `as const` readonly tuples — just append new entries to the array
 
 ---
+
+## 2026-02-18 - US-022
+- Added prop context banner to trade detail stats panel
+- Banner shows below hero P&L section, only for prop_challenge/prop_funded accounts
+- For losses: "This trade used X% of Y% max drawdown limit" (red text for percentage)
+- For wins: "This trade contributed X% toward Y% profit target" (green text for percentage)
+- Fallback text "Prop account trade" when missing data (no initialBalance or no relevant metric)
+- Uses Shield icon from lucide-react with primary (chartreuse) color
+- Terminal design: font-mono text-[10px], border-white/5 container, rounded-sm
+- Added `account` field to StatsPanel's Trade interface (accountType, maxDrawdown, profitTarget, initialBalance)
+- Passed `trade.account` from page.tsx to StatsPanel in both mobile (Sheet) and desktop (ResizablePanel) views
+- No new API calls needed — trade.account already loaded by `getById` with `account: true` relation
+- All data-testid attributes added (prop-context-banner)
+- Files changed: `src/components/trade-detail/stats-panel.tsx` (updated), `src/app/(protected)/journal/[id]/page.tsx` (updated)
+- **Learnings for future iterations:**
+  - `getById` fetches `account: true` relation — full Account object (including all prop fields) available on `trade.account`
+  - `TradeForStatsPanel` is a Pick type from src/types — to pass additional data, extend the local `Trade` interface in stats-panel.tsx rather than modifying the shared type
+  - `initialBalance` on Account can be `string | null` — handle null case in component
+  - Biome auto-formats long arithmetic expressions inside JSX to multiline with `%` on a separate line
+  - Percentage-to-dollar conversion: `initialBalance * (maxDrawdown / 100)` gives the dollar limit; `Math.abs(netPnl) / dollarLimit * 100` gives what percentage of that limit was used
+
+---
