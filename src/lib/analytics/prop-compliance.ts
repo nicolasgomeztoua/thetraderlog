@@ -9,6 +9,7 @@ import {
 	COMPLIANCE_THRESHOLDS,
 	type ComplianceStatus,
 } from "@/lib/constants/prop";
+import { getDateStringInTimezone } from "@/lib/shared/timezone";
 import type { EquityPoint } from "./risk";
 
 // =============================================================================
@@ -141,18 +142,20 @@ export function calculateDrawdownStatus(
  *
  * @param trades - Array of trades with netPnl (string) and exitTime (Date)
  * @param date - The date to filter by (defaults to today)
+ * @param timezone - IANA timezone string for date grouping (defaults to "UTC")
  */
 export function calculateDailyPnl(
 	trades: { netPnl: string | null; exitTime: Date | null }[],
 	date?: Date,
+	timezone = "UTC",
 ): number {
 	const target = date ?? new Date();
-	const targetDate = target.toISOString().slice(0, 10);
+	const targetDate = getDateStringInTimezone(target, timezone);
 
 	let total = 0;
 	for (const trade of trades) {
 		if (!trade.exitTime) continue;
-		const tradeDate = trade.exitTime.toISOString().slice(0, 10);
+		const tradeDate = getDateStringInTimezone(trade.exitTime, timezone);
 		if (tradeDate === targetDate) {
 			const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
 			if (!Number.isNaN(pnl)) {
@@ -305,16 +308,18 @@ export function calculateConsistencyMetric(
  *
  * @param trades - Array of trades with exitTime
  * @param minRequired - Minimum number of trading days required
+ * @param timezone - IANA timezone string for date grouping (defaults to "UTC")
  */
 export function calculateTradingDays(
 	trades: { exitTime: Date | null }[],
 	minRequired: number,
+	timezone = "UTC",
 ): TradingDaysResult {
 	const uniqueDates = new Set<string>();
 
 	for (const trade of trades) {
 		if (trade.exitTime) {
-			uniqueDates.add(trade.exitTime.toISOString().slice(0, 10));
+			uniqueDates.add(getDateStringInTimezone(trade.exitTime, timezone));
 		}
 	}
 

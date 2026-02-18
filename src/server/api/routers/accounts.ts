@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-
 import {
 	calculateConsistencyMetric,
 	calculateDailyLossStatus,
@@ -28,6 +27,8 @@ import {
 	propFieldsSchema,
 	tradingPlatformEnum,
 } from "@/lib/shared";
+import { getDateStringInTimezone } from "@/lib/shared/timezone";
+import { getUserTimezone } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { accountGroups, accounts, trades } from "@/server/db/schema";
 
@@ -525,6 +526,9 @@ export const accountsRouter = createTRPCRouter({
 				orderBy: [asc(trades.exitTime)],
 			});
 
+			// Get user timezone for date grouping
+			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+
 			const initialBalance = parseFloat(account.initialBalance ?? "0");
 			const maxDrawdownPercent = parseFloat(account.maxDrawdown ?? "0");
 			const dailyLossLimitPercent = parseFloat(account.dailyLossLimit ?? "0");
@@ -560,8 +564,12 @@ export const accountsRouter = createTRPCRouter({
 				maxDrawdownPercent,
 			);
 
-			// Daily loss
-			const todayPnl = calculateDailyPnl(accountTrades);
+			// Daily loss (timezone-aware)
+			const todayPnl = calculateDailyPnl(
+				accountTrades,
+				undefined,
+				userTimezone,
+			);
 			const dailyLossStatus = calculateDailyLossStatus(
 				todayPnl,
 				dailyLossLimitPercent,
@@ -580,7 +588,7 @@ export const accountsRouter = createTRPCRouter({
 			const dailyPnlMap = new Map<string, number>();
 			for (const trade of accountTrades) {
 				if (!trade.exitTime) continue;
-				const dateKey = trade.exitTime.toISOString().slice(0, 10);
+				const dateKey = getDateStringInTimezone(trade.exitTime, userTimezone);
 				const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
 				dailyPnlMap.set(dateKey, (dailyPnlMap.get(dateKey) ?? 0) + pnl);
 			}
@@ -591,7 +599,11 @@ export const accountsRouter = createTRPCRouter({
 			);
 
 			// Trading days
-			const tradingDays = calculateTradingDays(accountTrades, minTradingDays);
+			const tradingDays = calculateTradingDays(
+				accountTrades,
+				minTradingDays,
+				userTimezone,
+			);
 
 			// Timeline
 			const now = new Date();

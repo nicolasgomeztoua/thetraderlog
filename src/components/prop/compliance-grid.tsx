@@ -213,7 +213,7 @@ function MaxDrawdownCard({
 							Remaining
 						</span>
 						<span className="font-mono text-muted-foreground text-sm">
-							{drawdown.remaining.toFixed(2)}%
+							{(drawdown.remaining * drawdown.limit).toFixed(2)}%
 						</span>
 					</div>
 				</div>
@@ -263,7 +263,7 @@ function DailyLossCard({
 					{Math.round(usedPercent)}% used
 				</span>
 				<span className="font-mono text-[10px] text-muted-foreground">
-					{formatCurrency(dailyLoss.remaining)} remaining
+					{formatCurrency(dailyLoss.remaining * dailyLoss.limit)} remaining
 				</span>
 			</div>
 		</ComplianceCardShell>
