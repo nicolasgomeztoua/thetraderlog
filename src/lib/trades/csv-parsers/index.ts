@@ -2,20 +2,34 @@
 // CSV Parsers - Platform-specific trade importers
 // ============================================
 
+export { apexParser } from "./apex-parser";
 export { mt4Parser, mt5Parser } from "./mt4-parser";
+export { ninjatraderParser } from "./ninjatrader-parser";
 export { projectxParser } from "./projectx-parser";
+export { rithmicParser } from "./rithmic-parser";
+export { topstepxParser } from "./topstepx-parser";
+export { tradovateParser } from "./tradovate-parser";
 export * from "./types";
 
+import { apexParser } from "./apex-parser";
 import { mt4Parser, mt5Parser } from "./mt4-parser";
+import { ninjatraderParser } from "./ninjatrader-parser";
 import { projectxParser } from "./projectx-parser";
+import { rithmicParser } from "./rithmic-parser";
+import { topstepxParser } from "./topstepx-parser";
+import { tradovateParser } from "./tradovate-parser";
 import type { CSVParser, TradingPlatform } from "./types";
 
 // Registry of all available parsers
 const parsers: Record<TradingPlatform, CSVParser | null> = {
 	mt4: mt4Parser,
 	mt5: mt5Parser,
+	topstepx: topstepxParser,
 	projectx: projectxParser,
-	ninjatrader: null, // TODO: Implement
+	ninjatrader: ninjatraderParser,
+	tradovate: tradovateParser,
+	rithmic: rithmicParser,
+	apex: apexParser,
 	other: null, // No parser for "other" - requires manual entry
 };
 
@@ -42,7 +56,31 @@ export function getSupportedPlatforms(): {
 			label: "ProjectX",
 			description: "ProjectX platform export",
 		},
-		// { value: "ninjatrader", label: "NinjaTrader", description: "Coming soon" },
+		{
+			value: "topstepx",
+			label: "TopstepX",
+			description: "TopstepX trades export",
+		},
+		{
+			value: "ninjatrader",
+			label: "NinjaTrader",
+			description: "NinjaTrader executions export",
+		},
+		{
+			value: "tradovate",
+			label: "Tradovate",
+			description: "Tradovate order report export",
+		},
+		{
+			value: "rithmic",
+			label: "Rithmic (R | Trader)",
+			description: "Rithmic completed orders export",
+		},
+		{
+			value: "apex",
+			label: "Apex (Adapter)",
+			description: "Auto-detect Apex underlying format",
+		},
 	];
 }
 
@@ -53,7 +91,11 @@ export const TRADING_PLATFORMS = [
 	{ value: "mt4" as const, label: "MetaTrader 4" },
 	{ value: "mt5" as const, label: "MetaTrader 5" },
 	{ value: "projectx" as const, label: "ProjectX" },
+	{ value: "topstepx" as const, label: "TopstepX" },
 	{ value: "ninjatrader" as const, label: "NinjaTrader" },
+	{ value: "tradovate" as const, label: "Tradovate" },
+	{ value: "rithmic" as const, label: "Rithmic (R | Trader)" },
+	{ value: "apex" as const, label: "Apex" },
 	{ value: "other" as const, label: "Other / Manual" },
 ];
 

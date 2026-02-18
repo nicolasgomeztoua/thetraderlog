@@ -3,7 +3,16 @@ import { getTestDb, schema } from "../db";
 export interface CreateTestAccountOptions {
 	name?: string;
 	broker?: string;
-	platform?: "mt4" | "mt5" | "projectx" | "ninjatrader" | "other";
+	platform?:
+		| "mt4"
+		| "mt5"
+		| "projectx"
+		| "topstepx"
+		| "ninjatrader"
+		| "tradovate"
+		| "rithmic"
+		| "apex"
+		| "other";
 	accountType?: "prop_challenge" | "prop_funded" | "live" | "demo";
 	initialBalance?: string;
 	currency?: string;

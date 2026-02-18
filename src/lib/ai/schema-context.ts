@@ -23,7 +23,7 @@ const SCHEMA_CONTEXT = `
 - **drawdown_type**: trailing, static, eod
 - **payout_frequency**: weekly, bi_weekly, monthly
 - **challenge_status**: active, passed, failed
-- **trading_platform**: mt4, mt5, projectx, ninjatrader, other
+- **trading_platform**: mt4, mt5, projectx, topstepx, ninjatrader, tradovate, rithmic, apex, other
 - **strategy_rule_category**: entry, exit, risk, management
 - **rule_type**: manual, auto, semi_auto
 - **data_quality**: full, partial, unavailable, pending
