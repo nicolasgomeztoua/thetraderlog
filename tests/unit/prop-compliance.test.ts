@@ -16,6 +16,7 @@ import {
 	calculateTradingDays,
 	calculateTrailingDrawdown,
 	getOverallComplianceStatus,
+	simulatePropChallenge,
 } from "@/lib/analytics/prop-compliance";
 import type { EquityPoint } from "@/lib/analytics/risk";
 
@@ -609,5 +610,154 @@ describe("getOverallComplianceStatus", () => {
 
 	it("handles single status", () => {
 		expect(getOverallComplianceStatus(["caution"])).toBe("caution");
+	});
+});
+
+// =============================================================================
+// simulatePropChallenge
+// =============================================================================
+
+describe("simulatePropChallenge", () => {
+	const baseInput = {
+		winRate: 0.55,
+		avgWin: 300,
+		avgLoss: 200,
+		profitTarget: 10000,
+		maxDrawdown: 6000,
+		initialBalance: 100000,
+		maxTrades: 500,
+		iterations: 1000,
+	};
+
+	it("high win rate produces high pass rate", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			winRate: 0.8,
+			avgWin: 400,
+			avgLoss: 150,
+			iterations: 2000,
+		});
+		// 80% win rate with favorable R:R should pass very often
+		expect(result.passRate).toBeGreaterThan(0.7);
+		expect(result.failRate).toBeLessThan(0.3);
+	});
+
+	it("low win rate produces low pass rate", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			winRate: 0.3,
+			avgWin: 200,
+			avgLoss: 300,
+			iterations: 2000,
+		});
+		// 30% win rate with poor R:R should fail most of the time
+		expect(result.passRate).toBeLessThan(0.3);
+		expect(result.failRate).toBeGreaterThan(0.7);
+	});
+
+	it("returns 100% pass rate when profitTarget is 0", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			profitTarget: 0,
+		});
+		expect(result.passRate).toBe(1);
+		expect(result.failRate).toBe(0);
+		expect(result.avgTradesToPass).toBe(0);
+	});
+
+	it("returns 100% fail rate when maxDrawdown is 0", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			maxDrawdown: 0,
+		});
+		expect(result.passRate).toBe(0);
+		expect(result.failRate).toBe(1);
+		expect(result.avgTradesToPass).toBe(0);
+	});
+
+	it("returns all expected fields in result shape", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			iterations: 100,
+		});
+		expect(result).toHaveProperty("passRate");
+		expect(result).toHaveProperty("failRate");
+		expect(result).toHaveProperty("avgTradesToPass");
+		expect(result).toHaveProperty("medianOutcome");
+		expect(result).toHaveProperty("percentiles");
+		expect(result).toHaveProperty("simulations");
+		expect(result.percentiles).toHaveProperty("p10");
+		expect(result.percentiles).toHaveProperty("p25");
+		expect(result.percentiles).toHaveProperty("p50");
+		expect(result.percentiles).toHaveProperty("p75");
+		expect(result.percentiles).toHaveProperty("p90");
+	});
+
+	it("percentiles are in correct order", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			iterations: 2000,
+		});
+		expect(result.percentiles.p10).toBeLessThanOrEqual(result.percentiles.p25);
+		expect(result.percentiles.p25).toBeLessThanOrEqual(result.percentiles.p50);
+		expect(result.percentiles.p50).toBeLessThanOrEqual(result.percentiles.p75);
+		expect(result.percentiles.p75).toBeLessThanOrEqual(result.percentiles.p90);
+	});
+
+	it("passRate + failRate equals 1", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			iterations: 500,
+		});
+		expect(result.passRate + result.failRate).toBeCloseTo(1);
+	});
+
+	it("simulations count matches iterations input", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			iterations: 777,
+		});
+		expect(result.simulations).toBe(777);
+	});
+
+	it("defaults to 10000 iterations when not specified", () => {
+		const result = simulatePropChallenge({
+			winRate: 0.55,
+			avgWin: 300,
+			avgLoss: 200,
+			profitTarget: 10000,
+			maxDrawdown: 6000,
+			initialBalance: 100000,
+			maxTrades: 500,
+		});
+		expect(result.simulations).toBe(10000);
+	});
+
+	it("medianOutcome equals p50 percentile", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			iterations: 1000,
+		});
+		expect(result.medianOutcome).toBe(result.percentiles.p50);
+	});
+
+	it("avgTradesToPass is positive when there are passes", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			winRate: 0.7,
+			iterations: 1000,
+		});
+		if (result.passRate > 0) {
+			expect(result.avgTradesToPass).toBeGreaterThan(0);
+		}
+	});
+
+	it("handles negative profitTarget as edge case (100% pass)", () => {
+		const result = simulatePropChallenge({
+			...baseInput,
+			profitTarget: -1000,
+		});
+		expect(result.passRate).toBe(1);
+		expect(result.failRate).toBe(0);
 	});
 });
