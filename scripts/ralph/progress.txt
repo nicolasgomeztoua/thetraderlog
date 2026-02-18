@@ -1,3 +1,107 @@
 # Ralph Progress Log
 Started: Wed Feb 18 17:15:47 WET 2026
 ---
+
+## Codebase Patterns
+- Equity curve: use `buildEquityCurve()` from `src/lib/analytics/risk.ts` — returns EquityPoint[] with peak, drawdown, drawdownPercent per trade
+- Drawdown periods: use `findDrawdownPeriods()` from `src/lib/analytics/risk.ts`
+- Aggregate stats (winRate, avgWin, avgLoss, profitFactor): use `calculateAggregateStats()` from `src/lib/analytics/stats.ts`
+- Risk of Ruin already computed in `analytics.getRiskMetrics` router (line 1056) with account-based ruinThreshold
+- Prop schema fields on accounts: maxDrawdown, drawdownType, dailyLossLimit, profitTarget, consistencyRule, minTradingDays, challengeStartDate, challengeEndDate, challengeStatus, profitSplit, payoutFrequency, linkedAccountId
+- Prop enums: drawdownTypeEnum (trailing/static/eod), challengeStatusEnum (active/passed/failed), payoutFrequencyEnum, accountTypeEnum (prop_challenge/prop_funded/live/demo)
+- propFieldsSchema in `src/lib/shared/schemas.ts` — Zod validation for account prop fields
+- DailyLossProgress component already exists in `src/components/dashboard/widgets/today-performance-widget.tsx:12-55` — shows progress bar for daily loss limit
+- ComplianceGauge circular gauge in `rule-compliance-widget.tsx:11-77` — reusable pattern for circular progress
+- RiskGauge component at `src/components/analytics/risk-gauge.tsx` — circular SVG gauge with risk level badges
+- MonteCarloChart at `src/components/analytics/monte-carlo-chart.tsx` — percentile distribution display
+- accounts.getStats (line 439) returns totalTrades, wins, losses, winRate, totalPnl, initialBalance, currentBalance
+- Error constants: ERR_ACCOUNT_NOT_FOUND, ERR_CHALLENGE_ACCOUNT_NOT_FOUND, ERR_ACCOUNT_NOT_CHALLENGE in `src/lib/constants/errors.ts`
+- Constants barrel export: `src/lib/constants/index.ts` — add new prop constants here
+- parsePnl() helper exists in both `src/lib/analytics/risk.ts` and `src/lib/analytics/stats.ts`
+
+---
+
+## 2026-02-18 - US-000
+- Audited existing codebase for prop compliance reusable utilities
+- No files changed (audit only)
+
+### Existing Utilities to REUSE (with file:line):
+
+**src/lib/analytics/risk.ts:**
+- `buildEquityCurve(trades)` (:127) — builds cumulative P&L curve with peak/drawdown tracking. REUSE for drawdown chart and trailing drawdown calculation
+- `findDrawdownPeriods(curve)` (:168) — finds all drawdown periods from equity curve. REUSE for drawdown analysis
+- `calculateRiskOfRuin()` (:376) — formula-based RoR calculation. REUSE for Monte Carlo comparison
+- `calculateKellyPercent()` (:348) — Kelly criterion. REUSE as-is
+- `calculateRiskMetrics()` (:417) — complete risk metrics calculator. REUSE for prop compliance risk section
+- `TradeForRisk` interface (:9) — minimal trade interface for risk calcs
+- `EquityPoint` interface (:45) — equity curve point type
+- Private `parsePnl()` (:102) — safe PnL parsing (note: also exists in stats.ts as public export)
+
+**src/lib/analytics/stats.ts:**
+- `calculateAggregateStats(trades, beThreshold)` (:131) — win rate, avg win/loss, profit factor. REUSE for Monte Carlo inputs
+- `parsePnl()` (:51) — public export, safe PnL string→number parsing
+- `TradeForStats` interface (:11) — minimal trade interface for stats
+
+**src/lib/shared/schemas.ts:**
+- `propFieldsSchema` (:121) — Zod validation for all prop firm fields
+- `drawdownTypeEnum`, `challengeStatusEnum`, `payoutFrequencyEnum`, `accountTypeEnum` — shared enums
+
+**src/server/db/schema.ts:**
+- Account table (:206-223) — prop fields: maxDrawdown, drawdownType, dailyLossLimit, profitTarget, consistencyRule, minTradingDays, challengeStartDate, challengeEndDate, challengeStatus, profitSplit, payoutFrequency, linkedAccountId
+
+**src/server/api/routers/accounts.ts:**
+- `getStats` (:439) — basic account stats (trades, P&L, balance). Can extend or query alongside
+- `convertToFunded` (:277) — challenge→funded conversion logic
+- `markChallengeFailed` (:338) — mark challenge as failed
+
+**src/server/api/routers/analytics.ts:**
+- `getRiskMetrics` (:1056) — already uses account's maxDrawdown as ruinThreshold. Pattern to follow for prop compliance endpoint
+
+### Existing UI Components to REUSE:
+
+**src/components/dashboard/widgets/today-performance-widget.tsx:**
+- `DailyLossProgress` (:12-55) — progress bar for daily loss limit. Can extract to shared component or reference pattern
+
+**src/components/dashboard/widgets/rule-compliance-widget.tsx:**
+- `ComplianceGauge` (:11-77) — circular SVG gauge. REUSE pattern for compliance gauges
+- `CategoryBar` (:80-100) — horizontal progress bar with label. REUSE pattern for metric bars
+
+**src/components/analytics/risk-gauge.tsx:**
+- `RiskGauge` — full circular gauge with risk level badges. REUSE for drawdown gauge on prop page
+
+**src/components/analytics/monte-carlo-chart.tsx:**
+- `MonteCarloChart` — percentile distribution display. REUSE pattern for challenge outcome simulator
+
+**src/components/analytics/equity-curve.tsx:**
+- EquityCurve chart using AG Charts. REUSE pattern for drawdown chart overlay
+
+### Local Helpers to EXTRACT:
+
+- `DailyLossProgress` from today-performance-widget.tsx — currently local, should be extracted if reused in prop status widget
+- `ComplianceGauge` pattern — can be generalized for multiple gauge use cases
+
+### NEW Utilities Needed:
+
+1. **src/lib/constants/prop.ts** — COMPLIANCE_STATUS, COMPLIANCE_THRESHOLDS, COMPLIANCE_STATUS_COLORS, CHALLENGE_STATUS_LABELS, DRAWDOWN_TYPE_LABELS, PROP_ACCOUNT_TYPES
+2. **src/lib/analytics/prop-compliance.ts** — Pure calculation functions:
+   - calculateDrawdownStatus() — current vs max drawdown with status
+   - calculateDailyPnl() — sum netPnl for trades on a date
+   - calculateDailyLossStatus() — today's P&L vs daily loss limit
+   - calculateProfitTargetProgress() — current P&L vs profit target
+   - calculateConsistencyMetric() — max single-day P&L vs consistency rule
+   - calculateTradingDays() — distinct trading dates count
+   - calculateTrailingDrawdown() — high-water-mark drawdown from equity curve
+   - calculateStaticDrawdown() — simple formula
+   - getOverallComplianceStatus() — worst status across all metrics
+   - simulatePropChallenge() — Monte Carlo for challenge pass/fail
+3. **accounts.getPropCompliance** tRPC endpoint — single endpoint returning all compliance data
+4. **UI components:** PropStatusWidget, ComplianceGrid, DrawdownChart, TradingDaysTimeline, ChallengeHistory, ChallengeSimulator
+
+### Learnings for future iterations:
+- buildEquityCurve() starts at $0 cumulative P&L, NOT initial balance. For prop compliance, need to account for initialBalance when computing absolute drawdown thresholds
+- maxDrawdown is stored as percentage (e.g., "6.00" for 6%), dailyLossLimit same. Parse with parseFloat() and divide by 100 for decimal
+- getRiskMetrics router (analytics.ts:1074-1095) shows pattern for reading account's maxDrawdown and converting to decimal threshold
+- DailyLossProgress already exists and handles prop daily loss display — consider extracting rather than duplicating
+- Account props stored as decimal strings, all need parseFloat() conversion
+
+---
