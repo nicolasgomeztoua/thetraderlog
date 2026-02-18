@@ -11,8 +11,17 @@ export interface CreateTestAccountOptions {
 	isActive?: boolean;
 	// Prop firm fields
 	maxDrawdown?: string;
+	drawdownType?: "trailing" | "static" | "eod";
+	dailyLossLimit?: string;
 	profitTarget?: string;
+	consistencyRule?: string;
+	minTradingDays?: number;
+	challengeStartDate?: Date;
+	challengeEndDate?: Date;
+	challengeStatus?: "active" | "passed" | "failed";
 	profitSplit?: string;
+	payoutFrequency?: "weekly" | "bi_weekly" | "monthly";
+	linkedAccountId?: string;
 }
 
 let accountCounter = 0;
@@ -49,8 +58,17 @@ export async function createTestAccount(
 			isDefault,
 			isActive,
 			maxDrawdown: options.maxDrawdown,
+			drawdownType: options.drawdownType,
+			dailyLossLimit: options.dailyLossLimit,
 			profitTarget: options.profitTarget,
+			consistencyRule: options.consistencyRule,
+			minTradingDays: options.minTradingDays,
+			challengeStartDate: options.challengeStartDate,
+			challengeEndDate: options.challengeEndDate,
+			challengeStatus: options.challengeStatus,
 			profitSplit: options.profitSplit,
+			payoutFrequency: options.payoutFrequency,
+			linkedAccountId: options.linkedAccountId,
 		})
 		.returning();
 

@@ -93,6 +93,14 @@ const trades = await ctx.db.query.trades.findMany({
 **When:** Writing integration tests that touch AI router (sendMessage, etc.)
 **How:** Mock `@/lib/ai/client` with `aiGenerateText` returning `{ text, totalTokens, steps: [], finishReason: "stop" }`. Also export `OpenRouterError` class in the mock. Do NOT mock old `chatCompletion`/`chatCompletionStream` — those were removed in US-012.
 
+### Soft-Delete Filtering for Trades
+**When:** Querying trades for any analytics, stats, or compliance calculations
+**How:** Always include `isNull(trades.deletedAt)` in the where clause. Trades support soft-deletion, so without this filter you'll include deleted trades in calculations. Import `isNull` from `drizzle-orm`.
+
+### Prop Account Type Validation
+**When:** Validating that an account is a prop account (challenge or funded)
+**How:** Use `isPropAccountType(account.accountType)` from `@/lib/constants/prop`. This type-guards both `prop_challenge` and `prop_funded`. Use `ERR_ACCOUNT_NOT_PROP` error constant for the rejection message.
+
 ## Decisions
 
 ### AI SDK v6 Type Names

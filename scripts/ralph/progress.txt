@@ -18,6 +18,13 @@ Started: Wed Feb 18 17:15:47 WET 2026
 - Error constants: ERR_ACCOUNT_NOT_FOUND, ERR_CHALLENGE_ACCOUNT_NOT_FOUND, ERR_ACCOUNT_NOT_CHALLENGE in `src/lib/constants/errors.ts`
 - Constants barrel export: `src/lib/constants/index.ts` — add new prop constants here
 - parsePnl() helper exists in both `src/lib/analytics/risk.ts` and `src/lib/analytics/stats.ts`
+- Prop constants: `src/lib/constants/prop.ts` — COMPLIANCE_STATUS, COMPLIANCE_THRESHOLDS, COMPLIANCE_STATUS_COLORS, CHALLENGE_STATUS_LABELS, DRAWDOWN_TYPE_LABELS, PROP_ACCOUNT_TYPES, isPropAccountType()
+- Compliance thresholds: SAFE_MIN=0.3 (>30% buffer), CAUTION_MIN=0.1 (10-30% buffer), below 0.1 = danger
+- Prop compliance calculations: `src/lib/analytics/prop-compliance.ts` — all pure functions, no DB calls
+- Percentage inputs (maxDrawdown, dailyLossLimit, profitTarget) are raw numbers (6 = 6%), divide by 100 for dollar conversions
+- Biome barrel export ordering: alphabetical (prop-compliance before risk, stats, thresholds)
+- Soft-delete filtering: always include `isNull(trades.deletedAt)` when querying trades to exclude soft-deleted records
+- `isPropAccountType()` from `@/lib/constants/prop` validates both prop_challenge and prop_funded account types
 
 ---
 
@@ -103,5 +110,107 @@ Started: Wed Feb 18 17:15:47 WET 2026
 - getRiskMetrics router (analytics.ts:1074-1095) shows pattern for reading account's maxDrawdown and converting to decimal threshold
 - DailyLossProgress already exists and handles prop daily loss display — consider extracting rather than duplicating
 - Account props stored as decimal strings, all need parseFloat() conversion
+
+---
+
+## 2026-02-18 - US-001
+- Created `src/lib/constants/prop.ts` with all prop compliance constants
+- Exported from `src/lib/constants/index.ts` barrel file
+- Files changed: `src/lib/constants/prop.ts` (new), `src/lib/constants/index.ts` (updated)
+- **Learnings for future iterations:**
+  - Constants file pattern: use `as const` for literal type inference, `Record<ComplianceStatus, string>` for mapped types
+  - `isPropAccountType()` helper available for type-safe prop account checks
+  - `ComplianceStatus` type exported for use in utility functions and UI components
+  - COMPLIANCE_STATUS_BG_COLORS also available for badge backgrounds (bg-profit/10, bg-primary/10, bg-loss/10)
+
+---
+
+## 2026-02-18 - US-002
+- Created `src/lib/analytics/prop-compliance.ts` with all pure calculation functions
+- Exported from `src/lib/analytics/index.ts` barrel file
+- Files changed: `src/lib/analytics/prop-compliance.ts` (new), `src/lib/analytics/index.ts` (updated)
+- Functions implemented:
+  - `calculateDrawdownStatus()` — drawdown vs limit with compliance status
+  - `calculateDailyPnl()` — sum trades by date (ISO date string comparison)
+  - `calculateDailyLossStatus()` — daily P&L vs daily loss limit (converts % to dollar limit)
+  - `calculateProfitTargetProgress()` — progress toward profit target (converts % to dollar target)
+  - `calculateConsistencyMetric()` — largest single-day % of total profit vs consistency rule
+  - `calculateTradingDays()` — count distinct trading dates from exitTime
+  - `calculateTrailingDrawdown()` — high-water-mark drawdown from equity curve + initial balance
+  - `calculateStaticDrawdown()` — simple initialBalance - currentBalance formula
+  - `getOverallComplianceStatus()` — returns worst status from an array
+- **Learnings for future iterations:**
+  - `statusFromBuffer()` private helper centralizes threshold logic — remaining buffer → status
+  - All percentage inputs (maxDrawdown, dailyLossLimit, profitTarget) come as raw numbers (e.g. 6 for 6%), not decimals — divide by 100 when converting to dollar amounts
+  - `calculateTrailingDrawdown()` adds initialBalance to equity curve points since `buildEquityCurve()` tracks cumulative P&L from $0
+  - Biome requires alphabetical ordering for barrel exports — `prop-compliance` goes before `risk`
+  - Profit target status uses different thresholds than drawdown (progress >= 1 = safe, >= 0.5 = caution, < 0.5 = danger)
+- Unit tests: run with `bunx vitest run --config vitest.config.unit.ts` (no Docker needed)
+- Floating point gotcha: `1 - 0.7` in JS is `0.30000000000000004`, not `0.3` — boundary tests must account for this
+
+---
+
+## 2026-02-18 - US-003
+- Created `tests/unit/prop-compliance.test.ts` with 62 tests covering all 9 functions
+- Files changed: `tests/unit/prop-compliance.test.ts` (new)
+- Tests cover:
+  - `calculateDrawdownStatus`: safe/caution/danger thresholds, edge cases (0 limit, exceeded limit), trailing/static/EOD scenarios
+  - `calculateDailyPnl`: multi-trade summation, date filtering, null handling
+  - `calculateDailyLossStatus`: safe/caution/danger, percentage-to-dollar conversion, positive P&L handling
+  - `calculateProfitTargetProgress`: 0%/50%/100%+ progress, negative P&L clamping, 0 target edge case
+  - `calculateConsistencyMetric`: compliant/non-compliant, negative days ignored, empty array, single day, boundary
+  - `calculateTradingDays`: distinct date counting, null exitTime, deduplication
+  - `calculateTrailingDrawdown`: high-water-mark tracking, peak recovery, monotonic curves, empty/zero edge cases
+  - `calculateStaticDrawdown`: below/equal/above initial balance, zero balance
+  - `getOverallComplianceStatus`: worst-status selection, empty array
+- **Learnings for future iterations:**
+  - Floating point precision: `1 - 0.7 = 0.30000000000000004` in JS — boundary tests at exact threshold values will fail if you assume exact equality. Use values clearly on one side of the boundary.
+  - Unit test helper pattern: `makeEquityPoint()` helper creates minimal EquityPoint objects for tests — avoids boilerplate
+  - Biome formatting: wrapping `.toBe()` calls requires specific formatting — Biome prefers `expect(fn()).toBe(val)` inline when possible
+
+---
+
+## 2026-02-18 - US-004
+- Created `getPropCompliance` tRPC query in `src/server/api/routers/accounts.ts`
+- Added `ERR_ACCOUNT_NOT_PROP` error constant in `src/lib/constants/errors.ts`
+- Files changed: `src/server/api/routers/accounts.ts`, `src/lib/constants/errors.ts`
+- Endpoint features:
+  - Input: `{ accountId: string }`, validates ownership and prop account type
+  - Fetches all closed trades sorted by exitTime, filters out soft-deleted trades (`isNull(deletedAt)`)
+  - Computes drawdown (trailing vs static based on `drawdownType`), daily loss, profit target, consistency, trading days, timeline
+  - Returns equity curve for charting, overall compliance status
+  - Uses all pure utility functions from US-002 (`calculateDrawdownStatus`, `calculateDailyLossStatus`, etc.)
+  - Uses `buildEquityCurve()` from risk analytics for equity curve data
+- **Learnings for future iterations:**
+  - Import `isNull` from `drizzle-orm` for soft-delete filtering — closed trades query should always include `isNull(trades.deletedAt)`
+  - Import `asc` from `drizzle-orm` for ascending sort by exitTime
+  - `isPropAccountType()` from `@/lib/constants/prop` is the right way to validate prop accounts (supports both `prop_challenge` and `prop_funded`)
+  - Biome requires alphabetical ordering of named imports within import blocks
+  - Biome prefers inline function calls when arguments fit on one line — avoid unnecessary wrapping
+
+---
+
+## 2026-02-18 - US-005
+- Created `tests/integration/prop-compliance.test.ts` with 12 tests covering 8 scenarios
+- Updated `tests/utils/fixtures/accounts.ts` to support all prop fields (drawdownType, dailyLossLimit, consistencyRule, minTradingDays, challengeStartDate, challengeEndDate, challengeStatus, payoutFrequency, linkedAccountId)
+- Updated `tests/utils/fixtures/scenarios.ts` — `setupPropChallenge()` now accepts full `account` options and sets all prop fields by default
+- Files changed: `tests/integration/prop-compliance.test.ts` (new), `tests/utils/fixtures/accounts.ts` (updated), `tests/utils/fixtures/scenarios.ts` (updated)
+- Tests cover:
+  - Happy path: returns all compliance metrics for account with trades across multiple days
+  - Empty trades: returns safe drawdown/daily loss but danger profit target (0% progress)
+  - Danger state: near max drawdown (5.5% of 6% limit → danger)
+  - Daily loss limit: today's trades near daily limit (93.3% used → danger)
+  - Profit target reached: trades exceeding $10000 target → safe
+  - Auth validation: rejects unauthenticated and non-owner requests
+  - Non-prop rejection: rejects live and demo accounts with correct error
+  - Trailing drawdown: verifies trailing tracks from peak (higher than static)
+  - Prop funded: accepts prop_funded accounts
+  - Consistency metric: detects non-compliant when one day dominates (80% > 30% rule)
+- **Learnings for future iterations:**
+  - `createTestAccount` fixture now supports ALL prop fields — no need to insert directly via DB
+  - `setupPropChallenge()` sets sensible defaults: 100k balance, 6% drawdown, 3% daily loss, 10% profit target, 30% consistency rule, 5 min trading days
+  - Compliance threshold math: SAFE > 30% buffer remaining, CAUTION 10-30%, DANGER < 10% — so for a 6% drawdown limit, you need > 5.4% current drawdown to hit danger (>90% used)
+  - Biome formatting: `createTestCaller(user.clerkId, user)` fits inline, but `createTestCaller(trailingUser.clerkId, trailingUser)` wraps to multiline — line length determines format
+  - Docker/OrbStack must be running for integration tests (Testcontainers requires container runtime)
 
 ---
