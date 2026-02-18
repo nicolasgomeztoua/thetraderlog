@@ -439,3 +439,27 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - No need for seeded PRNG — Math.random() is fine for Monte Carlo since exact reproducibility isn't required
 
 ---
+
+## 2026-02-18 - US-018
+- Added 12 unit tests for `simulatePropChallenge()` to `tests/unit/prop-compliance.test.ts`
+- Files changed: `tests/unit/prop-compliance.test.ts` (updated)
+- Test total now: 74 tests in prop-compliance file, 110 total across unit tests
+- Tests cover:
+  - High win rate (80%) produces high pass rate (>70%)
+  - Low win rate (30%) produces low pass rate (<30%)
+  - Edge case: profitTarget = 0 → 100% pass rate
+  - Edge case: maxDrawdown = 0 → 100% fail rate
+  - Edge case: negative profitTarget → 100% pass rate
+  - Return shape: all expected fields present (passRate, failRate, avgTradesToPass, medianOutcome, percentiles, simulations)
+  - Percentiles in correct order (p10 ≤ p25 ≤ p50 ≤ p75 ≤ p90)
+  - passRate + failRate = 1 invariant
+  - Simulations count matches iterations input
+  - Default 10000 iterations when not specified
+  - medianOutcome equals p50 percentile
+  - avgTradesToPass is positive when passes exist
+- **Learnings for future iterations:**
+  - Biome formatting: `expect().toBeLessThanOrEqual(value)` fits inline when argument is short — don't wrap to multiline
+  - Monte Carlo tests use statistical assertions (>0.7, <0.3) not exact values due to randomness — use generous bounds
+  - `baseInput` pattern with spread overrides (`{...baseInput, winRate: 0.8}`) keeps test setup DRY
+
+---
