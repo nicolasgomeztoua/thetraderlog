@@ -420,3 +420,22 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - ChartTerminal title should also reflect the label change — users see the terminal header before the gauge content
 
 ---
+
+## 2026-02-18 - US-017
+- Added `simulatePropChallenge()` Monte Carlo simulation function to `src/lib/analytics/prop-compliance.ts`
+- Added `SimulatePropChallengeInput` and `SimulatePropChallengeResult` interfaces
+- Added private `percentile()` helper for linear interpolation of sorted arrays
+- Files changed: `src/lib/analytics/prop-compliance.ts` (updated)
+- Function features:
+  - Runs N iterations (default 10000), each simulating random trades using winRate + avgWin/avgLoss
+  - Tracks equity and high-water-mark drawdown per simulation
+  - Three stop conditions: profit target reached (pass), max drawdown breached (fail), max trades exceeded (fail)
+  - Returns passRate, failRate, avgTradesToPass, medianOutcome, percentiles (p10/p25/p50/p75/p90), simulations count
+  - Edge cases: profitTarget <= 0 returns 100% pass, maxDrawdown <= 0 returns 100% fail
+- **Learnings for future iterations:**
+  - `avgLoss` input is a positive number (e.g. 200), negated inside the loop as `-avgLoss` for trade result
+  - Percentile calculation uses linear interpolation between sorted array indices for smooth values
+  - Already exported from barrel `src/lib/analytics/index.ts` via `export * from "./prop-compliance"`
+  - No need for seeded PRNG — Math.random() is fine for Monte Carlo since exact reproducibility isn't required
+
+---
