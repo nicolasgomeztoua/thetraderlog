@@ -487,3 +487,19 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - Biome auto-fix: `bunx biome check --write <files>` is the fastest way to fix class ordering and formatting
 
 ---
+
+## 2026-02-18 - US-020
+- Added prop compliance to AI context — AI can now query prop challenge/funded account compliance metrics
+- Extended `call-analytics.ts` to support `accounts` router with `getPropCompliance` endpoint in the allowlist
+- Updated `definitions.ts` tool description to include accounts router and prop compliance endpoint details, expanded router enum to `["analytics", "trades", "accounts"]`
+- Updated `schema-context.ts` to add Accounts Router section with `getPropCompliance` endpoint documentation
+- Updated `planner.ts` to add accounts router with `getPropCompliance` to available analytics endpoints for report planning
+- Files changed: `src/lib/ai/tools/call-analytics.ts`, `src/lib/ai/tools/definitions.ts`, `src/lib/ai/schema-context.ts`, `src/lib/ai/report-pipeline/planner.ts`
+- **Learnings for future iterations:**
+  - AI tool system uses allowlisted endpoint sets per router (`ALLOWED_ANALYTICS_ENDPOINTS`, `ALLOWED_TRADES_ENDPOINTS`) — add new routers by creating a new `ALLOWED_*_ENDPOINTS` array and `*_SET`
+  - `executeCallAnalytics` creates a server-side tRPC caller via `createCaller(ctx)` — new routers are accessed as `caller.routerName[endpoint]` with the same pattern
+  - `schema-context.ts` is a static string (not per-request) — describes the full database schema and available endpoints for the AI system prompt
+  - `planner.ts` has a separate `AVAILABLE_ANALYTICS_ENDPOINTS` string used only for report planning — keep in sync with actual tool capabilities
+  - The tool `inputSchema` `router` field uses a `z.enum()` — must be updated when adding new routers
+
+---

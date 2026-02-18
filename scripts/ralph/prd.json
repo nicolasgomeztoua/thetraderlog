@@ -415,7 +415,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 20,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
