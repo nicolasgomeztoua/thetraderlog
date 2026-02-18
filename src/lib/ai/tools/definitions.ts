@@ -62,7 +62,7 @@ function createRunQueryTool(context: ToolContext) {
 function createCallAnalyticsTool(context: ToolContext) {
 	return tool({
 		description:
-			"Call an existing analytics or trades tRPC endpoint to get pre-computed trading statistics. " +
+			"Call an existing analytics, trades, or accounts tRPC endpoint to get pre-computed trading statistics. " +
 			"Prefer this over raw SQL queries when an endpoint already provides the data you need. " +
 			"Available analytics endpoints: getOverview, getCalendarData, getPerformanceByDayOfWeek, " +
 			"getPerformanceByHour, getPerformanceBySession, getPerformanceByMonth, getRiskMetrics, " +
@@ -71,14 +71,19 @@ function createCallAnalyticsTool(context: ToolContext) {
 			"getRevengeTrading, getOvertradingAnalysis, getHoldingTimeAnalysis, getBehavioralPatterns, " +
 			"getMonteCarloSimulation, getFilteredTradeCount, exportFilteredTrades. " +
 			"Available trades endpoints: getStats, getAll. " +
+			"Available accounts endpoints: getPropCompliance (prop firm challenge/funded account compliance metrics). " +
 			"Most analytics endpoints accept optional input: { accountId?: string, filters?: { symbols?, dateRange?: { start?, end? }, " +
 			"daysOfWeek?, hours?, sessions?, strategies?, tags?, rMultipleRange?, positionSizeRange?, outcome?, reviewed? } }. " +
 			"trades.getStats accepts: { startDate?, endDate?, accountId? }. " +
-			"trades.getAll accepts: { limit?, status?, symbol?, startDate?, endDate?, accountId?, sortField?, sortDirection? }.",
+			"trades.getAll accepts: { limit?, status?, symbol?, startDate?, endDate?, accountId?, sortField?, sortDirection? }. " +
+			"accounts.getPropCompliance accepts: { accountId: string } and returns drawdown status, daily loss, profit target progress, " +
+			"consistency metric, trading days, timeline, equity curve, overall compliance status, and trade stats for prop accounts.",
 		inputSchema: z.object({
 			router: z
-				.enum(["analytics", "trades"])
-				.describe('The tRPC router to call: "analytics" or "trades".'),
+				.enum(["analytics", "trades", "accounts"])
+				.describe(
+					'The tRPC router to call: "analytics", "trades", or "accounts".',
+				),
 			endpoint: z
 				.string()
 				.describe("The endpoint name to call (e.g., getOverview, getStats)."),
