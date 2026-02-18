@@ -25,6 +25,10 @@ Started: Wed Feb 18 17:15:47 WET 2026
 - Biome barrel export ordering: alphabetical (prop-compliance before risk, stats, thresholds)
 - Soft-delete filtering: always include `isNull(trades.deletedAt)` when querying trades to exclude soft-deleted records
 - `isPropAccountType()` from `@/lib/constants/prop` validates both prop_challenge and prop_funded account types
+- Dashboard widget pattern: `DashboardWidget` wrapper provides terminal chrome, loading skeleton, href link. Use `skeletonVariant` for appropriate loading state
+- Conditional rendering for prop widgets: check `isPropAccountType(selectedAccount?.accountType)` and return null if not prop
+- Biome import ordering: `import type` BEFORE `import` from same module path
+- `COMPLIANCE_STATUS_COLORS[status]` maps compliance status to Terminal design text colors (text-profit/text-primary/text-loss)
 
 ---
 
@@ -212,5 +216,78 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - Compliance threshold math: SAFE > 30% buffer remaining, CAUTION 10-30%, DANGER < 10% — so for a 6% drawdown limit, you need > 5.4% current drawdown to hit danger (>90% used)
   - Biome formatting: `createTestCaller(user.clerkId, user)` fits inline, but `createTestCaller(trailingUser.clerkId, trailingUser)` wraps to multiline — line length determines format
   - Docker/OrbStack must be running for integration tests (Testcontainers requires container runtime)
+
+---
+
+## 2026-02-18 - US-006
+- Created `src/components/dashboard/widgets/prop-status-widget.tsx`
+- Compact prop compliance widget for dashboard with:
+  - DrawdownGauge (circular SVG gauge showing used % of max drawdown)
+  - ComplianceBar (reusable progress bar for daily loss and profit target)
+  - StatusDot (colored indicator for overall status)
+  - Trading days count and days remaining countdown
+  - Overall status label (safe/caution/danger)
+- Uses `isPropAccountType()` to conditionally render (returns null for non-prop accounts)
+- Calls `accounts.getPropCompliance` with `enabled: isProp && !!selectedAccountId`
+- Uses `DashboardWidget` wrapper for loading skeleton and terminal chrome
+- All key elements have data-testid attributes
+- Files changed: `src/components/dashboard/widgets/prop-status-widget.tsx` (new)
+- **Learnings for future iterations:**
+  - Biome import ordering: `import type` must come BEFORE `import` from the same module
+  - Biome formatting: `cn()` arguments need one extra level of indentation when inside JSX attribute
+  - Biome class sorting: `font-mono font-semibold text-xs` not `font-mono text-xs font-semibold` — weight modifiers before size
+  - Widget pattern: use `DashboardWidget` wrapper with `icon`, `title`, `href`, `loading`, `skeletonVariant` props
+  - Query pattern for conditional data: `{ enabled: condition }` prevents unnecessary API calls
+
+---
+
+## 2026-02-18 - US-007
+- Added PropStatusWidget to dashboard grid in `src/app/(protected)/dashboard/page.tsx`
+- Conditionally renders before Today's Performance when `isPropAccountType(selectedAccount?.accountType)` is true
+- Uses `GridItem size="md"` for 2-column width
+- Files changed: `src/app/(protected)/dashboard/page.tsx` (updated)
+- **Learnings for future iterations:**
+  - Conditional grid items: use `{condition && (<GridItem>...</GridItem>)}` pattern — React handles null children in grids correctly
+  - `isPropAccountType()` accepts `undefined` safely (returns false), no need for optional chaining guard
+  - Dashboard page already has `selectedAccount` from `useAccount()` — no need to destructure `selectedAccountId` unless needed for API calls
+
+---
+
+## 2026-02-18 - US-008
+- Added conditional Prop nav item to sidebar in `src/app/(protected)/_components/app-sidebar.tsx`
+- Imports `Shield` icon from lucide-react, `isPropAccountType` from `@/lib/constants/prop`
+- Uses `useMemo` to compute `navItems` array: inserts `{ title: "Prop", href: "/prop", icon: Shield }` between Analytics and AI Insights when any account is prop type
+- Renders `navItems` instead of static `mainNavItems` in the sidebar menu
+- Files changed: `src/app/(protected)/_components/app-sidebar.tsx` (updated)
+- **Learnings for future iterations:**
+  - Sidebar nav items are defined in static `mainNavItems` array — for conditional items, compute a dynamic `navItems` via `useMemo` that splices in the conditional item at the right index
+  - `accounts` from `useAccount()` is available in sidebar — use `.some()` to check for prop accounts
+  - Biome import ordering: `@/contexts` comes before `@/lib` alphabetically — respect this when adding new imports
+
+---
+
+## 2026-02-18 - US-009
+- Created `src/app/(protected)/prop/page.tsx` — dedicated prop compliance page
+- Features implemented:
+  - Page header with "Compliance" section label and "Prop Compliance" heading (Terminal design)
+  - Account selector dropdown filtered to `prop_challenge` and `prop_funded` accounts only
+  - Challenge status badge (Active/Passed/Failed) with color-coded styling
+  - Phase indicator for funded accounts showing "Challenge → Funded" journey
+  - Auto-selects first prop account if globally selected account is not a prop account
+  - Compliance summary bar showing overall status, account name, and current balance
+  - Loading skeleton state while data fetches
+  - Empty state when user has no prop accounts
+  - No-data state when compliance data unavailable
+  - All key elements have data-testid attributes
+- Uses `accounts.getPropCompliance` with `enabled` guard and `staleTime: 30000`
+- Syncs prop page selection back to global `setSelectedAccountId` on change
+- Files changed: `src/app/(protected)/prop/page.tsx` (new)
+- **Learnings for future iterations:**
+  - Biome import ordering: `lucide-react` comes before `react` (l < r)
+  - TypeScript `Record<string, T>` index lookup returns `T | undefined` — use a separate default variable rather than `?? map.key` to avoid possibly-undefined errors
+  - Biome CSS class sorting: `text-muted-foreground` before `text-xs` (specificity order)
+  - Biome formatting: JSX attributes should be on separate lines when combining `className` and `data-testid` on a div
+  - Prop page uses local `propAccountId` state to allow independent selection from global account selector
+  - `formatCurrency` from `@/lib/shared` not needed here — using `toLocaleString` directly for inline balance display
 
 ---

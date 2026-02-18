@@ -144,7 +144,7 @@
         "Verify in browser"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -163,7 +163,7 @@
         "Verify in browser: widget appears for prop accounts, hidden for live/demo"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -183,7 +183,7 @@
         "Verify in browser: nav item appears/disappears based on account types"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -205,7 +205,7 @@
         "Verify in browser"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
