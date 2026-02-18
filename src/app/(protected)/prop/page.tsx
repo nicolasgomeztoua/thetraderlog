@@ -2,6 +2,10 @@
 
 import { ShieldIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ChallengeHistory } from "@/components/prop/challenge-history";
+import { ComplianceGrid } from "@/components/prop/compliance-grid";
+import { DrawdownChart } from "@/components/prop/drawdown-chart";
+import { TradingDaysTimeline } from "@/components/prop/trading-days-timeline";
 import {
 	Select,
 	SelectContent,
@@ -149,9 +153,9 @@ export default function PropPage() {
 			{/* Loading state */}
 			{isLoading && <PropPageSkeleton />}
 
-			{/* Data loaded — compliance content placeholder for future stories */}
+			{/* Data loaded — compliance content */}
 			{!isLoading && data && (
-				<div data-testid="prop-compliance-content">
+				<div className="space-y-6" data-testid="prop-compliance-content">
 					{/* Compliance summary bar */}
 					<div className="rounded border border-white/5 bg-white/1 p-4">
 						<div className="flex items-center gap-3">
@@ -185,7 +189,32 @@ export default function PropPage() {
 						</div>
 					</div>
 
-					{/* Components from US-010 through US-013 will be assembled here in US-014 */}
+					{/* Compliance Grid — 4 metric cards */}
+					<ComplianceGrid data={data} />
+
+					{/* Drawdown chart + Trading days — 2-column on desktop */}
+					<div className="grid gap-6 lg:grid-cols-2">
+						<DrawdownChart
+							dailyLossLimit={
+								data.drawdown.limit > 0
+									? (data.dailyLoss.limit / data.account.initialBalance) * 100
+									: 0
+							}
+							equityCurve={data.drawdown.equityCurve}
+							initialBalance={data.account.initialBalance}
+							maxDrawdownPercent={data.drawdown.limit}
+						/>
+						<TradingDaysTimeline
+							timeline={data.timeline}
+							tradingDays={data.tradingDays}
+						/>
+					</div>
+
+					{/* Challenge History */}
+					<ChallengeHistory
+						onSelectAccount={handleAccountChange}
+						selectedAccountId={propAccountId}
+					/>
 				</div>
 			)}
 
@@ -293,7 +322,7 @@ function PropPageSkeleton() {
 				</div>
 			</div>
 
-			{/* Grid skeleton */}
+			{/* Grid skeleton — 4 metric cards */}
 			<div className="grid gap-4 sm:grid-cols-2">
 				{[...Array(4)].map((_, i) => (
 					<div
@@ -307,10 +336,34 @@ function PropPageSkeleton() {
 				))}
 			</div>
 
-			{/* Chart skeleton */}
+			{/* Chart + timeline skeleton — 2 columns on desktop */}
+			<div className="grid gap-6 lg:grid-cols-2">
+				<div className="rounded border border-white/5 bg-white/1 p-4">
+					<Skeleton className="mb-3 h-3 w-32" />
+					<Skeleton className="h-[200px] w-full" />
+				</div>
+				<div className="rounded border border-white/5 bg-white/1 p-4">
+					<Skeleton className="mb-3 h-3 w-28" />
+					<Skeleton className="mb-4 h-4 w-full" />
+					<Skeleton className="h-[160px] w-full" />
+				</div>
+			</div>
+
+			{/* Challenge history skeleton */}
 			<div className="rounded border border-white/5 bg-white/1 p-4">
-				<Skeleton className="mb-3 h-3 w-32" />
-				<Skeleton className="h-[200px] w-full" />
+				<Skeleton className="mb-4 h-3 w-36" />
+				<div className="space-y-3">
+					{[...Array(3)].map((_, i) => (
+						<div
+							className="flex items-center gap-3"
+							key={`prop-history-skeleton-${i.toString()}`}
+						>
+							<Skeleton className="h-3 w-3 rounded-full" />
+							<Skeleton className="h-4 w-40" />
+							<Skeleton className="ml-auto h-3 w-20" />
+						</div>
+					))}
+				</div>
 			</div>
 		</div>
 	);
