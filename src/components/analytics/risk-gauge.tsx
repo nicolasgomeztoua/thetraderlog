@@ -1,3 +1,4 @@
+import { isPropAccountType } from "@/lib/constants/prop";
 import { cn, RISK_COLORS } from "@/lib/shared";
 
 interface RiskGaugeProps {
@@ -11,6 +12,8 @@ interface RiskGaugeProps {
 	ruinThresholdPercent?: number;
 	/** Source of ruin threshold */
 	ruinThresholdSource?: "account" | "default";
+	/** Account type — when prop, relabels as "Challenge Failure Risk" */
+	accountType?: string;
 	className?: string;
 }
 
@@ -44,6 +47,7 @@ export function RiskGauge({
 	riskPerTradeSource = "default",
 	ruinThresholdPercent = 50,
 	ruinThresholdSource = "default",
+	accountType,
 	className,
 }: RiskGaugeProps) {
 	const cappedRor = Math.min(Math.max(riskOfRuin, 0), 100);
@@ -66,6 +70,11 @@ export function RiskGauge({
 				? "100%"
 				: `${riskOfRuin.toFixed(2)}%`;
 
+	// Prop-aware labels
+	const isProp =
+		isPropAccountType(accountType) && ruinThresholdSource === "account";
+	const subtitle = isProp ? "Challenge Failure Risk" : "Risk of Ruin";
+
 	// Build the basis text
 	const riskBasis =
 		riskPerTradeSource === "calculated"
@@ -74,8 +83,9 @@ export function RiskGauge({
 				? "1% est. (no losses)"
 				: `${riskPerTradePercent.toFixed(1)}% default`;
 
-	const ruinBasis =
-		ruinThresholdSource === "account"
+	const ruinBasis = isProp
+		? `Based on ${ruinThresholdPercent.toFixed(0)}% max drawdown rule`
+		: ruinThresholdSource === "account"
 			? `${ruinThresholdPercent.toFixed(0)}% max DD`
 			: `${ruinThresholdPercent.toFixed(0)}% threshold`;
 
@@ -96,7 +106,7 @@ export function RiskGauge({
 				}}
 			>
 				<svg
-					aria-label={`Risk of Ruin: ${displayValue}`}
+					aria-label={`${subtitle}: ${displayValue}`}
 					className="-rotate-90"
 					height={size}
 					role="img"
@@ -153,7 +163,7 @@ export function RiskGauge({
 						{displayValue}
 					</span>
 					<span className="mt-1 font-mono text-muted-foreground text-xs">
-						Risk of Ruin
+						{subtitle}
 					</span>
 				</div>
 			</div>
@@ -172,7 +182,15 @@ export function RiskGauge({
 
 			{/* Basis info */}
 			<div className="mt-3 text-center font-mono text-[10px] text-muted-foreground">
-				Based on {riskBasis} · {ruinBasis}
+				{isProp ? (
+					<>
+						{riskBasis} · {ruinBasis}
+					</>
+				) : (
+					<>
+						Based on {riskBasis} · {ruinBasis}
+					</>
+				)}
 			</div>
 		</div>
 	);

@@ -99,6 +99,7 @@ const PositionSizeChart = dynamic(
 
 import { useAccount } from "@/contexts/account-context";
 import { useTimezone } from "@/hooks/use-timezone";
+import { isPropAccountType } from "@/lib/constants/prop";
 import {
 	formatCurrency,
 	formatDate,
@@ -643,7 +644,7 @@ function TimeTab() {
 // =============================================================================
 
 function RiskTab() {
-	const { selectedAccountId } = useAccount();
+	const { selectedAccount, selectedAccountId } = useAccount();
 	const apiFilters = useApiFilters();
 
 	const { data: riskMetrics, isLoading: riskLoading } =
@@ -887,9 +888,15 @@ function RiskTab() {
 			<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 				<ChartTerminal
 					description={`Probability of hitting ${riskMetrics.ruinThresholdPercent.toFixed(0)}% drawdown`}
-					title="Risk of Ruin"
+					title={
+						isPropAccountType(selectedAccount?.accountType) &&
+						riskMetrics.ruinThresholdSource === "account"
+							? "Challenge Failure Risk"
+							: "Risk of Ruin"
+					}
 				>
 					<RiskGauge
+						accountType={selectedAccount?.accountType}
 						riskOfRuin={riskMetrics.riskOfRuin}
 						riskPerTradePercent={riskMetrics.riskPerTradePercent}
 						riskPerTradeSource={riskMetrics.riskPerTradeSource}
