@@ -5,6 +5,7 @@ import {
 	calculateDailyLossStatus,
 	calculateDailyPnl,
 	calculateDrawdownStatus,
+	calculateEodTrailingDrawdown,
 	calculateProfitTargetProgress,
 	calculateStaticDrawdown,
 	calculateTradingDays,
@@ -546,11 +547,18 @@ export const accountsRouter = createTRPCRouter({
 			// Build equity curve for drawdown calculations
 			const equityCurve = buildEquityCurve(accountTrades);
 
-			// Drawdown calculation (trailing vs static)
+			// Drawdown calculation (trailing vs eod vs static)
 			let currentDrawdownPercent: number;
 			if (account.drawdownType === "trailing") {
 				const trailing = calculateTrailingDrawdown(equityCurve, initialBalance);
 				currentDrawdownPercent = trailing.currentDrawdownPercent;
+			} else if (account.drawdownType === "eod") {
+				const eod = calculateEodTrailingDrawdown(
+					equityCurve,
+					initialBalance,
+					userTimezone,
+				);
+				currentDrawdownPercent = eod.currentDrawdownPercent;
 			} else {
 				const staticDd = calculateStaticDrawdown(
 					initialBalance,
@@ -642,10 +650,11 @@ export const accountsRouter = createTRPCRouter({
 			}, 0);
 
 			// Overall status
+			// Profit target is a progress metric, not a risk indicator —
+			// exclude it so it doesn't flag "danger" while the account is safe.
 			const overallStatus = getOverallComplianceStatus([
 				drawdownStatus.status,
 				dailyLossStatus.status,
-				profitTarget.status,
 			]);
 
 			return {

@@ -382,6 +382,68 @@ export function calculateTrailingDrawdown(
 }
 
 // =============================================================================
+// EOD TRAILING DRAWDOWN
+// =============================================================================
+
+/**
+ * Compute end-of-day trailing drawdown from an equity curve.
+ * Like trailing drawdown, but the high-water mark only ratchets up at end of
+ * each trading day (last trade of the day), not intraday.
+ *
+ * @param equityCurve - Equity curve points from buildEquityCurve()
+ * @param initialBalance - Account initial balance in dollars
+ * @param timezone - IANA timezone for day grouping (defaults to "UTC")
+ */
+export function calculateEodTrailingDrawdown(
+	equityCurve: EquityPoint[],
+	initialBalance: number,
+	timezone = "UTC",
+): TrailingDrawdownResult {
+	if (equityCurve.length === 0 || initialBalance <= 0) {
+		return {
+			maxDrawdown: 0,
+			maxDrawdownPercent: 0,
+			currentDrawdown: 0,
+			currentDrawdownPercent: 0,
+		};
+	}
+
+	// Group points by trading day, keeping only the last point per day
+	const eodByDay = new Map<string, EquityPoint>();
+	for (const point of equityCurve) {
+		const dayKey = getDateStringInTimezone(point.date, timezone);
+		eodByDay.set(dayKey, point);
+	}
+
+	// Walk EOD points in chronological order to build the HWM
+	const eodPoints = [...eodByDay.entries()]
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([, point]) => point);
+
+	let highWaterMark = initialBalance;
+	let maxDrawdownDollars = 0;
+
+	for (const point of eodPoints) {
+		const eodEquity = initialBalance + point.equity;
+		highWaterMark = Math.max(highWaterMark, eodEquity);
+		const dd = highWaterMark - eodEquity;
+		maxDrawdownDollars = Math.max(maxDrawdownDollars, dd);
+	}
+
+	// Current drawdown: use the latest equity point against the EOD HWM
+	const lastPoint = equityCurve[equityCurve.length - 1];
+	const currentEquity = initialBalance + (lastPoint?.equity ?? 0);
+	const currentDrawdownDollars = Math.max(0, highWaterMark - currentEquity);
+
+	return {
+		maxDrawdown: maxDrawdownDollars,
+		maxDrawdownPercent: (maxDrawdownDollars / initialBalance) * 100,
+		currentDrawdown: currentDrawdownDollars,
+		currentDrawdownPercent: (currentDrawdownDollars / initialBalance) * 100,
+	};
+}
+
+// =============================================================================
 // STATIC DRAWDOWN
 // =============================================================================
 

@@ -25,7 +25,8 @@ import { isPropAccountType } from "@/lib/constants/prop";
  * Row 2: [Journal Status] [P&L Calendar  ] [Analytics Snapshot]
  * Row 3: [Journal Streak] [   (large)    ] [Strategies Snapshot]
  * Row 4: [Rule Compliance]               [Recent Trades]
- * Row 5: [Journal Excerpts (wide)                      ]
+ * Row 5: [Prop Status Widget (wide)]  ← prop accounts only
+ * Row 6: [Journal Excerpts (wide)                      ]
  */
 export default function DashboardPage() {
 	const { selectedAccount } = useAccount();
@@ -60,13 +61,6 @@ export default function DashboardPage() {
 
 			{/* Command Center Grid */}
 			<CommandCenterGrid>
-				{/* Prop Compliance Widget — only for prop accounts */}
-				{isPropAccountType(selectedAccount?.accountType) && (
-					<GridItem size="md">
-						<PropStatusWidget />
-					</GridItem>
-				)}
-
 				{/* Row 1: Today's Performance (wide) */}
 				<GridItem size="md">
 					<TodayPerformanceWidget />
@@ -102,6 +96,13 @@ export default function DashboardPage() {
 				<GridItem size="sm">
 					<TradesSnapshotWidget />
 				</GridItem>
+
+				{/* Prop Compliance Widget — only for prop accounts */}
+				{isPropAccountType(selectedAccount?.accountType) && (
+					<GridItem size="wide">
+						<PropStatusWidget />
+					</GridItem>
+				)}
 
 				{/* Bottom: Journal Excerpts (wide) */}
 				<GridItem size="wide">

@@ -1,0 +1,79 @@
+[
+	{
+		"platform": "ninjatrader",
+		"title": "Ninjatrader — How to import trades from Ninjatrader into TradeZella using the file upload method?",
+		"article": "https://help.tradezella.com/en/articles/6499264-ninjatrader-how-to-import-trades-from-ninjatrader-into-tradezella-using-the-file-upload-method",
+		"lastUpdated": "Updated over 12 months ago",
+		"attachments": [
+			{
+				"name": "NinjaTrader_CorrectFile.csv",
+				"contentType": "text/csv",
+				"url": "https://tradezella-b87031e45409.intercom-attachments-2.com/i/o/1115789329/60e2f8e4ee7ab70d22347ac5/NinjaTrader_CorrectFile.csv?expires=1771454700&signature=b6c60c3026e0ebf59b7ac8ed2875bf81adcfd12cc1ff7925143b9b63a2f06eb8&req=dSEmE852lIJdUPMW1HO4zXdcnr84%2BWu85D%2BNErUbNpGYyQ2wyy4mg0KUogg6%0A2NdEwPqU3is%3D%0A",
+				"savedAs": "docs/research/futures-platform-csvs/raw/ninjatrader.csv"
+			}
+		]
+	},
+	{
+		"platform": "tradovate",
+		"title": "Tradovate — How to import trades from Tradovate into TradeZella using the file upload method?",
+		"article": "https://help.tradezella.com/en/articles/6472250-tradovate-how-to-import-trades-from-tradovate-into-tradezella-using-the-file-upload-method",
+		"lastUpdated": "Updated over 12 months ago",
+		"attachments": [
+			{
+				"name": "Tradovate_CorrectFile.csv",
+				"contentType": "text/csv",
+				"url": "https://tradezella-b87031e45409.intercom-attachments-2.com/i/o/zt4f1ld5/1400819733/2d4809bd1f41d7a711f3a7824e24/Tradovate_CorrectFile.csv?expires=1771453800&signature=946940e929ea72bba2b3be63cc5ed098180bb368abe3df69f6ed5b90d9e0c2a3&req=dSQnFsF%2FlIZcWvMW1HO4zTq7I0Djbpv621GiibusGnux%2B7EzNsxFp9XC0ssM%0A2raQDcf1fzM%3D%0A",
+				"savedAs": "docs/research/futures-platform-csvs/raw/tradovate.csv"
+			}
+		]
+	},
+	{
+		"platform": "rithmic",
+		"title": "Rithmic R Trader — How to import trades from Rithmic R Trader into TradeZella using the file upload method?",
+		"article": "https://help.tradezella.com/en/articles/6839918-rithmic-r-trader-how-to-import-trades-from-rithmic-r-trader-into-tradezella-using-the-file-upload-method",
+		"lastUpdated": "Updated over 12 months ago",
+		"attachments": [
+			{
+				"name": "Rithmic R Trader_CorrectFile.csv",
+				"contentType": "text/csv",
+				"url": "https://tradezella-b87031e45409.intercom-attachments-2.com/i/o/1116613809/ab18a0b79e9347a87aec3f07/Rithmic+R+Trader_CorrectFile.csv?expires=1771454700&signature=6bf11a1df8564f280cbec4539c545d5b4d59f0eef2a93bf8617904b84b5a6e61&req=dSEmEM9%2FnolfUPMW1HO4zVxV3F7GVub8%2FW0ExbUoxLZS3AfqcRLPknxwqZev%0A2BTUTLYuZmg%3D%0A",
+				"savedAs": "docs/research/futures-platform-csvs/raw/rithmic.csv"
+			}
+		]
+	},
+	{
+		"platform": "topstepx",
+		"title": "TopstepX — How to import trades from TopstepX into TradeZella using the file upload method?",
+		"article": "https://help.tradezella.com/en/articles/9557681-topstepx-how-to-import-trades-from-topstepx-into-tradezella-using-the-file-upload-method",
+		"lastUpdated": "Updated over 4 months ago",
+		"attachments": [
+			{
+				"name": "topstep_trades_export.csv",
+				"contentType": "text/csv",
+				"url": "https://tradezella-b87031e45409.intercom-attachments-2.com/i/o/zt4f1ld5/1400823149/a02bacf917444b989e4adc9d73a6/topstep_trades_export.csv?expires=1771454700&signature=9d2cf2256a9b717e26b9fb97c3caabce0659686fcbcd0032a297284858cc65ca&req=dSQnFsF8noBbUPMW1HO4zc2FSuoVL4N2ZcPXAbggl5pyfING5S7vHKTfhEqO%0AsvO1AkPTR%2BI%3D%0A",
+				"savedAs": "docs/research/futures-platform-csvs/raw/topstepx.csv"
+			}
+		]
+	},
+	{
+		"platform": "projectx",
+		"title": "ProjectX — How to Import Trades from ProjectX Prop Firms Platforms into TradeZella Using the File Upload Method",
+		"article": "https://help.tradezella.com/en/articles/11943188-projectx-how-to-import-trades-from-projectx-prop-firms-platforms-into-tradezella-using-the-file-upload-method",
+		"lastUpdated": "Updated over 6 months ago",
+		"attachments": []
+	},
+	{
+		"platform": "tradingview",
+		"title": "TradingView — How to import trades from TradingView into TradeZella?",
+		"article": "https://help.tradezella.com/en/articles/6992227-tradingview-how-to-import-trades-from-tradingview-into-tradezella",
+		"lastUpdated": "Updated over 3 months ago",
+		"attachments": [
+			{
+				"name": "Tradingview_paper-trading-history-all-2025-02-15T20_11_00.219Z.csv",
+				"contentType": "text/csv",
+				"url": "https://tradezella-b87031e45409.intercom-attachments-2.com/i/o/zt4f1ld5/1400822515/5395b8f89daaf18e8a4e326368d3/Tradingview_paper-trading-history-all-2025-02-15T20_11_00_219Z.csv?expires=1771454700&signature=036a56abdd4db0e082e8572b149b7d967900466b2a8348c8421ddf14e28bcc7e&req=dSQnFsF8n4ReXPMW1HO4zf3AHsZDu09CQEbVGSs8H6soDcDVPPRh3qbHhN%2Fv%0AjNw%2BA32Qjos%3D%0A",
+				"savedAs": "docs/research/futures-platform-csvs/raw/tradingview.csv"
+			}
+		]
+	}
+]

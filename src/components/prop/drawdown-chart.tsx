@@ -239,7 +239,10 @@ export function DrawdownChart({
 
 	return (
 		<div
-			className={cn("rounded border border-white/5 bg-white/1 p-4", className)}
+			className={cn(
+				"h-fit rounded border border-white/5 bg-white/1 p-4",
+				className,
+			)}
 			data-testid="drawdown-chart"
 		>
 			{/* Header */}
