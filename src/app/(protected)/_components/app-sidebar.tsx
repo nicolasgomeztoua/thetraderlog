@@ -15,11 +15,12 @@ import {
 	Plus,
 	PlusCircle,
 	Settings,
+	Shield,
 	Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ThemeSelector } from "@/components/theme-selector";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAccount } from "@/contexts/account-context";
+import { isPropAccountType } from "@/lib/constants/prop";
 import { ACCOUNT_TYPE_COLORS, cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -99,6 +101,14 @@ export function AppSidebar() {
 	useEffect(() => {
 		setMounted(true);
 	}, []);
+
+	const navItems = useMemo(() => {
+		const hasProp = accounts.some((a) => isPropAccountType(a.accountType));
+		if (!hasProp) return mainNavItems;
+		// Insert Prop between Analytics (index 4) and AI Insights (index 5)
+		const propItem = { title: "Prop", href: "/prop", icon: Shield };
+		return [...mainNavItems.slice(0, 5), propItem, ...mainNavItems.slice(5)];
+	}, [accounts]);
 
 	// Fetch groups for group selector
 	const { data: groups = [] } = api.accounts.getGroups.useQuery();
@@ -370,7 +380,7 @@ export function AppSidebar() {
 					</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{mainNavItems.map((item) => (
+							{navItems.map((item) => (
 								<SidebarMenuItem key={item.href}>
 									<SidebarMenuButton
 										asChild

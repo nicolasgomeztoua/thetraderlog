@@ -1,12 +1,25 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-
+import {
+	calculateConsistencyMetric,
+	calculateDailyLossStatus,
+	calculateDailyPnl,
+	calculateDrawdownStatus,
+	calculateProfitTargetProgress,
+	calculateStaticDrawdown,
+	calculateTradingDays,
+	calculateTrailingDrawdown,
+	getOverallComplianceStatus,
+} from "@/lib/analytics/prop-compliance";
+import { buildEquityCurve } from "@/lib/analytics/risk";
 import {
 	ERR_ACCOUNT_NOT_CHALLENGE,
 	ERR_ACCOUNT_NOT_FOUND,
+	ERR_ACCOUNT_NOT_PROP,
 	ERR_CHALLENGE_ACCOUNT_NOT_FOUND,
 	ERR_GROUP_NOT_FOUND,
 } from "@/lib/constants/errors";
+import { isPropAccountType } from "@/lib/constants/prop";
 import {
 	accountTypeEnum,
 	drawdownTypeEnum,
@@ -14,6 +27,8 @@ import {
 	propFieldsSchema,
 	tradingPlatformEnum,
 } from "@/lib/shared";
+import { getDateStringInTimezone } from "@/lib/shared/timezone";
+import { getUserTimezone } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { accountGroups, accounts, trades } from "@/server/db/schema";
 
@@ -477,6 +492,227 @@ export const accountsRouter = createTRPCRouter({
 				totalPnl,
 				initialBalance: parseFloat(account.initialBalance ?? "0"),
 				currentBalance,
+			};
+		}),
+
+	// Get prop compliance metrics for a prop account
+	getPropCompliance: protectedProcedure
+		.input(z.object({ accountId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			// Verify ownership
+			const account = await ctx.db.query.accounts.findFirst({
+				where: and(
+					eq(accounts.id, input.accountId),
+					eq(accounts.userId, ctx.user.id),
+				),
+			});
+
+			if (!account) {
+				throw new Error(ERR_ACCOUNT_NOT_FOUND);
+			}
+
+			// Validate it's a prop account
+			if (!isPropAccountType(account.accountType)) {
+				throw new Error(ERR_ACCOUNT_NOT_PROP);
+			}
+
+			// Fetch all closed trades for the account, sorted by exitTime
+			const accountTrades = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.accountId, input.accountId),
+					eq(trades.status, "closed"),
+					isNull(trades.deletedAt),
+				),
+				orderBy: [asc(trades.exitTime)],
+			});
+
+			// Get user timezone for date grouping
+			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+
+			const initialBalance = parseFloat(account.initialBalance ?? "0");
+			const maxDrawdownPercent = parseFloat(account.maxDrawdown ?? "0");
+			const dailyLossLimitPercent = parseFloat(account.dailyLossLimit ?? "0");
+			const profitTargetPercent = parseFloat(account.profitTarget ?? "0");
+			const consistencyRulePercent = parseFloat(account.consistencyRule ?? "0");
+			const minTradingDays = account.minTradingDays ?? 0;
+
+			// Total P&L
+			const totalPnl = accountTrades.reduce(
+				(sum, t) => sum + (t.netPnl ? parseFloat(t.netPnl) : 0),
+				0,
+			);
+			const currentBalance = initialBalance + totalPnl;
+
+			// Build equity curve for drawdown calculations
+			const equityCurve = buildEquityCurve(accountTrades);
+
+			// Drawdown calculation (trailing vs static)
+			let currentDrawdownPercent: number;
+			if (account.drawdownType === "trailing") {
+				const trailing = calculateTrailingDrawdown(equityCurve, initialBalance);
+				currentDrawdownPercent = trailing.currentDrawdownPercent;
+			} else {
+				const staticDd = calculateStaticDrawdown(
+					initialBalance,
+					currentBalance,
+				);
+				currentDrawdownPercent = staticDd.drawdownPercent;
+			}
+
+			const drawdownStatus = calculateDrawdownStatus(
+				currentDrawdownPercent,
+				maxDrawdownPercent,
+			);
+
+			// Daily loss (timezone-aware)
+			const todayPnl = calculateDailyPnl(
+				accountTrades,
+				undefined,
+				userTimezone,
+			);
+			const dailyLossStatus = calculateDailyLossStatus(
+				todayPnl,
+				dailyLossLimitPercent,
+				initialBalance,
+			);
+
+			// Profit target
+			const profitTarget = calculateProfitTargetProgress(
+				totalPnl,
+				profitTargetPercent,
+				initialBalance,
+			);
+
+			// Consistency
+			// Build daily P&L map for consistency metric
+			const dailyPnlMap = new Map<string, number>();
+			for (const trade of accountTrades) {
+				if (!trade.exitTime) continue;
+				const dateKey = getDateStringInTimezone(trade.exitTime, userTimezone);
+				const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
+				dailyPnlMap.set(dateKey, (dailyPnlMap.get(dateKey) ?? 0) + pnl);
+			}
+			const dailyPnls = Array.from(dailyPnlMap.values());
+			const consistency = calculateConsistencyMetric(
+				dailyPnls,
+				consistencyRulePercent,
+			);
+
+			// Trading days
+			const tradingDays = calculateTradingDays(
+				accountTrades,
+				minTradingDays,
+				userTimezone,
+			);
+
+			// Timeline
+			const now = new Date();
+			const startDate = account.challengeStartDate ?? null;
+			const endDate = account.challengeEndDate ?? null;
+			let daysRemaining: number | null = null;
+			let daysElapsed: number | null = null;
+			if (startDate) {
+				daysElapsed = Math.floor(
+					(now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+				);
+			}
+			if (endDate) {
+				daysRemaining = Math.max(
+					0,
+					Math.ceil(
+						(endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+					),
+				);
+			}
+
+			// Trade stats for Monte Carlo simulation
+			const wins = accountTrades.filter(
+				(t) => t.netPnl && parseFloat(t.netPnl) > 0,
+			).length;
+			const losses = accountTrades.filter(
+				(t) => t.netPnl && parseFloat(t.netPnl) < 0,
+			).length;
+			const grossProfit = accountTrades.reduce((sum, t) => {
+				const pnl = t.netPnl ? parseFloat(t.netPnl) : 0;
+				return pnl > 0 ? sum + pnl : sum;
+			}, 0);
+			const grossLoss = accountTrades.reduce((sum, t) => {
+				const pnl = t.netPnl ? parseFloat(t.netPnl) : 0;
+				return pnl < 0 ? sum + Math.abs(pnl) : sum;
+			}, 0);
+
+			// Overall status
+			const overallStatus = getOverallComplianceStatus([
+				drawdownStatus.status,
+				dailyLossStatus.status,
+				profitTarget.status,
+			]);
+
+			return {
+				account: {
+					id: account.id,
+					name: account.name,
+					accountType: account.accountType,
+					initialBalance,
+					currentBalance,
+					challengeStatus: account.challengeStatus,
+					linkedAccountId: account.linkedAccountId,
+				},
+				drawdown: {
+					current: drawdownStatus.percent,
+					limit: drawdownStatus.limit,
+					used: drawdownStatus.used,
+					remaining: drawdownStatus.remaining,
+					type: account.drawdownType ?? "static",
+					status: drawdownStatus.status,
+					equityCurve: equityCurve.map((p) => ({
+						date: p.date,
+						equity: p.equity,
+						peak: p.peak,
+						drawdown: p.drawdown,
+						drawdownPercent: p.drawdownPercent,
+					})),
+				},
+				dailyLoss: {
+					todayPnl: dailyLossStatus.current,
+					limit: dailyLossStatus.limit,
+					used: dailyLossStatus.used,
+					remaining: dailyLossStatus.remaining,
+					status: dailyLossStatus.status,
+				},
+				profitTarget: {
+					current: profitTarget.current,
+					target: profitTarget.target,
+					progress: profitTarget.progress,
+					status: profitTarget.status,
+				},
+				consistency: {
+					maxDayPercent: consistency.maxDayPercent,
+					limit: consistency.limit,
+					isCompliant: consistency.isCompliant,
+				},
+				tradingDays: {
+					daysTraded: tradingDays.daysTraded,
+					minRequired: tradingDays.minRequired,
+					remaining: tradingDays.remaining,
+					dates: Array.from(dailyPnlMap.keys()),
+				},
+				timeline: {
+					startDate,
+					endDate,
+					daysRemaining,
+					daysElapsed,
+				},
+				overallStatus,
+				tradeStats: {
+					totalTrades: accountTrades.length,
+					wins,
+					losses,
+					winRate:
+						accountTrades.length > 0 ? (wins / accountTrades.length) * 100 : 0,
+					avgWin: wins > 0 ? grossProfit / wins : 0,
+					avgLoss: losses > 0 ? grossLoss / losses : 0,
+				},
 			};
 		}),
 

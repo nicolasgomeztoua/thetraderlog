@@ -57,6 +57,9 @@ These endpoints provide pre-computed trading statistics. The data gatherer phase
 - **getStats** — Quick trade stats (count, P&L, win rate) with optional date range
 - **getAll** — List of trades with filtering, sorting, pagination
 
+### accounts router
+- **getPropCompliance** — Prop firm challenge/funded account compliance metrics: drawdown status (current vs limit, trailing/static), daily loss tracking, profit target progress, consistency rule compliance, trading days count, timeline with days remaining, equity curve, overall status (safe/caution/danger), and trade stats. Requires { accountId }. Only works for prop_challenge or prop_funded accounts.
+
 ### Deep Analysis Tools
 - **run_query** — Execute read-only SQL against user-scoped tables. Use for trade-level detail, custom aggregations, cross-referencing, and any analysis not covered by analytics endpoints. Examples: entry timing relative to session open, trade clustering patterns, P&L by holding time buckets, consecutive loss behavior.
 - **get_market_data** — Fetch OHLC candle data for symbols (ES, NQ, EUR/USD, etc.). Use proactively for any analysis involving entry/exit quality, market context, or price structure — not just when explicitly requested. Cross-reference with run_query results for insights like "where in the daily range did I enter?" or "did I trade with or against the trend?"

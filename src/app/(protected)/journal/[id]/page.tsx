@@ -585,6 +585,7 @@ export default function TradeDetailPage() {
 										maeAmount: trade.maeAmount,
 										mfeAmount: trade.mfeAmount,
 										marketDataQuality: trade.marketDataQuality,
+										account: trade.account,
 										executions: trade.executions?.map((e) => ({
 											id: e.id,
 											executionType: e.executionType as
@@ -663,6 +664,7 @@ export default function TradeDetailPage() {
 								maeAmount: trade.maeAmount,
 								mfeAmount: trade.mfeAmount,
 								marketDataQuality: trade.marketDataQuality,
+								account: trade.account,
 								executions: trade.executions?.map((e) => ({
 									id: e.id,
 									executionType: e.executionType as

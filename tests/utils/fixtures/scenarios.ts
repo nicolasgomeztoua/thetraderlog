@@ -156,22 +156,28 @@ export async function setupTraderWithMultipleAccounts(
 
 /**
  * Sets up a prop firm challenge scenario.
- * Creates a user with a prop challenge account.
+ * Creates a user with a prop challenge account with all prop fields.
  */
 export async function setupPropChallenge(options?: {
 	user?: CreateTestUserOptions;
-	initialBalance?: string;
-	profitTarget?: string;
-	maxDrawdown?: string;
+	account?: CreateTestAccountOptions;
 }) {
 	const user = await createTestUser(options?.user);
 	const account = await createTestAccount(user.id, {
 		name: "Prop Challenge",
 		accountType: "prop_challenge",
-		initialBalance: options?.initialBalance ?? "100000",
-		profitTarget: options?.profitTarget ?? "10",
-		maxDrawdown: options?.maxDrawdown ?? "6",
+		initialBalance: "100000",
+		maxDrawdown: "6",
+		drawdownType: "static",
+		dailyLossLimit: "3",
+		profitTarget: "10",
+		consistencyRule: "30",
+		minTradingDays: 5,
+		challengeStartDate: new Date("2026-01-01T00:00:00Z"),
+		challengeEndDate: new Date("2026-06-01T00:00:00Z"),
+		challengeStatus: "active",
 		isDefault: true,
+		...options?.account,
 	});
 
 	return { user, account };

@@ -559,9 +559,9 @@ ORDER BY t.entry_time DESC;
 \`\`\`
 Combine with get_market_data (use 1h or 15min candles) to compute how far from session open price the trader entered, and whether they traded with or against the initial move.
 
-## Available tRPC Analytics Endpoints
+## Available tRPC Endpoints
 
-Use the \`call_analytics\` tool to invoke these endpoints. All accept optional accountId and analytics filters.
+Use the \`call_analytics\` tool to invoke these endpoints. Analytics and trades endpoints accept optional accountId and analytics filters.
 
 ### Analytics Router
 
@@ -593,6 +593,14 @@ Use the \`call_analytics\` tool to invoke these endpoints. All accept optional a
 |----------|-------------|---------|
 | getStats | Trade statistics summary | totalTrades, wins, losses, winRate, totalPnl, avgPnl, avgWin, avgLoss, profitFactor |
 | getAll | Filtered trade list (paginated) | {items: Trade[], nextCursor} with full filter support |
+
+### Accounts Router
+
+| Endpoint | Description | Returns |
+|----------|-------------|---------|
+| getPropCompliance | Prop firm challenge/funded compliance metrics | drawdown {current, limit, type, used, remaining, status}, dailyLoss {todayPnl, limit, used, remaining, status}, profitTarget {current, target, progress, status}, consistency {maxDayPercent, limit, isCompliant}, tradingDays {daysTraded, minRequired, remaining, dates}, timeline {startDate, endDate, daysRemaining, daysElapsed}, equityCurve, overallStatus (safe/caution/danger), tradeStats {totalTrades, wins, losses, winRate, avgWin, avgLoss}, account info |
+
+**Note:** accounts.getPropCompliance requires \`{ accountId: string }\` and only works for prop_challenge or prop_funded accounts. Use this when the trader asks about challenge progress, drawdown limits, profit targets, daily loss compliance, or probability of passing their prop challenge.
 
 ### Analytics Filter Schema
 

@@ -41,11 +41,15 @@ const ALLOWED_ANALYTICS_ENDPOINTS = [
 
 const ALLOWED_TRADES_ENDPOINTS = ["getStats", "getAll"] as const;
 
+const ALLOWED_ACCOUNTS_ENDPOINTS = ["getPropCompliance"] as const;
+
 type AnalyticsEndpoint = (typeof ALLOWED_ANALYTICS_ENDPOINTS)[number];
 type TradesEndpoint = (typeof ALLOWED_TRADES_ENDPOINTS)[number];
+type AccountsEndpoint = (typeof ALLOWED_ACCOUNTS_ENDPOINTS)[number];
 
 const ANALYTICS_SET = new Set<string>(ALLOWED_ANALYTICS_ENDPOINTS);
 const TRADES_SET = new Set<string>(ALLOWED_TRADES_ENDPOINTS);
+const ACCOUNTS_SET = new Set<string>(ALLOWED_ACCOUNTS_ENDPOINTS);
 
 // =============================================================================
 // EXECUTOR
@@ -59,10 +63,10 @@ export async function executeCallAnalytics(
 	db?: Db,
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
 	// Validate router
-	if (router !== "analytics" && router !== "trades") {
+	if (router !== "analytics" && router !== "trades" && router !== "accounts") {
 		return {
 			success: false,
-			error: `Invalid router "${router}". Must be "analytics" or "trades".`,
+			error: `Invalid router "${router}". Must be "analytics", "trades", or "accounts".`,
 		};
 	}
 
@@ -77,6 +81,12 @@ export async function executeCallAnalytics(
 		return {
 			success: false,
 			error: `Endpoint "trades.${endpoint}" is not allowed. Available: ${ALLOWED_TRADES_ENDPOINTS.join(", ")}`,
+		};
+	}
+	if (router === "accounts" && !ACCOUNTS_SET.has(endpoint)) {
+		return {
+			success: false,
+			error: `Endpoint "accounts.${endpoint}" is not allowed. Available: ${ALLOWED_ACCOUNTS_ENDPOINTS.join(", ")}`,
 		};
 	}
 
@@ -111,8 +121,12 @@ export async function executeCallAnalytics(
 			const procedure = caller.analytics[endpoint as AnalyticsEndpoint];
 			// biome-ignore lint/suspicious/noExplicitAny: tRPC caller procedures have dynamic input types
 			result = await (procedure as any)(input);
-		} else {
+		} else if (router === "trades") {
 			const procedure = caller.trades[endpoint as TradesEndpoint];
+			// biome-ignore lint/suspicious/noExplicitAny: tRPC caller procedures have dynamic input types
+			result = await (procedure as any)(input);
+		} else {
+			const procedure = caller.accounts[endpoint as AccountsEndpoint];
 			// biome-ignore lint/suspicious/noExplicitAny: tRPC caller procedures have dynamic input types
 			result = await (procedure as any)(input);
 		}
