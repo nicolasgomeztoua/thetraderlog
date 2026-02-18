@@ -503,3 +503,14 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - The tool `inputSchema` `router` field uses a `z.enum()` — must be updated when adding new routers
 
 ---
+
+## 2026-02-18 - US-021
+- Added 3 prop-related queries to `SUGGESTED_CHAT_QUERIES` in `src/lib/constants/ai.ts`
+- Added 1 prop-related report prompt to `SUGGESTED_REPORT_PROMPTS`
+- Files changed: `src/lib/constants/ai.ts` (updated)
+- Chat queries added: "How am I doing on my prop challenge?", "Will I pass this challenge at my current pace?", "What's my risk of failing the challenge?"
+- Report prompt added: "Generate a prop challenge compliance report with drawdown analysis, daily loss tracking, and probability of passing"
+- **Learnings for future iterations:**
+  - `SUGGESTED_CHAT_QUERIES` and `SUGGESTED_REPORT_PROMPTS` are `as const` readonly tuples — just append new entries to the array
+
+---
