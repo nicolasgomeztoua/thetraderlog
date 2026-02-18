@@ -11,6 +11,7 @@ import {
 	type SimulatePropChallengeResult,
 	simulatePropChallenge,
 } from "@/lib/analytics/prop-compliance";
+import { PASS_RATE_THRESHOLDS, SIMULATOR } from "@/lib/constants/prop";
 import { cn, formatCurrency, formatPercent } from "@/lib/shared";
 
 interface ChallengeSimulatorProps {
@@ -32,9 +33,7 @@ interface ChallengeSimulatorProps {
 	className?: string;
 }
 
-const MIN_TRADES = 10;
-const SIMULATION_ITERATIONS = 10000;
-const MAX_TRADES_PER_SIM = 500;
+const { MIN_TRADES, ITERATIONS, MAX_TRADES_PER_SIM } = SIMULATOR;
 
 export function ChallengeSimulator({
 	tradeStats,
@@ -55,7 +54,7 @@ export function ChallengeSimulator({
 			maxDrawdown,
 			initialBalance,
 			maxTrades: MAX_TRADES_PER_SIM,
-			iterations: SIMULATION_ITERATIONS,
+			iterations: ITERATIONS,
 		});
 	}, [tradeStats, profitTarget, maxDrawdown, initialBalance]);
 
@@ -100,9 +99,9 @@ export function ChallengeSimulator({
 					<div
 						className={cn(
 							"font-bold font-mono text-3xl tabular-nums",
-							passPercent >= 70
+							passPercent >= PASS_RATE_THRESHOLDS.GOOD
 								? "text-profit"
-								: passPercent >= 40
+								: passPercent >= PASS_RATE_THRESHOLDS.FAIR
 									? "text-breakeven"
 									: "text-loss",
 						)}
@@ -237,7 +236,7 @@ export function ChallengeSimulator({
 			{/* Disclaimer */}
 			<p className="mt-3 font-mono text-[9px] text-muted-foreground/50">
 				Simulation assumes future performance matches historical stats.{" "}
-				{SIMULATION_ITERATIONS.toLocaleString()} iterations.
+				{ITERATIONS.toLocaleString()} iterations.
 			</p>
 		</div>
 	);
@@ -272,8 +271,8 @@ function SimulatorHeader() {
 							<div>
 								<span className="font-medium text-primary text-xs">What:</span>
 								<p className="text-muted-foreground text-xs">
-									Runs {SIMULATION_ITERATIONS.toLocaleString()} random
-									simulations using your actual win rate and average trade size.
+									Runs {ITERATIONS.toLocaleString()} random simulations using
+									your actual win rate and average trade size.
 								</p>
 							</div>
 							<div>

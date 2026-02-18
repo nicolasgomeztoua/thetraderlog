@@ -64,7 +64,8 @@ function generateDateRange(start: Date, end: Date): string[] {
 function parseDate(value: Date | string | null): Date | null {
 	if (!value) return null;
 	if (value instanceof Date) return value;
-	return new Date(value);
+	const d = new Date(value);
+	return Number.isNaN(d.getTime()) ? null : d;
 }
 
 // =============================================================================

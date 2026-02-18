@@ -62,6 +62,24 @@ export const COMPLIANCE_STATUS_BG_COLORS: Record<ComplianceStatus, string> = {
 	danger: "bg-loss/10",
 };
 
+/**
+ * Solid background Tailwind classes for compliance status (progress bars, dots).
+ */
+export const COMPLIANCE_STATUS_BG: Record<ComplianceStatus, string> = {
+	safe: "bg-profit",
+	caution: "bg-primary",
+	danger: "bg-loss",
+};
+
+/**
+ * Stroke Tailwind classes for compliance status (SVG gauges).
+ */
+export const COMPLIANCE_STATUS_STROKE: Record<ComplianceStatus, string> = {
+	safe: "stroke-profit",
+	caution: "stroke-primary",
+	danger: "stroke-loss",
+};
+
 // =============================================================================
 // LABEL MAPPINGS
 // =============================================================================
@@ -95,6 +113,36 @@ export const DRAWDOWN_TYPE_LABELS: Record<string, string> = {
 export const PROP_ACCOUNT_TYPES = ["prop_challenge", "prop_funded"] as const;
 
 export type PropAccountType = (typeof PROP_ACCOUNT_TYPES)[number];
+
+// =============================================================================
+// CHALLENGE SIMULATOR
+// =============================================================================
+
+/**
+ * Monte Carlo challenge simulator configuration.
+ */
+export const SIMULATOR = {
+	/** Minimum closed trades required to run a simulation */
+	MIN_TRADES: 10,
+	/** Number of Monte Carlo iterations */
+	ITERATIONS: 10000,
+	/** Max trades per simulated run before declaring a fail */
+	MAX_TRADES_PER_SIM: 500,
+} as const;
+
+/**
+ * Pass-rate percentage thresholds for color-coding the simulation result.
+ */
+export const PASS_RATE_THRESHOLDS = {
+	/** >= this value → profit (green) */
+	GOOD: 70,
+	/** >= this value → breakeven (yellow); below → loss (red) */
+	FAIR: 40,
+} as const;
+
+// =============================================================================
+// HELPERS
+// =============================================================================
 
 /**
  * Check if an account type is a prop account type.

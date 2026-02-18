@@ -2,7 +2,9 @@
 
 import type { ComplianceStatus } from "@/lib/constants/prop";
 import {
+	COMPLIANCE_STATUS_BG,
 	COMPLIANCE_STATUS_COLORS,
+	COMPLIANCE_STATUS_STROKE,
 	DRAWDOWN_TYPE_LABELS,
 } from "@/lib/constants/prop";
 import { cn, formatCurrency } from "@/lib/shared";
@@ -45,14 +47,14 @@ interface ComplianceData {
 // =============================================================================
 
 function StatusDot({ status }: { status: ComplianceStatus }) {
-	const dotColor =
-		status === "danger"
-			? "bg-loss"
-			: status === "caution"
-				? "bg-primary"
-				: "bg-profit";
-
-	return <span className={cn("inline-block h-2 w-2 rounded-full", dotColor)} />;
+	return (
+		<span
+			className={cn(
+				"inline-block h-2 w-2 rounded-full",
+				COMPLIANCE_STATUS_BG[status],
+			)}
+		/>
+	);
 }
 
 function ComplianceCardShell({
@@ -90,12 +92,7 @@ function DrawdownGauge({
 	const percent = Math.min(Math.max(used, 0), 1);
 	const offset = circumference - percent * circumference;
 
-	const strokeColor =
-		status === "danger"
-			? "stroke-loss"
-			: status === "caution"
-				? "stroke-primary"
-				: "stroke-profit";
+	const strokeColor = COMPLIANCE_STATUS_STROKE[status];
 
 	return (
 		<div className="relative" data-testid="compliance-drawdown-gauge">
@@ -154,12 +151,7 @@ function MetricProgressBar({
 	status: ComplianceStatus;
 }) {
 	const clamped = Math.min(Math.max(percent, 0), 100);
-	const barColor =
-		status === "danger"
-			? "bg-loss"
-			: status === "caution"
-				? "bg-primary"
-				: "bg-profit";
+	const barColor = COMPLIANCE_STATUS_BG[status];
 
 	return (
 		<div className="h-1.5 overflow-hidden rounded bg-white/5">
