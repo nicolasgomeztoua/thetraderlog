@@ -2,6 +2,7 @@ import {
 	BookMarked,
 	ExternalLink,
 	Info,
+	Shield,
 	TrendingDown,
 	TrendingUp,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTimezone } from "@/hooks/use-timezone";
+import { isPropAccountType } from "@/lib/constants/prop";
 import { cn, formatCurrency } from "@/lib/shared";
 import type { TradeStats } from "@/lib/trades";
 import { api } from "@/trpc/react";
@@ -44,6 +46,12 @@ interface Trade
 	entryTime: Date | string;
 	exitTime: Date | string | null;
 	executions?: Execution[]; // Local Execution type (simpler than full TradeExecution)
+	account?: {
+		accountType: string;
+		maxDrawdown: string | null;
+		profitTarget: string | null;
+		initialBalance: string | null;
+	} | null;
 }
 
 interface StatsPanelProps {
@@ -219,6 +227,71 @@ function StrategySection({
 }
 
 // =============================================================================
+// PROP CONTEXT BANNER
+// =============================================================================
+
+function PropContextBanner({
+	netPnl,
+	account,
+}: {
+	netPnl: number | null;
+	account?: Trade["account"];
+}) {
+	if (!account || !isPropAccountType(account.accountType)) return null;
+	if (netPnl === null) return null;
+
+	const maxDrawdown = account.maxDrawdown
+		? Number.parseFloat(account.maxDrawdown)
+		: null;
+	const profitTarget = account.profitTarget
+		? Number.parseFloat(account.profitTarget)
+		: null;
+	const initialBalance = account.initialBalance
+		? Number.parseFloat(account.initialBalance)
+		: 0;
+
+	const isLoss = netPnl < 0;
+
+	return (
+		<div
+			className="flex items-center gap-2 rounded-sm border border-white/5 bg-white/1 px-3 py-2"
+			data-testid="prop-context-banner"
+		>
+			<Shield className="h-3.5 w-3.5 shrink-0 text-primary" />
+			<span className="font-mono text-[10px] text-muted-foreground">
+				{isLoss && maxDrawdown !== null && initialBalance > 0 ? (
+					<>
+						This trade used{" "}
+						<span className="text-loss">
+							{(
+								(Math.abs(netPnl) / (initialBalance * (maxDrawdown / 100))) *
+								100
+							).toFixed(1)}
+							%
+						</span>{" "}
+						of {maxDrawdown}% max drawdown limit
+					</>
+				) : !isLoss && profitTarget !== null && initialBalance > 0 ? (
+					<>
+						This trade contributed{" "}
+						<span className="text-profit">
+							{(
+								(netPnl / (initialBalance * (profitTarget / 100))) *
+								100
+							).toFixed(1)}
+							%
+						</span>{" "}
+						toward {profitTarget}% profit target
+					</>
+				) : (
+					<>Prop account trade</>
+				)}
+			</span>
+		</div>
+	);
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -302,6 +375,11 @@ export function StatsPanel({
 									</span>
 								</div>
 							</div>
+
+							{/* ============================================
+							    PROP CONTEXT BANNER
+							    ============================================ */}
+							<PropContextBanner account={trade.account} netPnl={netPnl} />
 
 							{/* ============================================
 							    SECTION 1: Risk Levels (Editable)
