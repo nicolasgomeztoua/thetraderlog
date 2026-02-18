@@ -55,6 +55,7 @@ export const ERR_TRADES_BULK_NOT_FOUND =
 export const ERR_TAG_NAME_EXISTS = "Tag with this name already exists";
 export const ERR_ACCOUNT_NOT_CHALLENGE =
 	"Account is not a prop challenge account";
+export const ERR_ACCOUNT_NOT_PROP = "Account is not a prop account";
 export const ERR_TRADE_NO_STRATEGY = "Trade has no strategy assigned";
 export const ERR_REPORT_ONLY_FAILED_RETRY =
 	"Only failed reports can be retried";
