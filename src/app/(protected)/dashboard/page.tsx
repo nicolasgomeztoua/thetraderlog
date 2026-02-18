@@ -9,11 +9,13 @@ import { JournalExcerptsWidget } from "@/components/dashboard/widgets/journal-ex
 import { JournalStatusWidget } from "@/components/dashboard/widgets/journal-status-widget";
 import { JournalStreakWidget } from "@/components/dashboard/widgets/journal-streak-widget";
 import { PnLCalendarWidget } from "@/components/dashboard/widgets/pnl-calendar-widget";
+import { PropStatusWidget } from "@/components/dashboard/widgets/prop-status-widget";
 import { RuleComplianceWidget } from "@/components/dashboard/widgets/rule-compliance-widget";
 import { StrategiesSnapshotWidget } from "@/components/dashboard/widgets/strategies-snapshot-widget";
 import { TodayPerformanceWidget } from "@/components/dashboard/widgets/today-performance-widget";
 import { TradesSnapshotWidget } from "@/components/dashboard/widgets/trades-snapshot-widget";
 import { useAccount } from "@/contexts/account-context";
+import { isPropAccountType } from "@/lib/constants/prop";
 
 /**
  * Command Center Dashboard - Adaptive trading dashboard
@@ -58,6 +60,13 @@ export default function DashboardPage() {
 
 			{/* Command Center Grid */}
 			<CommandCenterGrid>
+				{/* Prop Compliance Widget — only for prop accounts */}
+				{isPropAccountType(selectedAccount?.accountType) && (
+					<GridItem size="md">
+						<PropStatusWidget />
+					</GridItem>
+				)}
+
 				{/* Row 1: Today's Performance (wide) */}
 				<GridItem size="md">
 					<TodayPerformanceWidget />
