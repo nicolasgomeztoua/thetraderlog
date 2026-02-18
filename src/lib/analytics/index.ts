@@ -15,6 +15,7 @@
 
 export * from "./calculations";
 export * from "./constants";
+export * from "./prop-compliance";
 export * from "./risk";
 export * from "./stats";
 export * from "./thresholds";
