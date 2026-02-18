@@ -401,6 +401,177 @@ export function calculateStaticDrawdown(
 }
 
 // =============================================================================
+// MONTE CARLO CHALLENGE SIMULATOR
+// =============================================================================
+
+export interface SimulatePropChallengeInput {
+	/** Win rate as a fraction (e.g. 0.55 for 55%) */
+	winRate: number;
+	/** Average winning trade in dollars */
+	avgWin: number;
+	/** Average losing trade in dollars (positive number, e.g. 200) */
+	avgLoss: number;
+	/** Profit target in dollars */
+	profitTarget: number;
+	/** Max drawdown in dollars */
+	maxDrawdown: number;
+	/** Starting balance in dollars */
+	initialBalance: number;
+	/** Maximum trades per simulation before giving up */
+	maxTrades: number;
+	/** Number of simulations to run (default 10000) */
+	iterations?: number;
+}
+
+export interface SimulatePropChallengeResult {
+	/** Fraction of simulations that passed (0–1) */
+	passRate: number;
+	/** Fraction of simulations that failed (0–1) */
+	failRate: number;
+	/** Average number of trades to reach profit target (among passes only) */
+	avgTradesToPass: number;
+	/** Median final P&L across all simulations */
+	medianOutcome: number;
+	/** Percentile outcomes (p10, p25, p50, p75, p90) */
+	percentiles: {
+		p10: number;
+		p25: number;
+		p50: number;
+		p75: number;
+		p90: number;
+	};
+	/** Total number of simulations run */
+	simulations: number;
+}
+
+/**
+ * Run a Monte Carlo simulation to estimate the probability of passing a prop challenge.
+ *
+ * Each simulation runs random trades using the given win rate and avg win/loss
+ * until one of three conditions is met:
+ * - Profit target reached (pass)
+ * - Max drawdown breached (fail)
+ * - Max trades exceeded without reaching target (fail)
+ */
+export function simulatePropChallenge(
+	input: SimulatePropChallengeInput,
+): SimulatePropChallengeResult {
+	const {
+		winRate,
+		avgWin,
+		avgLoss,
+		profitTarget,
+		maxDrawdown,
+		initialBalance,
+		maxTrades,
+		iterations = 10000,
+	} = input;
+
+	// Edge case: impossible to pass with 0 profit target
+	if (profitTarget <= 0) {
+		return {
+			passRate: 1,
+			failRate: 0,
+			avgTradesToPass: 0,
+			medianOutcome: 0,
+			percentiles: { p10: 0, p25: 0, p50: 0, p75: 0, p90: 0 },
+			simulations: iterations,
+		};
+	}
+
+	// Edge case: impossible drawdown constraint
+	if (maxDrawdown <= 0) {
+		return {
+			passRate: 0,
+			failRate: 1,
+			avgTradesToPass: 0,
+			medianOutcome: 0,
+			percentiles: { p10: 0, p25: 0, p50: 0, p75: 0, p90: 0 },
+			simulations: iterations,
+		};
+	}
+
+	let passes = 0;
+	let totalTradesToPass = 0;
+	const finalPnls: number[] = [];
+
+	// Simple seeded PRNG for reproducibility is not required here.
+	// Using Math.random() since this is a client/server utility.
+	for (let i = 0; i < iterations; i++) {
+		let equity = initialBalance;
+		let highWaterMark = initialBalance;
+		let pnl = 0;
+		let passed = false;
+		let tradeCount = 0;
+
+		for (let t = 0; t < maxTrades; t++) {
+			tradeCount++;
+
+			// Determine trade outcome
+			const isWin = Math.random() < winRate;
+			const tradeResult = isWin ? avgWin : -avgLoss;
+
+			pnl += tradeResult;
+			equity = initialBalance + pnl;
+			highWaterMark = Math.max(highWaterMark, equity);
+
+			// Check profit target
+			if (pnl >= profitTarget) {
+				passed = true;
+				break;
+			}
+
+			// Check max drawdown (from high water mark)
+			const drawdown = highWaterMark - equity;
+			if (drawdown >= maxDrawdown) {
+				break;
+			}
+		}
+
+		finalPnls.push(pnl);
+
+		if (passed) {
+			passes++;
+			totalTradesToPass += tradeCount;
+		}
+	}
+
+	// Sort for percentile calculation
+	finalPnls.sort((a, b) => a - b);
+
+	const passRate = passes / iterations;
+	const failRate = 1 - passRate;
+	const avgTradesToPass = passes > 0 ? totalTradesToPass / passes : 0;
+
+	return {
+		passRate,
+		failRate,
+		avgTradesToPass,
+		medianOutcome: percentile(finalPnls, 0.5),
+		percentiles: {
+			p10: percentile(finalPnls, 0.1),
+			p25: percentile(finalPnls, 0.25),
+			p50: percentile(finalPnls, 0.5),
+			p75: percentile(finalPnls, 0.75),
+			p90: percentile(finalPnls, 0.9),
+		},
+		simulations: iterations,
+	};
+}
+
+/** Compute a percentile value from a sorted array using linear interpolation. */
+function percentile(sorted: number[], p: number): number {
+	if (sorted.length === 0) return 0;
+	const index = p * (sorted.length - 1);
+	const lower = Math.floor(index);
+	const upper = Math.ceil(index);
+	if (lower === upper) return sorted[lower] ?? 0;
+	const lowerVal = sorted[lower] ?? 0;
+	const upperVal = sorted[upper] ?? 0;
+	return lowerVal + (upperVal - lowerVal) * (index - lower);
+}
+
+// =============================================================================
 // OVERALL COMPLIANCE STATUS
 // =============================================================================
 
