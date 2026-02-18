@@ -229,7 +229,7 @@
         "Verify in browser"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -255,7 +255,7 @@
         "Verify in browser"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -278,7 +278,7 @@
         "Verify in browser"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -301,7 +301,7 @@
         "Verify in browser"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -321,7 +321,7 @@
         "Verify in browser: full page flow works end-to-end"
       ],
       "priority": 15,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -339,7 +339,7 @@
         "Verify in browser: RoR label changes when prop account selected"
       ],
       "priority": 16,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

@@ -29,6 +29,8 @@ Started: Wed Feb 18 17:15:47 WET 2026
 - Conditional rendering for prop widgets: check `isPropAccountType(selectedAccount?.accountType)` and return null if not prop
 - Biome import ordering: `import type` BEFORE `import` from same module path
 - `COMPLIANCE_STATUS_COLORS[status]` maps compliance status to Terminal design text colors (text-profit/text-primary/text-loss)
+- AG Charts (`ag-charts-react`) is the charting library — NOT Recharts. Use `ANALYTICS_COLORS`, `CHART_AXIS_STYLE` from `@/lib/analytics`
+- Drawdown chart props: `equityCurve`, `maxDrawdownPercent`, `dailyLossLimit`, `initialBalance` — thresholds computed as negative P&L from $0 start
 
 ---
 
@@ -289,5 +291,132 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - Biome formatting: JSX attributes should be on separate lines when combining `className` and `data-testid` on a div
   - Prop page uses local `propAccountId` state to allow independent selection from global account selector
   - `formatCurrency` from `@/lib/shared` not needed here — using `toLocaleString` directly for inline balance display
+
+---
+
+## 2026-02-18 - US-010
+- Created `src/components/prop/compliance-grid.tsx` — 4-card responsive compliance grid
+- Cards implemented:
+  - Max Drawdown: circular SVG gauge (80px) showing used% with current/limit/remaining stats
+  - Daily Loss: large dollar amount display + progress bar with used% and remaining
+  - Profit Target: large dollar amount display + progress bar with completion% and amount to go
+  - Consistency Rule: max day % vs limit with compliant/non-compliant indicator
+- Each card has StatusDot indicator, ComplianceCardShell wrapper, and data-testid attributes
+- Uses `ComplianceData` interface typed to match `getPropCompliance` return shape
+- Shared helpers: `StatusDot`, `ComplianceCardShell`, `DrawdownGauge`, `MetricProgressBar`
+- Responsive: 1 column on mobile, 2x2 grid on `sm:` breakpoint
+- Files changed: `src/components/prop/compliance-grid.tsx` (new)
+- **Learnings for future iterations:**
+  - Biome formatting: single JSX return without parens when it fits one line — `return <span .../>;` not `return (\n<span .../>\n);`
+  - Biome formatting: short ternary fits one line — `const x = cond ? "a" : "b";` not multiline
+  - Biome formatting: short `className` + `data-testid` attributes can go on same line as opening tag
+  - `ComplianceData` interface props match `getPropCompliance` return keys — new prop components can import this type
+  - `formatCurrency()` from `@/lib/shared` accepts `number | string | null | undefined` — safe to use for dollar displays
+
+---
+
+## 2026-02-18 - US-011
+- Created `src/components/prop/drawdown-chart.tsx` — equity curve with drawdown threshold lines
+- Features implemented:
+  - AG Charts AreaChart showing cumulative P&L over time (matching existing EquityCurve pattern)
+  - Red dashed horizontal reference line at max drawdown threshold
+  - Orange/amber dashed horizontal reference line at daily loss limit
+  - Shaded danger zone (red fill) below max drawdown threshold
+  - Color gradient: profit green above $0, loss red below
+  - Tooltip showing date, P&L, drawdown %, and distance to threshold
+  - Legend explaining threshold lines (P&L, Max DD, Daily Loss, Danger Zone)
+  - Summary stats bar: Current P&L, Drawdown, Max DD Limit, Daily Loss Limit
+  - Empty state for no equity data
+  - Responsive design, Terminal design system
+  - All data-testid attributes on key elements
+- Files changed: `src/components/prop/drawdown-chart.tsx` (new)
+- **Learnings for future iterations:**
+  - AG Charts is the charting library (not Recharts) — PRD said Recharts but codebase uses `ag-charts-react`
+  - Use `ANALYTICS_COLORS` and `CHART_AXIS_STYLE` from `@/lib/analytics` for chart styling consistency
+  - Threshold lines use `type: "line"` series with `lineDash` for dashed appearance
+  - Danger zone fill: use `type: "area"` series with very low opacity fill (`${ANALYTICS_COLORS.loss}10`)
+  - `buildEquityCurve()` returns cumulative P&L from $0, so thresholds are negative dollar amounts (e.g., -$6000 for 6% of $100k)
+  - Biome auto-fix: `bunx biome check --write <file>` to fix formatting in one shot
+
+---
+
+## 2026-02-18 - US-012
+- Created `src/components/prop/trading-days-timeline.tsx` — Trading Days Timeline Component
+- Features implemented:
+  - Progress bar showing days traded vs minTradingDays requirement (X / Y format)
+  - Days remaining countdown to challengeEndDate with color-coded urgency (red ≤5, primary ≤14, muted otherwise)
+  - Calendar-style grid highlighting active trading days (green cells for traded, white/5 for past untouched, white/2 for future)
+  - Today indicator with ring highlight
+  - Pace indicator showing "On pace" / "Behind pace" based on expected vs actual trading days
+  - Footer stats: start date, end date, days elapsed, days traded
+  - "Requirement met" label when all minimum days are completed
+  - Empty/missing date handling for accounts without start/end dates
+- Component accepts `tradingDays` and `timeline` props matching `getPropCompliance` response shape
+- Files changed: `src/components/prop/trading-days-timeline.tsx` (new)
+- **Learnings for future iterations:**
+  - Array destructuring from `.split().map(Number)` gives `(number | undefined)[]` in strict TS — use individual index access with nullish coalescing (`parts[0] ?? 0`) instead of destructuring
+  - `allDates[0]` is `string | undefined` even when guarded by `allDates.length > 0` — TS doesn't narrow array index access, use `?? ""` fallback
+  - Calendar grid week alignment: use `getDayOfWeek(firstDate)` to compute padding cells (null values) for the first partial week
+  - Date generation: use local Date constructor `new Date(y, m-1, d)` to avoid timezone issues with date strings
+  - `parseDate()` helper handles both `Date` objects and ISO strings from tRPC serialization (dates become strings over the wire)
+
+---
+
+## 2026-02-18 - US-013
+- Created `src/components/prop/challenge-history.tsx` — Challenge History Component
+- Features implemented:
+  - Vertical timeline of all prop accounts (challenge + funded) sorted by challengeStartDate (newest first)
+  - Each entry shows: account name, status badge (Active/Passed/Failed), date range, starting balance
+  - Timeline dots with connecting lines, color-coded by challenge status (profit green for passed, loss red for failed, primary for active)
+  - Selected account highlighted with brighter background
+  - Linked funded account indicator showing "→ Funded: [account name]" connection
+  - Clickable entries with `onSelectAccount` callback
+  - Empty state: "No challenge history yet"
+  - Account type label (Challenge/Funded) on right side
+  - Uses `useAccount()` context for account data (includes all active accounts)
+  - All data-testid attributes on key elements
+- Files changed: `src/components/prop/challenge-history.tsx` (new)
+- **Learnings for future iterations:**
+  - `useAccount()` context uses `getActive` which only returns active accounts — failed/deactivated challenges may not appear. If full history needed, use `accounts.getAll` tRPC query directly
+  - `accounts.getAll` includes `with: { group: true, linkedAccount: true }` relation data, while `getActive` does not
+  - For timeline dots: use `border-2` + `border-current` for unfilled state, solid `bg-` class for filled/selected state
+  - `Number.parseFloat()` preferred over `parseFloat()` by Biome's linting rules
+  - Biome auto-inlines short `cn()` calls that fit on one line — don't fight it, let `bunx biome check --write` handle formatting
+
+---
+
+## 2026-02-18 - US-014
+- Assembled full /prop page with all compliance components from US-009 through US-013
+- Replaced placeholder comment with actual component assembly
+- Files changed: `src/app/(protected)/prop/page.tsx` (updated)
+- Components assembled:
+  - `ComplianceGrid` (US-010): receives full `data` object from `getPropCompliance`
+  - `DrawdownChart` (US-011): receives `equityCurve`, `maxDrawdownPercent`, `dailyLossLimit`, `initialBalance` from compliance data
+  - `TradingDaysTimeline` (US-012): receives `tradingDays` and `timeline` props
+  - `ChallengeHistory` (US-013): uses its own data from `useAccount()`, receives `selectedAccountId` and `onSelectAccount` callback
+- Layout: `space-y-6` vertical spacing, 2-column grid (`lg:grid-cols-2`) for DrawdownChart + TradingDaysTimeline on desktop
+- Updated loading skeleton to match full page layout (summary bar, 4 metric cards, chart + timeline, history)
+- `ChallengeHistory.onSelectAccount` wired to `handleAccountChange` for seamless account switching from timeline
+- **Learnings for future iterations:**
+  - Biome formatting: inline ternary expressions that exceed line width must be multiline — Biome enforces `\n? value\n: fallback\n` format
+  - `dailyLossLimit` for DrawdownChart is percentage, computed from dollar amounts: `(dollarLimit / initialBalance) * 100`
+  - `ComplianceGrid` uses a `ComplianceData` interface — passing the full `getPropCompliance` response works because it's a superset
+  - Loading skeleton should mirror the actual content layout for smooth CLS (content layout shift) — update skeleton whenever content structure changes
+
+---
+
+## 2026-02-18 - US-016
+- Added `accountType` prop to `RiskGauge` component for prop-aware labeling
+- When `accountType` is prop + `ruinThresholdSource === "account"`:
+  - Subtitle changes from "Risk of Ruin" to "Challenge Failure Risk"
+  - Basis text says "Based on X% max drawdown rule" instead of "X% max DD"
+  - ChartTerminal title also updates to "Challenge Failure Risk"
+- Updated `RiskTab` in analytics page to pass `selectedAccount?.accountType` to `RiskGauge`
+- Existing behavior unchanged for non-prop accounts
+- Files changed: `src/components/analytics/risk-gauge.tsx`, `src/app/(protected)/analytics/page.tsx`
+- **Learnings for future iterations:**
+  - `isPropAccountType()` accepts `undefined` gracefully (returns false) — safe to pass `selectedAccount?.accountType` directly
+  - Compound condition pattern: `isPropAccountType(accountType) && ruinThresholdSource === "account"` ensures only prop accounts with account-based thresholds get relabeled
+  - ChartTerminal title should also reflect the label change — users see the terminal header before the gauge content
 
 ---
