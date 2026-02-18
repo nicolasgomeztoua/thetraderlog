@@ -82,6 +82,9 @@ export const SUGGESTED_CHAT_QUERIES = [
 	"Do I perform better on specific days of the week?",
 	"How has my equity curve trended over the last 90 days?",
 	"What's my risk of ruin based on current performance?",
+	"How am I doing on my prop challenge?",
+	"Will I pass this challenge at my current pace?",
+	"What's my risk of failing the challenge?",
 ] as const;
 
 /**
@@ -93,4 +96,5 @@ export const SUGGESTED_REPORT_PROMPTS = [
 	"Create a detailed session-by-session breakdown showing where I'm leaving money on the table and where I'm most disciplined",
 	"Build a strategy comparison report showing which setups have the best expectancy and which I should stop trading",
 	"Analyze my revenge trading and overtrading patterns — show the data behind my worst days and what triggers them",
+	"Generate a prop challenge compliance report with drawdown analysis, daily loss tracking, and probability of passing",
 ] as const;
