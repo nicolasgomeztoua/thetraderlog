@@ -463,3 +463,27 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - `baseInput` pattern with spread overrides (`{...baseInput, winRate: 0.8}`) keeps test setup DRY
 
 ---
+
+## 2026-02-18 - US-019
+- Created `src/components/prop/challenge-simulator.tsx` — Monte Carlo Challenge Outcome Card
+- Enhanced `getPropCompliance` endpoint to include `tradeStats` (totalTrades, wins, losses, winRate, avgWin, avgLoss) since trades are already loaded
+- Added `ChallengeSimulator` to `/prop` page after drawdown chart section, before challenge history
+- Files changed: `src/components/prop/challenge-simulator.tsx` (new), `src/app/(protected)/prop/page.tsx` (updated), `src/server/api/routers/accounts.ts` (updated)
+- Features implemented:
+  - Prominent pass rate display (large number, color-coded: green >=70%, amber >=40%, red <40%)
+  - Pass/fail distribution bar with inline labels
+  - Percentile outcome distribution visualization (interquartile range, median marker) — reuses MonteCarloChart pattern
+  - Stats grid: median outcome, avg trades to pass
+  - Basis info showing trade count, win rate, avg win/loss
+  - Disclaimer about historical stats assumption
+  - "Not enough data" empty state when < 10 trades
+  - Terminal design: font-mono, data-testid attributes, dark card styling
+  - Runs 10,000 iterations client-side via useMemo
+- **Learnings for future iterations:**
+  - `getPropCompliance` already loads all account trades — enrich its return value rather than making a second API call to `getStats` for trade statistics
+  - `simulatePropChallenge` expects `winRate` as fraction (0-1), but `tradeStats.winRate` is percentage (0-100) — divide by 100 before passing
+  - `maxDrawdown` for simulator needs dollar amount, computed from `data.drawdown.limit` (percentage) × `initialBalance`
+  - `profitTarget` dollar amount available directly from `data.profitTarget.target`
+  - Biome auto-fix: `bunx biome check --write <files>` is the fastest way to fix class ordering and formatting
+
+---
