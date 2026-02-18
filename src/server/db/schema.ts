@@ -76,7 +76,11 @@ export const tradingPlatformEnum = pgEnum("trading_platform", [
 	"mt4", // MetaTrader 4
 	"mt5", // MetaTrader 5
 	"projectx", // ProjectX
-	"ninjatrader", // NinjaTrader (future)
+	"topstepx", // TopstepX
+	"ninjatrader", // NinjaTrader
+	"tradovate", // Tradovate
+	"rithmic", // Rithmic (R | Trader)
+	"apex", // Apex (adapter to underlying export format)
 	"other", // Manual/Other
 ]);
 export const strategyRuleCategoryEnum = pgEnum("strategy_rule_category", [

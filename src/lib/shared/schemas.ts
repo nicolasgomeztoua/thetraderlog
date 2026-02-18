@@ -76,7 +76,11 @@ export const tradingPlatformEnum = z.enum([
 	"mt4",
 	"mt5",
 	"projectx",
+	"topstepx",
 	"ninjatrader",
+	"tradovate",
+	"rithmic",
+	"apex",
 	"other",
 ]);
 export type TradingPlatform = z.infer<typeof tradingPlatformEnum>;

@@ -52,7 +52,7 @@ import {
 	ERR_VALIDATION_SELECT_ACCOUNT,
 } from "@/lib/constants/errors";
 import type { ParsedTrade, TradingPlatform } from "@/lib/trades";
-import { getParser, TRADING_PLATFORMS } from "@/lib/trades";
+import { detectPlatform, getParser, TRADING_PLATFORMS } from "@/lib/trades";
 import { api } from "@/trpc/react";
 
 type Step = "select-account" | "upload" | "mapping" | "preview" | "complete";
@@ -97,9 +97,26 @@ const PLATFORM_INFO: Record<
 		description: "Auto-import from ProjectX Trades CSV export",
 		status: "ready",
 	},
+	topstepx: {
+		description: "Auto-import from TopstepX Trades CSV export",
+		status: "ready",
+	},
 	ninjatrader: {
-		description: "Auto-import from NinjaTrader export",
-		status: "coming-soon",
+		description: "Auto-import from NinjaTrader execution export",
+		status: "ready",
+	},
+	tradovate: {
+		description: "Auto-import from Tradovate order report export",
+		status: "ready",
+	},
+	rithmic: {
+		description: "Auto-import from Rithmic Completed Orders export",
+		status: "ready",
+	},
+	apex: {
+		description:
+			"Auto-detect Apex CSV format (Rithmic/Tradovate/ProjectX-family)",
+		status: "ready",
 	},
 	other: { description: "Manual column mapping", status: "manual" },
 };
@@ -140,7 +157,6 @@ export default function ImportPage() {
 	);
 	const accountPlatform = (selectedImportAccount?.platform ??
 		"other") as TradingPlatform;
-	const platformParser = getParser(accountPlatform);
 	const platformStatus = PLATFORM_INFO[accountPlatform]?.status ?? "manual";
 
 	const parseCSV = useCallback(
@@ -160,6 +176,8 @@ export default function ImportPage() {
 				.split(",")
 				.map((h) => h.trim().replace(/"/g, ""));
 			setHeaders(parsedHeaders);
+			setParsedTrades([]);
+			setParseErrors([]);
 
 			const rows: ParsedRow[] = [];
 			for (let i = 1; i < lines.length; i++) {
@@ -175,28 +193,60 @@ export default function ImportPage() {
 
 			setCsvData(rows);
 
-			// If we have a working platform parser, try to use it
-			if (platformParser && platformStatus === "ready") {
-				platformParser.parse(text).then((result) => {
+			void (async () => {
+				const parserCandidates: TradingPlatform[] = [];
+				const addCandidate = (platform: TradingPlatform | null) => {
+					if (!platform) return;
+					if (parserCandidates.includes(platform)) return;
+					if (PLATFORM_INFO[platform]?.status !== "ready") return;
+					if (!getParser(platform)) return;
+					parserCandidates.push(platform);
+				};
+
+				addCandidate(accountPlatform);
+				addCandidate(detectPlatform(parsedHeaders));
+
+				for (const [platform, info] of Object.entries(PLATFORM_INFO)) {
+					if (info.status !== "ready") continue;
+					addCandidate(platform as TradingPlatform);
+				}
+
+				if (parserCandidates.length === 0) {
+					setStep("mapping");
+					return;
+				}
+
+				let latestErrors: string[] = [];
+				for (const platform of parserCandidates) {
+					const parser = getParser(platform);
+					if (!parser) continue;
+
+					const result = await parser.parse(text);
 					if (result.success && result.trades.length > 0) {
 						setParsedTrades(result.trades);
 						setParseErrors(
-							result.errors.map((e) => `Row ${e.row}: ${e.message}`),
+							result.errors.map(
+								(error) => `Row ${error.row}: ${error.message}`,
+							),
 						);
 						setStep("preview");
-					} else {
-						// Fall back to manual mapping
-						setParseErrors(
-							result.errors.map((e) => `Row ${e.row}: ${e.message}`),
-						);
-						toast.error(ERR_CSV_AUTOPARSE_FAILED);
-						setStep("mapping");
+						return;
 					}
-				});
-			} else {
-				// Use manual mapping flow
+
+					if (result.errors.length > 0) {
+						latestErrors = result.errors.map(
+							(error) => `Row ${error.row}: ${error.message}`,
+						);
+					}
+				}
+
+				if (latestErrors.length > 0) {
+					setParseErrors(latestErrors);
+					toast.error(ERR_CSV_AUTOPARSE_FAILED);
+				}
+
 				setStep("mapping");
-			}
+			})();
 
 			// Auto-map headers if they match field names
 			const autoMapping: Record<string, string> = {};
@@ -214,7 +264,7 @@ export default function ImportPage() {
 			});
 			setMapping(autoMapping);
 		},
-		[platformParser, platformStatus],
+		[accountPlatform],
 	);
 
 	const handleFileUpload = useCallback(

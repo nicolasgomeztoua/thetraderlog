@@ -6,7 +6,11 @@ export type TradingPlatform =
 	| "mt4"
 	| "mt5"
 	| "projectx"
+	| "topstepx"
 	| "ninjatrader"
+	| "tradovate"
+	| "rithmic"
+	| "apex"
 	| "other";
 
 export interface ParsedTrade {
