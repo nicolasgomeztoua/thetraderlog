@@ -613,6 +613,22 @@ export const accountsRouter = createTRPCRouter({
 				);
 			}
 
+			// Trade stats for Monte Carlo simulation
+			const wins = accountTrades.filter(
+				(t) => t.netPnl && parseFloat(t.netPnl) > 0,
+			).length;
+			const losses = accountTrades.filter(
+				(t) => t.netPnl && parseFloat(t.netPnl) < 0,
+			).length;
+			const grossProfit = accountTrades.reduce((sum, t) => {
+				const pnl = t.netPnl ? parseFloat(t.netPnl) : 0;
+				return pnl > 0 ? sum + pnl : sum;
+			}, 0);
+			const grossLoss = accountTrades.reduce((sum, t) => {
+				const pnl = t.netPnl ? parseFloat(t.netPnl) : 0;
+				return pnl < 0 ? sum + Math.abs(pnl) : sum;
+			}, 0);
+
 			// Overall status
 			const overallStatus = getOverallComplianceStatus([
 				drawdownStatus.status,
@@ -676,6 +692,15 @@ export const accountsRouter = createTRPCRouter({
 					daysElapsed,
 				},
 				overallStatus,
+				tradeStats: {
+					totalTrades: accountTrades.length,
+					wins,
+					losses,
+					winRate:
+						accountTrades.length > 0 ? (wins / accountTrades.length) * 100 : 0,
+					avgWin: wins > 0 ? grossProfit / wins : 0,
+					avgLoss: losses > 0 ? grossLoss / losses : 0,
+				},
 			};
 		}),
 

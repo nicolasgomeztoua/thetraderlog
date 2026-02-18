@@ -3,6 +3,7 @@
 import { ShieldIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ChallengeHistory } from "@/components/prop/challenge-history";
+import { ChallengeSimulator } from "@/components/prop/challenge-simulator";
 import { ComplianceGrid } from "@/components/prop/compliance-grid";
 import { DrawdownChart } from "@/components/prop/drawdown-chart";
 import { TradingDaysTimeline } from "@/components/prop/trading-days-timeline";
@@ -209,6 +210,16 @@ export default function PropPage() {
 							tradingDays={data.tradingDays}
 						/>
 					</div>
+
+					{/* Challenge Simulator */}
+					<ChallengeSimulator
+						initialBalance={data.account.initialBalance}
+						maxDrawdown={
+							(data.drawdown.limit / 100) * data.account.initialBalance
+						}
+						profitTarget={data.profitTarget.target}
+						tradeStats={data.tradeStats}
+					/>
 
 					{/* Challenge History */}
 					<ChallengeHistory
