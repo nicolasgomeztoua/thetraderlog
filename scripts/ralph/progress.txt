@@ -536,3 +536,25 @@ Started: Wed Feb 18 17:15:47 WET 2026
   - Percentage-to-dollar conversion: `initialBalance * (maxDrawdown / 100)` gives the dollar limit; `Math.abs(netPnl) / dollarLimit * 100` gives what percentage of that limit was used
 
 ---
+
+## 2026-02-18 - US-015
+- Created `tests/e2e/prop-compliance.spec.ts` with 7 smoke tests for prop compliance UI
+- Files changed: `tests/e2e/prop-compliance.spec.ts` (new)
+- Tests cover:
+  - Dashboard prop widget visibility (shows for prop accounts, absent for non-prop)
+  - Sidebar Prop nav item presence and navigation to /prop
+  - /prop page loads with either empty state or compliance content
+  - Compliance grid renders all 4 metric cards (drawdown, daily loss, profit target, consistency)
+  - Drawdown chart renders (or empty state for no data)
+  - Account selector and status dot present on prop page
+  - Challenge status badge visible for prop accounts
+- Tests are adaptive: gracefully handle both "has prop accounts" and "no prop accounts" scenarios
+- All tests use `data-testid` selectors following project convention
+- **Learnings for future iterations:**
+  - E2E tests must adapt to unknown user data — use `isVisible().catch(() => false)` pattern to check if elements exist, then branch test logic accordingly
+  - `reuseExistingServer: !process.env.CI` in Playwright config requires the dev server to return non-500 responses on the base URL for detection to work
+  - For conditional UI features (prop-only), test both presence and absence — early `return` when feature conditions aren't met
+  - Biome auto-inlines `expect(page.getByTestId(...)).toBeVisible()` when short enough — don't fight the formatter
+  - `page.getByRole("link", { name: "Prop" })` works for nav items without data-testid since the text content is unique
+
+---
