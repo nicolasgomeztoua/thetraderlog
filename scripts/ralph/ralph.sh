@@ -1,9 +1,44 @@
 #!/bin/bash
 # Ralph - Long-running Claude Code agent loop
 # Adapted from https://github.com/snarktank/ralph for Claude Code CLI
-# Usage: ./ralph.sh [max_iterations] [pr_review_cycles]
+# Usage: ./ralph.sh [options] [max_iterations] [pr_review_cycles]
+#
+# Options:
+#   --base <branch>    PR target branch (skips interactive menu)
+#   --work <branch>    Working branch (skips interactive menu)
+#   --auto             Shorthand: use prd.json branchName as work, "main" as base
+#
+# Examples:
+#   ./ralph.sh --auto                    # Non-interactive, branches from prd.json
+#   ./ralph.sh --auto 20 5               # Non-interactive, 20 iters, 5 PR cycles
+#   ./ralph.sh --base main --work ralph/my-feature 30
 
 set -e
+
+# Parse named flags
+AUTO_MODE=false
+CLI_BASE_BRANCH=""
+CLI_WORK_BRANCH=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --auto)
+            AUTO_MODE=true
+            shift
+            ;;
+        --base)
+            CLI_BASE_BRANCH="$2"
+            shift 2
+            ;;
+        --work)
+            CLI_WORK_BRANCH="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 MAX_ITERATIONS=${1:-30}
 PR_REVIEW_CYCLES=${2:-10}
@@ -112,19 +147,31 @@ show_branch_menu() {
     fi
 }
 
-# ---- 1. Which branch to PR into? (ask first so we can branch from it) ----
+# ---- Resolve branches (non-interactive if flags provided) ----
 echo ""
 echo -e "${CYAN}Branch Setup${NC}"
 echo -e "  Current git branch: ${GREEN}$GIT_BRANCH${NC}"
 [ -n "$PRD_BRANCH" ] && echo -e "  Branch in prd.json: ${GREEN}$PRD_BRANCH${NC}"
 
-show_branch_menu "Which branch should the PR target?" "main"
-PR_BASE_BRANCH="$SELECTED_BRANCH"
+if [ "$AUTO_MODE" = true ]; then
+    # --auto: use prd.json branchName as work branch, main as base
+    PR_BASE_BRANCH="main"
+    WORK_BRANCH="${PRD_BRANCH:-$GIT_BRANCH}"
+    echo -e "${CYAN}Auto mode: work=$WORK_BRANCH → PR into $PR_BASE_BRANCH${NC}"
+elif [ -n "$CLI_BASE_BRANCH" ] && [ -n "$CLI_WORK_BRANCH" ]; then
+    # --base + --work: fully non-interactive
+    PR_BASE_BRANCH="$CLI_BASE_BRANCH"
+    WORK_BRANCH="$CLI_WORK_BRANCH"
+    echo -e "${CYAN}CLI mode: work=$WORK_BRANCH → PR into $PR_BASE_BRANCH${NC}"
+else
+    # Interactive menus (original behavior)
+    show_branch_menu "Which branch should the PR target?" "main"
+    PR_BASE_BRANCH="$SELECTED_BRANCH"
 
-# ---- 2. Which branch to work on? (default = prd.json branch) ----
-WORK_DEFAULT="${PRD_BRANCH:-$GIT_BRANCH}"
-show_branch_menu "Which branch should Ralph work on?" "$WORK_DEFAULT"
-WORK_BRANCH="$SELECTED_BRANCH"
+    WORK_DEFAULT="${PRD_BRANCH:-$GIT_BRANCH}"
+    show_branch_menu "Which branch should Ralph work on?" "$WORK_DEFAULT"
+    WORK_BRANCH="$SELECTED_BRANCH"
+fi
 
 # ---- 3. Create / switch to the working branch ----
 BRANCH_EXISTS=$(git branch --list "$WORK_BRANCH" 2>/dev/null | tr -d ' ')
