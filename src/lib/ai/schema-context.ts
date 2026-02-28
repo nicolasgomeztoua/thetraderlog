@@ -12,7 +12,6 @@ const SCHEMA_CONTEXT = `
 ### Enums
 
 - **user_role**: user, admin
-- **instrument_type**: futures, forex
 - **trade_direction**: long, short
 - **trade_status**: open, closed
 - **execution_type**: entry, exit, scale_in, scale_out
@@ -23,7 +22,7 @@ const SCHEMA_CONTEXT = `
 - **drawdown_type**: trailing, static, eod
 - **payout_frequency**: weekly, bi_weekly, monthly
 - **challenge_status**: active, passed, failed
-- **trading_platform**: mt4, mt5, projectx, topstepx, ninjatrader, tradovate, rithmic, apex, other
+- **trading_platform**: projectx, topstepx, ninjatrader, tradovate, rithmic, apex, other
 - **strategy_rule_category**: entry, exit, risk, management
 - **rule_type**: manual, auto, semi_auto
 - **data_quality**: full, partial, unavailable, pending
@@ -95,8 +94,7 @@ const SCHEMA_CONTEXT = `
 | user_id | text (FK → user.id) | no | CASCADE on delete |
 | account_id | text (FK → account.id) | yes | SET NULL on delete |
 | strategy_id | text (FK → strategy.id) | yes | |
-| symbol | text | no | e.g., "ES", "NQ", "EUR/USD" |
-| instrument_type | instrument_type | no | futures or forex |
+| symbol | text | no | e.g., "ES", "NQ", "MES", "MNQ" |
 | direction | trade_direction | no | long or short |
 | status | trade_status | no | Default: 'open' |
 | entry_price | decimal(20,8) | no | |
@@ -171,7 +169,6 @@ const SCHEMA_CONTEXT = `
 | anthropic_api_key | text | yes | Encrypted |
 | google_api_key | text | yes | Encrypted |
 | preferred_ai_provider | text | yes | Default: 'openai' |
-| default_instrument_type | instrument_type | yes | Default: 'futures' |
 | timezone | text | yes | Default: 'UTC' |
 | breakeven_threshold | decimal(10,2) | yes | Default: '3.00' — P&L within ±$X is breakeven |
 | currency | text | yes | Default: 'USD' |
@@ -343,12 +340,12 @@ const SCHEMA_CONTEXT = `
 | Column | Type | Nullable | Notes |
 |--------|------|----------|-------|
 | id | text (PK) | no | Generated ID |
-| symbol | text | no | e.g., "ES", "MNQ" |
+| symbol | text | no | e.g., "ES", "NQ", "MNQ" |
 | interval | text | no | "1min", "5min", "15min", "1h" |
 | date | timestamp with tz | no | Normalized to midnight UTC |
 | bars | text | no | JSON array of OHLC bars |
 | bar_count | integer | no | Quick count |
-| source | text | no | e.g., "twelve_data" |
+| source | text | no | e.g., "databento" |
 | fetched_at | timestamp with tz | no | |
 
 ### Relationships

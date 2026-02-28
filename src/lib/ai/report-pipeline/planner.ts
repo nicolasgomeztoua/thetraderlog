@@ -62,7 +62,7 @@ These endpoints provide pre-computed trading statistics. The data gatherer phase
 
 ### Deep Analysis Tools
 - **run_query** — Execute read-only SQL against user-scoped tables. Use for trade-level detail, custom aggregations, cross-referencing, and any analysis not covered by analytics endpoints. Examples: entry timing relative to session open, trade clustering patterns, P&L by holding time buckets, consecutive loss behavior.
-- **get_market_data** — Fetch OHLC candle data for symbols (ES, NQ, EUR/USD, etc.). Use proactively for any analysis involving entry/exit quality, market context, or price structure — not just when explicitly requested. Cross-reference with run_query results for insights like "where in the daily range did I enter?" or "did I trade with or against the trend?"
+- **get_market_data** — Fetch OHLC candle data for futures symbols (ES, NQ, MES, MNQ, CL, GC, etc.). Use proactively for any analysis involving entry/exit quality, market context, or price structure — not just when explicitly requested. Cross-reference with run_query results for insights like "where in the daily range did I enter?" or "did I trade with or against the trend?"
 - **run_python** — Execute Python code for statistical analysis, regressions, distribution fitting, and custom charts that don't map to MDX components.
 
 **Important**: Not every report section needs analytics endpoints. Custom queries and market data yield insights the dashboard cannot — plan for them when the report topic involves price context, trade quality, or cross-referenced analysis.`;

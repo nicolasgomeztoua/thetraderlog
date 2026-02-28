@@ -114,9 +114,9 @@ function createCallAnalyticsTool(context: ToolContext) {
 function createGetMarketDataTool() {
 	return tool({
 		description:
-			"Fetch OHLC (Open, High, Low, Close) candle data for a specific trading symbol and time range. " +
-			"Supports futures symbols (ES, NQ, MNQ, MES, CL, GC, etc.) and forex pairs (EUR/USD, GBP/USD, etc.). " +
-			"Data is fetched from Databento (futures) or Twelve Data (forex) with automatic caching. " +
+			"Fetch OHLC (Open, High, Low, Close) candle data for a specific futures symbol and time range. " +
+			"Supports futures symbols (ES, NQ, MNQ, MES, CL, GC, YM, RTY, etc.). " +
+			"Data is fetched from Databento with automatic caching. " +
 			"Available intervals: 1min, 5min, 15min, 30min, 1h, 4h. " +
 			"Use this tool to analyze price action around specific trades or time periods. " +
 			"Results are limited to 1000 bars. For large date ranges, use a larger interval (e.g., 1h or 4h).",
@@ -124,9 +124,7 @@ function createGetMarketDataTool() {
 			symbol: z
 				.string()
 				.describe(
-					'Trading symbol (e.g., "ES", "NQ", "MNQ", "EUR/USD", "GBP/JPY"). ' +
-						"Futures symbols use short codes (ES, NQ, CL, GC). " +
-						"Forex pairs use slash format (EUR/USD, GBP/JPY).",
+					'Futures symbol (e.g., "ES", "NQ", "MNQ", "MES", "CL", "GC", "YM", "RTY").',
 				),
 			interval: z
 				.enum(["1min", "5min", "15min", "30min", "1h", "4h"])

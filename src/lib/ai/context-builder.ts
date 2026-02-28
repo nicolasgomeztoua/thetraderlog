@@ -98,7 +98,6 @@ async function loadSettings(db: Db, userId: string) {
 		columns: {
 			timezone: true,
 			breakevenThreshold: true,
-			defaultInstrumentType: true,
 			currency: true,
 			tradingSessions: true,
 		},
@@ -210,13 +209,12 @@ function formatTags(rows: TagRow[]): string {
 
 function formatSettings(settings: SettingsRow): string {
 	if (!settings) {
-		return "## Settings\nDefault settings (UTC timezone, $3.00 breakeven threshold, futures, USD).";
+		return "## Settings\nDefault settings (UTC timezone, $3.00 breakeven threshold, USD).";
 	}
 
 	const lines = [
 		`- Timezone: ${settings.timezone ?? "UTC"}`,
 		`- Breakeven threshold: $${settings.breakevenThreshold ?? "3.00"}`,
-		`- Default instrument: ${settings.defaultInstrumentType ?? "futures"}`,
 		`- Currency: ${settings.currency ?? "USD"}`,
 	];
 
