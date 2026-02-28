@@ -6,7 +6,7 @@ Started: Sat Feb 28 11:47:18 WET 2026
 - Pre-existing Biome error in scripts/ralph/prd.prop-compliance.archived.json — not a blocker, use `bunx biome check <specific-files>` to verify your changes
 - instrumentType is deeply embedded: DB schema, tRPC routers, UI components, shared schemas, CSV parsers, calculations, analytics, AI prompts
 - Twelve Data integration spans: env.js, service.ts, symbols.ts (TWELVE_DATA_SYMBOL_MAP), AI tool definitions
-- MT4/MT5 parsers live in a single file: src/lib/trades/csv-parsers/mt4-parser.ts (exports both parsers)
+- MT4/MT5 parsers removed — were in a single file (mt4-parser.ts), both stub implementations
 - Forex removal touches every layer: DB → server → lib → components → app → tests
 
 ---
@@ -253,4 +253,20 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - AI prompt files are static strings — no runtime dependencies, safe to edit
   - context-builder.ts loads settings from DB — when removing DB columns later (US-013), remember the column reference here is already removed
   - schema-context.ts is a manual documentation of the DB schema for AI — must be kept in sync with actual schema changes
+---
+
+## 2026-02-28 - US-004: Remove MT4 and MT5 CSV Parsers
+- Deleted src/lib/trades/csv-parsers/mt4-parser.ts (contained both mt4Parser and mt5Parser)
+- Removed MT4/MT5 from parser registry, getSupportedPlatforms(), TRADING_PLATFORMS in index.ts
+- Removed "mt4" | "mt5" from TradingPlatform type in types.ts
+- Removed "mt4", "mt5" from tradingPlatformEnum Zod schema in shared/schemas.ts
+- Removed "mt4", "mt5" from tradingPlatformEnum pgEnum in server/db/schema.ts
+- Removed MT4/MT5 entries from PLATFORM_INFO in import page
+- Removed MT4/MT5 from PLATFORM_LABELS, AccountFormState union, and SelectItem entries in settings page
+- Updated test fixtures (accounts.ts) and accounts test to use "ninjatrader" instead of "mt5"
+- Files changed: mt4-parser.ts (deleted), index.ts, types.ts, schemas.ts, schema.ts, import/page.tsx, settings-content.tsx, accounts.ts fixture, accounts.test.ts
+- **Learnings for future iterations:**
+  - Removing a platform from tradingPlatformEnum requires cascading to: DB schema pgEnum, shared Zod schema, CSV parser types, import page UI, settings page UI, and test fixtures
+  - Tests in accounts.test.ts used "mt5" platform — always grep tests/ for removed enum values
+  - The magicNumber field in ParsedTrade was MT4/5-specific but can stay as a generic optional field
 ---

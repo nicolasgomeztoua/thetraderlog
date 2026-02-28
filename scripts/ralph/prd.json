@@ -66,8 +66,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Deleted mt4-parser.ts (both MT4 and MT5 parsers were in one file). Removed mt4/mt5 from parser registry, TradingPlatform type, shared Zod schemas, DB pgEnum, import page PLATFORM_INFO, settings page labels/select/type. Updated test fixtures and accounts test to use ninjatrader instead of mt5."
     },
     {
       "id": "US-005",
