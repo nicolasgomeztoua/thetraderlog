@@ -58,7 +58,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -112,7 +112,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -166,7 +166,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -220,7 +220,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -269,7 +269,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -320,7 +320,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -369,7 +369,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -434,7 +434,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -509,7 +509,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -564,7 +564,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -624,7 +624,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -680,7 +680,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -734,7 +734,7 @@ describe("rule-relevance", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",

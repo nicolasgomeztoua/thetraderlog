@@ -129,7 +129,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 					accountId: account.id,
 					strategyId: strategy?.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -256,7 +256,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 					accountId: account.id,
 					strategyId: strategy?.id,
 					symbol: "NQ",
-					instrumentType: "futures",
+
 					direction: "short",
 					status: "closed",
 					entryPrice: "18000.00",
@@ -363,7 +363,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 						accountId: account.id,
 						strategyId: strategy.id,
 						symbol: "ES",
-						instrumentType: "futures",
+
 						direction: "long",
 						status: "closed",
 						entryPrice: "5000.00",
@@ -449,7 +449,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 					accountId: account.id,
 					strategyId: strategy?.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -560,7 +560,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 					accountId: accounts[0]?.id ?? "",
 					strategyId: strategy?.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -588,7 +588,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 					accountId: accounts[1]?.id ?? "",
 					strategyId: strategy?.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "short",
 					status: "closed",
 					entryPrice: "5020.00",
@@ -700,7 +700,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 					accountId: otherAccount?.id ?? "",
 					strategyId: otherStrategy?.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",

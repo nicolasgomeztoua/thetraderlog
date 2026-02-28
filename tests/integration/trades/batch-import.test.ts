@@ -16,7 +16,6 @@ import {
 function createBatchImportTrade(
 	overrides: {
 		symbol?: string;
-		instrumentType?: "futures" | "forex";
 		direction?: "long" | "short";
 		entryPrice?: string;
 		entryTime?: string;
@@ -38,7 +37,6 @@ function createBatchImportTrade(
 
 	return {
 		symbol: overrides.symbol ?? "ES",
-		instrumentType: overrides.instrumentType ?? ("futures" as const),
 		direction: overrides.direction ?? ("long" as const),
 		entryPrice: overrides.entryPrice ?? "5000.00",
 		entryTime,
@@ -178,7 +176,6 @@ describe("trades router - batchImport", () => {
 		it("should correctly set trade fields from import data", async () => {
 			const tradeData = createBatchImportTrade({
 				symbol: "CL",
-				instrumentType: "futures",
 				direction: "short",
 				entryPrice: "75.50",
 				exitPrice: "74.00",
@@ -208,7 +205,6 @@ describe("trades router - batchImport", () => {
 			});
 
 			expect(importedTrade.symbol).toBe("CL");
-			expect(importedTrade.instrumentType).toBe("futures");
 			expect(importedTrade.direction).toBe("short");
 			// Decimal fields are stored with 8 decimal places in DB, use parseFloat for comparison
 			expect(parseFloat(importedTrade.entryPrice)).toBe(75.5);

@@ -319,7 +319,6 @@ describe("trades router", () => {
   it("should calculate P&L for a long trade", async () => {
     const trade = await caller.trades.create({
       symbol: "ES",
-      instrumentType: "futures",
       direction: "long",
       entryPrice: "5000.00",
       exitPrice: "5010.00",

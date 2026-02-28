@@ -319,19 +319,18 @@ export async function setupTraderWithAnalyticsData() {
 
 	trades.push(
 		await createTestTrade(user.id, account.id, {
-			symbol: "EURUSD",
-			instrumentType: "forex",
+			symbol: "MES",
 			direction: "long",
 			status: "closed",
-			entryPrice: "1.0800",
-			exitPrice: "1.0780",
-			quantity: "100000",
+			entryPrice: "5000.00",
+			exitPrice: "4996.00",
+			quantity: "2",
 			entryTime: new Date(wednesdayMorning.getTime() + 2 * 60 * 60000),
 			exitTime: new Date(wednesdayMorning.getTime() + 4 * 60 * 60000),
-			realizedPnl: "-200",
-			netPnl: "-202",
+			realizedPnl: "-40",
+			netPnl: "-42",
 			fees: "2",
-			stopLoss: "1.0770",
+			stopLoss: "4994.00",
 		}),
 	);
 

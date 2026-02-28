@@ -21,10 +21,6 @@ export const createTable = pgTableCreator((name) => name);
 // ============================================================================
 
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
-export const instrumentTypeEnum = pgEnum("instrument_type", [
-	"futures",
-	"forex",
-]);
 export const tradeDirectionEnum = pgEnum("trade_direction", ["long", "short"]);
 export const tradeStatusEnum = pgEnum("trade_status", ["open", "closed"]);
 export const executionTypeEnum = pgEnum("execution_type", [
@@ -266,8 +262,7 @@ export const trades = createTable(
 		strategyId: text("strategy_id"), // FK added after strategies table is defined
 
 		// Instrument info
-		symbol: text("symbol").notNull(), // e.g., "ES", "NQ", "EUR/USD"
-		instrumentType: instrumentTypeEnum("instrument_type").notNull(),
+		symbol: text("symbol").notNull(), // e.g., "ES", "NQ", "MES"
 
 		// Trade direction and status
 		direction: tradeDirectionEnum("direction").notNull(),
@@ -453,9 +448,6 @@ export const userSettings = createTable("user_settings", {
 	preferredAiProvider: text("preferred_ai_provider").default("openai"),
 
 	// Trading preferences
-	defaultInstrumentType: instrumentTypeEnum("default_instrument_type").default(
-		"futures",
-	),
 	timezone: text("timezone").default("UTC"),
 	breakevenThreshold: decimal("breakeven_threshold", {
 		precision: 10,
@@ -882,12 +874,12 @@ export const candleCache = createTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => ids.candleCache()),
-		symbol: text("symbol").notNull(), // e.g., "ES", "MNQ", "EUR/USD"
+		symbol: text("symbol").notNull(), // e.g., "ES", "MNQ", "MES"
 		interval: text("interval").notNull(), // "1min", "5min", "15min", "1h"
 		date: timestamp("date", { withTimezone: true }).notNull(), // Day of data (normalized to midnight UTC)
 		bars: text("bars").notNull(), // JSON array of OHLC bars
 		barCount: integer("bar_count").notNull(), // Quick count without parsing JSON
-		source: text("source").notNull(), // "twelve_data", "polygon"
+		source: text("source").notNull(), // "databento"
 		fetchedAt: timestamp("fetched_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),

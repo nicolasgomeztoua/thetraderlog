@@ -59,7 +59,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -111,7 +111,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -159,7 +159,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -202,7 +202,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -246,7 +246,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -296,7 +296,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -347,7 +347,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -396,7 +396,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -447,7 +447,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -504,7 +504,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -552,7 +552,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -596,7 +596,7 @@ describe("strategy-evaluation", () => {
 				userId,
 				accountId,
 				symbol: "ES",
-				instrumentType: "futures",
+
 				direction: "long",
 				status: "closed",
 				entryPrice: "5000.00",
@@ -618,7 +618,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "4990.00",
@@ -662,7 +662,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -704,7 +704,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -745,7 +745,7 @@ describe("strategy-evaluation", () => {
 				userId,
 				accountId,
 				symbol: "NQ",
-				instrumentType: "futures",
+
 				direction: "long",
 				status: "closed",
 				entryPrice: "17500.00",
@@ -763,7 +763,7 @@ describe("strategy-evaluation", () => {
 				userId,
 				accountId,
 				symbol: "CL",
-				instrumentType: "futures",
+
 				direction: "short",
 				status: "closed",
 				entryPrice: "80.00",
@@ -785,7 +785,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -832,7 +832,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -875,7 +875,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -922,7 +922,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -959,7 +959,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: null, // No strategy
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -1008,7 +1008,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -1056,7 +1056,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -1103,7 +1103,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "short",
 					status: "closed",
 					entryPrice: "5000.00",
@@ -1148,7 +1148,7 @@ describe("strategy-evaluation", () => {
 					accountId,
 					strategyId: strategy.id,
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "short",
 					status: "closed",
 					entryPrice: "5000.00",
