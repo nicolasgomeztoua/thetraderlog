@@ -363,7 +363,7 @@
         "Verify in browser"
       ],
       "priority": 21,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -383,7 +383,7 @@
         "Verify in browser"
       ],
       "priority": 22,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -403,7 +403,7 @@
         "Verify in browser"
       ],
       "priority": 23,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

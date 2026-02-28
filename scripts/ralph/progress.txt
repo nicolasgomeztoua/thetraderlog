@@ -280,3 +280,75 @@ Feature: Admin Panel
   - `e.stopPropagation()` on DropdownMenuTrigger onClick prevents row expand/collapse when clicking the status dropdown
   - Biome auto-formats single-line ternaries and nullish coalescing — run `bunx biome check --write` after writing JSX
 ---
+
+## 2026-02-28 - US-020
+- Created /admin/users page with full list view
+- Table with columns: name, email, role, accounts count, trades count, joined date, last active
+- Search bar with Enter key support and Clear button for name/email filtering
+- Role badges with color coding: admin=chartreuse (primary), user=gray
+- Click row navigates to /admin/users/[userId] detail page via `router.push()`
+- Pagination with prev/next buttons and page counter
+- Loading skeleton rows, empty state, and error state
+- Added ROLE_COLORS constant to src/lib/constants/admin.ts
+- Terminal design: monospace table, data-dense layout
+- Files changed: src/app/(admin)/admin/users/page.tsx (new), src/lib/constants/admin.ts
+- **Learnings for future iterations:**
+  - Biome formats short lucide-react imports onto a single line — always run `bunx biome check --write` after creating new files
+  - Search pattern: use separate `searchInput` (for controlled input) and `search` (for query) state to avoid re-fetching on every keystroke
+  - `router.push()` for row click navigation to detail pages — more appropriate than `Link` wrapping table rows
+  - ROLE_COLORS constant follows same pattern as BUG_REPORT_STATUS_COLORS: `"text-{color} bg-{color}/10"`
+---
+
+## 2026-02-28 - US-021
+- Created /admin/users/[userId] user detail page
+- Header: avatar (Next.js Image), name, email, role badge, joined date
+- Role toggle button with AlertDialog confirmation dialog (promote to admin / demote to user)
+- Summary stat cards: accounts, recent trades, AI conversations, bug reports
+- Accounts table: name, type (with color badges), broker, active status, created date
+- Recent trades table: symbol, direction (with trending icons), status, entry/exit dates, net P&L (color-coded)
+- AI Conversations and Bug Reports summary sections with counts
+- Loading skeleton, error state, back-to-users link
+- Terminal design: monospace values, data-dense layout, chartreuse accents
+- Files changed: src/app/(admin)/admin/users/[userId]/page.tsx (new)
+- **Learnings for future iterations:**
+  - Use Next.js `Image` component instead of `<img>` — Biome warns about LCP/bandwidth for raw img elements
+  - `useParams()` returns `Record<string, string | string[]>` — cast `params.userId as string` for dynamic route params
+  - AlertDialog from Radix: control with `open`/`onOpenChange` state, use `AlertDialogAction` onClick for the confirm action
+  - ACCOUNT_TYPE_LABELS/COLORS not centralized in constants — duplicated locally (also in app-sidebar and settings). Consider centralizing if it comes up again.
+  - `admin.users.getById` returns `recentTrades` with string P&L values — parse with `Number.parseFloat()` for color logic
+---
+
+## 2026-02-28 - US-022
+- Created /admin/ai page with full AI usage monitoring
+- Top stats: total conversations, total reports, total tokens, avg tokens per conversation (4 stat cards)
+- Token usage bar chart using AG Charts (ag-charts-react) showing daily token consumption for last 30 days
+- Conversations table: user, title, mode (chat/report), status, messages count, tokens, date
+- Filter dropdowns for mode (chat/report) and status (active/generating/complete/failed)
+- Click row to expand and view full conversation messages inline with role coloring
+- Ice blue (#00d4ff) accent for AI section per design system
+- Files changed: src/app/(admin)/admin/ai/page.tsx (new)
+- **Learnings for future iterations:**
+  - AG Charts pattern: use `AgCartesianChartOptions<DataType>` with `useMemo`, `AgCharts` component with `style={{ height: N }}`
+  - Chart theme: transparent background, `#64748b` label color, `JetBrains Mono` font, `#1e293b` line stroke, `#ffffff08` gridline
+  - AI conversation mode can be null — use nullish coalescing for MODE_LABELS/MODE_COLORS lookup: `convo.mode ?? ""`
+  - `getConversation` query with `enabled: !!expandedId` prevents fetching until a row is expanded
+  - Biome flags unused computed variables even if derived from used data — remove or prefix with `_`
+---
+
+## 2026-02-28 - US-023
+- Created /admin/analytics page with full platform analytics dashboard
+- User Growth chart: bar chart for daily new users + line overlay for cumulative total (dual Y-axes)
+- Trading Activity chart: bar chart for daily trade count + line overlay for total P&L (dual Y-axes)
+- Top 10 Traders leaderboard table: ranked by total P&L with color-coded profit/loss values
+- Account Type Breakdown donut chart: demo, live, challenge, funded with distinct colors
+- All charts use AG Charts (ag-charts-community) with Terminal design theming
+- Loading skeletons, error state, empty state for each section
+- Terminal design: chartreuse accent for positive metrics, red for losses, monospace throughout
+- Files changed: src/app/(admin)/admin/analytics/page.tsx (new)
+- **Learnings for future iterations:**
+  - AG Charts dual Y-axis pattern: use `keys: ["fieldName"]` on each number axis to bind series to specific axes
+  - `AgPolarChartOptions` for donut/pie charts — import from `ag-charts-community`
+  - `name` field from `users` table is `string | null` — always account for null in TopTrader interfaces
+  - Biome auto-removes unused imports with `--write --unsafe` flag — run after initial file creation to clean up
+  - Account type labels/colors duplicated across admin pages — consider centralizing in constants if pattern continues
+---
