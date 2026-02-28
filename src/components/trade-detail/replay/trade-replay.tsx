@@ -30,7 +30,6 @@ interface TradeReplayProps {
 	tradeId: string;
 	symbol: string;
 	direction: "long" | "short";
-	instrumentType: "futures" | "forex";
 	entryPrice: string | null;
 	exitPrice?: string | null;
 	entryTime: Date | string | null;
@@ -57,7 +56,6 @@ export function TradeReplay({
 	tradeId: _tradeId,
 	symbol,
 	direction,
-	instrumentType,
 	entryPrice,
 	exitPrice: _exitPrice,
 	entryTime,
@@ -151,7 +149,6 @@ export function TradeReplay({
 		entryPrice,
 		direction,
 		symbol,
-		instrumentType: instrumentType,
 		initialSpeed: defaultSpeed,
 	});
 

@@ -270,7 +270,6 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 				parseFloat(trade.stopLoss),
 				parseFloat(trade.quantity),
 				trade.symbol ?? "",
-				(trade.instrumentType as "futures" | "forex") ?? "futures",
 			);
 
 			if (rMultiple === null) return true;
@@ -1489,7 +1488,6 @@ export const analyticsRouter = createTRPCRouter({
 					parseFloat(trade.stopLoss),
 					parseFloat(trade.quantity),
 					trade.symbol,
-					trade.instrumentType as "futures" | "forex",
 				);
 
 				if (rMultiple === null) continue;
@@ -1650,7 +1648,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss,
 					parseFloat(trade.quantity),
 					trade.symbol,
-					trade.instrumentType as "futures" | "forex",
 				);
 
 				if (rMultiple === null) continue;
@@ -3678,7 +3675,6 @@ export const analyticsRouter = createTRPCRouter({
 								parseFloat(trade.stopLoss),
 								parseFloat(trade.quantity),
 								trade.symbol,
-								(trade.instrumentType as "futures" | "forex") ?? "futures",
 							)
 						: null;
 

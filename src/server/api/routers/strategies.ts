@@ -887,7 +887,6 @@ export const strategiesRouter = createTRPCRouter({
 			const mfeR = calculateMfeInR({
 				id: trade.id,
 				symbol: trade.symbol,
-				instrumentType: trade.instrumentType,
 				direction: trade.direction,
 				entryPrice: trade.entryPrice,
 				exitPrice: trade.exitPrice,
@@ -1406,7 +1405,6 @@ export const strategiesRouter = createTRPCRouter({
 					userId: trade.userId,
 					accountId: trade.accountId,
 					symbol: trade.symbol,
-					instrumentType: trade.instrumentType,
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					exitPrice: trade.exitPrice,
@@ -1457,7 +1455,6 @@ export const strategiesRouter = createTRPCRouter({
 					{
 						id: trade.id,
 						symbol: trade.symbol,
-						instrumentType: trade.instrumentType,
 						direction: trade.direction,
 						entryPrice: trade.entryPrice,
 						exitPrice: trade.exitPrice,

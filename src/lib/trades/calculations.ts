@@ -59,7 +59,6 @@ export function calculateActualRMultiple(
 	stopLoss: number | null,
 	quantity: number,
 	symbol: string,
-	_instrumentType: "futures" | "forex",
 ): number | null {
 	if (netPnl === null || stopLoss === null || quantity === 0) return null;
 
@@ -131,7 +130,6 @@ export function calculateROI(
 	entryPrice: number,
 	quantity: number,
 	symbol: string,
-	_instrumentType: "futures" | "forex",
 ): number | null {
 	if (netPnl === null) return null;
 
@@ -173,7 +171,6 @@ export function calculateAllStats(trade: {
 	entryTime: Date | string;
 	exitTime: Date | string | null;
 	symbol: string;
-	instrumentType: "futures" | "forex";
 }): TradeStats {
 	const entry = parseFloat(trade.entryPrice);
 	const exit = trade.exitPrice ? parseFloat(trade.exitPrice) : null;
@@ -191,16 +188,9 @@ export function calculateAllStats(trade: {
 		ticks,
 		ticksPerContract: calculateTicksPerContract(ticks, qty),
 		grossPnl: calculateGrossPnl(netPnl, fees),
-		roi: calculateROI(netPnl, entry, qty, trade.symbol, trade.instrumentType),
+		roi: calculateROI(netPnl, entry, qty, trade.symbol),
 		duration: calculateDuration(trade.entryTime, trade.exitTime),
-		rMultiple: calculateActualRMultiple(
-			netPnl,
-			entry,
-			sl,
-			qty,
-			trade.symbol,
-			trade.instrumentType,
-		),
+		rMultiple: calculateActualRMultiple(netPnl, entry, sl, qty, trade.symbol),
 		plannedRR: calculatePlannedRR(entry, sl, tp),
 	};
 }
@@ -230,9 +220,8 @@ export interface MAEMFEResult {
  * @param entryPrice - Trade entry price
  * @param exitPrice - Trade exit price
  * @param direction - "long" or "short"
- * @param quantity - Number of contracts/lots
+ * @param quantity - Number of contracts
  * @param symbol - Trading symbol (for point value calculation)
- * @param instrumentType - "futures" or "forex"
  * @returns MAE/MFE metrics
  */
 export function calculateMAEMFE(
@@ -242,7 +231,6 @@ export function calculateMAEMFE(
 	direction: "long" | "short",
 	quantity: number,
 	symbol: string,
-	_instrumentType: "futures" | "forex",
 ): MAEMFEResult {
 	if (bars.length === 0) {
 		// No data - return zeros

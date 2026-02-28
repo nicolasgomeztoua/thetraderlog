@@ -282,7 +282,6 @@ export default function TradeDetailPage() {
 				entryTime: trade.entryTime,
 				exitTime: trade.exitTime,
 				symbol: trade.symbol,
-				instrumentType: trade.instrumentType,
 			})
 		: null;
 

@@ -163,7 +163,6 @@ async function autoEvaluateTradeRules(
 				userId: trade.userId,
 				accountId: trade.accountId,
 				symbol: trade.symbol,
-				instrumentType: trade.instrumentType,
 				direction: trade.direction,
 				entryPrice: trade.entryPrice,
 				exitPrice: trade.exitPrice,
@@ -204,7 +203,6 @@ async function autoEvaluateTradeRules(
 				{
 					id: trade.id,
 					symbol: trade.symbol,
-					instrumentType: trade.instrumentType,
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					exitPrice: trade.exitPrice,
@@ -564,7 +562,6 @@ export const tradesRouter = createTRPCRouter({
 						parseFloat(trade.stopLoss),
 						parseFloat(trade.quantity),
 						trade.symbol,
-						trade.instrumentType,
 					);
 
 					if (rMultiple === null) return false;

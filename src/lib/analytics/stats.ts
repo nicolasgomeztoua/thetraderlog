@@ -14,7 +14,6 @@ export interface TradeForStats {
 	stopLoss?: string | null;
 	quantity?: string;
 	symbol?: string;
-	instrumentType?: "futures" | "forex";
 }
 
 /**
@@ -103,7 +102,6 @@ export function calculateRMultipleFromTrade(
 	stopLoss: number,
 	quantity: number,
 	symbol?: string,
-	_instrumentType?: "futures" | "forex",
 ): number | null {
 	const riskPerUnit = Math.abs(entryPrice - stopLoss);
 	if (riskPerUnit === 0 || quantity === 0) return null;
@@ -193,14 +191,12 @@ export function calculateAggregateStats(
 			stopLoss: string;
 			entryPrice: string;
 			symbol: string;
-			instrumentType: "futures" | "forex";
 		} =>
 			t.stopLoss !== null &&
 			t.stopLoss !== undefined &&
 			t.entryPrice !== undefined &&
 			t.netPnl !== null &&
-			t.symbol !== undefined &&
-			t.instrumentType !== undefined,
+			t.symbol !== undefined,
 	);
 
 	if (tradesWithSL.length > 0) {
@@ -217,7 +213,6 @@ export function calculateAggregateStats(
 				sl,
 				qty,
 				t.symbol,
-				t.instrumentType,
 			);
 			if (rMultiple !== null) {
 				rMultiples.push(rMultiple);

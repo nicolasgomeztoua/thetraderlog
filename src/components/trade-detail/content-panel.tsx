@@ -180,7 +180,6 @@ export function ContentPanel({
 						}))}
 						exitPrice={trade.exitPrice}
 						exitTime={trade.exitTime}
-						instrumentType={trade.instrumentType}
 						quantity={trade.quantity}
 						stopLoss={trade.stopLoss}
 						symbol={trade.symbol}
@@ -205,7 +204,6 @@ export function ContentPanel({
 						}))}
 						exitPrice={trade.exitPrice}
 						exitTime={trade.exitTime}
-						instrumentType={trade.instrumentType}
 						quantity={trade.quantity}
 						symbol={trade.symbol}
 					/>

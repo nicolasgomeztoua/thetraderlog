@@ -32,7 +32,6 @@ export interface RunningPnlOptions {
 	executions: Execution[];
 	direction: "long" | "short";
 	symbol: string;
-	instrumentType: "futures" | "forex";
 }
 
 // =============================================================================
@@ -48,8 +47,7 @@ export interface RunningPnlOptions {
  * @param executions - All executions up to the target time
  * @param currentPrice - Current market price (close of current bar)
  * @param direction - Trade direction (long/short)
- * @param symbol - Trading symbol (e.g., "ES", "EUR/USD")
- * @param instrumentType - "futures" or "forex"
+ * @param symbol - Trading symbol (e.g., "ES", "NQ")
  * @returns P&L in dollars
  */
 export function calculateRunningPnlAtTime(
@@ -57,7 +55,6 @@ export function calculateRunningPnlAtTime(
 	currentPrice: number,
 	direction: "long" | "short",
 	symbol: string,
-	_instrumentType: "futures" | "forex",
 ): number {
 	if (executions.length === 0) {
 		return 0;
@@ -121,7 +118,7 @@ export function calculateRunningPnlAtTime(
 export function generateRunningPnlSeries(
 	options: RunningPnlOptions,
 ): RunningPnlPoint[] {
-	const { bars, executions, direction, symbol, instrumentType } = options;
+	const { bars, executions, direction, symbol } = options;
 
 	if (bars.length === 0 || executions.length === 0) {
 		return [];
@@ -172,7 +169,6 @@ export function generateRunningPnlSeries(
 			priceForPnl,
 			direction,
 			symbol,
-			instrumentType,
 		);
 
 		pnlSeries.push({
@@ -197,7 +193,6 @@ export function generateRunningPnlSeries(
 				exitPrice,
 				direction,
 				symbol,
-				instrumentType,
 			);
 			pnlSeries.push({
 				time: exitTime,

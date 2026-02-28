@@ -134,7 +134,6 @@ export const marketDataRouter = createTRPCRouter({
 					input.direction,
 					1, // quantity not relevant for point calculations
 					input.symbol,
-					"futures", // Default to futures for point-based calculations
 				);
 
 				// Check SL/TP hit

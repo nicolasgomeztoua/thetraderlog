@@ -17,7 +17,6 @@ import { RunningPnlChart } from "./running-pnl-chart";
 interface RunningPnlTabProps {
 	symbol: string;
 	direction: "long" | "short";
-	instrumentType: "futures" | "forex";
 	entryPrice: string | null;
 	entryTime: Date | string | null;
 	exitPrice?: string | null;
@@ -45,7 +44,6 @@ interface RunningPnlTabProps {
 export function RunningPnlTab({
 	symbol,
 	direction,
-	instrumentType,
 	entryPrice,
 	entryTime,
 	exitPrice,
@@ -141,9 +139,8 @@ export function RunningPnlTab({
 			executions: allExecutions,
 			direction,
 			symbol,
-			instrumentType,
 		});
-	}, [chartBars, allExecutions, direction, symbol, instrumentType]);
+	}, [chartBars, allExecutions, direction, symbol]);
 
 	// Handle no entry time state
 	if (!entryTime) {

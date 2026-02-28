@@ -132,7 +132,6 @@ export async function calculateAndStoreMAEMFE(
 			trade.direction,
 			parseFloat(trade.quantity),
 			trade.symbol,
-			trade.instrumentType,
 		);
 
 		// 8. Store results permanently

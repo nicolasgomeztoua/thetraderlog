@@ -58,7 +58,6 @@ export interface EvaluationContext {
 export interface TradeForEvaluation {
 	id: string;
 	symbol: string;
-	instrumentType: "futures" | "forex";
 	direction: "long" | "short";
 	entryPrice: string;
 	exitPrice: string | null;
@@ -615,7 +614,6 @@ export interface TradeWithAccount {
 	userId: string;
 	accountId: string | null;
 	symbol: string;
-	instrumentType: "futures" | "forex";
 	direction: "long" | "short";
 	entryPrice: string;
 	exitPrice: string | null;
@@ -668,7 +666,6 @@ export async function buildEvaluationContext(
 	const mfeR = calculateMfeInR({
 		id: trade.id,
 		symbol: trade.symbol,
-		instrumentType: trade.instrumentType,
 		direction: trade.direction,
 		entryPrice: trade.entryPrice,
 		exitPrice: trade.exitPrice,
