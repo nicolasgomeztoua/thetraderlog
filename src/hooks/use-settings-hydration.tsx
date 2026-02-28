@@ -21,7 +21,6 @@ export function useSettingsHydration() {
 				timezone: settings.timezone,
 				currency: settings.currency,
 				breakevenThreshold: settings.breakevenThreshold,
-				defaultInstrumentType: settings.defaultInstrumentType,
 				tradingSessions: settings.tradingSessions,
 				theme: settings.theme,
 			});

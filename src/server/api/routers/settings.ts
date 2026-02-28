@@ -33,7 +33,6 @@ export const settingsRouter = createTRPCRouter({
 				anthropicApiKey: z.string().optional(),
 				googleApiKey: z.string().optional(),
 				preferredAiProvider: z.string().optional(),
-				defaultInstrumentType: z.enum(["futures", "forex"]).optional(),
 				timezone: z.string().optional(),
 				currency: z.string().optional(),
 				breakevenThreshold: z.string().optional(), // Dollar amount for breakeven threshold
