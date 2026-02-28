@@ -352,3 +352,19 @@ Feature: Admin Panel
   - Biome auto-removes unused imports with `--write --unsafe` flag — run after initial file creation to clean up
   - Account type labels/colors duplicated across admin pages — consider centralizing in constants if pattern continues
 ---
+
+## 2026-02-28 - US-024
+- Created /admin/system page with full system health dashboard
+- Database connection status indicator: green CheckCircle for connected, red XCircle for error
+- App version display from package.json with "v" prefix
+- 6 stat cards for database row counts: users, trades, accounts, AI conversations, AI messages, bug reports
+- Last activity section: last signup, last trade, last AI conversation with formatted timestamps
+- Loading skeletons, error state
+- Terminal design: green (#00ff88) for healthy, red (#ff3b3b) for issues, chartreuse primary accent, monospace throughout
+- Files changed: src/app/(admin)/admin/system/page.tsx (new)
+- **Learnings for future iterations:**
+  - System health page is simpler than analytics pages — single endpoint, no charts, just stat cards and status indicators
+  - `CheckCircle`/`XCircle` from lucide-react work well for binary status indicators
+  - `toLocaleString()` with date options gives clean timestamp formatting for "last activity" displays
+  - Divide-y on a container with child rows gives clean separator lines without manual borders
+---
