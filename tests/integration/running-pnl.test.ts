@@ -253,12 +253,7 @@ describe("calculateRunningPnlAtTime - Futures symbols", () => {
 			createExecution("1", "entry", "5000", "1", 1000),
 		];
 
-		const pnl = calculateRunningPnlAtTime(
-			executions,
-			5010,
-			"long",
-			"ES",
-		);
+		const pnl = calculateRunningPnlAtTime(executions, 5010, "long", "ES");
 
 		expect(pnl).toBe(500);
 	});
@@ -270,12 +265,7 @@ describe("calculateRunningPnlAtTime - Futures symbols", () => {
 			createExecution("1", "entry", "18000", "1", 1000),
 		];
 
-		const pnl = calculateRunningPnlAtTime(
-			executions,
-			18010,
-			"long",
-			"NQ",
-		);
+		const pnl = calculateRunningPnlAtTime(executions, 18010, "long", "NQ");
 
 		expect(pnl).toBe(200);
 	});
@@ -287,12 +277,7 @@ describe("calculateRunningPnlAtTime - Futures symbols", () => {
 			createExecution("1", "entry", "5000", "1", 1000),
 		];
 
-		const pnl = calculateRunningPnlAtTime(
-			executions,
-			5010,
-			"long",
-			"MES",
-		);
+		const pnl = calculateRunningPnlAtTime(executions, 5010, "long", "MES");
 
 		expect(pnl).toBe(50);
 	});
