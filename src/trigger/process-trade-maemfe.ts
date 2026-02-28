@@ -3,7 +3,7 @@ import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 
 export const processTradeMAEMFE = task({
 	id: "process-trade-maemfe",
-	// Limit concurrency to avoid API rate limits (Databento, Twelve Data)
+	// Limit concurrency to avoid Databento API rate limits
 	queue: {
 		concurrencyLimit: 10,
 	},
