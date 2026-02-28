@@ -31,7 +31,6 @@ import {
 	emotionalStateEnum,
 	executionTypeEnum,
 	exitReasonEnum,
-	instrumentTypeEnum,
 	tradeStatusEnum,
 } from "@/lib/shared";
 import {
@@ -163,7 +162,6 @@ async function autoEvaluateTradeRules(
 				userId: trade.userId,
 				accountId: trade.accountId,
 				symbol: trade.symbol,
-				instrumentType: trade.instrumentType,
 				direction: trade.direction,
 				entryPrice: trade.entryPrice,
 				exitPrice: trade.exitPrice,
@@ -204,7 +202,6 @@ async function autoEvaluateTradeRules(
 				{
 					id: trade.id,
 					symbol: trade.symbol,
-					instrumentType: trade.instrumentType,
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					exitPrice: trade.exitPrice,
@@ -251,7 +248,6 @@ async function autoEvaluateTradeRules(
 // Input schemas
 const createTradeSchema = z.object({
 	symbol: z.string().min(1),
-	instrumentType: instrumentTypeEnum,
 	direction: directionEnum,
 	entryPrice: z.string(),
 	entryTime: z.iso.datetime(),
@@ -279,7 +275,6 @@ const createTradeSchema = z.object({
 const updateTradeSchema = z.object({
 	id: z.string(),
 	symbol: z.string().optional(),
-	instrumentType: instrumentTypeEnum.optional(),
 	direction: directionEnum.optional(),
 	entryPrice: z.string().optional(),
 	exitPrice: z.string().optional(),
@@ -323,7 +318,6 @@ const addExecutionSchema = z.object({
 // Batch import schema for CSV imports
 const batchImportTradeSchema = z.object({
 	symbol: z.string().min(1),
-	instrumentType: instrumentTypeEnum,
 	direction: directionEnum,
 	entryPrice: z.string(),
 	entryTime: z.string(), // ISO string
@@ -564,7 +558,6 @@ export const tradesRouter = createTRPCRouter({
 						parseFloat(trade.stopLoss),
 						parseFloat(trade.quantity),
 						trade.symbol,
-						trade.instrumentType,
 					);
 
 					if (rMultiple === null) return false;
@@ -771,7 +764,6 @@ export const tradesRouter = createTRPCRouter({
 					userId: ctx.user.id,
 					accountId,
 					symbol: trade.symbol,
-					instrumentType: trade.instrumentType,
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					entryTime: new Date(trade.entryTime),

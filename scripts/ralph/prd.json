@@ -1,477 +1,281 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/prop-compliance",
-  "description": "Prop firm compliance dashboard — backend engine, dashboard widget, dedicated /prop page, Monte Carlo simulator, and AI integration",
+  "branchName": "ralph/futures-only-cleanup",
+  "description": "Strip all forex, crypto, Twelve Data, and non-futures code to launch as a futures-only trading journal",
   "userStories": [
     {
-      "id": "US-000",
-      "title": "Audit Existing Utilities for Prop Compliance",
-      "description": "As a developer, I want to audit existing code before implementing prop compliance so that we reuse utilities and avoid duplication.",
+      "id": "US-001",
+      "title": "Audit All Forex and Non-Futures References",
+      "description": "As a developer, I want to audit every forex reference before removing anything so that we have a complete removal checklist and don't miss anything.",
       "acceptanceCriteria": [
-        "Search src/lib/analytics/ for existing equity curve, drawdown, and risk functions",
-        "Search src/lib/trades/calculations.ts for P&L utilities",
-        "Search src/components/dashboard/widgets/ for existing prop-aware code (e.g., DailyLossProgress)",
-        "Search src/components/analytics/ for RiskGauge, MonteCarloChart patterns",
-        "Search src/server/api/routers/accounts.ts for getStats and existing prop queries",
-        "Search src/server/api/routers/analytics.ts for getRiskMetrics and ruinThreshold handling",
-        "Document findings in scripts/ralph/progress.txt: existing utilities to reuse (with file:line), local helpers to extract (with file:line), new utilities needed",
+        "Search src/lib/ for all forex/pip/twelve-data references with file:line",
+        "Search src/server/ for all instrumentType usages with file:line",
+        "Search src/components/ and src/app/ for forex UI references with file:line",
+        "Search for EUR/USD, GBP/USD, MT4, MT5, MetaTrader references",
+        "Document complete findings in scripts/ralph/progress.txt",
         "Typecheck passes (bun run check)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-001",
-      "title": "Create Prop Compliance Constants",
-      "description": "As a developer, I want shared constants for prop compliance thresholds and labels so that they're reusable across backend and frontend.",
-      "acceptanceCriteria": [
-        "Create src/lib/constants/prop.ts with: COMPLIANCE_STATUS enum/object (safe | caution | danger), COMPLIANCE_THRESHOLDS (safe >30% buffer, caution 10-30%, danger <10%), COMPLIANCE_STATUS_COLORS mapping to Terminal design colors (text-profit, text-primary, text-loss), CHALLENGE_STATUS_LABELS, DRAWDOWN_TYPE_LABELS, PROP_ACCOUNT_TYPES",
-        "Export from src/lib/constants/index.ts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": ""
+      "notes": "Complete audit documented in progress.txt with file:line references for all forex, pip, Twelve Data, MT4/MT5, instrumentType, and EUR/USD/GBP/USD references across src/, tests/, and env.js"
     },
     {
       "id": "US-002",
-      "title": "Create Prop Compliance Calculation Utilities",
-      "description": "As a developer, I want shared utility functions for computing prop compliance metrics so that backend and frontend can use them consistently.",
+      "title": "Remove Forex References from Marketing Pages",
+      "description": "As a visitor, I want the landing page to clearly communicate this is a futures trading journal so that expectations are set correctly.",
       "acceptanceCriteria": [
-        "Create src/lib/analytics/prop-compliance.ts with pure calculation functions",
-        "calculateDrawdownStatus(currentDrawdownPercent, maxDrawdownPercent) returns { percent, limit, used, remaining, status } respecting COMPLIANCE_THRESHOLDS",
-        "calculateDailyPnl(trades, date?) sums netPnl for trades on a given date",
-        "calculateDailyLossStatus(dailyPnl, dailyLossLimit, initialBalance) returns { current, limit, used, remaining, status }",
-        "calculateProfitTargetProgress(totalPnl, profitTarget, initialBalance) returns { current, target, progress, status }",
-        "calculateConsistencyMetric(dailyPnls, consistencyRule) returns { maxDayPercent, limit, isCompliant }",
-        "calculateTradingDays(trades) returns { daysTraded, minRequired, remaining }",
-        "calculateTrailingDrawdown(equityCurve, initialBalance) computes high-water-mark drawdown from equity curve",
-        "calculateStaticDrawdown(initialBalance, currentBalance) straightforward formula",
-        "getOverallComplianceStatus(metrics[]) returns worst status across all metrics",
-        "Export from src/lib/analytics/index.ts",
-        "Uses COMPLIANCE_THRESHOLDS from constants (US-001)",
-        "All functions are pure, no DB calls",
+        "src/app/(marketing)/_components/hero.tsx — Remove 'and forex' from tagline, remove forex example trades (EUR/USD, pips), replace with futures examples",
+        "src/app/(marketing)/_components/features.tsx — Change 'Futures & Forex' to 'Futures', remove forex pairs from descriptions",
+        "src/app/(marketing)/layout.tsx — Update meta description to 'futures traders' only",
+        "Remove any other marketing page forex references found during audit",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Replaced EUR/USD, GBP/USD with futures symbols in hero ticker and demo trades. Updated features card to 'Built for Futures'. Updated footer and meta descriptions."
+    },
+    {
+      "id": "US-003",
+      "title": "Remove Forex References from AI Prompts and Tool Definitions",
+      "description": "As a developer, I want AI prompts and tools to only reference futures so that AI responses are accurate for a futures-only product.",
+      "acceptanceCriteria": [
+        "src/lib/ai/tools/definitions.ts — Remove forex pairs from tool descriptions, remove Twelve Data references",
+        "src/lib/ai/schema-context.ts — Remove instrument_type from schema docs, remove twelve_data source reference",
+        "src/lib/ai/prompts/trading-analyst.ts — Change persona to 'futures trading journal', remove forex pair references",
+        "src/lib/ai/report-pipeline/planner.ts — Remove forex from market data tool description",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 3,
       "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-003",
-      "title": "Unit Tests for Prop Compliance Calculations",
-      "description": "As a developer, I want unit tests for the prop compliance utility functions so that we verify correctness of all compliance math.",
-      "acceptanceCriteria": [
-        "Test file created: tests/unit/prop-compliance.test.ts",
-        "Tests calculateDrawdownStatus with static, trailing, and EOD scenarios",
-        "Tests calculateDailyPnl with multiple trades on same day, no trades",
-        "Tests calculateDailyLossStatus safe/caution/danger thresholds",
-        "Tests calculateProfitTargetProgress at 0%, 50%, 100%+",
-        "Tests calculateConsistencyMetric compliant and non-compliant cases",
-        "Tests calculateTradingDays distinct date counting",
-        "Tests calculateTrailingDrawdown high-water mark logic with peak tracking",
-        "Tests getOverallComplianceStatus returns worst status",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": ""
+      "notes": "Removed forex pairs and Twelve Data from tool descriptions, schema context, trading analyst persona, report planner, and context builder. Updated to futures-only references."
     },
     {
       "id": "US-004",
-      "title": "Create getPropCompliance tRPC Endpoint",
-      "description": "As a backend developer, I want a single tRPC endpoint that computes all prop compliance metrics for an account so that the frontend can fetch everything in one call.",
+      "title": "Remove MT4 and MT5 CSV Parsers",
+      "description": "As a developer, I want to remove MetaTrader parsers since they are forex-only platforms not relevant to futures traders.",
       "acceptanceCriteria": [
-        "Add getPropCompliance query to src/server/api/routers/accounts.ts",
-        "Input: { accountId: string }",
-        "Validates account ownership and that account is prop_challenge or prop_funded",
-        "Fetches all closed trades for the account, sorted by exitTime",
-        "Computes and returns: drawdown { current, limit, type, status, equityCurve }, dailyLoss { todayPnl, limit, status }, profitTarget { current, target, progress, status }, consistency { maxDayPercent, limit, isCompliant }, tradingDays { daysTraded, minRequired, remaining, dates }, timeline { startDate, endDate, daysRemaining, daysElapsed }, overallStatus (safe | caution | danger), account basic info",
-        "Uses utility functions from US-002",
-        "Uses buildEquityCurve() from src/lib/analytics/risk.ts for equity curve",
-        "Error constants in src/lib/constants/errors.ts",
-        "Uses protectedProcedure for auth",
+        "Delete src/lib/trades/csv-parsers/mt4-parser.ts",
+        "Delete src/lib/trades/csv-parsers/mt5-parser.ts",
+        "Remove MT4/MT5 from parser registry in src/lib/trades/csv-parsers/index.ts",
+        "Remove 'mt4' and 'mt5' from tradingPlatformEnum in src/server/db/schema.ts if safe (no existing data)",
+        "Remove any MT4/MT5 references in import page UI",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Deleted mt4-parser.ts (both MT4 and MT5 parsers were in one file). Removed mt4/mt5 from parser registry, TradingPlatform type, shared Zod schemas, DB pgEnum, import page PLATFORM_INFO, settings page labels/select/type. Updated test fixtures and accounts test to use ninjatrader instead of mt5."
+    },
+    {
+      "id": "US-005",
+      "title": "Remove Twelve Data Service Integration",
+      "description": "As a developer, I want to remove the Twelve Data API integration so that Databento is the sole market data provider.",
+      "acceptanceCriteria": [
+        "src/lib/market-data/service.ts — Remove TwelveDataBar and TwelveDataResponse interfaces",
+        "Remove fetchFromTwelveData() function entirely",
+        "Simplify fetchFromProvider() to only call Databento (remove forex/crypto routing logic)",
+        "Remove TWELVE_DATA_API_KEY from src/env.js or env schema if present",
+        "Remove TWELVE_DATA_SYMBOL_MAP from src/lib/market-data/symbols.ts",
+        "Update comments referencing Twelve Data in the service file",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 5,
       "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-005",
-      "title": "Integration Tests for getPropCompliance Endpoint",
-      "description": "As a developer, I want integration tests for the prop compliance endpoint so that we verify correct behavior with real database.",
-      "acceptanceCriteria": [
-        "Test file created: tests/integration/prop-compliance.test.ts",
-        "Uses setupTrader() fixture to create user + prop_challenge account with all prop fields set",
-        "Tests happy path: returns all compliance metrics for account with trades",
-        "Tests empty trades: returns safe status, 0% progress",
-        "Tests danger state: creates trades that bring account near max drawdown",
-        "Tests daily loss limit: creates today's trades exceeding daily limit",
-        "Tests profit target progress: creates trades that reach target",
-        "Tests auth validation: rejects request for account not owned by user",
-        "Tests non-prop account: rejects request for live/demo accounts",
-        "Tests trailing drawdown calculation vs static",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": ""
+      "notes": "Removed TwelveDataBar/TwelveDataResponse interfaces, fetchFromTwelveData() function, and TWELVE_DATA_SYMBOL_MAP. Simplified fetchFromProvider() to Databento-only. Removed TWELVE_DATA_API_KEY from env.js. Updated service.ts comments. Removed forex pairs from DATABENTO_SYMBOL_MAP."
     },
     {
       "id": "US-006",
-      "title": "Dashboard Prop Status Widget",
-      "description": "As a prop trader, I want to see my challenge compliance at a glance on the dashboard so I don't have to manually calculate drawdown limits.",
+      "title": "Remove Forex Specs, Symbols, and Helper Functions from symbols.ts",
+      "description": "As a developer, I want to remove all forex-specific data structures and functions from the symbols module so that only futures remain.",
       "acceptanceCriteria": [
-        "Create src/components/dashboard/widgets/prop-status-widget.tsx",
-        "Only renders when selected account is prop_challenge or prop_funded",
-        "Calls accounts.getPropCompliance for selected account",
-        "Shows compact card with: drawdown gauge (current % vs max %, color-coded), daily P&L vs daily loss limit progress bar, profit target progress bar with percentage, trading days X/Y count, days remaining countdown",
-        "Overall status indicator (safe/caution/danger) with colored dot",
-        "Uses Terminal design system: font-mono, text-[10px] labels, border-white/5 cards, rounded borders",
-        "Loading skeleton state via DashboardWidget wrapper",
-        "Empty state when no prop data available",
-        "All data-testid attributes on interactive/key elements",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+        "Remove ForexSpec interface from src/lib/market-data/symbols.ts",
+        "Remove FOREX_SPECS constant (all 27 forex pair specifications)",
+        "Remove FOREX_SYMBOLS array (all 27 forex symbol definitions)",
+        "Remove getForexSpec() function",
+        "Remove getForexPipSize() function",
+        "Remove calculateForexPnL() function",
+        "Simplify getSymbolsByType() — remove or just return FUTURES_SYMBOLS",
+        "Simplify getPointValue() and getTickSize() — remove forex branches",
+        "Remove forex-related exports from src/lib/market-data/index.ts",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
-      "priority": 7,
+      "priority": 6,
       "passes": true,
-      "notes": ""
+      "notes": "Removed ForexSpec interface, FOREX_SPECS (27 pairs), FOREX_SYMBOLS (27 symbols), getForexSpec(), getForexPipSize(), calculateForexPnL(), calculatePnL(), getSymbolsByType(). Simplified getPointValue() and getTickSize() to futures-only (removed instrumentType param). Removed forex pairs from TRADINGVIEW_SYMBOL_MAP. Updated callers: calculations.ts (removed calculatePips, simplified ROI), running-pnl.ts (removed forex branch), stats.ts, evaluation.ts, stats-panel.tsx (removed pips display), journal detail page, trade/new page."
     },
     {
       "id": "US-007",
-      "title": "Add Prop Status Widget to Dashboard Grid",
-      "description": "As a prop trader, I want the prop status widget to appear on my dashboard when I have an active prop account.",
+      "title": "Remove Forex P&L Calculations and Pip Functions",
+      "description": "As a developer, I want to remove forex-specific calculation functions so that only futures tick-based math remains.",
       "acceptanceCriteria": [
-        "Edit src/app/(protected)/dashboard/page.tsx",
-        "Import PropStatusWidget component",
-        "Conditionally render a GridItem with PropStatusWidget when selectedAccount?.accountType starts with prop_",
-        "Position as first widget in the grid (before Today's Performance)",
-        "Uses GridItem size md for appropriate width",
-        "Dashboard renders correctly with and without prop account selected",
+        "src/lib/trades/calculations.ts — Remove calculatePips(), getPipValue(), getTickOrPipSize() or simplify to tick-only",
+        "Remove getForexPipSize import from calculations.ts",
+        "Simplify any functions that branch on instrumentType to only handle futures",
+        "src/lib/trades/running-pnl.ts — Remove forex branches, remove calculateForexPnL references, remove instrumentType parameter if only for forex",
+        "src/lib/analytics/stats.ts — Remove instrumentType parameter if present",
+        "src/lib/strategy/evaluation.ts — Remove instrumentType parameter if present",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: widget appears for prop accounts, hidden for live/demo"
+        "Build passes (bun run build)"
       ],
-      "priority": 8,
+      "priority": 7,
       "passes": true,
-      "notes": ""
+      "notes": "Removed _instrumentType parameter from calculateActualRMultiple(), calculateROI(), calculateMAEMFE() in calculations.ts. Removed instrumentType from calculateAllStats() input type. Removed instrumentType from RunningPnlOptions, calculateRunningPnlAtTime() in running-pnl.ts. Removed instrumentType from TradeForStats, calculateRMultipleFromTrade() in stats.ts. Removed instrumentType from TradeForEvaluation, TradeWithAccount in evaluation.ts. Updated all callers in trades.ts, analytics.ts, strategies.ts, marketData.ts, maemfe.ts, journal pages, and trade-detail components."
     },
     {
       "id": "US-008",
-      "title": "Add Conditional Prop Nav Item to Sidebar",
-      "description": "As a prop trader, I want a Prop navigation item in the sidebar when I have prop accounts, so I can access the dedicated compliance page.",
+      "title": "Remove Instrument Type UI from Trade Entry and Import Pages",
+      "description": "As a trader, I should not see instrument type toggles since the product is futures-only.",
       "acceptanceCriteria": [
-        "Edit src/app/(protected)/_components/app-sidebar.tsx",
-        "Import Shield icon from lucide-react for the prop nav item",
-        "Add conditional nav item: { title: Prop, href: /prop, icon: Shield } — only shown when user has at least one prop_challenge or prop_funded account",
-        "Position between Analytics and AI Insights in the nav",
-        "Follows existing nav item pattern (SidebarMenuItem + SidebarMenuButton)",
-        "Active state works correctly when on /prop route",
-        "Terminal styling: font-mono text-xs uppercase tracking-wider",
+        "src/app/(protected)/trade/new/page.tsx — Remove instrumentType state, remove futures/forex tabs, remove FOREX_SYMBOLS import, always use FUTURES_SYMBOLS",
+        "src/app/(protected)/import/page.tsx — Remove instrument type toggle, remove setInstrumentType, hardcode to futures behavior",
+        "Remove any instrument type selection UI patterns in these pages",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)",
-        "Verify in browser: nav item appears/disappears based on account types"
+        "Verify in browser — new trade and import pages work without instrument type toggle"
       ],
-      "priority": 9,
+      "priority": 8,
       "passes": true,
-      "notes": ""
+      "notes": "Removed instrumentType state and Futures/Forex tabs from trade/new/page.tsx. Removed instrumentType state and Tabs UI from import/page.tsx. Hardcoded instrumentType: 'futures' in mutation calls. Simplified quantity label to 'Contracts'. Removed unused Tabs imports from import page."
     },
     {
       "id": "US-009",
-      "title": "Create /prop Page Layout and Account Selector",
-      "description": "As a prop trader, I want a dedicated prop compliance page with an account selector filtered to prop accounts only.",
+      "title": "Remove defaultInstrumentType from Settings",
+      "description": "As a developer, I want to remove the instrument type preference from settings since there is only one option now.",
       "acceptanceCriteria": [
-        "Create src/app/(protected)/prop/page.tsx",
-        "Header section with: page title Prop Compliance with font-mono section label, account selector dropdown filtered to prop_challenge and prop_funded only, challenge status badge (Active/Passed/Failed) with appropriate colors, phase indicator if linkedAccountId exists (shows Challenge → Funded journey)",
-        "Auto-selects first prop account if current selection is not a prop account",
-        "Uses accounts.getPropCompliance to fetch data for selected account",
-        "Loading state while data fetches",
-        "Empty state if user has no prop accounts (redirect suggestion to create one)",
-        "Terminal design system: dark background, font-mono labels, minimal border-radius",
-        "All data-testid attributes on key elements",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+        "src/app/(protected)/settings/_components/settings-content.tsx — Remove instrument type dropdown/selector",
+        "src/stores/settings-store.ts — Remove defaultInstrumentType from store state",
+        "src/server/api/routers/settings.ts — Remove defaultInstrumentType from settings input/output schemas",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)",
-        "Verify in browser"
+        "Verify in browser — settings page renders without instrument type option"
       ],
-      "priority": 10,
+      "priority": 9,
       "passes": true,
-      "notes": ""
+      "notes": "Removed defaultInstrumentType from APISettings and SettingsState interfaces in settings-store.ts. Removed from hydrate() and default values. Removed defaultInstrumentType from settings.ts tRPC update input schema. Removed defaultInstrument from settings-content.tsx state, hydration, save handler, Zustand sync, and Default Instrument Select UI. Removed from use-settings-hydration.tsx hydrate call."
     },
     {
       "id": "US-010",
-      "title": "Prop Compliance Grid — 4 Metric Cards",
-      "description": "As a prop trader, I want to see all my compliance metrics as visual cards on the prop page.",
+      "title": "Remove instrumentType from Trade Detail Components",
+      "description": "As a developer, I want to simplify trade detail components by removing the instrumentType parameter since all trades are futures.",
       "acceptanceCriteria": [
-        "Create src/components/prop/compliance-grid.tsx",
-        "4-card responsive grid (2x2 on desktop, 1-column on mobile)",
-        "Max Drawdown Card: circular gauge (reuse RiskGauge pattern) showing current vs limit, drawdown type label, danger zone coloring",
-        "Daily Loss Card: progress bar with today's P&L vs limit, shows actual dollar amounts and percentages",
-        "Profit Target Card: progress bar with current P&L vs target, shows percentage complete",
-        "Consistency Rule Card: shows largest single-day P&L as % of target vs consistency limit, compliant/non-compliant indicator",
-        "Each card shows safe/caution/danger colored indicator dot",
-        "Terminal design: border-white/5 cards, font-mono labels, text-[10px] subtitles",
-        "Responsive: stacks on mobile, 2x2 on tablet+",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+        "src/components/trade-detail/stats-panel.tsx — Remove pip display logic, remove instrumentType prop/parameter",
+        "src/components/trade-detail/running-pnl-tab.tsx — Remove instrumentType parameter",
+        "src/components/trade-detail/trade-replay.tsx — Remove instrumentType parameter",
+        "src/components/trade-detail/tradingview-chart.tsx — Remove instrumentType optional parameter",
+        "src/components/trade-detail/replay/time-sales-panel.tsx — Remove instrumentType parameter",
+        "Update all parent components passing instrumentType to these children",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
-      "priority": 11,
+      "priority": 10,
       "passes": true,
-      "notes": ""
+      "notes": "Removed instrumentType prop from ExecutionTimeline (interface, destructure, sizeLabel hardcoded to 'cts'). Removed instrumentType prop from TimeSalesPanel (interface, destructure, sizeLabel hardcoded to 'cts'). Removed instrumentType from ChartProps in tradingview-chart.tsx. Removed instrumentType={trade.instrumentType} from StatsPanel's ExecutionTimeline call. running-pnl-tab.tsx and trade-replay.tsx were already clean from US-007."
     },
     {
       "id": "US-011",
-      "title": "Prop Drawdown Chart with Threshold Lines",
-      "description": "As a prop trader, I want to see my equity curve overlaid with my max drawdown threshold so I can visualize how close I am to failing.",
+      "title": "Remove instrumentType from tRPC Routers",
+      "description": "As a developer, I want to remove instrumentType from all tRPC router inputs and queries so the API is futures-only.",
       "acceptanceCriteria": [
-        "Create src/components/prop/drawdown-chart.tsx",
-        "Reuses equity curve data from getPropCompliance (which uses buildEquityCurve)",
-        "Recharts AreaChart showing cumulative P&L over time",
-        "Horizontal reference line at max drawdown threshold (red dashed)",
-        "Horizontal reference line at daily loss limit (orange dashed)",
-        "Shaded danger zone below drawdown threshold",
-        "Color gradient: profit green above $0, loss red below",
-        "Tooltip showing date, P&L, drawdown %, distance to threshold",
-        "Legend explaining threshold lines",
-        "Terminal design: dark chart background, monospace axis labels, border-white/5 container",
-        "Responsive: works on mobile and desktop",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+        "src/server/api/routers/trades.ts — Remove instrumentType from create/update inputs, remove from queries/filters",
+        "src/server/api/routers/analytics.ts — Remove instrumentType casting and filtering",
+        "src/server/api/routers/marketData.ts — Simplify to Databento-only, remove instrument type routing comments",
+        "Remove instrumentType from any other routers that reference it",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
-      "priority": 12,
+      "priority": 11,
       "passes": true,
-      "notes": ""
+      "notes": "analytics.ts and marketData.ts were already clean from US-007. Updated marketData.ts comment to remove Twelve Data/forex reference. trades.ts still has instrumentType: 'futures' as const in 2 insert statements (required while DB column exists — US-013 will remove). Removed instrumentType from TradeForStatsPanel, TradeForContentPanel, TradeForTable Pick types in src/types/index.ts. Removed InstrumentType type alias. Fixed type error by adding 'as const' to batch import instrumentType literal."
     },
     {
       "id": "US-012",
-      "title": "Trading Days Timeline Component",
-      "description": "As a prop trader, I want to see a visual timeline of my trading days vs the minimum required and challenge deadline.",
+      "title": "Remove instrumentType from Shared Types and Schemas",
+      "description": "As a developer, I want to remove the instrument type from all shared Zod schemas and TypeScript types.",
       "acceptanceCriteria": [
-        "Create src/components/prop/trading-days-timeline.tsx",
-        "Shows visual bar/progress of days traded vs minTradingDays requirement",
-        "Days remaining countdown to challengeEndDate",
-        "Calendar-style grid (optional) highlighting active trading days",
-        "Shows X of Y days traded with progress bar",
-        "Shows Z days remaining in challenge window",
-        "Warning color if not on pace to hit minimum days",
-        "Terminal design: monospace, data-dense layout",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+        "src/lib/shared/schemas.ts — Remove instrumentTypeEnum Zod schema",
+        "src/lib/trades/csv-parsers/types.ts — Remove instrumentType from ParsedTrade type",
+        "Search for and remove any remaining 'futures' | 'forex' union types across the codebase",
+        "Remove any remaining imports of instrumentTypeEnum from shared schemas",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
-      "priority": 13,
+      "priority": 12,
       "passes": true,
-      "notes": ""
+      "notes": "Removed instrumentTypeEnum Zod schema and InstrumentType type from shared/schemas.ts. Removed instrumentType from tradeBaseFields. Removed instrumentType from ParsedTrade interface in csv-parsers/types.ts. Removed instrumentType: 'futures' from utils.ts and projectx-parser.ts parser outputs. Removed instrumentType assertion from csv-parsers.test.ts. No remaining imports of instrumentTypeEnum found. No remaining 'futures' | 'forex' union types in src/."
     },
     {
       "id": "US-013",
-      "title": "Challenge History Component",
-      "description": "As a trader who has attempted multiple challenges, I want to see a timeline of previous challenge attempts with pass/fail outcomes.",
+      "title": "Drop instrumentType Column and Enum from Database Schema",
+      "description": "As a developer, I want to remove the instrument_type column and enum from the database so the schema reflects the futures-only product.",
       "acceptanceCriteria": [
-        "Create src/components/prop/challenge-history.tsx",
-        "Fetches all user's prop accounts via accounts.getAll and filters to prop types",
-        "Displays vertical timeline of challenge accounts sorted by challengeStartDate",
-        "Each entry shows: account name, status badge (active/passed/failed), date range, final P&L",
-        "If linkedAccountId exists, shows → Funded connection with link to funded account",
-        "Challenge → Funded journeys visually connected",
-        "Empty state: No challenge history yet",
-        "Terminal design: monospace, timeline dots/lines, color-coded status",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+        "src/server/db/schema.ts — Remove instrumentTypeEnum pgEnum definition",
+        "Remove instrumentType column from trades table",
+        "Remove defaultInstrumentType column from userSettings table",
+        "Remove source column from candleCache if it only distinguished Twelve Data vs Databento (or simplify)",
+        "Run bun run db:push to apply schema changes",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
-      "priority": 14,
+      "priority": 13,
       "passes": true,
-      "notes": ""
+      "notes": "Removed instrumentTypeEnum pgEnum definition. Removed instrumentType column from trades table. Removed defaultInstrumentType column from userSettings table. Updated candleCache source comment to 'databento'. Updated symbol comments to remove EUR/USD. Removed instrumentType: 'futures' from trades.ts create and batchImport inserts. Removed instrumentType from test fixtures (trades.ts, scenarios.ts), batch-import test, rule-relevance test, rule-compliance test, strategy-evaluation test. Removed forex test cases and 5th arg from running-pnl.test.ts. Updated README.md."
     },
     {
       "id": "US-014",
-      "title": "Assemble Full /prop Page",
-      "description": "As a prop trader, I want the dedicated prop page to combine all compliance components into a cohesive layout.",
+      "title": "Clean Up Environment Variables and Documentation",
+      "description": "As a developer, I want to remove Twelve Data env var references and update project documentation to reflect futures-only product.",
       "acceptanceCriteria": [
-        "Edit src/app/(protected)/prop/page.tsx to assemble components: Header (US-009 account selector + status badge), Compliance Grid (US-010), Drawdown Chart (US-011), Trading Days Timeline (US-012), Challenge History (US-013)",
-        "Sections properly spaced with Terminal design space-y-6",
-        "All components receive data from single getPropCompliance query where possible",
-        "Challenge History section uses separate query (needs all accounts)",
-        "Page works when switching between different prop accounts",
-        "Responsive layout: single column on mobile, 2-column sections on desktop",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: full page flow works end-to-end"
-      ],
-      "priority": 15,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-016",
-      "title": "Prop-Aware Risk of Ruin Framing in Analytics",
-      "description": "As a prop trader, I want the Risk of Ruin display to say 'Probability of failing this challenge' when viewing a prop account.",
-      "acceptanceCriteria": [
-        "Edit src/components/analytics/risk-gauge.tsx: add optional accountType prop",
-        "When accountType starts with prop_ AND ruinThresholdSource === account: subtitle changes from Risk of Ruin to Challenge Failure Risk, tooltip says Based on X% max drawdown rule",
-        "Existing behavior unchanged for non-prop accounts",
-        "Edit src/app/(protected)/analytics/page.tsx: pass accountType from selected account to RiskGauge",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: RoR label changes when prop account selected"
-      ],
-      "priority": 16,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-017",
-      "title": "Monte Carlo Challenge Simulator Utility",
-      "description": "As a developer, I want a Monte Carlo simulation that models prop challenge outcomes so that we can show X% of simulations pass the challenge.",
-      "acceptanceCriteria": [
-        "Create simulatePropChallenge function in src/lib/analytics/prop-compliance.ts",
-        "Inputs: { winRate, avgWin, avgLoss, profitTarget, maxDrawdown, initialBalance, maxTrades, iterations? }",
-        "For each simulation: run random trades using win rate and avg win/loss, track equity and high-water-mark drawdown, stop if profit target reached (pass), max drawdown breached (fail), or max trades exceeded (fail)",
-        "Returns: { passRate, failRate, avgTradesToPass, medianOutcome, percentiles, simulations }",
-        "Default 10000 iterations",
-        "Pure function, no DB calls",
+        "Remove TWELVE_DATA_API_KEY from .env.example if it exists",
+        "Remove Twelve Data references from CLAUDE.md environment variables section",
+        "Update CLAUDE.md description to 'futures traders' not 'futures and forex traders'",
+        "Remove 'forex' from any remaining documentation files in plans/ or docs/",
+        "Update ROADMAP.md if it references forex features",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
-      "priority": 17,
+      "priority": 14,
       "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-018",
-      "title": "Unit Tests for Monte Carlo Challenge Simulator",
-      "description": "As a developer, I want unit tests for the Monte Carlo challenge simulator to verify statistical correctness.",
-      "acceptanceCriteria": [
-        "Add tests to tests/unit/prop-compliance.test.ts (or separate file)",
-        "Tests high win rate (80%) produces high pass rate",
-        "Tests low win rate (30%) produces low pass rate",
-        "Tests edge case: profitTarget = 0 (100% pass)",
-        "Tests edge case: maxDrawdown = 0 (100% fail)",
-        "Tests return shape: all expected fields present",
-        "Tests percentiles are in correct order",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 18,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-019",
-      "title": "Monte Carlo Challenge Outcome Card on Prop Page",
-      "description": "As a prop trader, I want to see a Monte Carlo simulation showing X% chance of passing this challenge on the prop page.",
-      "acceptanceCriteria": [
-        "Create src/components/prop/challenge-simulator.tsx",
-        "Calls simulatePropChallenge with current account stats (win rate, avg win/loss from accounts.getStats)",
-        "Shows prominent pass/fail percentage with large number display",
-        "Mini histogram or distribution chart of simulated outcomes (reuse MonteCarloChart pattern)",
-        "Shows: Based on X trades, Y% win rate, Z avg win/loss",
-        "Disclaimer: Simulation assumes future performance matches historical stats",
-        "Terminal design: dark card, monospace numbers, profit/loss coloring",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 19,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-020",
-      "title": "Add Prop Compliance to AI Context",
-      "description": "As a developer, I want the AI system to have access to prop compliance data so it can answer questions about challenge progress.",
-      "acceptanceCriteria": [
-        "Add getPropCompliance to the AI tools available endpoints list in src/lib/ai/report-pipeline/planner.ts",
-        "Update src/lib/ai/schema-context.ts to include prop compliance data context",
-        "Update src/lib/ai/tools/definitions.ts to include prop compliance as a callable tool",
-        "Implement the tool handler in src/lib/ai/tools/call-analytics.ts (or new call-prop.ts)",
-        "The AI can now query prop compliance metrics for the user's selected account",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 20,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-021",
-      "title": "Add Prop-Related Suggested Prompts to AI Chat",
-      "description": "As a prop trader, I want suggested prompts related to my prop challenge when using AI chat so I can quickly ask relevant questions.",
-      "acceptanceCriteria": [
-        "Edit src/lib/constants/ai.ts",
-        "Add to SUGGESTED_CHAT_QUERIES: How am I doing on my prop challenge?, Will I pass this challenge at my current pace?, What's my risk of failing the challenge?",
-        "Add to SUGGESTED_REPORT_PROMPTS: Generate a prop challenge compliance report with drawdown analysis, daily loss tracking, and probability of passing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 21,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-022",
-      "title": "Trade Detail Prop Context Banner",
-      "description": "As a prop trader, when I view a trade on a prop account, I want to see a contextual banner showing how that trade affected my challenge compliance.",
-      "acceptanceCriteria": [
-        "Find the trade detail view component (likely in src/app/(protected)/journal/ or trade detail page)",
-        "Add a small banner below trade info for prop accounts showing: if trade was a loss 'After this trade: X% of Y% max drawdown used', if trade was a win 'Profit target: Z% reached'",
-        "Banner uses font-mono text-[10px] styling, subtle border-white/5 container",
-        "Only shows for trades on prop_challenge or prop_funded accounts",
-        "Uses existing trade data + account data (no new API call needed)",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 22,
-      "passes": true,
-      "notes": ""
+      "notes": "Updated CLAUDE.md (description + removed TWELVE_DATA_API_KEY env var). Updated README.md (description + removed MT4/MT5 from CSV import). Updated ROADMAP.md (Phase 7 historical data, replay, brokers — removed forex/MT4/MT5/Twelve Data refs). Updated .claude/skills/ (architecture SKILL.md, MARKET_DATA_REFERENCE.md, testing TESTING_REFERENCE.md, consistency-audit SKILL.md, backend TRPC_REFERENCE.md). Updated plans/ (prd-running-pnl.md, prd-command-center-dashboard.md, prd-broker-live-integration.md with futures-only pivot note). No .env.example exists."
     },
     {
       "id": "US-015",
-      "title": "E2E Tests for Prop Dashboard Widget and /prop Page",
-      "description": "As a developer, I want E2E tests for the prop compliance UI so that we can verify user flows work correctly.",
+      "title": "Integration Tests — Verify Forex Removal Complete",
+      "description": "As a developer, I want to verify that the forex removal is complete, existing futures flows still work, and no forex references remain.",
       "acceptanceCriteria": [
-        "Test file created: tests/e2e/prop-compliance.spec.ts",
-        "Tests dashboard widget visibility: shows for prop accounts, hidden for live/demo",
-        "Tests prop nav item: appears when prop accounts exist",
-        "Tests /prop page loads with compliance grid",
-        "Tests account selector on prop page switches between prop accounts",
-        "Tests compliance cards show data (drawdown, daily loss, profit target, consistency)",
-        "Tests drawdown chart renders",
-        "All new UI elements have data-testid attributes",
-        "All tests pass (bun run test:e2e)",
-        "Typecheck passes (bun run check)"
+        "Verify existing trade tests pass with futures-only schema",
+        "Verify existing analytics tests pass without instrumentType filtering",
+        "Verify CSV import tests pass without MT4/MT5 parsers",
+        "Run grep for 'forex|FOREX|Forex' in src/ — zero results (excluding comments)",
+        "Run grep for 'twelve.data|TWELVE_DATA' in src/ — zero results",
+        "Run grep for 'pipSize|pipValue|calculatePips|getForexPipSize' in src/ — zero results",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
       ],
-      "priority": 23,
+      "priority": 15,
       "passes": true,
-      "notes": ""
+      "notes": "All greps confirmed zero forex/Twelve Data/pip/instrumentType references in src/. Fixed 8 test files with stale EURUSD references from US-013 (EURUSD→MES, updated P&L values, position sizes). Fixed pre-existing prop-compliance test mismatch. All 1027 tests pass across 32 test files. Build passes."
+    },
+    {
+      "id": "US-016",
+      "title": "Final Build Verification and Smoke Test",
+      "description": "As a developer, I want a clean build and runtime verification to confirm the futures-only product works end-to-end.",
+      "acceptanceCriteria": [
+        "bun run check passes with zero errors",
+        "bun run build passes with zero errors",
+        "bun run test passes — all integration tests green",
+        "Verify no dead imports or unused variables from removal",
+        "Verify no remaining instrumentType references in src/",
+        "Dev server starts without errors (bun run dev)"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "All checks pass: Biome (only pre-existing archived PRD JSON error), build (zero errors), 1027 tests across 32 files, zero instrumentType in src/, dev server starts cleanly. Futures-only cleanup is complete."
     }
   ]
 }

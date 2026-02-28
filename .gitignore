@@ -62,6 +62,8 @@ scripts/ralph/.pr-number
 scripts/ralph/.last-branch
 scripts/ralph/.processed-comments
 scripts/ralph/.greptile-comments.json
+scripts/ralph/.greptile-summary-id
+scripts/ralph/.greptile-summary-context.md
 scripts/ralph/prd.json
 scripts/ralph/archive/
 

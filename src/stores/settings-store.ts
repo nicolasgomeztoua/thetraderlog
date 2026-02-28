@@ -21,7 +21,6 @@ export interface APISettings {
 	timezone: string | null;
 	currency: string | null;
 	breakevenThreshold: string | null;
-	defaultInstrumentType: "futures" | "forex" | null;
 	tradingSessions: string | null;
 	theme: string | null;
 }
@@ -32,7 +31,6 @@ interface SettingsState {
 	timezoneAbbr: string;
 	currency: string;
 	breakevenThreshold: number;
-	defaultInstrumentType: "futures" | "forex";
 	tradingSessions: TradingSession[];
 	theme: string;
 
@@ -77,7 +75,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 	timezoneAbbr: getTimezoneAbbreviation(getBrowserTimezone()),
 	currency: "USD",
 	breakevenThreshold: 3.0,
-	defaultInstrumentType: "futures",
 	tradingSessions: DEFAULT_SESSIONS,
 	theme: "terminal",
 	isHydrated: false,
@@ -92,7 +89,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 			timezoneAbbr,
 			currency: settings.currency || "USD",
 			breakevenThreshold: parseFloat(settings.breakevenThreshold || "3.00"),
-			defaultInstrumentType: settings.defaultInstrumentType || "futures",
 			tradingSessions: parseTradingSessions(settings.tradingSessions),
 			theme: settings.theme || "terminal",
 			isHydrated: true,

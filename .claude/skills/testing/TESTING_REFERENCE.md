@@ -185,7 +185,6 @@ resetAccountCounter();
 
 interface CreateTestTradeOptions {
   symbol?: string;           // Default: "ES"
-  instrumentType?: "futures" | "forex";  // Default: "futures"
   direction?: "long" | "short";          // Default: "long"
   status?: "open" | "closed";            // Default: "closed"
   entryPrice?: string;       // Default: "5000.00"

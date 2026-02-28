@@ -2,7 +2,6 @@ import { getTestDb, schema } from "../db";
 
 export interface CreateTestTradeOptions {
 	symbol?: string;
-	instrumentType?: "futures" | "forex";
 	direction?: "long" | "short";
 	status?: "open" | "closed";
 	entryPrice?: string;
@@ -34,7 +33,6 @@ export async function createTestTrade(
 	_tradeCounter++;
 
 	const symbol = options.symbol ?? "ES";
-	const instrumentType = options.instrumentType ?? "futures";
 	const direction = options.direction ?? "long";
 	const status = options.status ?? "closed";
 	const entryPrice = options.entryPrice ?? "5000.00";
@@ -71,7 +69,6 @@ export async function createTestTrade(
 			userId,
 			accountId,
 			symbol,
-			instrumentType,
 			direction,
 			status,
 			entryPrice,

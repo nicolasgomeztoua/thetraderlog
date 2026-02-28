@@ -32,7 +32,6 @@ interface UseReplayEngineOptions {
 	entryPrice: string | null;
 	direction: "long" | "short";
 	symbol: string;
-	instrumentType: "futures" | "forex";
 	initialSpeed?: ReplaySpeed;
 }
 
@@ -56,7 +55,6 @@ export function useReplayEngine({
 	entryPrice: _entryPrice,
 	direction,
 	symbol,
-	instrumentType,
 	initialSpeed = "1x",
 }: UseReplayEngineOptions) {
 	// Convert times to timestamps (seconds)
@@ -183,7 +181,6 @@ export function useReplayEngine({
 		currentPrice,
 		direction,
 		symbol,
-		instrumentType,
 	);
 
 	// Calculate progress percentage

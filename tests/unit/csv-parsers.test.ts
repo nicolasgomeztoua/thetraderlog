@@ -34,7 +34,6 @@ describe("futures CSV parsers", () => {
 		expect(result.success).toBe(true);
 		expect(result.trades.length).toBeGreaterThan(0);
 		expect(result.trades[0]?.symbol).toBe("NQ");
-		expect(result.trades[0]?.instrumentType).toBe("futures");
 	});
 
 	it("should parse NinjaTrader executions into closed trades", async () => {

@@ -204,10 +204,9 @@ describe("accounts.getPropCompliance", () => {
 			// Equity curve: empty
 			expect(result.drawdown.equityCurve).toHaveLength(0);
 
-			// Overall should be safe or danger depending on profit target
-			// Profit progress is 0 which is < 50% → danger for profit, but drawdown/daily are safe
-			// Overall = worst = danger
-			expect(result.overallStatus).toBe("danger");
+			// Overall only considers drawdown + daily loss (profit target excluded as progress metric)
+			// Both are safe with no trades
+			expect(result.overallStatus).toBe("safe");
 		});
 	});
 

@@ -37,7 +37,7 @@ grep -rn "stopLoss.*entry\|entry.*stopLoss" src/
 grep -rn "Math.abs.*entry\|Math.abs.*stop" src/
 
 # Point value lookups
-grep -rn "pointValue\|getPointValue\|FUTURES_SPECS\|FOREX_SPECS" src/
+grep -rn "pointValue\|getPointValue\|FUTURES_SPECS" src/
 
 # R-multiple patterns
 grep -rn "rMultiple\|r-multiple\|R-Multiple" src/

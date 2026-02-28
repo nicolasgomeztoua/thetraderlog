@@ -42,8 +42,8 @@ done
 
 MAX_ITERATIONS=${1:-30}
 PR_REVIEW_CYCLES=${2:-10}
-PR_REVIEW_INITIAL_WAIT=480   # 8 minutes — give Greptile time to finish
-PR_REVIEW_INTERVAL=300       # 5 minutes between subsequent checks
+POLL_INTERVAL=30             # Check every 30 seconds for Greptile response
+POLL_MAX_WAIT=1200            # Max 10 minutes waiting per poll cycle
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
@@ -388,115 +388,192 @@ fi
 echo "$PR_NUMBER" > "$PR_NUMBER_FILE"
 
 # =============================================================================
-# PHASE 4: Greptile Review Loop
+# PHASE 4: Score-Driven Greptile Review Loop
 # =============================================================================
 
 echo ""
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
-echo -e "${MAGENTA} Ralph PR Review Phase - Monitoring for Greptile Comments${NC}"
-echo -e "${MAGENTA} Checking every 5 minutes for $PR_REVIEW_CYCLES cycles${NC}"
+echo -e "${MAGENTA} Ralph PR Review Phase - Score-Driven Greptile Loop${NC}"
+echo -e "${MAGENTA} Polling every ${POLL_INTERVAL}s | Target: Confidence Score 5/5${NC}"
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════${NC}"
 
-# Track which comments we've already processed
+# Track which inline comments we've already processed
 PROCESSED_COMMENTS_FILE="$SCRIPT_DIR/.processed-comments"
 touch "$PROCESSED_COMMENTS_FILE"
 
-# Track consecutive cycles with no new comments for early exit
-NO_COMMENTS_COUNT=0
-# Track if Claude has signaled all reviews are complete
-CLAUDE_SIGNALED_COMPLETE=false
+# Greptile summary state
+GREPTILE_SUMMARY_FILE="$SCRIPT_DIR/.greptile-summary-id"
+SUMMARY_ID=""
+SUMMARY_BODY=""
+GREPTILE_SCORE=0
 
-echo -e "${YELLOW}Waiting 8 minutes for Greptile to complete its review...${NC}"
-sleep $PR_REVIEW_INITIAL_WAIT
+# --- Helper: Fetch Greptile's summary comment (the one with "Confidence Score") ---
+fetch_greptile_summary() {
+    SUMMARY_ID=""
+    SUMMARY_BODY=""
+    GREPTILE_SCORE=0
 
-for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
-    echo ""
-    echo -e "${CYAN}PR Review Cycle $cycle of $PR_REVIEW_CYCLES${NC}"
-
-    # Get all review comments from Greptile
-    GREPTILE_COMMENTS=$(gh api \
-        "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" \
-        --jq '.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, path: .path, line: .line, commit_id: .commit_id}' \
+    local raw
+    raw=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
+        --jq '[.[] | select(.user.login | test("greptile"; "i")) | select(.body | test("Confidence Score"))] | last // empty' \
         2>/dev/null || echo "")
 
-    # Also check issue comments (general PR comments)
-    GREPTILE_ISSUE_COMMENTS=$(gh api \
-        "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-        --jq '.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, path: "", line: 0}' \
-        2>/dev/null || echo "")
-
-    ALL_COMMENTS="$GREPTILE_COMMENTS"$'\n'"$GREPTILE_ISSUE_COMMENTS"
-
-    # Filter to only unprocessed comments
-    NEW_COMMENTS=""
-    while IFS= read -r comment; do
-        [ -z "$comment" ] && continue
-        COMMENT_ID=$(echo "$comment" | jq -r '.id')
-        if ! grep -q "^$COMMENT_ID$" "$PROCESSED_COMMENTS_FILE" 2>/dev/null; then
-            NEW_COMMENTS="$NEW_COMMENTS"$'\n'"$comment"
+    if [ -n "$raw" ] && [ "$raw" != "null" ]; then
+        SUMMARY_ID=$(echo "$raw" | jq -r '.id')
+        SUMMARY_BODY=$(echo "$raw" | jq -r '.body')
+        # Parse "Confidence Score: X/5" — extract the number
+        local score_str
+        score_str=$(echo "$SUMMARY_BODY" | grep -oE 'Confidence Score: [0-9]+/5' | head -1 || echo "")
+        if [ -n "$score_str" ]; then
+            GREPTILE_SCORE=$(echo "$score_str" | grep -oE '[0-9]+' | head -1)
         fi
-    done <<< "$ALL_COMMENTS"
+        echo "$SUMMARY_ID" > "$GREPTILE_SUMMARY_FILE"
+    fi
+}
 
-    # Remove leading newline
-    NEW_COMMENTS=$(echo "$NEW_COMMENTS" | sed '/^$/d')
+# --- Helper: Wait for Greptile to post/update its summary comment ---
+# Detects change by comparing summary body md5 hash.
+# Args: $1 = previous hash (empty string = wait for any summary)
+# Returns: 0 if Greptile responded, 1 on timeout
+wait_for_greptile() {
+    local prev_hash="$1"
+    local waited=0
 
-    if [ -z "$NEW_COMMENTS" ]; then
-        echo -e "${YELLOW}No new Greptile comments found.${NC}"
-        NO_COMMENTS_COUNT=$((NO_COMMENTS_COUNT + 1))
+    echo -e "${YELLOW}Polling for Greptile response (every ${POLL_INTERVAL}s, max ${POLL_MAX_WAIT}s)...${NC}"
 
-        # Early exit conditions:
-        # 1. Claude previously signaled completion AND no new comments = immediate exit
-        # 2. No new comments for 2 consecutive cycles (original behavior)
-        if [ "$CLAUDE_SIGNALED_COMPLETE" = true ]; then
-            echo -e "${GREEN}Claude signaled completion and no new comments. All reviews complete!${NC}"
+    while [ "$waited" -lt "$POLL_MAX_WAIT" ]; do
+        fetch_greptile_summary
+        local curr_hash=""
+        if [ -n "$SUMMARY_BODY" ]; then
+            curr_hash=$(echo "$SUMMARY_BODY" | md5)
+        fi
+
+        if [ -n "$SUMMARY_BODY" ] && [ "$curr_hash" != "$prev_hash" ]; then
+            echo -e "${GREEN}Greptile responded! (score: ${GREPTILE_SCORE}/5)${NC}"
+            return 0
+        fi
+
+        sleep "$POLL_INTERVAL"
+        waited=$((waited + POLL_INTERVAL))
+        echo -e "  ${CYAN}... waited ${waited}s${NC}"
+    done
+
+    echo -e "${RED}Timed out waiting for Greptile (${POLL_MAX_WAIT}s).${NC}"
+    return 1
+}
+
+# --- Helper: Post @greptileai tag to trigger a fresh re-review ---
+trigger_greptile_review() {
+    echo -e "${YELLOW}Tagging @greptileai for re-review...${NC}"
+    gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
+        -f body="@greptileai" \
+        >/dev/null 2>&1 || echo -e "${RED}Warning: failed to tag @greptileai${NC}"
+}
+
+# --- Phase 4 Main Loop ---
+
+# Step 1: Wait for Greptile's initial summary (no fixed 8-min wait)
+echo -e "${YELLOW}Waiting for Greptile's initial review...${NC}"
+if ! wait_for_greptile ""; then
+    echo -e "${RED}Greptile didn't respond in time. Skipping review loop.${NC}"
+else
+    # Step 2: Score-driven review loop
+    for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
+        echo ""
+        echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
+        echo -e "${CYAN} Review Cycle $cycle of $PR_REVIEW_CYCLES — Current Score: ${GREPTILE_SCORE}/5${NC}"
+        echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
+
+        # 2a. Check if we've hit 5/5
+        if [ "$GREPTILE_SCORE" -ge 5 ]; then
+            echo -e "${GREEN}Confidence Score: 5/5! Safe to merge.${NC}"
             break
         fi
 
-        if [ "$NO_COMMENTS_COUNT" -ge 2 ]; then
-            echo -e "${GREEN}No new Greptile comments for 2 consecutive cycles. All reviews complete!${NC}"
-            break
+        # 2b. Save summary hash for later comparison
+        local_prev_hash=""
+        if [ -n "$SUMMARY_BODY" ]; then
+            local_prev_hash=$(echo "$SUMMARY_BODY" | md5)
         fi
-    else
-        # Reset counters when we find new comments
-        NO_COMMENTS_COUNT=0
-        CLAUDE_SIGNALED_COMPLETE=false
 
-        COMMENT_COUNT=$(echo "$NEW_COMMENTS" | grep -c '^{' || echo "0")
-        echo -e "${GREEN}Found $COMMENT_COUNT new Greptile comment(s)! Invoking Claude for review...${NC}"
+        # 2c. Fetch inline PR review comments from Greptile, filter to unprocessed
+        GREPTILE_COMMENTS=$(gh api \
+            "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" \
+            --jq '.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, path: .path, line: .line, commit_id: .commit_id}' \
+            2>/dev/null || echo "")
 
-        # Save comments to temp file for Claude to process
+        NEW_COMMENTS=""
+        while IFS= read -r comment; do
+            [ -z "$comment" ] && continue
+            COMMENT_ID=$(echo "$comment" | jq -r '.id')
+            if ! grep -q "^$COMMENT_ID$" "$PROCESSED_COMMENTS_FILE" 2>/dev/null; then
+                NEW_COMMENTS="$NEW_COMMENTS"$'\n'"$comment"
+            fi
+        done <<< "$GREPTILE_COMMENTS"
+        NEW_COMMENTS=$(echo "$NEW_COMMENTS" | sed '/^$/d')
+
+        # 2d. Prepare context for Claude
         COMMENTS_FILE="$SCRIPT_DIR/.greptile-comments.json"
-        echo "$NEW_COMMENTS" | jq -s '.' > "$COMMENTS_FILE"
+        SUMMARY_CONTEXT_FILE="$SCRIPT_DIR/.greptile-summary-context.md"
 
-        # Run Claude with the PR review prompt
+        if [ -n "$NEW_COMMENTS" ]; then
+            COMMENT_COUNT=$(echo "$NEW_COMMENTS" | grep -c '^{' || echo "0")
+            echo -e "${GREEN}Found $COMMENT_COUNT new inline comment(s).${NC}"
+            echo "$NEW_COMMENTS" | jq -s '.' > "$COMMENTS_FILE"
+            # Clear summary context — inline comments take priority
+            echo "" > "$SUMMARY_CONTEXT_FILE"
+        else
+            echo -e "${YELLOW}No new inline comments, but score is ${GREPTILE_SCORE}/5.${NC}"
+            echo -e "${YELLOW}Passing summary as context for proactive fixes.${NC}"
+            # No inline comments — write summary body as context for Claude
+            echo "[]" > "$COMMENTS_FILE"
+            cat > "$SUMMARY_CONTEXT_FILE" <<SUMMARYEOF
+# Greptile Summary Review (Score: ${GREPTILE_SCORE}/5)
+
+The Greptile reviewer gave this PR a score of **${GREPTILE_SCORE}/5**. There are no new inline comments, but the summary below contains concerns that should be addressed to improve the score.
+
+## Summary Content
+
+$SUMMARY_BODY
+SUMMARYEOF
+        fi
+
+        # 2e. Invoke Claude to fix issues
+        echo -e "${YELLOW}Invoking Claude to address review feedback...${NC}"
         OUTPUT=$(cd "$PROJECT_ROOT" && cat "$SCRIPT_DIR/pr-review-prompt.md" | claude --dangerously-skip-permissions -p 2>&1 | tee /dev/stderr) || true
 
-        # Mark comments as processed
-        echo "$NEW_COMMENTS" | jq -r '.id' >> "$PROCESSED_COMMENTS_FILE"
+        # 2f. Mark inline comments as processed
+        if [ -n "$NEW_COMMENTS" ]; then
+            echo "$NEW_COMMENTS" | jq -r '.id' >> "$PROCESSED_COMMENTS_FILE"
+        fi
+        echo -e "${GREEN}Finished processing review feedback.${NC}"
 
-        # Check if Claude signaled all reviews are complete
-        if echo "$OUTPUT" | grep -q "<review>COMPLETE</review>"; then
-            echo -e "${GREEN}Claude signaled all reviews are addressed.${NC}"
-            CLAUDE_SIGNALED_COMPLETE=true
-            # Skip the wait - immediately check for new comments
-            continue
+        # Check if this is the last cycle
+        if [ "$cycle" -eq "$PR_REVIEW_CYCLES" ]; then
+            echo -e "${YELLOW}Reached max review cycles ($PR_REVIEW_CYCLES).${NC}"
+            break
         fi
 
-        echo -e "${GREEN}Finished processing Greptile comments.${NC}"
-    fi
+        # 2g. Tag @greptileai to trigger re-review
+        trigger_greptile_review
 
-    # Check if this is the last cycle
-    if [ "$cycle" -eq "$PR_REVIEW_CYCLES" ]; then
-        echo -e "${GREEN}Completed all PR review cycles.${NC}"
-        break
-    fi
+        # 2h. Wait for Greptile to update its summary
+        if ! wait_for_greptile "$local_prev_hash"; then
+            echo -e "${RED}Greptile didn't respond after fixes. Exiting review loop.${NC}"
+            break
+        fi
 
-    # Only wait if we haven't signaled completion
-    if [ "$CLAUDE_SIGNALED_COMPLETE" = false ]; then
-        echo -e "${YELLOW}Waiting 5 minutes before next check...${NC}"
-        sleep $PR_REVIEW_INTERVAL
-    fi
-done
+        # Score was updated by wait_for_greptile → fetch_greptile_summary
+        # Loop continues to check the new score at the top
+    done
+fi
+
+# Summary
+if [ "$GREPTILE_SCORE" -ge 5 ]; then
+    echo -e "${GREEN}PR achieved Confidence Score 5/5!${NC}"
+else
+    echo -e "${YELLOW}Review loop ended with score: ${GREPTILE_SCORE}/5${NC}"
+fi
 
 # =============================================================================
 # COMPLETE

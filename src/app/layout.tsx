@@ -11,7 +11,7 @@ import { TRPCReactProvider } from "@/trpc/react";
 export const metadata: Metadata = {
 	title: "EdgeJournal - AI Trading Analytics for Serious Traders",
 	description:
-		"The professional trading journal for Futures and Forex traders. Track trades, analyze patterns, and get AI-driven insights to find your edge.",
+		"The professional trading journal for futures traders. Track trades, analyze patterns, and get AI-driven insights to find your edge.",
 	icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

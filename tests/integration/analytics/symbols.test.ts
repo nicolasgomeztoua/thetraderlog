@@ -19,8 +19,8 @@ describe("Analytics Symbols", () => {
 	// NQ: 2 trades (1 win @ 1995, 1 loss @ -1005)
 	//     - Total P&L: 1995 - 1005 = 990
 	//     - 1 win, 1 loss = 50% win rate
-	// EURUSD: 1 trade (1 loss @ -202)
-	//     - Total P&L: -202
+	// MES: 1 trade (1 loss @ -42)
+	//     - Total P&L: -42
 	//     - 0 wins, 1 loss = 0% win rate
 
 	beforeAll(async () => {
@@ -47,7 +47,7 @@ describe("Analytics Symbols", () => {
 				expect(Array.isArray(result)).toBe(true);
 			});
 
-			it("should return correct number of symbols (3: ES, NQ, EURUSD)", async () => {
+			it("should return correct number of symbols (3: ES, NQ, MES)", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
@@ -115,14 +115,14 @@ describe("Analytics Symbols", () => {
 				expect(nq?.trades).toBe(2);
 			});
 
-			it("should have EURUSD with 1 trade", async () => {
+			it("should have MES with 1 trade", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
 
-				const eurusd = result.find((r) => r.symbol === "EURUSD");
-				expect(eurusd).toBeDefined();
-				expect(eurusd?.trades).toBe(1);
+				const mes = result.find((r) => r.symbol === "MES");
+				expect(mes).toBeDefined();
+				expect(mes?.trades).toBe(1);
 			});
 
 			it("should have total trades summing to 7", async () => {
@@ -156,14 +156,14 @@ describe("Analytics Symbols", () => {
 				expect(nq?.pnl).toBeCloseTo(990, 0);
 			});
 
-			it("should have EURUSD with negative total P&L", async () => {
+			it("should have MES with negative total P&L", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
 
-				const eurusd = result.find((r) => r.symbol === "EURUSD");
-				// EURUSD P&L: -202
-				expect(eurusd?.pnl).toBeCloseTo(-202, 0);
+				const mes = result.find((r) => r.symbol === "MES");
+				// MES P&L: -42
+				expect(mes?.pnl).toBeCloseTo(-42, 0);
 			});
 
 			it("should have total P&L across all symbols summing to expected value", async () => {
@@ -187,14 +187,14 @@ describe("Analytics Symbols", () => {
 				expect(nq?.winRate).toBeCloseTo(50, 0);
 			});
 
-			it("should calculate EURUSD win rate correctly (0%)", async () => {
+			it("should calculate MES win rate correctly (0%)", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
 
-				const eurusd = result.find((r) => r.symbol === "EURUSD");
-				// EURUSD: 0 wins, 1 loss = 0% win rate
-				expect(eurusd?.winRate).toBeCloseTo(0, 0);
+				const mes = result.find((r) => r.symbol === "MES");
+				// MES: 0 wins, 1 loss = 0% win rate
+				expect(mes?.winRate).toBeCloseTo(0, 0);
 			});
 
 			it("should have ES with high win rate", async () => {
@@ -242,15 +242,15 @@ describe("Analytics Symbols", () => {
 				expect(nq?.losses).toBe(1);
 			});
 
-			it("should have correct wins and losses for EURUSD", async () => {
+			it("should have correct wins and losses for MES", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
 
-				const eurusd = result.find((r) => r.symbol === "EURUSD");
-				// EURUSD: 0 wins, 1 loss (-202)
-				expect(eurusd?.wins).toBe(0);
-				expect(eurusd?.losses).toBe(1);
+				const mes = result.find((r) => r.symbol === "MES");
+				// MES: 0 wins, 1 loss (-42)
+				expect(mes?.wins).toBe(0);
+				expect(mes?.losses).toBe(1);
 			});
 
 			it("should have wins + losses = trades when no breakevens", async () => {
@@ -291,14 +291,14 @@ describe("Analytics Symbols", () => {
 				expect(nq?.profitFactor).toBeCloseTo(1.98, 1);
 			});
 
-			it("should have EURUSD with profit factor of 0 (no wins)", async () => {
+			it("should have MES with profit factor of 0 (no wins)", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
 
-				const eurusd = result.find((r) => r.symbol === "EURUSD");
-				// EURUSD: 0 wins, so profit factor = 0
-				expect(eurusd?.profitFactor).toBe(0);
+				const mes = result.find((r) => r.symbol === "MES");
+				// MES: 0 wins, so profit factor = 0
+				expect(mes?.profitFactor).toBe(0);
 			});
 
 			it("should have non-negative profit factors", async () => {
@@ -333,14 +333,14 @@ describe("Analytics Symbols", () => {
 				expect(nq?.avgTrade).toBeCloseTo(495, 0);
 			});
 
-			it("should have correct average trade for EURUSD", async () => {
+			it("should have correct average trade for MES", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
 
-				const eurusd = result.find((r) => r.symbol === "EURUSD");
-				// EURUSD avg trade: -202 / 1 = -202
-				expect(eurusd?.avgTrade).toBeCloseTo(-202, 0);
+				const mes = result.find((r) => r.symbol === "MES");
+				// MES avg trade: -42 / 1 = -42
+				expect(mes?.avgTrade).toBeCloseTo(-42, 0);
 			});
 		});
 
@@ -365,12 +365,12 @@ describe("Analytics Symbols", () => {
 				expect(result[0]?.symbol).toBe("ES");
 			});
 
-			it("should have EURUSD as the worst performing symbol", async () => {
+			it("should have MES as the worst performing symbol", async () => {
 				const result = await caller.analytics.getPerformanceBySymbol({
 					accountId: testData.account.id,
 				});
 
-				expect(result[result.length - 1]?.symbol).toBe("EURUSD");
+				expect(result[result.length - 1]?.symbol).toBe("MES");
 			});
 		});
 
@@ -536,7 +536,7 @@ describe("Analytics Symbols", () => {
 		});
 
 		describe("Symbol Data", () => {
-			it("should include all traded symbols (ES, NQ, EURUSD)", async () => {
+			it("should include all traded symbols (ES, NQ, MES)", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
 					months: 24,
@@ -545,7 +545,7 @@ describe("Analytics Symbols", () => {
 				const symbolNames = result.symbols.map((s) => s.symbol);
 				expect(symbolNames).toContain("ES");
 				expect(symbolNames).toContain("NQ");
-				expect(symbolNames).toContain("EURUSD");
+				expect(symbolNames).toContain("MES");
 			});
 
 			it("should have 3 symbols total", async () => {
@@ -599,14 +599,14 @@ describe("Analytics Symbols", () => {
 				expect(es?.totalPnl).toBeGreaterThan(0);
 			});
 
-			it("should have EURUSD with negative totalPnl", async () => {
+			it("should have MES with negative totalPnl", async () => {
 				const result = await caller.analytics.getSymbolTrend({
 					accountId: testData.account.id,
 					months: 24,
 				});
 
-				const eurusd = result.symbols.find((s) => s.symbol === "EURUSD");
-				expect(eurusd?.totalPnl).toBeLessThan(0);
+				const mes = result.symbols.find((s) => s.symbol === "MES");
+				expect(mes?.totalPnl).toBeLessThan(0);
 			});
 		});
 

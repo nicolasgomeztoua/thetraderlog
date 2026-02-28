@@ -73,7 +73,6 @@ export type TradeForStatsPanel = Pick<
 	| "symbol"
 	| "direction"
 	| "status"
-	| "instrumentType"
 	| "quantity"
 	| "entryPrice"
 	| "exitPrice"
@@ -109,7 +108,6 @@ export type TradeForContentPanel = Pick<
 	| "symbol"
 	| "direction"
 	| "status"
-	| "instrumentType"
 	| "entryPrice"
 	| "exitPrice"
 	| "stopLoss"
@@ -139,7 +137,6 @@ export type TradeForTable = Pick<
 	| "symbol"
 	| "direction"
 	| "status"
-	| "instrumentType"
 	| "entryPrice"
 	| "exitPrice"
 	| "entryTime"
@@ -162,7 +159,6 @@ export type TradeForTable = Pick<
 
 export type TradeDirection = Trade["direction"];
 export type TradeStatus = Trade["status"];
-export type InstrumentType = Trade["instrumentType"];
 export type EmotionalState = NonNullable<Trade["emotionalState"]>;
 export type ExitReason = NonNullable<Trade["exitReason"]>;
 export type AccountType = Account["accountType"];

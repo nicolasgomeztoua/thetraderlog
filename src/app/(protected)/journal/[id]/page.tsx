@@ -282,7 +282,6 @@ export default function TradeDetailPage() {
 				entryTime: trade.entryTime,
 				exitTime: trade.exitTime,
 				symbol: trade.symbol,
-				instrumentType: trade.instrumentType,
 			})
 		: null;
 
@@ -509,7 +508,6 @@ export default function TradeDetailPage() {
 								symbol: trade.symbol,
 								direction: trade.direction,
 								status: trade.status,
-								instrumentType: trade.instrumentType,
 								entryPrice: trade.entryPrice,
 								exitPrice: trade.exitPrice,
 								entryTime: trade.entryTime,
@@ -549,7 +547,6 @@ export default function TradeDetailPage() {
 										stats ?? {
 											points: null,
 											ticks: null,
-											pips: null,
 											ticksPerContract: null,
 											grossPnl: null,
 											roi: null,
@@ -563,7 +560,7 @@ export default function TradeDetailPage() {
 										symbol: trade.symbol,
 										direction: trade.direction,
 										status: trade.status,
-										instrumentType: trade.instrumentType,
+
 										quantity: trade.quantity,
 										entryPrice: trade.entryPrice,
 										exitPrice: trade.exitPrice,
@@ -628,7 +625,6 @@ export default function TradeDetailPage() {
 								stats ?? {
 									points: null,
 									ticks: null,
-									pips: null,
 									ticksPerContract: null,
 									grossPnl: null,
 									roi: null,
@@ -642,7 +638,7 @@ export default function TradeDetailPage() {
 								symbol: trade.symbol,
 								direction: trade.direction,
 								status: trade.status,
-								instrumentType: trade.instrumentType,
+
 								quantity: trade.quantity,
 								entryPrice: trade.entryPrice,
 								exitPrice: trade.exitPrice,
@@ -698,7 +694,6 @@ export default function TradeDetailPage() {
 								symbol: trade.symbol,
 								direction: trade.direction,
 								status: trade.status,
-								instrumentType: trade.instrumentType,
 								entryPrice: trade.entryPrice,
 								exitPrice: trade.exitPrice,
 								entryTime: trade.entryTime,

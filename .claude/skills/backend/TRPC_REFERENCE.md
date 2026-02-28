@@ -721,7 +721,7 @@ All queries should use indexed columns:
 ### Market Data Router
 
 - Cache-first pattern: check DB before API call
-- Provider routing: Databento (futures), Twelve Data (forex/crypto)
+- Provider routing: Databento (futures-only)
 - Data quality tracking: full, partial, unavailable, pending
 
 ---

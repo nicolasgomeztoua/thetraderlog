@@ -3,8 +3,6 @@
 // ============================================
 
 export type TradingPlatform =
-	| "mt4"
-	| "mt5"
 	| "projectx"
 	| "topstepx"
 	| "ninjatrader"
@@ -16,7 +14,6 @@ export type TradingPlatform =
 export interface ParsedTrade {
 	// Required fields
 	symbol: string;
-	instrumentType: "futures" | "forex";
 	direction: "long" | "short";
 	entryPrice: string;
 	entryTime: Date;
@@ -37,7 +34,6 @@ export interface ParsedTrade {
 	// Metadata
 	externalId?: string; // Platform's trade ID
 	comment?: string;
-	magicNumber?: string; // MT4/5 magic number
 }
 
 export interface ParseResult {

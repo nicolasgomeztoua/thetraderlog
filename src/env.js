@@ -14,7 +14,6 @@ export const env = createEnv({
 			.default("development"),
 		CLERK_SECRET_KEY: z.string().min(1),
 		CLERK_WEBHOOK_SECRET: z.string().min(1),
-		TWELVE_DATA_API_KEY: z.string().min(1),
 		DATABENTO_API_KEY: z.string().min(1),
 		// Trigger.dev for background jobs
 		TRIGGER_SECRET_KEY: z.string().min(1),
@@ -58,7 +57,6 @@ export const env = createEnv({
 		NODE_ENV: process.env.NODE_ENV,
 		CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
 		CLERK_WEBHOOK_SECRET: process.env.CLERK_WEBHOOK_SECRET,
-		TWELVE_DATA_API_KEY: process.env.TWELVE_DATA_API_KEY,
 		NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
 			process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
 		NEXT_PUBLIC_CLERK_SIGN_IN_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,

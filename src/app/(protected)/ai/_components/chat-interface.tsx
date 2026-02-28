@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAccount } from "@/contexts/account-context";
 import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
 import { api } from "@/trpc/react";
 import { ChatInput } from "./chat-input";
@@ -81,6 +82,7 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const { user } = useUser();
+	const { selectedAccountId } = useAccount();
 	const [activeConversationId, setActiveConversationId] = useState<
 		string | null
 	>(null);
@@ -192,9 +194,10 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			sendMessage.mutate({
 				conversationId,
 				content: text,
+				...(selectedAccountId && { accountId: selectedAccountId }),
 			});
 		},
-		[input, activeConversationId, createConversation, sendMessage],
+		[input, activeConversationId, createConversation, sendMessage, selectedAccountId],
 	);
 
 	const handleNewConversation = () => {

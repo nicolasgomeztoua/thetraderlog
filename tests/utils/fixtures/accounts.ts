@@ -4,8 +4,6 @@ export interface CreateTestAccountOptions {
 	name?: string;
 	broker?: string;
 	platform?:
-		| "mt4"
-		| "mt5"
 		| "projectx"
 		| "topstepx"
 		| "ninjatrader"

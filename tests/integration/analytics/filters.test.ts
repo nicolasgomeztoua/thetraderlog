@@ -129,7 +129,7 @@ describe("Analytics Filters", () => {
 		it("should filter by all symbols", async () => {
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
-				filters: { symbols: ["ES", "NQ", "EURUSD"] },
+				filters: { symbols: ["ES", "NQ", "MES"] },
 			});
 
 			// All 7 trades
@@ -181,7 +181,7 @@ describe("Analytics Filters", () => {
 				filters: { outcome: "loss" },
 			});
 
-			// 3 losing trades with $3 threshold (Tuesday NQ, Wednesday EURUSD, Friday ES)
+			// 3 losing trades with $3 threshold (Tuesday NQ, Wednesday MES, Friday ES)
 			expect(result.totalTrades).toBe(3);
 			expect(result.losses).toBe(3);
 			expect(result.wins).toBe(0);
@@ -276,7 +276,7 @@ describe("Analytics Filters", () => {
 				},
 			});
 
-			// Wednesday has 2 trades (ES and EURUSD)
+			// Wednesday has 2 trades (ES and MES futures)
 			expect(result.totalTrades).toBe(2);
 		});
 
@@ -519,7 +519,7 @@ describe("Analytics Filters", () => {
 				},
 			});
 
-			// Monday afternoon trade has quantity 2, EURUSD has 100000
+			// Monday afternoon trade has quantity 2, MES has quantity 2
 			expect(result.totalTrades).toBe(2);
 		});
 
@@ -531,7 +531,7 @@ describe("Analytics Filters", () => {
 				},
 			});
 
-			// Most trades have quantity 1, except Monday afternoon (2) and EURUSD (100000)
+			// Most trades have quantity 1, except Monday afternoon (2) and MES (2)
 			expect(result.totalTrades).toBe(5);
 		});
 
@@ -543,8 +543,8 @@ describe("Analytics Filters", () => {
 				},
 			});
 
-			// Excludes EURUSD trade with 100000 contracts
-			expect(result.totalTrades).toBe(6);
+			// All trades have quantity 1 or 2
+			expect(result.totalTrades).toBe(7);
 		});
 
 		it("should handle null range values as no filter", async () => {
@@ -693,12 +693,12 @@ describe("Analytics Filters", () => {
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
-					symbols: ["EURUSD"],
+					symbols: ["MES"],
 					outcome: "win",
 				},
 			});
 
-			// EURUSD only has 1 trade and it's a loss
+			// MES only has 1 trade and it's a loss
 			expect(result.totalTrades).toBe(0);
 		});
 
@@ -785,9 +785,9 @@ describe("Analytics Filters", () => {
 				filters: { outcome: "loss" },
 			});
 
-			// All loss P&Ls: -1005 - 202 - 5 = -1212
-			expect(result.totalPnl).toBeCloseTo(-1212, 0);
-			expect(result.grossLoss).toBeCloseTo(1212, 0);
+			// All loss P&Ls: -1005 - 42 - 5 = -1052
+			expect(result.totalPnl).toBeCloseTo(-1052, 0);
+			expect(result.grossLoss).toBeCloseTo(1052, 0);
 			expect(result.grossProfit).toBe(0);
 		});
 
@@ -824,7 +824,7 @@ describe("Analytics Filters", () => {
 			const result = await caller.analytics.getOverview({
 				accountId: testData.account.id,
 				filters: {
-					symbols: ["EURUSD"],
+					symbols: ["MES"],
 				},
 			});
 

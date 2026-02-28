@@ -50,8 +50,8 @@ export function Footer() {
 							</span>
 						</Link>
 						<p className="mt-4 max-w-xs font-mono text-muted-foreground text-xs leading-relaxed sm:mt-6 sm:text-sm">
-							The professional trading journal for futures and forex traders who
-							want to find their edge.
+							The professional trading journal for futures traders who want to
+							find their edge.
 						</p>
 
 						{/* Status indicator */}

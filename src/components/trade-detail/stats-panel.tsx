@@ -551,9 +551,7 @@ export function StatsPanel({
 							<Section title="Trade Details">
 								<div className="divide-y divide-border">
 									<StatRow
-										label={
-											trade.instrumentType === "futures" ? "Contracts" : "Lots"
-										}
+										label="Contracts"
 										value={parseFloat(trade.quantity).toString()}
 									/>
 									<StatRow
@@ -567,38 +565,21 @@ export function StatsPanel({
 												: undefined
 										}
 									/>
-									{trade.instrumentType === "futures" && (
-										<>
-											<StatRow
-												label="Ticks"
-												value={stats.ticks?.toFixed(1)}
-												valueClassName={
-													stats.ticks !== null
-														? stats.ticks >= 0
-															? "text-profit"
-															: "text-loss"
-														: undefined
-												}
-											/>
-											<StatRow
-												label="Ticks/Contract"
-												value={stats.ticksPerContract?.toFixed(1)}
-											/>
-										</>
-									)}
-									{trade.instrumentType === "forex" && (
-										<StatRow
-											label="Pips"
-											value={stats.pips?.toFixed(1)}
-											valueClassName={
-												stats.pips !== null
-													? stats.pips >= 0
-														? "text-profit"
-														: "text-loss"
-													: undefined
-											}
-										/>
-									)}
+									<StatRow
+										label="Ticks"
+										value={stats.ticks?.toFixed(1)}
+										valueClassName={
+											stats.ticks !== null
+												? stats.ticks >= 0
+													? "text-profit"
+													: "text-loss"
+												: undefined
+										}
+									/>
+									<StatRow
+										label="Ticks/Contract"
+										value={stats.ticksPerContract?.toFixed(1)}
+									/>
 									<StatRow
 										label="Fees"
 										value={
@@ -753,7 +734,6 @@ export function StatsPanel({
 				>
 					<ExecutionTimeline
 						executions={trade.executions ?? []}
-						instrumentType={trade.instrumentType}
 						onAddExecution={() => {
 							// TODO: Implement add execution
 						}}

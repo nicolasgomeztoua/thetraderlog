@@ -4,7 +4,7 @@ A professional trading journal for serious traders who want to consistently find
 
 ## What is EdgeJournal?
 
-EdgeJournal is a data-dense, terminal-inspired trading journal that helps traders track, analyze, and improve their performance. Built for futures and forex traders who take their craft seriously.
+EdgeJournal is a data-dense, terminal-inspired trading journal that helps traders track, analyze, and improve their performance. Built for futures traders who take their craft seriously.
 
 ### Core Features
 
@@ -13,7 +13,7 @@ EdgeJournal is a data-dense, terminal-inspired trading journal that helps trader
 - **Prop Firm Tracking** — Monitor challenge progress, drawdown rules, profit targets, and automatically link challenges to funded accounts
 - **Analytics Dashboard** — Win rate, profit factor, average win/loss, performance by symbol, time-based analysis
 - **AI-Powered Insights** — Chat with your trading data to identify patterns and areas for improvement
-- **CSV Import** — Batch import trades from MT4, MT5, ProjectX, and other platforms
+- **CSV Import** — Batch import trades from ProjectX and other platforms
 
 ## Tech Stack
 

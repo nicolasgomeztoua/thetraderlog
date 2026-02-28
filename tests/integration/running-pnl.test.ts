@@ -2,7 +2,7 @@
  * Integration tests for running P&L calculation utilities.
  *
  * These tests verify that the running P&L calculations work correctly
- * for different trade directions, instrument types, and execution scenarios.
+ * for different trade directions and execution scenarios.
  */
 
 import { describe, expect, it } from "vitest";
@@ -311,72 +311,12 @@ describe("calculateRunningPnlAtTime - Futures symbols", () => {
 });
 
 // =============================================================================
-// FOREX SYMBOL TESTS
-// =============================================================================
-
-describe("calculateRunningPnlAtTime - Forex symbols", () => {
-	it("should calculate EUR/USD P&L correctly", () => {
-		// EUR/USD: pipSize = 0.0001, pipValuePerLot = $10
-		// Long 1 lot from 1.1000 to 1.1010 = 10 pips × $10 = $100
-		const executions: Execution[] = [
-			createExecution("1", "entry", "1.1000", "1", 1000),
-		];
-
-		const pnl = calculateRunningPnlAtTime(
-			executions,
-			1.101, // 1.1010
-			"long",
-			"EUR/USD",
-			"forex",
-		);
-
-		expect(pnl).toBeCloseTo(100, 10);
-	});
-
-	it("should calculate GBP/USD P&L correctly", () => {
-		// GBP/USD: pipSize = 0.0001, pipValuePerLot = $10
-		// Short 1 lot from 1.2700 to 1.2690 = 10 pips profit × $10 = $100
-		const executions: Execution[] = [
-			createExecution("1", "entry", "1.2700", "1", 1000),
-		];
-
-		const pnl = calculateRunningPnlAtTime(
-			executions,
-			1.269, // 1.2690
-			"short",
-			"GBP/USD",
-			"forex",
-		);
-
-		expect(pnl).toBeCloseTo(100, 10);
-	});
-
-	it("should scale with lot size for forex", () => {
-		// EUR/USD: 0.5 lots (mini lot)
-		// 20 pips × $10/pip × 0.5 = $100
-		const executions: Execution[] = [
-			createExecution("1", "entry", "1.1000", "0.5", 1000),
-		];
-
-		const pnl = calculateRunningPnlAtTime(
-			executions,
-			1.102, // +20 pips
-			"long",
-			"EUR/USD",
-			"forex",
-		);
-
-		expect(pnl).toBeCloseTo(100, 10);
-	});
-});
-
-// =============================================================================
 // EDGE CASES
 // =============================================================================
 
 describe("calculateRunningPnlAtTime - Edge cases", () => {
 	it("should return 0 for empty executions", () => {
-		const pnl = calculateRunningPnlAtTime([], 5000, "long", "ES", "futures");
+		const pnl = calculateRunningPnlAtTime([], 5000, "long", "ES");
 		expect(pnl).toBe(0);
 	});
 
@@ -386,13 +326,7 @@ describe("calculateRunningPnlAtTime - Edge cases", () => {
 			createExecution("1", "exit", "5020", "1", 1100, "1000"),
 		];
 
-		const pnl = calculateRunningPnlAtTime(
-			executions,
-			5020,
-			"long",
-			"ES",
-			"futures",
-		);
+		const pnl = calculateRunningPnlAtTime(executions, 5020, "long", "ES");
 
 		expect(pnl).toBe(0);
 	});
@@ -407,7 +341,6 @@ describe("calculateRunningPnlAtTime - Edge cases", () => {
 			5000, // same as entry
 			"long",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(0);
@@ -437,7 +370,6 @@ describe("generateRunningPnlSeries", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -469,7 +401,6 @@ describe("generateRunningPnlSeries", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -493,7 +424,6 @@ describe("generateRunningPnlSeries", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -509,7 +439,6 @@ describe("generateRunningPnlSeries", () => {
 			executions: [],
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -529,39 +458,11 @@ describe("generateRunningPnlSeries", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
 
 		expect(series).toEqual([]);
-	});
-
-	it("should handle forex symbols correctly", () => {
-		const entryTime = 1000;
-		const bars: ChartBar[] = [
-			createBar(1000, 1.1), // at entry
-			createBar(1100, 1.101), // +10 pips
-		];
-
-		const executions: Execution[] = [
-			createExecution("1", "entry", "1.1", "1", entryTime),
-		];
-
-		const options: RunningPnlOptions = {
-			bars,
-			executions,
-			direction: "long",
-			symbol: "EUR/USD",
-			instrumentType: "forex",
-		};
-
-		const series = generateRunningPnlSeries(options);
-
-		expect(series).toHaveLength(2);
-		expect(series[0]).toEqual({ time: 1000, pnl: 0 });
-		expect(series[1]?.time).toBe(1100);
-		expect(series[1]?.pnl).toBeCloseTo(100, 10); // 10 pips × $10
 	});
 
 	it("should handle short trades correctly", () => {
@@ -581,7 +482,6 @@ describe("generateRunningPnlSeries", () => {
 			executions,
 			direction: "short",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -620,7 +520,6 @@ describe("generateRunningPnlSeries - Exit time boundary", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -654,7 +553,6 @@ describe("generateRunningPnlSeries - Exit time boundary", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -685,7 +583,6 @@ describe("generateRunningPnlSeries - Exit time boundary", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -719,7 +616,6 @@ describe("generateRunningPnlSeries - Exit time boundary", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -754,7 +650,6 @@ describe("generateRunningPnlSeries - Exit time boundary", () => {
 			executions,
 			direction: "short",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);
@@ -788,7 +683,6 @@ describe("generateRunningPnlSeries - Exit time boundary", () => {
 			executions,
 			direction: "long",
 			symbol: "ES",
-			instrumentType: "futures",
 		};
 
 		const series = generateRunningPnlSeries(options);

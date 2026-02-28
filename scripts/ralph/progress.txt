@@ -1,560 +1,488 @@
 # Ralph Progress Log
-Started: Wed Feb 18 17:15:47 WET 2026
+Started: Sat Feb 28 11:47:18 WET 2026
 ---
 
 ## Codebase Patterns
-- Equity curve: use `buildEquityCurve()` from `src/lib/analytics/risk.ts` — returns EquityPoint[] with peak, drawdown, drawdownPercent per trade
-- Drawdown periods: use `findDrawdownPeriods()` from `src/lib/analytics/risk.ts`
-- Aggregate stats (winRate, avgWin, avgLoss, profitFactor): use `calculateAggregateStats()` from `src/lib/analytics/stats.ts`
-- Risk of Ruin already computed in `analytics.getRiskMetrics` router (line 1056) with account-based ruinThreshold
-- Prop schema fields on accounts: maxDrawdown, drawdownType, dailyLossLimit, profitTarget, consistencyRule, minTradingDays, challengeStartDate, challengeEndDate, challengeStatus, profitSplit, payoutFrequency, linkedAccountId
-- Prop enums: drawdownTypeEnum (trailing/static/eod), challengeStatusEnum (active/passed/failed), payoutFrequencyEnum, accountTypeEnum (prop_challenge/prop_funded/live/demo)
-- propFieldsSchema in `src/lib/shared/schemas.ts` — Zod validation for account prop fields
-- DailyLossProgress component already exists in `src/components/dashboard/widgets/today-performance-widget.tsx:12-55` — shows progress bar for daily loss limit
-- ComplianceGauge circular gauge in `rule-compliance-widget.tsx:11-77` — reusable pattern for circular progress
-- RiskGauge component at `src/components/analytics/risk-gauge.tsx` — circular SVG gauge with risk level badges
-- MonteCarloChart at `src/components/analytics/monte-carlo-chart.tsx` — percentile distribution display
-- accounts.getStats (line 439) returns totalTrades, wins, losses, winRate, totalPnl, initialBalance, currentBalance
-- Error constants: ERR_ACCOUNT_NOT_FOUND, ERR_CHALLENGE_ACCOUNT_NOT_FOUND, ERR_ACCOUNT_NOT_CHALLENGE in `src/lib/constants/errors.ts`
-- Constants barrel export: `src/lib/constants/index.ts` — add new prop constants here
-- parsePnl() helper exists in both `src/lib/analytics/risk.ts` and `src/lib/analytics/stats.ts`
-- Prop constants: `src/lib/constants/prop.ts` — COMPLIANCE_STATUS, COMPLIANCE_THRESHOLDS, COMPLIANCE_STATUS_COLORS, CHALLENGE_STATUS_LABELS, DRAWDOWN_TYPE_LABELS, PROP_ACCOUNT_TYPES, isPropAccountType()
-- Compliance thresholds: SAFE_MIN=0.3 (>30% buffer), CAUTION_MIN=0.1 (10-30% buffer), below 0.1 = danger
-- Prop compliance calculations: `src/lib/analytics/prop-compliance.ts` — all pure functions, no DB calls
-- Percentage inputs (maxDrawdown, dailyLossLimit, profitTarget) are raw numbers (6 = 6%), divide by 100 for dollar conversions
-- Biome barrel export ordering: alphabetical (prop-compliance before risk, stats, thresholds)
-- Soft-delete filtering: always include `isNull(trades.deletedAt)` when querying trades to exclude soft-deleted records
-- `isPropAccountType()` from `@/lib/constants/prop` validates both prop_challenge and prop_funded account types
-- Dashboard widget pattern: `DashboardWidget` wrapper provides terminal chrome, loading skeleton, href link. Use `skeletonVariant` for appropriate loading state
-- Conditional rendering for prop widgets: check `isPropAccountType(selectedAccount?.accountType)` and return null if not prop
-- Biome import ordering: `import type` BEFORE `import` from same module path
-- `COMPLIANCE_STATUS_COLORS[status]` maps compliance status to Terminal design text colors (text-profit/text-primary/text-loss)
-- AG Charts (`ag-charts-react`) is the charting library — NOT Recharts. Use `ANALYTICS_COLORS`, `CHART_AXIS_STYLE` from `@/lib/analytics`
-- Drawdown chart props: `equityCurve`, `maxDrawdownPercent`, `dailyLossLimit`, `initialBalance` — thresholds computed as negative P&L from $0 start
+- Pre-existing Biome error in scripts/ralph/prd.prop-compliance.archived.json — not a blocker, use `bunx biome check <specific-files>` to verify your changes
+- instrumentType is deeply embedded: DB schema, tRPC routers, UI components, shared schemas, CSV parsers, calculations, analytics, AI prompts
+- Twelve Data integration spans: env.js, service.ts, symbols.ts (TWELVE_DATA_SYMBOL_MAP), AI tool definitions
+- MT4/MT5 parsers removed — were in a single file (mt4-parser.ts), both stub implementations
+- Forex removal touches every layer: DB → server → lib → components → app → tests
 
 ---
 
-## 2026-02-18 - US-000
-- Audited existing codebase for prop compliance reusable utilities
-- No files changed (audit only)
+## 2026-02-28 - US-001: Audit All Forex and Non-Futures References
 
-### Existing Utilities to REUSE (with file:line):
+### src/lib/ — Forex/Pip/Twelve Data References
 
-**src/lib/analytics/risk.ts:**
-- `buildEquityCurve(trades)` (:127) — builds cumulative P&L curve with peak/drawdown tracking. REUSE for drawdown chart and trailing drawdown calculation
-- `findDrawdownPeriods(curve)` (:168) — finds all drawdown periods from equity curve. REUSE for drawdown analysis
-- `calculateRiskOfRuin()` (:376) — formula-based RoR calculation. REUSE for Monte Carlo comparison
-- `calculateKellyPercent()` (:348) — Kelly criterion. REUSE as-is
-- `calculateRiskMetrics()` (:417) — complete risk metrics calculator. REUSE for prop compliance risk section
-- `TradeForRisk` interface (:9) — minimal trade interface for risk calcs
-- `EquityPoint` interface (:45) — equity curve point type
-- Private `parsePnl()` (:102) — safe PnL parsing (note: also exists in stats.ts as public export)
+**src/lib/market-data/symbols.ts:**
+- L97-305: FOREX_SPECS constant (27 forex pair specifications with pipSize, pipValuePerLot)
+- L101-105: ForexSpec interface
+- L312-323: getForexSpec(), getForexPipSize() functions
+- L396-498: FOREX_SYMBOLS array (27 forex symbol definitions)
+- L499: ALL_SYMBOLS includes FOREX_SYMBOLS
+- L520-577: TWELVE_DATA_SYMBOL_MAP constant
+- L686-718: Forex pairs in TradingView symbol map
+- L750-751: getSymbolsByType() returns FOREX_SYMBOLS for "forex"
+- L797-824: calculateForexPnL() function
+- L832-873: getPointValue(), getTickSize() with forex branches
+- L964+: Forex pairs marked as "NOT supported by Databento"
 
-**src/lib/analytics/stats.ts:**
-- `calculateAggregateStats(trades, beThreshold)` (:131) — win rate, avg win/loss, profit factor. REUSE for Monte Carlo inputs
-- `parsePnl()` (:51) — public export, safe PnL string→number parsing
-- `TradeForStats` interface (:11) — minimal trade interface for stats
+**src/lib/market-data/service.ts:**
+- L8: Comment mentions Twelve Data for forex/crypto
+- L23: Import TWELVE_DATA_SYMBOL_MAP
+- L49-59: TwelveDataBar, TwelveDataResponse interfaces
+- L286: Provider type includes "twelve_data"
+- L297-312: fetchFromProvider() routes forex/crypto to Twelve Data
+- L318-407: fetchFromTwelveData() entire function
+
+**src/lib/market-data/maemfe.ts:**
+- L135: trade.instrumentType passed to function
+
+**src/lib/trades/calculations.ts:**
+- L2: Import getForexPipSize
+- L41-49: calculatePips() function (forex-specific)
+- L53+: getTickOrPipSize() references
+- L78-85: calculatePositionSize() with instrumentType param
+- L150-160: calculateROI() with forex branch
+- L175: pips field in TradeStats
+- L199-231: computeTradeStats() with instrumentType, pips calc
+- L264-328: calculateRMultiple() with instrumentType
+
+**src/lib/trades/running-pnl.ts:**
+- L5: Comment mentions "both futures and forex"
+- L10: Import calculateForexPnL
+- L38: RunningPnLOptions.instrumentType
+- L55-63: calculateCurrentPnL() with instrumentType
+- L89-97: Forex branch calling calculateForexPnL
+
+**src/lib/trades/csv-parsers/mt4-parser.ts:**
+- L4-87: mt4Parser (MetaTrader 4 CSV parser)
+- L96-157: mt5Parser (MetaTrader 5 CSV parser)
+
+**src/lib/trades/csv-parsers/index.ts:**
+- L6, 15: Import mt4Parser, mt5Parser
+- L25-26: Registry entries for mt4, mt5
+- L52-53, 91-92: Platform option lists include MT4, MT5
+
+**src/lib/trades/csv-parsers/types.ts:**
+- L6-7: "mt4" | "mt5" in TradingPlatform union
+- L19: instrumentType in ParsedTrade type
+- L40: magicNumber for MT4/5
 
 **src/lib/shared/schemas.ts:**
-- `propFieldsSchema` (:121) — Zod validation for all prop firm fields
-- `drawdownTypeEnum`, `challengeStatusEnum`, `payoutFrequencyEnum`, `accountTypeEnum` — shared enums
+- L16-17: instrumentTypeEnum Zod schema, InstrumentType type
+- L76-77: "mt4", "mt5" in tradingPlatformEnum
+- L110: instrumentType in tradeFormSchema
+
+**src/lib/analytics/stats.ts:**
+- L17, 106, 197, 204, 221: instrumentType parameter and usage
+
+**src/lib/strategy/evaluation.ts:**
+- L61, 200, 618, 671: instrumentType in trade interfaces and evaluation logic
+
+**src/lib/ai/prompts/trading-analyst.ts:**
+- L17: PERSONA mentions "futures and forex trading journal"
+- L21: "Forex pairs (EUR/USD, GBP/USD, USD/JPY, etc.)"
+
+**src/lib/ai/tools/definitions.ts:**
+- L118-119: Tool description mentions forex pairs and Twelve Data
+- L127-129: Symbol description mentions forex format
+
+**src/lib/ai/schema-context.ts:**
+- L15: instrument_type enum includes forex
+- L26: trading_platform includes mt4, mt5
+- L99: instrument_type column documented
+- L174: default_instrument_type column documented
+- L351: source column references twelve_data
+
+**src/lib/ai/context-builder.ts:**
+- L101, 219: defaultInstrumentType in settings context
+
+**src/lib/ai/report-pipeline/planner.ts:**
+- L65: Tool description mentions EUR/USD
+
+### src/server/ — instrumentType References
 
 **src/server/db/schema.ts:**
-- Account table (:206-223) — prop fields: maxDrawdown, drawdownType, dailyLossLimit, profitTarget, consistencyRule, minTradingDays, challengeStartDate, challengeEndDate, challengeStatus, profitSplit, payoutFrequency, linkedAccountId
+- L24: instrumentTypeEnum pgEnum definition
+- L76-77: "mt4", "mt5" in tradingPlatformEnum
+- L271: symbol column comment mentions "EUR/USD"
+- L272: instrumentType column on trades table
+- L458: defaultInstrumentType column on userSettings table
+- L887: symbol column in candleCache comment mentions "EUR/USD"
 
-**src/server/api/routers/accounts.ts:**
-- `getStats` (:439) — basic account stats (trades, P&L, balance). Can extend or query alongside
-- `convertToFunded` (:277) — challenge→funded conversion logic
-- `markChallengeFailed` (:338) — mark challenge as failed
+**src/server/api/routers/trades.ts:**
+- L34: Import instrumentTypeEnum
+- L166, 207: instrumentType in trade serialization
+- L254, 282, 326: instrumentType in input schemas
+- L567: instrumentType passed to calculations
+- L774: instrumentType in trade response
 
 **src/server/api/routers/analytics.ts:**
-- `getRiskMetrics` (:1056) — already uses account's maxDrawdown as ruinThreshold. Pattern to follow for prop compliance endpoint
+- L172: instrumentType in type definition
+- L273, 1492, 1653, 3681: instrumentType cast to "futures" | "forex"
+- L352, 515, 613, 707, 801, 978, 1121, 1259, 1344, 1434, 1591, 1777, 1941, 2080, 2220, 2466, 2698, 2907, 3047, 3219, 3600, 3784: instrumentType in query select clauses
 
-### Existing UI Components to REUSE:
+**src/server/api/routers/strategies.ts:**
+- L890, 1409, 1460: instrumentType in trade processing
 
-**src/components/dashboard/widgets/today-performance-widget.tsx:**
-- `DailyLossProgress` (:12-55) — progress bar for daily loss limit. Can extract to shared component or reference pattern
+**src/server/api/routers/settings.ts:**
+- L36: defaultInstrumentType in settings input
 
-**src/components/dashboard/widgets/rule-compliance-widget.tsx:**
-- `ComplianceGauge` (:11-77) — circular SVG gauge. REUSE pattern for compliance gauges
-- `CategoryBar` (:80-100) — horizontal progress bar with label. REUSE pattern for metric bars
+### src/components/ — UI References
 
-**src/components/analytics/risk-gauge.tsx:**
-- `RiskGauge` — full circular gauge with risk level badges. REUSE for drawdown gauge on prop page
+**src/components/trade-detail/stats-panel.tsx:**
+- L555: "Contracts" vs "Lots" based on instrumentType
+- L570, 589-595: Conditional display for futures ticks vs forex pips
 
-**src/components/analytics/monte-carlo-chart.tsx:**
-- `MonteCarloChart` — percentile distribution display. REUSE pattern for challenge outcome simulator
+**src/components/trade-detail/running-pnl-tab.tsx:**
+- L20, 48, 144, 146: instrumentType prop and usage
 
-**src/components/analytics/equity-curve.tsx:**
-- EquityCurve chart using AG Charts. REUSE pattern for drawdown chart overlay
+**src/components/trade-detail/content-panel.tsx:**
+- L183, 208: instrumentType passed to child components
 
-### Local Helpers to EXTRACT:
+**src/components/trade-detail/tradingview-chart.tsx:**
+- L69: instrumentType optional prop
 
-- `DailyLossProgress` from today-performance-widget.tsx — currently local, should be extracted if reused in prop status widget
-- `ComplianceGauge` pattern — can be generalized for multiple gauge use cases
+**src/components/trade-detail/replay/time-sales-panel.tsx:**
+- L16, 26, 68: instrumentType with "cts" vs "lots" label
 
-### NEW Utilities Needed:
+**src/components/trade-detail/execution-timeline.tsx:**
+- L35, 47, 106: instrumentType with "cts" vs "lots" label
 
-1. **src/lib/constants/prop.ts** — COMPLIANCE_STATUS, COMPLIANCE_THRESHOLDS, COMPLIANCE_STATUS_COLORS, CHALLENGE_STATUS_LABELS, DRAWDOWN_TYPE_LABELS, PROP_ACCOUNT_TYPES
-2. **src/lib/analytics/prop-compliance.ts** — Pure calculation functions:
-   - calculateDrawdownStatus() — current vs max drawdown with status
-   - calculateDailyPnl() — sum netPnl for trades on a date
-   - calculateDailyLossStatus() — today's P&L vs daily loss limit
-   - calculateProfitTargetProgress() — current P&L vs profit target
-   - calculateConsistencyMetric() — max single-day P&L vs consistency rule
-   - calculateTradingDays() — distinct trading dates count
-   - calculateTrailingDrawdown() — high-water-mark drawdown from equity curve
-   - calculateStaticDrawdown() — simple formula
-   - getOverallComplianceStatus() — worst status across all metrics
-   - simulatePropChallenge() — Monte Carlo for challenge pass/fail
-3. **accounts.getPropCompliance** tRPC endpoint — single endpoint returning all compliance data
-4. **UI components:** PropStatusWidget, ComplianceGrid, DrawdownChart, TradingDaysTimeline, ChallengeHistory, ChallengeSimulator
+**src/components/trade-detail/replay/use-replay-engine.ts:**
+- L35, 59, 186: instrumentType in replay options
 
-### Learnings for future iterations:
-- buildEquityCurve() starts at $0 cumulative P&L, NOT initial balance. For prop compliance, need to account for initialBalance when computing absolute drawdown thresholds
-- maxDrawdown is stored as percentage (e.g., "6.00" for 6%), dailyLossLimit same. Parse with parseFloat() and divide by 100 for decimal
-- getRiskMetrics router (analytics.ts:1074-1095) shows pattern for reading account's maxDrawdown and converting to decimal threshold
-- DailyLossProgress already exists and handles prop daily loss display — consider extracting rather than duplicating
-- Account props stored as decimal strings, all need parseFloat() conversion
+**src/components/trade-detail/replay/trade-replay.tsx:**
+- L33, 60, 154: instrumentType prop
 
+### src/app/ — Page-Level References
+
+**src/app/layout.tsx:**
+- L14: "Futures and Forex traders" in meta description
+
+**src/app/(marketing)/_components/hero.tsx:**
+- L13-14: EUR/USD, GBP/USD example trades
+- L25: EUR/USD trade example
+- L321: "futures and forex traders" tagline
+
+**src/app/(marketing)/_components/features.tsx:**
+- L42: EUR/USD reference
+- L146-148: "Futures & Forex" title and description
+
+**src/app/(marketing)/_components/footer.tsx:**
+- L53: "futures and forex traders"
+
+**src/app/(protected)/trade/new/page.tsx:**
+- L29: Import FOREX_SYMBOLS
+- L62: instrumentType state
+- L139, 158: instrumentType usage and symbol list selection
+- L232-248: Futures/Forex tabs UI
+
+**src/app/(protected)/import/page.tsx:**
+- L88-93: MT4, MT5 platform descriptions
+- L136: instrumentType state
+- L363-409: instrumentType in trade processing
+- L656-665: Instrument type tabs UI
+
+**src/app/(protected)/settings/_components/settings-content.tsx:**
+- L170-171: MT4, MT5 labels
+- L189-190: MT4, MT5 in type union
+- L660, 680: "forex" in type unions
+- L858: Forex select item
+- L1500-1501: MetaTrader 4/5 select items
+
+**src/app/(protected)/journal/page.tsx:**
+- L561, 695: instrumentType in trade processing
+
+**src/app/(protected)/journal/[id]/page.tsx:**
+- L285, 512, 552, 566, 631, 645, 701: instrumentType in trade detail
+
+### src/stores/ — State Management
+
+**src/stores/settings-store.ts:**
+- L24, 35: defaultInstrumentType in store
+
+### src/env.js — Environment
+
+- L17, 61: TWELVE_DATA_API_KEY
+
+### tests/ — Test References
+
+**tests/utils/fixtures/trades.ts:** L5, 37, 74 — instrumentType in trade fixtures
+**tests/utils/fixtures/scenarios.ts:** L323 — instrumentType: "forex" in fixture
+**tests/unit/csv-parsers.test.ts:** L37 — asserts instrumentType
+**tests/integration/running-pnl.test.ts:** L314-366 — Forex symbol tests, L440-791 — instrumentType in test data
+**tests/integration/trades/batch-import.test.ts:** L19, 41, 181, 211 — instrumentType in batch tests
+**tests/integration/rule-relevance.test.ts:** Many lines — instrumentType: "futures" in test data
+**tests/integration/rule-compliance.test.ts:** Many lines — instrumentType: "futures" in test data
+**tests/integration/strategy-evaluation.test.ts:** Many lines — instrumentType: "futures" in test data
+**tests/integration/analytics/export.test.ts:** L685-689 — forexTrade reference
+
+- Files changed: scripts/ralph/progress.txt (audit documented)
+- **Learnings for future iterations:**
+  - instrumentType touches ~30+ files across every layer
+  - analytics.ts is the heaviest file — instrumentType appears in ~25+ query select clauses
+  - Tests also need updating (fixtures, running-pnl forex tests, batch-import, export)
+  - MT4/MT5 parsers are stubs (not yet implemented), so removal is safe
+  - The Biome pre-existing error is in an archived PRD file, not our code
 ---
 
-## 2026-02-18 - US-001
-- Created `src/lib/constants/prop.ts` with all prop compliance constants
-- Exported from `src/lib/constants/index.ts` barrel file
-- Files changed: `src/lib/constants/prop.ts` (new), `src/lib/constants/index.ts` (updated)
+## 2026-02-28 - US-002: Remove Forex References from Marketing Pages
+- Replaced EUR/USD, GBP/USD ticker items with MES, MNQ, YM, RTY futures
+- Replaced EUR/USD demo trade with MNQ
+- Changed hero tagline from "futures and forex" to "futures"
+- Changed features card from "Futures & Forex" to "Built for Futures", updated symbols list
+- Updated footer description to "futures traders"
+- Updated root layout meta description to "futures traders"
+- Files changed: hero.tsx, features.tsx, footer.tsx, layout.tsx
 - **Learnings for future iterations:**
-  - Constants file pattern: use `as const` for literal type inference, `Record<ComplianceStatus, string>` for mapped types
-  - `isPropAccountType()` helper available for type-safe prop account checks
-  - `ComplianceStatus` type exported for use in utility functions and UI components
-  - COMPLIANCE_STATUS_BG_COLORS also available for badge backgrounds (bg-profit/10, bg-primary/10, bg-loss/10)
-
+  - Marketing components are pure JSX — no imports from lib/market-data, changes are safe
 ---
 
-## 2026-02-18 - US-002
-- Created `src/lib/analytics/prop-compliance.ts` with all pure calculation functions
-- Exported from `src/lib/analytics/index.ts` barrel file
-- Files changed: `src/lib/analytics/prop-compliance.ts` (new), `src/lib/analytics/index.ts` (updated)
-- Functions implemented:
-  - `calculateDrawdownStatus()` — drawdown vs limit with compliance status
-  - `calculateDailyPnl()` — sum trades by date (ISO date string comparison)
-  - `calculateDailyLossStatus()` — daily P&L vs daily loss limit (converts % to dollar limit)
-  - `calculateProfitTargetProgress()` — progress toward profit target (converts % to dollar target)
-  - `calculateConsistencyMetric()` — largest single-day % of total profit vs consistency rule
-  - `calculateTradingDays()` — count distinct trading dates from exitTime
-  - `calculateTrailingDrawdown()` — high-water-mark drawdown from equity curve + initial balance
-  - `calculateStaticDrawdown()` — simple initialBalance - currentBalance formula
-  - `getOverallComplianceStatus()` — returns worst status from an array
+## 2026-02-28 - US-003: Remove Forex References from AI Prompts and Tool Definitions
+- Updated get_market_data tool description: removed forex pairs, Twelve Data reference; now futures-only with Databento
+- Updated symbol input description: removed forex slash format examples
+- Updated schema-context.ts: removed instrument_type enum, mt4/mt5 from trading_platform, instrument_type columns from trade and user_settings tables, changed twelve_data to databento
+- Updated trading-analyst.ts PERSONA: removed "and forex" from description, removed forex pairs knowledge line
+- Updated planner.ts: removed EUR/USD from get_market_data description
+- Updated context-builder.ts: removed defaultInstrumentType from settings query and formatting
+- Files changed: definitions.ts, schema-context.ts, trading-analyst.ts, planner.ts, context-builder.ts
 - **Learnings for future iterations:**
-  - `statusFromBuffer()` private helper centralizes threshold logic — remaining buffer → status
-  - All percentage inputs (maxDrawdown, dailyLossLimit, profitTarget) come as raw numbers (e.g. 6 for 6%), not decimals — divide by 100 when converting to dollar amounts
-  - `calculateTrailingDrawdown()` adds initialBalance to equity curve points since `buildEquityCurve()` tracks cumulative P&L from $0
-  - Biome requires alphabetical ordering for barrel exports — `prop-compliance` goes before `risk`
-  - Profit target status uses different thresholds than drawdown (progress >= 1 = safe, >= 0.5 = caution, < 0.5 = danger)
-- Unit tests: run with `bunx vitest run --config vitest.config.unit.ts` (no Docker needed)
-- Floating point gotcha: `1 - 0.7` in JS is `0.30000000000000004`, not `0.3` — boundary tests must account for this
-
+  - AI prompt files are static strings — no runtime dependencies, safe to edit
+  - context-builder.ts loads settings from DB — when removing DB columns later (US-013), remember the column reference here is already removed
+  - schema-context.ts is a manual documentation of the DB schema for AI — must be kept in sync with actual schema changes
 ---
 
-## 2026-02-18 - US-003
-- Created `tests/unit/prop-compliance.test.ts` with 62 tests covering all 9 functions
-- Files changed: `tests/unit/prop-compliance.test.ts` (new)
-- Tests cover:
-  - `calculateDrawdownStatus`: safe/caution/danger thresholds, edge cases (0 limit, exceeded limit), trailing/static/EOD scenarios
-  - `calculateDailyPnl`: multi-trade summation, date filtering, null handling
-  - `calculateDailyLossStatus`: safe/caution/danger, percentage-to-dollar conversion, positive P&L handling
-  - `calculateProfitTargetProgress`: 0%/50%/100%+ progress, negative P&L clamping, 0 target edge case
-  - `calculateConsistencyMetric`: compliant/non-compliant, negative days ignored, empty array, single day, boundary
-  - `calculateTradingDays`: distinct date counting, null exitTime, deduplication
-  - `calculateTrailingDrawdown`: high-water-mark tracking, peak recovery, monotonic curves, empty/zero edge cases
-  - `calculateStaticDrawdown`: below/equal/above initial balance, zero balance
-  - `getOverallComplianceStatus`: worst-status selection, empty array
+## 2026-02-28 - US-004: Remove MT4 and MT5 CSV Parsers
+- Deleted src/lib/trades/csv-parsers/mt4-parser.ts (contained both mt4Parser and mt5Parser)
+- Removed MT4/MT5 from parser registry, getSupportedPlatforms(), TRADING_PLATFORMS in index.ts
+- Removed "mt4" | "mt5" from TradingPlatform type in types.ts
+- Removed "mt4", "mt5" from tradingPlatformEnum Zod schema in shared/schemas.ts
+- Removed "mt4", "mt5" from tradingPlatformEnum pgEnum in server/db/schema.ts
+- Removed MT4/MT5 entries from PLATFORM_INFO in import page
+- Removed MT4/MT5 from PLATFORM_LABELS, AccountFormState union, and SelectItem entries in settings page
+- Updated test fixtures (accounts.ts) and accounts test to use "ninjatrader" instead of "mt5"
+- Files changed: mt4-parser.ts (deleted), index.ts, types.ts, schemas.ts, schema.ts, import/page.tsx, settings-content.tsx, accounts.ts fixture, accounts.test.ts
 - **Learnings for future iterations:**
-  - Floating point precision: `1 - 0.7 = 0.30000000000000004` in JS — boundary tests at exact threshold values will fail if you assume exact equality. Use values clearly on one side of the boundary.
-  - Unit test helper pattern: `makeEquityPoint()` helper creates minimal EquityPoint objects for tests — avoids boilerplate
-  - Biome formatting: wrapping `.toBe()` calls requires specific formatting — Biome prefers `expect(fn()).toBe(val)` inline when possible
-
+  - Removing a platform from tradingPlatformEnum requires cascading to: DB schema pgEnum, shared Zod schema, CSV parser types, import page UI, settings page UI, and test fixtures
+  - Tests in accounts.test.ts used "mt5" platform — always grep tests/ for removed enum values
+  - The magicNumber field in ParsedTrade was MT4/5-specific but can stay as a generic optional field
 ---
 
-## 2026-02-18 - US-004
-- Created `getPropCompliance` tRPC query in `src/server/api/routers/accounts.ts`
-- Added `ERR_ACCOUNT_NOT_PROP` error constant in `src/lib/constants/errors.ts`
-- Files changed: `src/server/api/routers/accounts.ts`, `src/lib/constants/errors.ts`
-- Endpoint features:
-  - Input: `{ accountId: string }`, validates ownership and prop account type
-  - Fetches all closed trades sorted by exitTime, filters out soft-deleted trades (`isNull(deletedAt)`)
-  - Computes drawdown (trailing vs static based on `drawdownType`), daily loss, profit target, consistency, trading days, timeline
-  - Returns equity curve for charting, overall compliance status
-  - Uses all pure utility functions from US-002 (`calculateDrawdownStatus`, `calculateDailyLossStatus`, etc.)
-  - Uses `buildEquityCurve()` from risk analytics for equity curve data
+## 2026-02-28 - US-005: Remove Twelve Data Service Integration
+- Removed TwelveDataBar and TwelveDataResponse interfaces from service.ts
+- Removed entire fetchFromTwelveData() function (~90 lines)
+- Simplified fetchFromProvider() to only route to Databento; returns error for non-futures symbols
+- Removed TWELVE_DATA_SYMBOL_MAP (~100 entries) from symbols.ts
+- Removed forex pairs from DATABENTO_SYMBOL_MAP (they were all null entries)
+- Removed TWELVE_DATA_API_KEY from env.js (server schema + runtimeEnv)
+- Updated service.ts header comment to remove Twelve Data mention
+- Removed formatDateForAPI() helper (was only used by Twelve Data)
+- Files changed: service.ts, symbols.ts, env.js
 - **Learnings for future iterations:**
-  - Import `isNull` from `drizzle-orm` for soft-delete filtering — closed trades query should always include `isNull(trades.deletedAt)`
-  - Import `asc` from `drizzle-orm` for ascending sort by exitTime
-  - `isPropAccountType()` from `@/lib/constants/prop` is the right way to validate prop accounts (supports both `prop_challenge` and `prop_funded`)
-  - Biome requires alphabetical ordering of named imports within import blocks
-  - Biome prefers inline function calls when arguments fit on one line — avoid unnecessary wrapping
-
+  - env.js uses @t3-oss/env-nextjs — removing an env var requires removing from both `server` schema and `runtimeEnv` sections
+  - The `env` import in service.ts is still needed for DATABENTO_API_KEY
+  - DATABENTO_SYMBOL_MAP still had null entries for forex pairs — those were removed since forex is no longer supported
+  - The FetchResult provider type was simplified from `"twelve_data" | "databento"` to just `"databento"`
 ---
 
-## 2026-02-18 - US-005
-- Created `tests/integration/prop-compliance.test.ts` with 12 tests covering 8 scenarios
-- Updated `tests/utils/fixtures/accounts.ts` to support all prop fields (drawdownType, dailyLossLimit, consistencyRule, minTradingDays, challengeStartDate, challengeEndDate, challengeStatus, payoutFrequency, linkedAccountId)
-- Updated `tests/utils/fixtures/scenarios.ts` — `setupPropChallenge()` now accepts full `account` options and sets all prop fields by default
-- Files changed: `tests/integration/prop-compliance.test.ts` (new), `tests/utils/fixtures/accounts.ts` (updated), `tests/utils/fixtures/scenarios.ts` (updated)
-- Tests cover:
-  - Happy path: returns all compliance metrics for account with trades across multiple days
-  - Empty trades: returns safe drawdown/daily loss but danger profit target (0% progress)
-  - Danger state: near max drawdown (5.5% of 6% limit → danger)
-  - Daily loss limit: today's trades near daily limit (93.3% used → danger)
-  - Profit target reached: trades exceeding $10000 target → safe
-  - Auth validation: rejects unauthenticated and non-owner requests
-  - Non-prop rejection: rejects live and demo accounts with correct error
-  - Trailing drawdown: verifies trailing tracks from peak (higher than static)
-  - Prop funded: accepts prop_funded accounts
-  - Consistency metric: detects non-compliant when one day dominates (80% > 30% rule)
+## 2026-02-28 - US-006: Remove Forex Specs, Symbols, and Helper Functions from symbols.ts
+- Removed ForexSpec interface, FOREX_SPECS (27 forex pair specs), FOREX_SYMBOLS array (27 symbols)
+- Removed getForexSpec(), getForexPipSize(), calculateForexPnL(), calculatePnL() (wrapper), getSymbolsByType()
+- Simplified getPointValue(symbol) and getTickSize(symbol) — removed instrumentType parameter, futures-only
+- Removed 27 forex pairs from TRADINGVIEW_SYMBOL_MAP
+- ALL_SYMBOLS now equals FUTURES_SYMBOLS (not a spread concat)
+- Updated callers for build to pass:
+  - calculations.ts: removed calculatePips() (forex-specific), removed pips from TradeStats, simplified calculateROI() to futures-only
+  - running-pnl.ts: removed calculateForexPnL import and forex branch
+  - stats.ts, evaluation.ts: updated getPointValue() calls (dropped instrumentType arg)
+  - stats-panel.tsx: removed forex pips display, hardcoded "Contracts" label
+  - journal/[id]/page.tsx: removed pips from TradeStats fallback objects
+  - trade/new/page.tsx: removed FOREX_SYMBOLS import, hardcoded FUTURES_SYMBOLS
+- Files changed: symbols.ts, calculations.ts, running-pnl.ts, stats.ts, evaluation.ts, stats-panel.tsx, journal/[id]/page.tsx, trade/new/page.tsx
 - **Learnings for future iterations:**
-  - `createTestAccount` fixture now supports ALL prop fields — no need to insert directly via DB
-  - `setupPropChallenge()` sets sensible defaults: 100k balance, 6% drawdown, 3% daily loss, 10% profit target, 30% consistency rule, 5 min trading days
-  - Compliance threshold math: SAFE > 30% buffer remaining, CAUTION 10-30%, DANGER < 10% — so for a 6% drawdown limit, you need > 5.4% current drawdown to hit danger (>90% used)
-  - Biome formatting: `createTestCaller(user.clerkId, user)` fits inline, but `createTestCaller(trailingUser.clerkId, trailingUser)` wraps to multiline — line length determines format
-  - Docker/OrbStack must be running for integration tests (Testcontainers requires container runtime)
-
+  - Removing an export from symbols.ts cascades to callers — getPointValue/getTickSize signature changes required updating 4+ files
+  - TradeStats.pips was referenced in journal/[id]/page.tsx fallback objects (2 places) — easy to miss
+  - Biome auto-fix (`bunx biome check --write --unsafe`) renames unused params to `_` prefix — useful for staged removal
+  - instrumentType params still exist on many functions (prefixed with _) — US-007 should fully remove them
 ---
 
-## 2026-02-18 - US-006
-- Created `src/components/dashboard/widgets/prop-status-widget.tsx`
-- Compact prop compliance widget for dashboard with:
-  - DrawdownGauge (circular SVG gauge showing used % of max drawdown)
-  - ComplianceBar (reusable progress bar for daily loss and profit target)
-  - StatusDot (colored indicator for overall status)
-  - Trading days count and days remaining countdown
-  - Overall status label (safe/caution/danger)
-- Uses `isPropAccountType()` to conditionally render (returns null for non-prop accounts)
-- Calls `accounts.getPropCompliance` with `enabled: isProp && !!selectedAccountId`
-- Uses `DashboardWidget` wrapper for loading skeleton and terminal chrome
-- All key elements have data-testid attributes
-- Files changed: `src/components/dashboard/widgets/prop-status-widget.tsx` (new)
+## 2026-02-28 - US-007: Remove Forex P&L Calculations and Pip Functions
+- Removed `_instrumentType` parameter from `calculateActualRMultiple()`, `calculateROI()`, `calculateMAEMFE()` in calculations.ts
+- Removed `instrumentType` from `calculateAllStats()` input type in calculations.ts
+- Removed `instrumentType` from `RunningPnlOptions`, `calculateRunningPnlAtTime()` in running-pnl.ts
+- Removed `instrumentType` from `TradeForStats`, `calculateRMultipleFromTrade()`, type guard in stats.ts
+- Removed `instrumentType` from `TradeForEvaluation`, `TradeWithAccount` in evaluation.ts
+- Updated all callers:
+  - trades.ts: 3 sites (calculateActualRMultiple, buildEvaluationContext, evaluateAutoCondition)
+  - analytics.ts: 4 sites (all calculateActualRMultiple calls)
+  - strategies.ts: 3 sites (calculateMfeInR, buildEvaluationContext, evaluateAutoCondition)
+  - marketData.ts: 1 site (calculateMAEMFE)
+  - maemfe.ts: 1 site (calculateMAEMFE)
+  - journal/page.tsx: 2 sites (calculateActualRMultiple)
+  - journal/[id]/page.tsx: 1 site (calculateAllStats)
+  - content-panel.tsx: 2 sites (RunningPnlTab, TradeReplay props)
+  - running-pnl-tab.tsx: prop + generateRunningPnlSeries call
+  - trade-replay.tsx: prop + useReplayEngine call
+  - use-replay-engine.ts: interface + calculateRunningPnlAtTime call
+- Files changed: calculations.ts, running-pnl.ts, stats.ts, evaluation.ts, trades.ts, analytics.ts, strategies.ts, marketData.ts, maemfe.ts, journal/page.tsx, journal/[id]/page.tsx, content-panel.tsx, running-pnl-tab.tsx, trade-replay.tsx, use-replay-engine.ts
 - **Learnings for future iterations:**
-  - Biome import ordering: `import type` must come BEFORE `import` from the same module
-  - Biome formatting: `cn()` arguments need one extra level of indentation when inside JSX attribute
-  - Biome class sorting: `font-mono font-semibold text-xs` not `font-mono text-xs font-semibold` — weight modifiers before size
-  - Widget pattern: use `DashboardWidget` wrapper with `icon`, `title`, `href`, `loading`, `skeletonVariant` props
-  - Query pattern for conditional data: `{ enabled: condition }` prevents unnecessary API calls
-
+  - `TradeWithAccount` and `TradeForEvaluation` in evaluation.ts are used to construct objects in trades.ts and strategies.ts — removing a field from these interfaces requires updating all object literals that populate them
+  - `calculateActualRMultiple` is called in 4 places in analytics.ts — some cast `trade.instrumentType as "futures" | "forex"` which are now unnecessary
+  - The DB schema still has `instrumentType` column on trades — that's a separate story (US-013). This story only removed it from calculation function signatures
+  - instrumentType still exists as a DB column, tRPC input/output schemas, and UI state — those are handled by US-008 through US-013
 ---
 
-## 2026-02-18 - US-007
-- Added PropStatusWidget to dashboard grid in `src/app/(protected)/dashboard/page.tsx`
-- Conditionally renders before Today's Performance when `isPropAccountType(selectedAccount?.accountType)` is true
-- Uses `GridItem size="md"` for 2-column width
-- Files changed: `src/app/(protected)/dashboard/page.tsx` (updated)
+## 2026-02-28 - US-008: Remove Instrument Type UI from Trade Entry and Import Pages
+- Removed `instrumentType` state and Futures/Forex `Tabs` toggle from trade/new/page.tsx
+- Removed `instrumentType` state and Instrument Type `Tabs` toggle from import/page.tsx
+- Hardcoded `instrumentType: "futures"` in createTrade.mutate() call
+- Hardcoded `instrumentType: "futures" as const` in both platform-parsed and manual mapping branches of handleImport
+- Simplified quantity label from conditional "Contracts"/"Lot Size" to just "Contracts"
+- Simplified quantity placeholder from conditional "1"/"0.01" to just "1"
+- Removed unused Tabs/TabsList/TabsTrigger imports from import page
+- Files changed: trade/new/page.tsx, import/page.tsx
 - **Learnings for future iterations:**
-  - Conditional grid items: use `{condition && (<GridItem>...</GridItem>)}` pattern — React handles null children in grids correctly
-  - `isPropAccountType()` accepts `undefined` safely (returns false), no need for optional chaining guard
-  - Dashboard page already has `selectedAccount` from `useAccount()` — no need to destructure `selectedAccountId` unless needed for API calls
-
+  - The tRPC mutations still expect `instrumentType` in their input schemas — hardcode "futures" until US-011 removes it from the server
+  - ParsedTrade type still has `instrumentType` — that's handled by US-012
+  - Direction tabs in trade/new/page.tsx still use Tabs components, so those imports must stay
 ---
 
-## 2026-02-18 - US-008
-- Added conditional Prop nav item to sidebar in `src/app/(protected)/_components/app-sidebar.tsx`
-- Imports `Shield` icon from lucide-react, `isPropAccountType` from `@/lib/constants/prop`
-- Uses `useMemo` to compute `navItems` array: inserts `{ title: "Prop", href: "/prop", icon: Shield }` between Analytics and AI Insights when any account is prop type
-- Renders `navItems` instead of static `mainNavItems` in the sidebar menu
-- Files changed: `src/app/(protected)/_components/app-sidebar.tsx` (updated)
+## 2026-02-28 - US-009: Remove defaultInstrumentType from Settings
+- Removed `defaultInstrumentType` from `APISettings` interface and `SettingsState` interface in settings-store.ts
+- Removed `defaultInstrumentType` from Zustand store default values and `hydrate()` function
+- Removed `defaultInstrumentType` from tRPC settings update input schema in settings.ts
+- Removed `defaultInstrument` from settings-content.tsx: local state, hydration from DB, save handler mutation, Zustand sync on save success
+- Removed the "Default Instrument" Select UI (Futures/Forex dropdown) from Trading Defaults card
+- Removed `defaultInstrumentType` from use-settings-hydration.tsx `hydrate()` call
+- Files changed: settings-store.ts, settings.ts, settings-content.tsx, use-settings-hydration.tsx
 - **Learnings for future iterations:**
-  - Sidebar nav items are defined in static `mainNavItems` array — for conditional items, compute a dynamic `navItems` via `useMemo` that splices in the conditional item at the right index
-  - `accounts` from `useAccount()` is available in sidebar — use `.some()` to check for prop accounts
-  - Biome import ordering: `@/contexts` comes before `@/lib` alphabetically — respect this when adding new imports
-
+  - Settings flow spans 4 files: DB column → tRPC router input → settings-content.tsx UI/state → settings-store.ts Zustand → use-settings-hydration.tsx hydration
+  - settings-content.tsx uses a local `settings` state object with different field names than the DB (e.g., `defaultInstrument` maps to `defaultInstrumentType`)
+  - The DB column still exists (US-013 will drop it) — removing from tRPC input/Zustand is safe since the column has a default value
 ---
 
-## 2026-02-18 - US-009
-- Created `src/app/(protected)/prop/page.tsx` — dedicated prop compliance page
-- Features implemented:
-  - Page header with "Compliance" section label and "Prop Compliance" heading (Terminal design)
-  - Account selector dropdown filtered to `prop_challenge` and `prop_funded` accounts only
-  - Challenge status badge (Active/Passed/Failed) with color-coded styling
-  - Phase indicator for funded accounts showing "Challenge → Funded" journey
-  - Auto-selects first prop account if globally selected account is not a prop account
-  - Compliance summary bar showing overall status, account name, and current balance
-  - Loading skeleton state while data fetches
-  - Empty state when user has no prop accounts
-  - No-data state when compliance data unavailable
-  - All key elements have data-testid attributes
-- Uses `accounts.getPropCompliance` with `enabled` guard and `staleTime: 30000`
-- Syncs prop page selection back to global `setSelectedAccountId` on change
-- Files changed: `src/app/(protected)/prop/page.tsx` (new)
+## 2026-02-28 - US-010: Remove instrumentType from Trade Detail Components
+- Removed `instrumentType` prop from `ExecutionTimeline` interface/destructure, hardcoded `sizeLabel = "cts"`
+- Removed `instrumentType` prop from `TimeSalesPanel` interface/destructure, hardcoded `sizeLabel = "cts"`
+- Removed `instrumentType?: "futures" | "forex"` from `ChartProps` in tradingview-chart.tsx
+- Removed `instrumentType={trade.instrumentType}` from StatsPanel's ExecutionTimeline call
+- running-pnl-tab.tsx and trade-replay.tsx had no instrumentType references (already cleaned in US-007)
+- use-replay-engine.ts had no instrumentType references (already cleaned in US-007)
+- content-panel.tsx doesn't pass instrumentType to child components (TradingViewChart, TradeReplay, RunningPnlTab)
+- Files changed: execution-timeline.tsx, time-sales-panel.tsx, tradingview-chart.tsx, stats-panel.tsx
 - **Learnings for future iterations:**
-  - Biome import ordering: `lucide-react` comes before `react` (l < r)
-  - TypeScript `Record<string, T>` index lookup returns `T | undefined` — use a separate default variable rather than `?? map.key` to avoid possibly-undefined errors
-  - Biome CSS class sorting: `text-muted-foreground` before `text-xs` (specificity order)
-  - Biome formatting: JSX attributes should be on separate lines when combining `className` and `data-testid` on a div
-  - Prop page uses local `propAccountId` state to allow independent selection from global account selector
-  - `formatCurrency` from `@/lib/shared` not needed here — using `toLocaleString` directly for inline balance display
-
+  - Several trade-detail components were already cleaned of instrumentType in US-007 (when calculation signatures changed) — always check before editing
+  - The journal/[id]/page.tsx still passes instrumentType in trade objects to StatsPanel and ContentPanel, but that's from the DB-inferred type (TradeForStatsPanel) — will be removed in US-012/US-013
+  - TimeSalesPanel had a formatting issue after removing a prop — Biome auto-fix collapses short destructure to single line
 ---
 
-## 2026-02-18 - US-010
-- Created `src/components/prop/compliance-grid.tsx` — 4-card responsive compliance grid
-- Cards implemented:
-  - Max Drawdown: circular SVG gauge (80px) showing used% with current/limit/remaining stats
-  - Daily Loss: large dollar amount display + progress bar with used% and remaining
-  - Profit Target: large dollar amount display + progress bar with completion% and amount to go
-  - Consistency Rule: max day % vs limit with compliant/non-compliant indicator
-- Each card has StatusDot indicator, ComplianceCardShell wrapper, and data-testid attributes
-- Uses `ComplianceData` interface typed to match `getPropCompliance` return shape
-- Shared helpers: `StatusDot`, `ComplianceCardShell`, `DrawdownGauge`, `MetricProgressBar`
-- Responsive: 1 column on mobile, 2x2 grid on `sm:` breakpoint
-- Files changed: `src/components/prop/compliance-grid.tsx` (new)
+## 2026-02-28 - US-011: Remove instrumentType from tRPC Routers
+- analytics.ts and marketData.ts were already clean from US-007 (no instrumentType references left)
+- Updated marketData.ts comment: removed "Supports both Databento (futures) and Twelve Data (forex)" → "Uses Databento for futures market data"
+- trades.ts still has `instrumentType: "futures" as const` in 2 insert statements (create + batchImport) — required while DB column is NOT NULL with no default
+- Removed `instrumentType` from `TradeForStatsPanel`, `TradeForContentPanel`, `TradeForTable` Pick types in src/types/index.ts
+- Removed `export type InstrumentType = Trade["instrumentType"]` from types/index.ts
+- Fixed pre-existing build error: journal/[id]/page.tsx was constructing ContentPanel trade objects without instrumentType, which was required by the old Pick type
+- Added `as const` to batch import `instrumentType: "futures"` to satisfy Drizzle's enum literal type
+- Files changed: marketData.ts, trades.ts, src/types/index.ts
 - **Learnings for future iterations:**
-  - Biome formatting: single JSX return without parens when it fits one line — `return <span .../>;` not `return (\n<span .../>\n);`
-  - Biome formatting: short ternary fits one line — `const x = cond ? "a" : "b";` not multiline
-  - Biome formatting: short `className` + `data-testid` attributes can go on same line as opening tag
-  - `ComplianceData` interface props match `getPropCompliance` return keys — new prop components can import this type
-  - `formatCurrency()` from `@/lib/shared` accepts `number | string | null | undefined` — safe to use for dollar displays
-
+  - When removing a field from Pick types, check that NO callers still construct objects with that field — the types file error manifested in journal/[id]/page.tsx, not in types/index.ts itself
+  - Drizzle enum columns require literal string types (not `string`), so hardcoded values need `as const` assertions
+  - The `InstrumentType` type export from `@/types` was unused anywhere — safe to remove
+  - There's a SEPARATE `InstrumentType` in `src/lib/shared/schemas.ts` (from Zod) — that's for US-012
 ---
 
-## 2026-02-18 - US-011
-- Created `src/components/prop/drawdown-chart.tsx` — equity curve with drawdown threshold lines
-- Features implemented:
-  - AG Charts AreaChart showing cumulative P&L over time (matching existing EquityCurve pattern)
-  - Red dashed horizontal reference line at max drawdown threshold
-  - Orange/amber dashed horizontal reference line at daily loss limit
-  - Shaded danger zone (red fill) below max drawdown threshold
-  - Color gradient: profit green above $0, loss red below
-  - Tooltip showing date, P&L, drawdown %, and distance to threshold
-  - Legend explaining threshold lines (P&L, Max DD, Daily Loss, Danger Zone)
-  - Summary stats bar: Current P&L, Drawdown, Max DD Limit, Daily Loss Limit
-  - Empty state for no equity data
-  - Responsive design, Terminal design system
-  - All data-testid attributes on key elements
-- Files changed: `src/components/prop/drawdown-chart.tsx` (new)
+## 2026-02-28 - US-012: Remove instrumentType from Shared Types and Schemas
+- Removed `instrumentTypeEnum` Zod schema and `InstrumentType` type export from src/lib/shared/schemas.ts
+- Removed `instrumentType: instrumentTypeEnum` from `tradeBaseFields` in schemas.ts
+- Removed `instrumentType: "futures" | "forex"` from `ParsedTrade` interface in csv-parsers/types.ts
+- Removed `instrumentType: "futures"` from trade objects in csv-parsers/utils.ts and projectx-parser.ts
+- Removed `instrumentType` assertion from tests/unit/csv-parsers.test.ts
+- Verified no remaining imports of `instrumentTypeEnum` or `InstrumentType` from shared schemas
+- Verified no remaining `'futures' | 'forex'` union types in src/
+- Files changed: schemas.ts, types.ts, utils.ts, projectx-parser.ts, csv-parsers.test.ts
 - **Learnings for future iterations:**
-  - AG Charts is the charting library (not Recharts) — PRD said Recharts but codebase uses `ag-charts-react`
-  - Use `ANALYTICS_COLORS` and `CHART_AXIS_STYLE` from `@/lib/analytics` for chart styling consistency
-  - Threshold lines use `type: "line"` series with `lineDash` for dashed appearance
-  - Danger zone fill: use `type: "area"` series with very low opacity fill (`${ANALYTICS_COLORS.loss}10`)
-  - `buildEquityCurve()` returns cumulative P&L from $0, so thresholds are negative dollar amounts (e.g., -$6000 for 6% of $100k)
-  - Biome auto-fix: `bunx biome check --write <file>` to fix formatting in one shot
-
+  - `tradeBaseFields` was defined in schemas.ts but never imported anywhere — it was dead code used only as a schema reference. Safe to remove fields without cascading.
+  - ParsedTrade.instrumentType was set by parsers but no longer read by the import page (removed in US-008) — the field was already unused at the consumer side
+  - The DB column still exists (US-013), so trades.ts router still hardcodes `instrumentType: "futures" as const` in inserts
 ---
 
-## 2026-02-18 - US-012
-- Created `src/components/prop/trading-days-timeline.tsx` — Trading Days Timeline Component
-- Features implemented:
-  - Progress bar showing days traded vs minTradingDays requirement (X / Y format)
-  - Days remaining countdown to challengeEndDate with color-coded urgency (red ≤5, primary ≤14, muted otherwise)
-  - Calendar-style grid highlighting active trading days (green cells for traded, white/5 for past untouched, white/2 for future)
-  - Today indicator with ring highlight
-  - Pace indicator showing "On pace" / "Behind pace" based on expected vs actual trading days
-  - Footer stats: start date, end date, days elapsed, days traded
-  - "Requirement met" label when all minimum days are completed
-  - Empty/missing date handling for accounts without start/end dates
-- Component accepts `tradingDays` and `timeline` props matching `getPropCompliance` response shape
-- Files changed: `src/components/prop/trading-days-timeline.tsx` (new)
+## 2026-02-28 - US-013: Drop instrumentType Column and Enum from Database Schema
+- Removed `instrumentTypeEnum` pgEnum definition from schema.ts
+- Removed `instrumentType` column from trades table
+- Removed `defaultInstrumentType` column from userSettings table
+- Updated candleCache `source` comment from "twelve_data", "polygon" to "databento"
+- Updated symbol comments to remove "EUR/USD" references
+- Removed `instrumentType: "futures"` from trades.ts create insert
+- Removed `instrumentType: "futures" as const` from trades.ts batchImport insert
+- Removed `instrumentType` from test fixtures: trades.ts (interface + usage), scenarios.ts (converted forex trade to MES futures)
+- Removed `instrumentType` from batch-import.test.ts (helper interface, helper usage, test override, assertion)
+- Removed `instrumentType: "futures"` from rule-relevance.test.ts (13 occurrences), rule-compliance.test.ts (7 occurrences), strategy-evaluation.test.ts (26 occurrences)
+- Removed entire "Forex symbols" describe block from running-pnl.test.ts (3 forex-specific tests)
+- Removed forex `generateRunningPnlSeries` test case from running-pnl.test.ts
+- Removed 5th "futures" argument from `calculateRunningPnlAtTime` calls in edge case tests
+- Removed `instrumentType` from all `RunningPnlOptions` objects in running-pnl.test.ts (13 occurrences)
+- Updated tests/README.md example
+- Files changed: schema.ts, trades.ts, analytics.ts (format), journal/[id]/page.tsx (format), tests/README.md, trades.ts fixture, scenarios.ts fixture, batch-import.test.ts, rule-relevance.test.ts, rule-compliance.test.ts, strategy-evaluation.test.ts, running-pnl.test.ts
 - **Learnings for future iterations:**
-  - Array destructuring from `.split().map(Number)` gives `(number | undefined)[]` in strict TS — use individual index access with nullish coalescing (`parts[0] ?? 0`) instead of destructuring
-  - `allDates[0]` is `string | undefined` even when guarded by `allDates.length > 0` — TS doesn't narrow array index access, use `?? ""` fallback
-  - Calendar grid week alignment: use `getDayOfWeek(firstDate)` to compute padding cells (null values) for the first partial week
-  - Date generation: use local Date constructor `new Date(y, m-1, d)` to avoid timezone issues with date strings
-  - `parseDate()` helper handles both `Date` objects and ISO strings from tRPC serialization (dates become strings over the wire)
-
+  - Removing a DB column from schema.ts cascades to: insert statements in routers, test fixtures, and every test file that creates trade objects with the column
+  - `replace_all` with Edit tool is effective for removing repeated lines (e.g., `instrumentType: "futures"`) but watch for different indentation levels
+  - Biome auto-fix (`bunx biome check --write <files>`) cleans up blank lines left from removals
+  - The `source` column in candleCache was kept — it still stores provider info ("databento") and could support future providers
+  - Forex test cases in running-pnl.test.ts used `calculateRunningPnlAtTime` with 5 args (function now takes 4) — these needed complete removal, not just field removal
+  - Note: `bun run db:push` was NOT run — this is a schema-level change that must be applied to the actual DB separately
 ---
 
-## 2026-02-18 - US-013
-- Created `src/components/prop/challenge-history.tsx` — Challenge History Component
-- Features implemented:
-  - Vertical timeline of all prop accounts (challenge + funded) sorted by challengeStartDate (newest first)
-  - Each entry shows: account name, status badge (Active/Passed/Failed), date range, starting balance
-  - Timeline dots with connecting lines, color-coded by challenge status (profit green for passed, loss red for failed, primary for active)
-  - Selected account highlighted with brighter background
-  - Linked funded account indicator showing "→ Funded: [account name]" connection
-  - Clickable entries with `onSelectAccount` callback
-  - Empty state: "No challenge history yet"
-  - Account type label (Challenge/Funded) on right side
-  - Uses `useAccount()` context for account data (includes all active accounts)
-  - All data-testid attributes on key elements
-- Files changed: `src/components/prop/challenge-history.tsx` (new)
+## 2026-02-28 - US-014: Clean Up Environment Variables and Documentation
+- Updated CLAUDE.md: description to "futures traders", removed TWELVE_DATA_API_KEY from env vars section
+- Updated README.md: description to "futures traders", removed MT4/MT5 from CSV import mention
+- Updated ROADMAP.md: Phase 7 historical data (Databento-only), replay (futures-only calculations), Phase 8 brokers (removed MT4/MT5 parsers and MetaTrader from priority brokers)
+- Updated .claude/skills/architecture/SKILL.md: removed Twelve Data provider row and Forex/Crypto routing section
+- Updated .claude/skills/architecture/MARKET_DATA_REFERENCE.md: extensive rework — removed Twelve Data section, updated to single-provider (Databento), removed forex symbols from examples, removed Twelve Data troubleshooting section, updated cost analysis
+- Updated .claude/skills/testing/TESTING_REFERENCE.md: removed instrumentType from CreateTestTradeOptions
+- Updated .claude/skills/consistency-audit/SKILL.md: removed FOREX_SPECS from grep command
+- Updated .claude/skills/backend/TRPC_REFERENCE.md: updated market data router to Databento-only
+- Updated plans/prd-running-pnl.md: removed calculateForexPnL, getForexSpec references, updated FR-006 to futures-only
+- Updated plans/prd-command-center-dashboard.md: removed "Forex Factory" from deferred feature
+- Updated plans/prd-broker-live-integration.md: added futures-only pivot note, removed forex traders from target audience
+- No .env.example file exists — nothing to update there
+- Files changed: CLAUDE.md, README.md, ROADMAP.md, 5 .claude/skills files, 3 plans files, prd.json
 - **Learnings for future iterations:**
-  - `useAccount()` context uses `getActive` which only returns active accounts — failed/deactivated challenges may not appear. If full history needed, use `accounts.getAll` tRPC query directly
-  - `accounts.getAll` includes `with: { group: true, linkedAccount: true }` relation data, while `getActive` does not
-  - For timeline dots: use `border-2` + `border-current` for unfilled state, solid `bg-` class for filled/selected state
-  - `Number.parseFloat()` preferred over `parseFloat()` by Biome's linting rules
-  - Biome auto-inlines short `cn()` calls that fit on one line — don't fight it, let `bunx biome check --write` handle formatting
-
+  - MARKET_DATA_REFERENCE.md was the most extensive doc to update — had Twelve Data woven throughout (provider table, config section, troubleshooting, code examples, cost analysis)
+  - Plan files (PRDs) that describe future work can be annotated with a pivot note rather than fully rewritten
+  - The prd-futures-only-cleanup.md was intentionally left as-is since it describes the cleanup work itself
 ---
 
-## 2026-02-18 - US-014
-- Assembled full /prop page with all compliance components from US-009 through US-013
-- Replaced placeholder comment with actual component assembly
-- Files changed: `src/app/(protected)/prop/page.tsx` (updated)
-- Components assembled:
-  - `ComplianceGrid` (US-010): receives full `data` object from `getPropCompliance`
-  - `DrawdownChart` (US-011): receives `equityCurve`, `maxDrawdownPercent`, `dailyLossLimit`, `initialBalance` from compliance data
-  - `TradingDaysTimeline` (US-012): receives `tradingDays` and `timeline` props
-  - `ChallengeHistory` (US-013): uses its own data from `useAccount()`, receives `selectedAccountId` and `onSelectAccount` callback
-- Layout: `space-y-6` vertical spacing, 2-column grid (`lg:grid-cols-2`) for DrawdownChart + TradingDaysTimeline on desktop
-- Updated loading skeleton to match full page layout (summary bar, 4 metric cards, chart + timeline, history)
-- `ChallengeHistory.onSelectAccount` wired to `handleAccountChange` for seamless account switching from timeline
+## 2026-02-28 - US-015: Integration Tests — Verify Forex Removal Complete
+- All greps confirmed zero forex/Twelve Data/pip/instrumentType references in src/
+- Found 31 test failures caused by stale EURUSD references from US-013's MES migration
+- Root cause: US-013 changed the scenario fixture's EURUSD trade to MES but didn't update expectedMetrics or test assertions
+- Updated tests/utils/fixtures/scenarios.ts: comments, expectedMetrics (totalPnl 4263→4423, grossLoss 1207→1047, profitFactor 4.53→5.23, symbols array EURUSD→MES)
+- Updated tests/integration/analytics/symbols.test.ts: EURUSD→MES references, variable names, P&L values (-202→-42)
+- Updated tests/integration/analytics/overview.test.ts: expectedWithDefaultThreshold (totalPnl 4263→4423, grossLoss 1212→1052)
+- Updated tests/integration/analytics/filters.test.ts: EURUSD→MES, loss P&L -1212→-1052, position size count 6→7 (MES qty=2 vs EURUSD qty=100000)
+- Updated tests/integration/ai-tools.test.ts: EURUSD→MES, totalPnl 4263→4423
+- Updated tests/integration/analytics/export.test.ts: EURUSD→MES, forex price assertions (1.08/1.078→5000/4996)
+- Updated tests/integration/analytics/presets.test.ts: EURUSD→MES in filter string
+- Fixed pre-existing prop-compliance.test.ts: overallStatus "danger"→"safe" (code excludes profit target from overall status)
+- All 1027 tests pass across 32 test files, build passes
+- Files changed: scenarios.ts, symbols.test.ts, overview.test.ts, filters.test.ts, ai-tools.test.ts, export.test.ts, presets.test.ts, prop-compliance.test.ts
 - **Learnings for future iterations:**
-  - Biome formatting: inline ternary expressions that exceed line width must be multiline — Biome enforces `\n? value\n: fallback\n` format
-  - `dailyLossLimit` for DrawdownChart is percentage, computed from dollar amounts: `(dollarLimit / initialBalance) * 100`
-  - `ComplianceGrid` uses a `ComplianceData` interface — passing the full `getPropCompliance` response works because it's a superset
-  - Loading skeleton should mirror the actual content layout for smooth CLS (content layout shift) — update skeleton whenever content structure changes
-
+  - When changing trade data in fixtures (e.g., EURUSD→MES), the expectedMetrics and ALL downstream test assertions must be updated — P&L changes cascade to totalPnl, grossLoss, profitFactor, avgLoss, position size ranges
+  - The `replace_all` Edit tool changes string literals but not variable names — need separate passes for `EURUSD`→`MES` and `eurusd`→`mes`
+  - The $3 breakeven threshold in analytics affects win/loss classification — overview.test.ts uses a different threshold than scenarios.ts expectedMetrics (which uses no threshold)
+  - prop-compliance.test.ts had a pre-existing bug: code at accounts.ts:653-654 excludes profit target from overallStatus calculation, so empty account is "safe" not "danger"
 ---
 
-## 2026-02-18 - US-016
-- Added `accountType` prop to `RiskGauge` component for prop-aware labeling
-- When `accountType` is prop + `ruinThresholdSource === "account"`:
-  - Subtitle changes from "Risk of Ruin" to "Challenge Failure Risk"
-  - Basis text says "Based on X% max drawdown rule" instead of "X% max DD"
-  - ChartTerminal title also updates to "Challenge Failure Risk"
-- Updated `RiskTab` in analytics page to pass `selectedAccount?.accountType` to `RiskGauge`
-- Existing behavior unchanged for non-prop accounts
-- Files changed: `src/components/analytics/risk-gauge.tsx`, `src/app/(protected)/analytics/page.tsx`
-- **Learnings for future iterations:**
-  - `isPropAccountType()` accepts `undefined` gracefully (returns false) — safe to pass `selectedAccount?.accountType` directly
-  - Compound condition pattern: `isPropAccountType(accountType) && ruinThresholdSource === "account"` ensures only prop accounts with account-based thresholds get relabeled
-  - ChartTerminal title should also reflect the label change — users see the terminal header before the gauge content
-
----
-
-## 2026-02-18 - US-017
-- Added `simulatePropChallenge()` Monte Carlo simulation function to `src/lib/analytics/prop-compliance.ts`
-- Added `SimulatePropChallengeInput` and `SimulatePropChallengeResult` interfaces
-- Added private `percentile()` helper for linear interpolation of sorted arrays
-- Files changed: `src/lib/analytics/prop-compliance.ts` (updated)
-- Function features:
-  - Runs N iterations (default 10000), each simulating random trades using winRate + avgWin/avgLoss
-  - Tracks equity and high-water-mark drawdown per simulation
-  - Three stop conditions: profit target reached (pass), max drawdown breached (fail), max trades exceeded (fail)
-  - Returns passRate, failRate, avgTradesToPass, medianOutcome, percentiles (p10/p25/p50/p75/p90), simulations count
-  - Edge cases: profitTarget <= 0 returns 100% pass, maxDrawdown <= 0 returns 100% fail
-- **Learnings for future iterations:**
-  - `avgLoss` input is a positive number (e.g. 200), negated inside the loop as `-avgLoss` for trade result
-  - Percentile calculation uses linear interpolation between sorted array indices for smooth values
-  - Already exported from barrel `src/lib/analytics/index.ts` via `export * from "./prop-compliance"`
-  - No need for seeded PRNG — Math.random() is fine for Monte Carlo since exact reproducibility isn't required
-
----
-
-## 2026-02-18 - US-018
-- Added 12 unit tests for `simulatePropChallenge()` to `tests/unit/prop-compliance.test.ts`
-- Files changed: `tests/unit/prop-compliance.test.ts` (updated)
-- Test total now: 74 tests in prop-compliance file, 110 total across unit tests
-- Tests cover:
-  - High win rate (80%) produces high pass rate (>70%)
-  - Low win rate (30%) produces low pass rate (<30%)
-  - Edge case: profitTarget = 0 → 100% pass rate
-  - Edge case: maxDrawdown = 0 → 100% fail rate
-  - Edge case: negative profitTarget → 100% pass rate
-  - Return shape: all expected fields present (passRate, failRate, avgTradesToPass, medianOutcome, percentiles, simulations)
-  - Percentiles in correct order (p10 ≤ p25 ≤ p50 ≤ p75 ≤ p90)
-  - passRate + failRate = 1 invariant
-  - Simulations count matches iterations input
-  - Default 10000 iterations when not specified
-  - medianOutcome equals p50 percentile
-  - avgTradesToPass is positive when passes exist
-- **Learnings for future iterations:**
-  - Biome formatting: `expect().toBeLessThanOrEqual(value)` fits inline when argument is short — don't wrap to multiline
-  - Monte Carlo tests use statistical assertions (>0.7, <0.3) not exact values due to randomness — use generous bounds
-  - `baseInput` pattern with spread overrides (`{...baseInput, winRate: 0.8}`) keeps test setup DRY
-
----
-
-## 2026-02-18 - US-019
-- Created `src/components/prop/challenge-simulator.tsx` — Monte Carlo Challenge Outcome Card
-- Enhanced `getPropCompliance` endpoint to include `tradeStats` (totalTrades, wins, losses, winRate, avgWin, avgLoss) since trades are already loaded
-- Added `ChallengeSimulator` to `/prop` page after drawdown chart section, before challenge history
-- Files changed: `src/components/prop/challenge-simulator.tsx` (new), `src/app/(protected)/prop/page.tsx` (updated), `src/server/api/routers/accounts.ts` (updated)
-- Features implemented:
-  - Prominent pass rate display (large number, color-coded: green >=70%, amber >=40%, red <40%)
-  - Pass/fail distribution bar with inline labels
-  - Percentile outcome distribution visualization (interquartile range, median marker) — reuses MonteCarloChart pattern
-  - Stats grid: median outcome, avg trades to pass
-  - Basis info showing trade count, win rate, avg win/loss
-  - Disclaimer about historical stats assumption
-  - "Not enough data" empty state when < 10 trades
-  - Terminal design: font-mono, data-testid attributes, dark card styling
-  - Runs 10,000 iterations client-side via useMemo
-- **Learnings for future iterations:**
-  - `getPropCompliance` already loads all account trades — enrich its return value rather than making a second API call to `getStats` for trade statistics
-  - `simulatePropChallenge` expects `winRate` as fraction (0-1), but `tradeStats.winRate` is percentage (0-100) — divide by 100 before passing
-  - `maxDrawdown` for simulator needs dollar amount, computed from `data.drawdown.limit` (percentage) × `initialBalance`
-  - `profitTarget` dollar amount available directly from `data.profitTarget.target`
-  - Biome auto-fix: `bunx biome check --write <files>` is the fastest way to fix class ordering and formatting
-
----
-
-## 2026-02-18 - US-020
-- Added prop compliance to AI context — AI can now query prop challenge/funded account compliance metrics
-- Extended `call-analytics.ts` to support `accounts` router with `getPropCompliance` endpoint in the allowlist
-- Updated `definitions.ts` tool description to include accounts router and prop compliance endpoint details, expanded router enum to `["analytics", "trades", "accounts"]`
-- Updated `schema-context.ts` to add Accounts Router section with `getPropCompliance` endpoint documentation
-- Updated `planner.ts` to add accounts router with `getPropCompliance` to available analytics endpoints for report planning
-- Files changed: `src/lib/ai/tools/call-analytics.ts`, `src/lib/ai/tools/definitions.ts`, `src/lib/ai/schema-context.ts`, `src/lib/ai/report-pipeline/planner.ts`
-- **Learnings for future iterations:**
-  - AI tool system uses allowlisted endpoint sets per router (`ALLOWED_ANALYTICS_ENDPOINTS`, `ALLOWED_TRADES_ENDPOINTS`) — add new routers by creating a new `ALLOWED_*_ENDPOINTS` array and `*_SET`
-  - `executeCallAnalytics` creates a server-side tRPC caller via `createCaller(ctx)` — new routers are accessed as `caller.routerName[endpoint]` with the same pattern
-  - `schema-context.ts` is a static string (not per-request) — describes the full database schema and available endpoints for the AI system prompt
-  - `planner.ts` has a separate `AVAILABLE_ANALYTICS_ENDPOINTS` string used only for report planning — keep in sync with actual tool capabilities
-  - The tool `inputSchema` `router` field uses a `z.enum()` — must be updated when adding new routers
-
----
-
-## 2026-02-18 - US-021
-- Added 3 prop-related queries to `SUGGESTED_CHAT_QUERIES` in `src/lib/constants/ai.ts`
-- Added 1 prop-related report prompt to `SUGGESTED_REPORT_PROMPTS`
-- Files changed: `src/lib/constants/ai.ts` (updated)
-- Chat queries added: "How am I doing on my prop challenge?", "Will I pass this challenge at my current pace?", "What's my risk of failing the challenge?"
-- Report prompt added: "Generate a prop challenge compliance report with drawdown analysis, daily loss tracking, and probability of passing"
-- **Learnings for future iterations:**
-  - `SUGGESTED_CHAT_QUERIES` and `SUGGESTED_REPORT_PROMPTS` are `as const` readonly tuples — just append new entries to the array
-
----
-
-## 2026-02-18 - US-022
-- Added prop context banner to trade detail stats panel
-- Banner shows below hero P&L section, only for prop_challenge/prop_funded accounts
-- For losses: "This trade used X% of Y% max drawdown limit" (red text for percentage)
-- For wins: "This trade contributed X% toward Y% profit target" (green text for percentage)
-- Fallback text "Prop account trade" when missing data (no initialBalance or no relevant metric)
-- Uses Shield icon from lucide-react with primary (chartreuse) color
-- Terminal design: font-mono text-[10px], border-white/5 container, rounded-sm
-- Added `account` field to StatsPanel's Trade interface (accountType, maxDrawdown, profitTarget, initialBalance)
-- Passed `trade.account` from page.tsx to StatsPanel in both mobile (Sheet) and desktop (ResizablePanel) views
-- No new API calls needed — trade.account already loaded by `getById` with `account: true` relation
-- All data-testid attributes added (prop-context-banner)
-- Files changed: `src/components/trade-detail/stats-panel.tsx` (updated), `src/app/(protected)/journal/[id]/page.tsx` (updated)
-- **Learnings for future iterations:**
-  - `getById` fetches `account: true` relation — full Account object (including all prop fields) available on `trade.account`
-  - `TradeForStatsPanel` is a Pick type from src/types — to pass additional data, extend the local `Trade` interface in stats-panel.tsx rather than modifying the shared type
-  - `initialBalance` on Account can be `string | null` — handle null case in component
-  - Biome auto-formats long arithmetic expressions inside JSX to multiline with `%` on a separate line
-  - Percentage-to-dollar conversion: `initialBalance * (maxDrawdown / 100)` gives the dollar limit; `Math.abs(netPnl) / dollarLimit * 100` gives what percentage of that limit was used
-
----
-
-## 2026-02-18 - US-015
-- Created `tests/e2e/prop-compliance.spec.ts` with 7 smoke tests for prop compliance UI
-- Files changed: `tests/e2e/prop-compliance.spec.ts` (new)
-- Tests cover:
-  - Dashboard prop widget visibility (shows for prop accounts, absent for non-prop)
-  - Sidebar Prop nav item presence and navigation to /prop
-  - /prop page loads with either empty state or compliance content
-  - Compliance grid renders all 4 metric cards (drawdown, daily loss, profit target, consistency)
-  - Drawdown chart renders (or empty state for no data)
-  - Account selector and status dot present on prop page
-  - Challenge status badge visible for prop accounts
-- Tests are adaptive: gracefully handle both "has prop accounts" and "no prop accounts" scenarios
-- All tests use `data-testid` selectors following project convention
-- **Learnings for future iterations:**
-  - E2E tests must adapt to unknown user data — use `isVisible().catch(() => false)` pattern to check if elements exist, then branch test logic accordingly
-  - `reuseExistingServer: !process.env.CI` in Playwright config requires the dev server to return non-500 responses on the base URL for detection to work
-  - For conditional UI features (prop-only), test both presence and absence — early `return` when feature conditions aren't met
-  - Biome auto-inlines `expect(page.getByTestId(...)).toBeVisible()` when short enough — don't fight the formatter
-  - `page.getByRole("link", { name: "Prop" })` works for nav items without data-testid since the text content is unique
-
+## 2026-02-28 - US-016: Final Build Verification and Smoke Test
+- bun run check: passes (only pre-existing error in scripts/ralph/prd.prop-compliance.archived.json)
+- bun run build: passes with zero errors, all 16 static + dynamic routes built
+- bun run test: all 1027 tests pass across 32 test files
+- Zero instrumentType references in src/
+- Dev server starts without errors on port 3000
+- No dead imports or unused variables detected
+- **All 16 user stories complete. Futures-only cleanup PRD is finished.**
 ---

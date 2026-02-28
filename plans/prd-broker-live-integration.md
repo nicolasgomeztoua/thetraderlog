@@ -12,9 +12,10 @@ EdgeJournal currently requires manual CSV upload for every trade. Traders forget
 tedious, and there is no automatic capture safety net. This feature adds **read-only live broker sync** that
 automatically imports closed trades from a trader's broker into their EdgeJournal account — no manual export needed.
 
+> **Note:** This PRD was written before the futures-only pivot. Forex-specific brokers (OANDA, MetaApi/MT4/MT5) and forex detection logic are no longer in scope.
+
 Target audiences:
 - **Futures prop traders** (Apex, Topstep, MyFundedFutures) on Tradovate, Rithmic, NinjaTrader
-- **Forex traders** (FTMO, retail) on MT4/5, OANDA, cTrader
 - **US equity/multi-asset traders** on TradeStation, Schwab, Webull
 
 ---

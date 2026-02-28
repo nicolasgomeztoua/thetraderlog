@@ -10,19 +10,19 @@ import { Button } from "@/components/ui/button";
 const tickerItems = [
 	{ symbol: "ES", price: "5,892.50", change: "+0.43%", positive: true },
 	{ symbol: "NQ", price: "21,245.75", change: "+0.67%", positive: true },
-	{ symbol: "EUR/USD", price: "1.0892", change: "-0.12%", positive: false },
-	{ symbol: "GBP/USD", price: "1.2654", change: "+0.08%", positive: true },
+	{ symbol: "MES", price: "5,892.25", change: "+0.41%", positive: true },
+	{ symbol: "MNQ", price: "21,244.50", change: "+0.65%", positive: true },
 	{ symbol: "CL", price: "72.45", change: "-0.89%", positive: false },
 	{ symbol: "GC", price: "2,645.30", change: "+0.34%", positive: true },
-	{ symbol: "BTC/USD", price: "104,892", change: "+2.14%", positive: true },
-	{ symbol: "USD/JPY", price: "149.82", change: "+0.21%", positive: true },
+	{ symbol: "YM", price: "43,892.00", change: "+0.28%", positive: true },
+	{ symbol: "RTY", price: "2,245.60", change: "-0.15%", positive: false },
 ];
 
 // Demo trades for the preview (for logged out users)
 const demoTrades = [
 	{ symbol: "ES", direction: "LONG", pnl: 425.0, positive: true },
 	{ symbol: "NQ", direction: "SHORT", pnl: -180.0, positive: false },
-	{ symbol: "EUR/USD", direction: "LONG", pnl: 312.5, positive: true },
+	{ symbol: "MNQ", direction: "LONG", pnl: 312.5, positive: true },
 	{ symbol: "ES", direction: "LONG", pnl: 287.0, positive: true },
 	{ symbol: "CL", direction: "SHORT", pnl: -95.0, positive: false },
 ];
@@ -318,7 +318,7 @@ export function Hero() {
 
 						{/* Subheadline */}
 						<p className="mx-auto max-w-xl font-mono text-muted-foreground text-xs sm:text-sm md:text-base">
-							The AI-powered trading journal for futures and forex traders.
+							The AI-powered trading journal for futures traders.
 							<br className="hidden sm:block" />
 							Track. Analyze. Improve.{" "}
 							<span className="text-foreground">Repeat.</span>

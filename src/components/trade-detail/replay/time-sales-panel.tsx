@@ -13,7 +13,6 @@ import type { ReplayExecution } from "./use-replay-engine";
 
 interface TimeSalesPanelProps {
 	executions: ReplayExecution[];
-	instrumentType?: "futures" | "forex";
 	className?: string;
 }
 
@@ -21,11 +20,7 @@ interface TimeSalesPanelProps {
 // COMPONENT
 // =============================================================================
 
-export function TimeSalesPanel({
-	executions,
-	instrumentType = "futures",
-	className,
-}: TimeSalesPanelProps) {
+export function TimeSalesPanel({ executions, className }: TimeSalesPanelProps) {
 	const { formatTime } = useTimezone();
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const lastExecutionCountRef = useRef(0);
@@ -65,7 +60,7 @@ export function TimeSalesPanel({
 		return type === "entry" || type === "scale_in";
 	};
 
-	const sizeLabel = instrumentType === "futures" ? "cts" : "lots";
+	const sizeLabel = "cts";
 
 	// Sort executions by time (most recent first for display)
 	const sortedExecutions = [...executions].sort(

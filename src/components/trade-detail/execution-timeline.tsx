@@ -32,7 +32,6 @@ interface ExecutionTimelineProps {
 	executions: Execution[];
 	onAddExecution?: (execution: Omit<Execution, "id">) => void;
 	onDeleteExecution?: (id: string) => void;
-	instrumentType?: string;
 	className?: string;
 }
 
@@ -44,7 +43,6 @@ export function ExecutionTimeline({
 	executions,
 	onAddExecution,
 	onDeleteExecution,
-	instrumentType = "futures",
 	className,
 }: ExecutionTimelineProps) {
 	const { formatDate, formatTime } = useTimezone();
@@ -103,7 +101,7 @@ export function ExecutionTimeline({
 		});
 	}
 
-	const sizeLabel = instrumentType === "futures" ? "cts" : "lots";
+	const sizeLabel = "cts";
 
 	if (sortedExecutions.length === 0 && !onAddExecution) {
 		return null;

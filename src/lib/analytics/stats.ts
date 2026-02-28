@@ -3,7 +3,7 @@
 // Shared module for calculating win rate, profit factor, avg win/loss, etc.
 // =============================================================================
 
-import { getPointValue } from "@/lib/market-data/symbols";
+import { getPointValue } from "@/lib/market-data";
 
 /**
  * Minimal trade interface for stats calculations
@@ -14,7 +14,6 @@ export interface TradeForStats {
 	stopLoss?: string | null;
 	quantity?: string;
 	symbol?: string;
-	instrumentType?: "futures" | "forex";
 }
 
 /**
@@ -103,14 +102,12 @@ export function calculateRMultipleFromTrade(
 	stopLoss: number,
 	quantity: number,
 	symbol?: string,
-	instrumentType?: "futures" | "forex",
 ): number | null {
 	const riskPerUnit = Math.abs(entryPrice - stopLoss);
 	if (riskPerUnit === 0 || quantity === 0) return null;
 
 	// Get point value for proper risk calculation
-	const pointValue =
-		symbol && instrumentType ? getPointValue(symbol, instrumentType) : 1;
+	const pointValue = symbol ? getPointValue(symbol) : 1;
 	const plannedRisk = riskPerUnit * pointValue * quantity;
 
 	if (plannedRisk === 0) return null;
@@ -194,14 +191,12 @@ export function calculateAggregateStats(
 			stopLoss: string;
 			entryPrice: string;
 			symbol: string;
-			instrumentType: "futures" | "forex";
 		} =>
 			t.stopLoss !== null &&
 			t.stopLoss !== undefined &&
 			t.entryPrice !== undefined &&
 			t.netPnl !== null &&
-			t.symbol !== undefined &&
-			t.instrumentType !== undefined,
+			t.symbol !== undefined,
 	);
 
 	if (tradesWithSL.length > 0) {
@@ -218,7 +213,6 @@ export function calculateAggregateStats(
 				sl,
 				qty,
 				t.symbol,
-				t.instrumentType,
 			);
 			if (rMultiple !== null) {
 				rMultiples.push(rMultiple);

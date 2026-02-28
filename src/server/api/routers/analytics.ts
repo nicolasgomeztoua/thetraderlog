@@ -169,7 +169,6 @@ interface TradeWithComputedFields {
 	stopLoss?: string | null;
 	quantity?: string;
 	symbol?: string;
-	instrumentType?: string | null;
 	direction?: string;
 }
 
@@ -270,7 +269,6 @@ function applyPostQueryFilters<T extends TradeWithComputedFields>(
 				parseFloat(trade.stopLoss),
 				parseFloat(trade.quantity),
 				trade.symbol ?? "",
-				(trade.instrumentType as "futures" | "forex") ?? "futures",
 			);
 
 			if (rMultiple === null) return true;
@@ -349,7 +347,6 @@ export const analyticsRouter = createTRPCRouter({
 					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -512,7 +509,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -610,7 +606,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -704,7 +699,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -798,7 +792,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -975,7 +968,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -1118,7 +1110,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -1256,7 +1247,6 @@ export const analyticsRouter = createTRPCRouter({
 					entryPrice: trades.entryPrice,
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -1341,7 +1331,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -1431,7 +1420,6 @@ export const analyticsRouter = createTRPCRouter({
 					quantity: trades.quantity,
 					direction: trades.direction,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -1489,7 +1477,6 @@ export const analyticsRouter = createTRPCRouter({
 					parseFloat(trade.stopLoss),
 					parseFloat(trade.quantity),
 					trade.symbol,
-					trade.instrumentType as "futures" | "forex",
 				);
 
 				if (rMultiple === null) continue;
@@ -1588,7 +1575,6 @@ export const analyticsRouter = createTRPCRouter({
 					quantity: trades.quantity,
 					direction: trades.direction,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -1650,7 +1636,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss,
 					parseFloat(trade.quantity),
 					trade.symbol,
-					trade.instrumentType as "futures" | "forex",
 				);
 
 				if (rMultiple === null) continue;
@@ -1774,7 +1759,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -1938,7 +1922,6 @@ export const analyticsRouter = createTRPCRouter({
 					entryPrice: trades.entryPrice,
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -2077,7 +2060,6 @@ export const analyticsRouter = createTRPCRouter({
 					entryPrice: trades.entryPrice,
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -2217,7 +2199,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -2463,7 +2444,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -2695,7 +2675,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -2904,7 +2883,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -3044,7 +3022,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions))
@@ -3216,7 +3193,6 @@ export const analyticsRouter = createTRPCRouter({
 					stopLoss: trades.stopLoss,
 					quantity: trades.quantity,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));
@@ -3597,7 +3573,7 @@ export const analyticsRouter = createTRPCRouter({
 					netPnl: trades.netPnl,
 					fees: trades.fees,
 					stopLoss: trades.stopLoss,
-					instrumentType: trades.instrumentType,
+
 					strategyId: trades.strategyId,
 					rating: trades.rating,
 					isReviewed: trades.isReviewed,
@@ -3678,7 +3654,6 @@ export const analyticsRouter = createTRPCRouter({
 								parseFloat(trade.stopLoss),
 								parseFloat(trade.quantity),
 								trade.symbol,
-								(trade.instrumentType as "futures" | "forex") ?? "futures",
 							)
 						: null;
 
@@ -3781,7 +3756,6 @@ export const analyticsRouter = createTRPCRouter({
 					entryTime: trades.entryTime,
 					exitTime: trades.exitTime,
 					symbol: trades.symbol,
-					instrumentType: trades.instrumentType,
 				})
 				.from(trades)
 				.where(and(...conditions));

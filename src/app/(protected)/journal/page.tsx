@@ -558,7 +558,6 @@ export default function JournalPage() {
 					trade.stopLoss ? parseFloat(trade.stopLoss) : null,
 					parseFloat(trade.quantity),
 					trade.symbol,
-					trade.instrumentType,
 				);
 				if (rMultiple === null) {
 					return (
@@ -692,7 +691,6 @@ export default function JournalPage() {
 			trade.stopLoss ? parseFloat(trade.stopLoss) : null,
 			parseFloat(trade.quantity),
 			trade.symbol,
-			trade.instrumentType,
 		);
 
 		return (

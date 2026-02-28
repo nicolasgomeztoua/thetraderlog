@@ -315,7 +315,7 @@ Match TradeZella's comprehensive trade tracking page.
 - [x] Scale-in/out markers with distinct shapes and sizes
 - [x] Integration with ContentPanel's "Running P&L" tab
 - [x] Stop P&L calculation at trade exit for accuracy
-- [x] Comprehensive integration tests (futures + forex)
+- [x] Comprehensive integration tests (futures)
 
 #### 5.5 MAE/MFE Per-Trade Analysis *(COMPLETED)*
 - [x] Add `maePrice`, `mfePrice`, `maeAmount`, `mfeAmount`, `tradeEfficiency`, `marketDataQuality` fields to trades schema
@@ -408,9 +408,9 @@ Tick-by-tick trade replay functionality.
 ### Tasks
 
 #### 7.1 Historical Data Integration
-- [x] Market data provider integration (Databento for futures, Twelve Data for forex)
+- [x] Market data provider integration (Databento for futures)
 - [x] Data fetching and caching (existing market data service)
-- [x] Support for forex and futures
+- [x] Support for futures instruments
 - [x] Handle different data granularities (1m, 5m, 15m, 30m, 1h aggregation)
 
 #### 7.2 Replay Engine
@@ -426,7 +426,7 @@ Tick-by-tick trade replay functionality.
 - [x] Candlestick chart renderer (lightweight-charts)
 - [x] Trade markers on chart (entry arrows, exit circles, scale-in/out)
 - [x] Time & Sales panel component
-- [x] Real-time running P&L during replay (proper futures/forex calculations)
+- [x] Real-time running P&L during replay (proper futures calculations)
 - [x] SL/TP price lines on chart
 - [x] Chart zoom/position preserved during playback
 
@@ -445,8 +445,6 @@ Direct broker connections for auto-sync.
 
 #### 8.1 CSV Parser Expansion
 - [x] ProjectX parser *(fully implemented)*
-- [ ] MT4 parser *(stub exists — header validation only)*
-- [ ] MT5 parser *(stub exists — header validation only)*
 - [ ] NinjaTrader parser
 - [ ] cTrader parser
 - [ ] TradingView parser
@@ -465,11 +463,10 @@ Direct broker connections for auto-sync.
 - [ ] Connection status UI
 
 **Priority brokers:**
-1. MetaTrader 4/5
-2. Interactive Brokers
-3. TradingView
-4. Tradovate
-5. NinjaTrader
+1. Interactive Brokers
+2. TradingView
+3. Tradovate
+4. NinjaTrader
 
 ---
 

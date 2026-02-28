@@ -688,7 +688,7 @@ describe("Analytics Filter Presets", () => {
 			// User B creates presets
 			await callerB.analytics.createFilterPreset({
 				name: "User B Preset 1",
-				filters: JSON.stringify({ symbols: ["EURUSD"] }),
+				filters: JSON.stringify({ symbols: ["MES"] }),
 				isDefault: true,
 			});
 

@@ -14,7 +14,7 @@ describe("Analytics Overview", () => {
 	// Expected values adjusted for the system's default $3 breakeven threshold
 	// With threshold of $3:
 	// - Wins (> $3): 995, 1490, 995, 1995 = 4 wins
-	// - Losses (< -$3): -1005, -202, -5 = 3 losses
+	// - Losses (< -$3): -1005, -42, -5 = 3 losses
 	// - Breakevens (between -$3 and $3): 0
 	// Note: The fixture's expectedMetrics uses a different threshold assumption
 	const expectedWithDefaultThreshold = {
@@ -22,9 +22,9 @@ describe("Analytics Overview", () => {
 		wins: 4,
 		losses: 3, // The -5 trade is a loss with $3 threshold
 		breakevens: 0,
-		totalPnl: 4263,
+		totalPnl: 4423,
 		grossProfit: 5475,
-		grossLoss: 1212, // 1005 + 202 + 5 = 1212
+		grossLoss: 1052, // 1005 + 42 + 5 = 1052
 	};
 
 	beforeAll(async () => {
@@ -47,7 +47,7 @@ describe("Analytics Overview", () => {
 				accountId: testData.account.id,
 			});
 
-			// Expected total P&L: 995 + 1490 - 1005 + 995 - 202 + 1995 - 5 = 4263
+			// Expected total P&L: 995 + 1490 - 1005 + 995 - 42 + 1995 - 5 = 4423
 			expect(result.totalPnl).toBeCloseTo(
 				expectedWithDefaultThreshold.totalPnl,
 				0,
@@ -75,7 +75,7 @@ describe("Analytics Overview", () => {
 				expectedWithDefaultThreshold.grossProfit,
 				0,
 			);
-			// Gross loss with $3 threshold: 1005 + 202 + 5 = 1212
+			// Gross loss with $3 threshold: 1005 + 42 + 5 = 1052
 			expect(result.grossLoss).toBeCloseTo(
 				expectedWithDefaultThreshold.grossLoss,
 				0,
@@ -107,7 +107,7 @@ describe("Analytics Overview", () => {
 				accountId: testData.account.id,
 			});
 
-			// Profit factor = gross profit / gross loss = 5475 / 1212 = 4.52
+			// Profit factor = gross profit / gross loss = 5475 / 1052 = 5.20
 			const expectedProfitFactor =
 				expectedWithDefaultThreshold.grossProfit /
 				expectedWithDefaultThreshold.grossLoss;
@@ -125,7 +125,7 @@ describe("Analytics Overview", () => {
 				accountId: testData.account.id,
 			});
 
-			// Average P&L = total P&L / total trades = 4263 / 7 = 609
+			// Average P&L = total P&L / total trades = 4423 / 7 = 632
 			const expectedAvgPnl =
 				expectedWithDefaultThreshold.totalPnl /
 				expectedWithDefaultThreshold.totalTrades;
@@ -149,7 +149,7 @@ describe("Analytics Overview", () => {
 				accountId: testData.account.id,
 			});
 
-			// Average loss = gross loss / losses = 1212 / 3 = 404
+			// Average loss = gross loss / losses = 1052 / 3 = 351
 			const expectedAvgLoss =
 				expectedWithDefaultThreshold.grossLoss /
 				expectedWithDefaultThreshold.losses;

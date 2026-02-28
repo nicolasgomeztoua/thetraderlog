@@ -167,8 +167,6 @@ const CHALLENGE_STATUS_LABELS: Record<string, string> = {
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
-	mt4: "MT4",
-	mt5: "MT5",
 	projectx: "ProjectX",
 	topstepx: "TopstepX",
 	ninjatrader: "NinjaTrader",
@@ -186,8 +184,6 @@ interface AccountFormState {
 	name: string;
 	broker: string;
 	platform:
-		| "mt4"
-		| "mt5"
 		| "projectx"
 		| "topstepx"
 		| "ninjatrader"
@@ -415,7 +411,6 @@ export function SettingsContent() {
 		openaiKey: "",
 		anthropicKey: "",
 		googleKey: "",
-		defaultInstrument: "futures",
 		timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 		currency: "USD",
 		breakevenThreshold: "3.00",
@@ -471,7 +466,6 @@ export function SettingsContent() {
 				openaiKey: userSettings.openaiApiKey ?? "",
 				anthropicKey: userSettings.anthropicApiKey ?? "",
 				googleKey: userSettings.googleApiKey ?? "",
-				defaultInstrument: userSettings.defaultInstrumentType ?? "futures",
 				timezone: tz,
 				currency: userSettings.currency ?? "USD",
 				breakevenThreshold: userSettings.breakevenThreshold ?? "3.00",
@@ -655,9 +649,6 @@ export function SettingsContent() {
 				openaiApiKey: settings.openaiKey || undefined,
 				anthropicApiKey: settings.anthropicKey || undefined,
 				googleApiKey: settings.googleKey || undefined,
-				defaultInstrumentType: settings.defaultInstrument as
-					| "futures"
-					| "forex",
 				timezone: settings.timezone,
 				currency: settings.currency,
 				breakevenThreshold: settings.breakevenThreshold,
@@ -675,9 +666,6 @@ export function SettingsContent() {
 						breakevenThreshold: parseFloat(
 							settings.breakevenThreshold || "3.00",
 						),
-						defaultInstrumentType: settings.defaultInstrument as
-							| "futures"
-							| "forex",
 						tradingSessions: utcSessions,
 					});
 				},
@@ -842,24 +830,6 @@ export function SettingsContent() {
 						</CardHeader>
 						<CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
 							<div className="grid gap-4 sm:grid-cols-2">
-								<div className="space-y-2">
-									<Label>Default Instrument</Label>
-									<Select
-										onValueChange={(value) =>
-											setSettings({ ...settings, defaultInstrument: value })
-										}
-										value={settings.defaultInstrument}
-									>
-										<SelectTrigger>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="futures">Futures</SelectItem>
-											<SelectItem value="forex">Forex</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-
 								<div className="space-y-2">
 									<Label>Currency</Label>
 									<Select
@@ -1497,8 +1467,6 @@ export function SettingsContent() {
 															<SelectValue />
 														</SelectTrigger>
 														<SelectContent>
-															<SelectItem value="mt4">MetaTrader 4</SelectItem>
-															<SelectItem value="mt5">MetaTrader 5</SelectItem>
 															<SelectItem value="projectx">ProjectX</SelectItem>
 															<SelectItem value="topstepx">TopstepX</SelectItem>
 															<SelectItem value="ninjatrader">

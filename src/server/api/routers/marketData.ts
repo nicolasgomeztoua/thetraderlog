@@ -134,7 +134,6 @@ export const marketDataRouter = createTRPCRouter({
 					input.direction,
 					1, // quantity not relevant for point calculations
 					input.symbol,
-					"futures", // Default to futures for point-based calculations
 				);
 
 				// Check SL/TP hit
@@ -204,7 +203,7 @@ export const marketDataRouter = createTRPCRouter({
 	 * This is the recommended endpoint for chart data as it:
 	 * - Uses the cache-first strategy with cross-user deduplication
 	 * - Adds context before/after the trade for better visualization
-	 * - Supports both Databento (futures) and Twelve Data (forex)
+	 * - Uses Databento for futures market data
 	 */
 	getChartData: protectedProcedure
 		.input(
