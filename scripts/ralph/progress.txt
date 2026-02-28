@@ -18,6 +18,8 @@ Feature: Admin Panel
 - `ilike` from drizzle-orm for case-insensitive search; combine with `or()` for multi-field search
 - Don't import schema tables only used in raw SQL strings — Biome flags unused imports
 - Don't use raw `sql\`${column} < ${dateVar}\`` with Date objects — postgres driver rejects Date instances in raw SQL. Use Drizzle operators (`lt`, `gte`, etc.) instead.
+- Admin layout: `(admin)` route group at app root with server-side role check via `api.settings.me()` + `redirect()`
+- `settings.me` query returns current user's `{ id, role, name, email, imageUrl }` — use for role-based UI
 ---
 
 ## 2026-02-28 - US-001
@@ -202,4 +204,20 @@ Feature: Admin Panel
   - System health tests build on each other within describes — data inserted in "accurate counts" test is visible in subsequent "last activity" tests since Vitest runs tests in order within a describe
   - The health endpoint returns `databaseStatus` as a union type "connected" | "error" — test the happy path (connected) since we can't easily break the DB connection in tests
   - `appVersion` comes from package.json at process.cwd() — always a valid string in the test environment
+---
+
+## 2026-02-28 - US-015
+- Created admin route group `(admin)` with layout, loading state, sidebar, and placeholder page
+- Added `settings.me` tRPC query returning `{ id, role, name, email, imageUrl }` for client-side role access
+- Admin layout (server component) checks user role via `api.settings.me()` and redirects non-admins to `/dashboard`
+- Admin sidebar uses `ADMIN_NAV_ITEMS` from constants with icon map pattern (string icon names → Lucide components)
+- Loading state shows spinner with "Verifying admin access..." while role is being checked
+- Terminal design: monospace labels, chartreuse accent for "Admin" badge and active nav items, muted nav items
+- Files changed: src/server/api/routers/settings.ts, src/app/(admin)/layout.tsx (new), src/app/(admin)/loading.tsx (new), src/app/(admin)/_components/admin-sidebar.tsx (new), src/app/(admin)/admin/page.tsx (new)
+- **Learnings for future iterations:**
+  - Admin layout is a separate route group `(admin)` at app root, parallel to `(protected)` — gives completely independent layout
+  - `settings.me` query returns current user info including role — use this for any client-side role checks
+  - Admin layout uses server-side role check with `redirect()` from next/navigation — no client-side loading flash for non-admins
+  - Icon map pattern: ADMIN_NAV_ITEMS stores icon names as strings, sidebar maps them to Lucide components via `ICON_MAP` record
+  - Active nav detection: exact match for `/admin` (overview), `startsWith` for sub-pages like `/admin/bug-reports`
 ---
