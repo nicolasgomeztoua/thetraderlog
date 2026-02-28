@@ -1,8 +1,4 @@
-import {
-	getForexPipSize,
-	getFuturesSpec,
-	getPointValue,
-} from "@/lib/market-data";
+import { getFuturesSpec, getPointValue } from "@/lib/market-data";
 import type { OHLCBar } from "@/lib/market-data/service";
 
 // =============================================================================
@@ -38,19 +34,7 @@ export function calculateTicks(
 }
 
 /**
- * Calculate pips from points for forex
- */
-export function calculatePips(
-	points: number | null,
-	symbol: string,
-): number | null {
-	if (points === null) return null;
-	const pipSize = getForexPipSize(symbol);
-	return points / pipSize;
-}
-
-/**
- * Calculate ticks/pips per contract
+ * Calculate ticks per contract
  */
 export function calculateTicksPerContract(
 	ticks: number | null,
@@ -75,14 +59,14 @@ export function calculateActualRMultiple(
 	stopLoss: number | null,
 	quantity: number,
 	symbol: string,
-	instrumentType: "futures" | "forex",
+	_instrumentType: "futures" | "forex",
 ): number | null {
 	if (netPnl === null || stopLoss === null || quantity === 0) return null;
 
 	const riskPerUnit = Math.abs(entryPrice - stopLoss);
 	if (riskPerUnit === 0) return null;
 
-	const pointValue = getPointValue(symbol, instrumentType);
+	const pointValue = getPointValue(symbol);
 	const plannedRisk = riskPerUnit * pointValue * quantity;
 
 	if (plannedRisk === 0) return null;
@@ -147,19 +131,13 @@ export function calculateROI(
 	entryPrice: number,
 	quantity: number,
 	symbol: string,
-	instrumentType: "futures" | "forex",
+	_instrumentType: "futures" | "forex",
 ): number | null {
 	if (netPnl === null) return null;
 
-	let notionalValue: number;
-	if (instrumentType === "futures") {
-		const spec = getFuturesSpec(symbol);
-		if (!spec) return null;
-		notionalValue = entryPrice * quantity * spec.pointValue;
-	} else {
-		// Forex: assume standard lot = 100,000 units
-		notionalValue = entryPrice * quantity * 100000;
-	}
+	const spec = getFuturesSpec(symbol);
+	if (!spec) return null;
+	const notionalValue = entryPrice * quantity * spec.pointValue;
 
 	if (notionalValue === 0) return null;
 	return (netPnl / notionalValue) * 100;
@@ -171,8 +149,7 @@ export function calculateROI(
 
 export interface TradeStats {
 	points: number | null;
-	ticks: number | null; // For futures
-	pips: number | null; // For forex
+	ticks: number | null;
 	ticksPerContract: number | null;
 	grossPnl: number | null;
 	roi: number | null;
@@ -207,18 +184,12 @@ export function calculateAllStats(trade: {
 	const tp = trade.takeProfit ? parseFloat(trade.takeProfit) : null;
 
 	const points = calculatePoints(entry, exit, trade.direction);
-	const isFutures = trade.instrumentType === "futures";
+	const ticks = calculateTicks(points, trade.symbol);
 
 	return {
 		points,
-		ticks: isFutures ? calculateTicks(points, trade.symbol) : null,
-		pips: !isFutures ? calculatePips(points, trade.symbol) : null,
-		ticksPerContract: calculateTicksPerContract(
-			isFutures
-				? calculateTicks(points, trade.symbol)
-				: calculatePips(points, trade.symbol),
-			qty,
-		),
+		ticks,
+		ticksPerContract: calculateTicksPerContract(ticks, qty),
 		grossPnl: calculateGrossPnl(netPnl, fees),
 		roi: calculateROI(netPnl, entry, qty, trade.symbol, trade.instrumentType),
 		duration: calculateDuration(trade.entryTime, trade.exitTime),
@@ -271,7 +242,7 @@ export function calculateMAEMFE(
 	direction: "long" | "short",
 	quantity: number,
 	symbol: string,
-	instrumentType: "futures" | "forex",
+	_instrumentType: "futures" | "forex",
 ): MAEMFEResult {
 	if (bars.length === 0) {
 		// No data - return zeros
@@ -325,7 +296,7 @@ export function calculateMAEMFE(
 	}
 
 	// Calculate dollar amounts
-	const pointValue = getPointValue(symbol, instrumentType);
+	const pointValue = getPointValue(symbol);
 	const maeAmount = maxAdverseExcursion * pointValue * quantity;
 	const mfeAmount = maxFavorableExcursion * pointValue * quantity;
 

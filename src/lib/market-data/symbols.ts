@@ -94,239 +94,6 @@ export function getFuturesSpec(symbol: string): FuturesSpec | null {
 }
 
 // ============================================
-// FOREX SPECIFICATIONS
-// Pip sizes and values per standard lot
-// ============================================
-
-export interface ForexSpec {
-	symbol: string;
-	pipSize: number; // Size of 1 pip (0.0001 for most, 0.01 for JPY pairs)
-	pipValuePerLot: number; // USD value of 1 pip per standard lot (approximate, varies with rates)
-	baseCurrency: string;
-	quoteCurrency: string;
-}
-
-export const FOREX_SPECS: Record<string, ForexSpec> = {
-	// Major pairs (USD quote = fixed pip value)
-	"EUR/USD": {
-		symbol: "EUR/USD",
-		pipSize: 0.0001,
-		pipValuePerLot: 10,
-		baseCurrency: "EUR",
-		quoteCurrency: "USD",
-	},
-	"GBP/USD": {
-		symbol: "GBP/USD",
-		pipSize: 0.0001,
-		pipValuePerLot: 10,
-		baseCurrency: "GBP",
-		quoteCurrency: "USD",
-	},
-	"AUD/USD": {
-		symbol: "AUD/USD",
-		pipSize: 0.0001,
-		pipValuePerLot: 10,
-		baseCurrency: "AUD",
-		quoteCurrency: "USD",
-	},
-	"NZD/USD": {
-		symbol: "NZD/USD",
-		pipSize: 0.0001,
-		pipValuePerLot: 10,
-		baseCurrency: "NZD",
-		quoteCurrency: "USD",
-	},
-	// USD base pairs (pip value varies with exchange rate)
-	"USD/JPY": {
-		symbol: "USD/JPY",
-		pipSize: 0.01,
-		pipValuePerLot: 9.1,
-		baseCurrency: "USD",
-		quoteCurrency: "JPY",
-	},
-	"USD/CHF": {
-		symbol: "USD/CHF",
-		pipSize: 0.0001,
-		pipValuePerLot: 11.2,
-		baseCurrency: "USD",
-		quoteCurrency: "CHF",
-	},
-	"USD/CAD": {
-		symbol: "USD/CAD",
-		pipSize: 0.0001,
-		pipValuePerLot: 7.4,
-		baseCurrency: "USD",
-		quoteCurrency: "CAD",
-	},
-	// Cross pairs
-	"EUR/JPY": {
-		symbol: "EUR/JPY",
-		pipSize: 0.01,
-		pipValuePerLot: 9.1,
-		baseCurrency: "EUR",
-		quoteCurrency: "JPY",
-	},
-	"GBP/JPY": {
-		symbol: "GBP/JPY",
-		pipSize: 0.01,
-		pipValuePerLot: 9.1,
-		baseCurrency: "GBP",
-		quoteCurrency: "JPY",
-	},
-	"AUD/JPY": {
-		symbol: "AUD/JPY",
-		pipSize: 0.01,
-		pipValuePerLot: 9.1,
-		baseCurrency: "AUD",
-		quoteCurrency: "JPY",
-	},
-	"NZD/JPY": {
-		symbol: "NZD/JPY",
-		pipSize: 0.01,
-		pipValuePerLot: 9.1,
-		baseCurrency: "NZD",
-		quoteCurrency: "JPY",
-	},
-	"CAD/JPY": {
-		symbol: "CAD/JPY",
-		pipSize: 0.01,
-		pipValuePerLot: 9.1,
-		baseCurrency: "CAD",
-		quoteCurrency: "JPY",
-	},
-	"CHF/JPY": {
-		symbol: "CHF/JPY",
-		pipSize: 0.01,
-		pipValuePerLot: 9.1,
-		baseCurrency: "CHF",
-		quoteCurrency: "JPY",
-	},
-	"EUR/GBP": {
-		symbol: "EUR/GBP",
-		pipSize: 0.0001,
-		pipValuePerLot: 12.5,
-		baseCurrency: "EUR",
-		quoteCurrency: "GBP",
-	},
-	"EUR/AUD": {
-		symbol: "EUR/AUD",
-		pipSize: 0.0001,
-		pipValuePerLot: 6.5,
-		baseCurrency: "EUR",
-		quoteCurrency: "AUD",
-	},
-	"EUR/CAD": {
-		symbol: "EUR/CAD",
-		pipSize: 0.0001,
-		pipValuePerLot: 7.4,
-		baseCurrency: "EUR",
-		quoteCurrency: "CAD",
-	},
-	"EUR/CHF": {
-		symbol: "EUR/CHF",
-		pipSize: 0.0001,
-		pipValuePerLot: 11.2,
-		baseCurrency: "EUR",
-		quoteCurrency: "CHF",
-	},
-	"EUR/NZD": {
-		symbol: "EUR/NZD",
-		pipSize: 0.0001,
-		pipValuePerLot: 5.9,
-		baseCurrency: "EUR",
-		quoteCurrency: "NZD",
-	},
-	"GBP/AUD": {
-		symbol: "GBP/AUD",
-		pipSize: 0.0001,
-		pipValuePerLot: 6.5,
-		baseCurrency: "GBP",
-		quoteCurrency: "AUD",
-	},
-	"GBP/CAD": {
-		symbol: "GBP/CAD",
-		pipSize: 0.0001,
-		pipValuePerLot: 7.4,
-		baseCurrency: "GBP",
-		quoteCurrency: "CAD",
-	},
-	"GBP/CHF": {
-		symbol: "GBP/CHF",
-		pipSize: 0.0001,
-		pipValuePerLot: 11.2,
-		baseCurrency: "GBP",
-		quoteCurrency: "CHF",
-	},
-	"GBP/NZD": {
-		symbol: "GBP/NZD",
-		pipSize: 0.0001,
-		pipValuePerLot: 5.9,
-		baseCurrency: "GBP",
-		quoteCurrency: "NZD",
-	},
-	"AUD/CAD": {
-		symbol: "AUD/CAD",
-		pipSize: 0.0001,
-		pipValuePerLot: 7.4,
-		baseCurrency: "AUD",
-		quoteCurrency: "CAD",
-	},
-	"AUD/CHF": {
-		symbol: "AUD/CHF",
-		pipSize: 0.0001,
-		pipValuePerLot: 11.2,
-		baseCurrency: "AUD",
-		quoteCurrency: "CHF",
-	},
-	"AUD/NZD": {
-		symbol: "AUD/NZD",
-		pipSize: 0.0001,
-		pipValuePerLot: 5.9,
-		baseCurrency: "AUD",
-		quoteCurrency: "NZD",
-	},
-	"NZD/CAD": {
-		symbol: "NZD/CAD",
-		pipSize: 0.0001,
-		pipValuePerLot: 7.4,
-		baseCurrency: "NZD",
-		quoteCurrency: "CAD",
-	},
-	"NZD/CHF": {
-		symbol: "NZD/CHF",
-		pipSize: 0.0001,
-		pipValuePerLot: 11.2,
-		baseCurrency: "NZD",
-		quoteCurrency: "CHF",
-	},
-	"CAD/CHF": {
-		symbol: "CAD/CHF",
-		pipSize: 0.0001,
-		pipValuePerLot: 11.2,
-		baseCurrency: "CAD",
-		quoteCurrency: "CHF",
-	},
-};
-
-/**
- * Get forex spec for a symbol
- */
-export function getForexSpec(symbol: string): ForexSpec | null {
-	return FOREX_SPECS[symbol] ?? null;
-}
-
-/**
- * Get pip size for forex pair
- */
-export function getForexPipSize(symbol: string): number {
-	const spec = FOREX_SPECS[symbol];
-	if (spec) return spec.pipSize;
-	// Fallback: JPY pairs have 2 decimal places
-	if (symbol.includes("JPY")) return 0.01;
-	return 0.0001;
-}
-
-// ============================================
 // FUTURES SYMBOLS
 // ============================================
 
@@ -393,110 +160,10 @@ export const FUTURES_SYMBOLS: SymbolInfo[] = [
 ];
 
 // ============================================
-// FOREX SYMBOLS
+// ALL SYMBOLS
 // ============================================
 
-export const FOREX_SYMBOLS: SymbolInfo[] = [
-	// Majors
-	{ value: "EUR/USD", label: "EUR/USD - Euro/US Dollar", category: "Majors" },
-	{
-		value: "GBP/USD",
-		label: "GBP/USD - British Pound/US Dollar",
-		category: "Majors",
-	},
-	{
-		value: "USD/JPY",
-		label: "USD/JPY - US Dollar/Japanese Yen",
-		category: "Majors",
-	},
-	{
-		value: "USD/CHF",
-		label: "USD/CHF - US Dollar/Swiss Franc",
-		category: "Majors",
-	},
-	{
-		value: "AUD/USD",
-		label: "AUD/USD - Australian Dollar/US Dollar",
-		category: "Majors",
-	},
-	{
-		value: "USD/CAD",
-		label: "USD/CAD - US Dollar/Canadian Dollar",
-		category: "Majors",
-	},
-	{
-		value: "NZD/USD",
-		label: "NZD/USD - New Zealand Dollar/US Dollar",
-		category: "Majors",
-	},
-	// JPY Crosses
-	{ value: "EUR/JPY", label: "EUR/JPY - Euro/Yen", category: "JPY Crosses" },
-	{ value: "GBP/JPY", label: "GBP/JPY - Pound/Yen", category: "JPY Crosses" },
-	{ value: "AUD/JPY", label: "AUD/JPY - Aussie/Yen", category: "JPY Crosses" },
-	{ value: "NZD/JPY", label: "NZD/JPY - Kiwi/Yen", category: "JPY Crosses" },
-	{ value: "CAD/JPY", label: "CAD/JPY - Loonie/Yen", category: "JPY Crosses" },
-	{ value: "CHF/JPY", label: "CHF/JPY - Swissy/Yen", category: "JPY Crosses" },
-	// EUR Crosses
-	{ value: "EUR/GBP", label: "EUR/GBP - Euro/Pound", category: "EUR Crosses" },
-	{ value: "EUR/AUD", label: "EUR/AUD - Euro/Aussie", category: "EUR Crosses" },
-	{ value: "EUR/CAD", label: "EUR/CAD - Euro/Loonie", category: "EUR Crosses" },
-	{ value: "EUR/CHF", label: "EUR/CHF - Euro/Swissy", category: "EUR Crosses" },
-	{ value: "EUR/NZD", label: "EUR/NZD - Euro/Kiwi", category: "EUR Crosses" },
-	// GBP Crosses
-	{
-		value: "GBP/AUD",
-		label: "GBP/AUD - Pound/Aussie",
-		category: "GBP Crosses",
-	},
-	{
-		value: "GBP/CAD",
-		label: "GBP/CAD - Pound/Loonie",
-		category: "GBP Crosses",
-	},
-	{
-		value: "GBP/CHF",
-		label: "GBP/CHF - Pound/Swissy",
-		category: "GBP Crosses",
-	},
-	{ value: "GBP/NZD", label: "GBP/NZD - Pound/Kiwi", category: "GBP Crosses" },
-	// Other Crosses
-	{
-		value: "AUD/CAD",
-		label: "AUD/CAD - Aussie/Loonie",
-		category: "Other Crosses",
-	},
-	{
-		value: "AUD/CHF",
-		label: "AUD/CHF - Aussie/Swissy",
-		category: "Other Crosses",
-	},
-	{
-		value: "AUD/NZD",
-		label: "AUD/NZD - Aussie/Kiwi",
-		category: "Other Crosses",
-	},
-	{
-		value: "NZD/CAD",
-		label: "NZD/CAD - Kiwi/Loonie",
-		category: "Other Crosses",
-	},
-	{
-		value: "NZD/CHF",
-		label: "NZD/CHF - Kiwi/Swissy",
-		category: "Other Crosses",
-	},
-	{
-		value: "CAD/CHF",
-		label: "CAD/CHF - Loonie/Swissy",
-		category: "Other Crosses",
-	},
-];
-
-// ============================================
-// ALL SYMBOLS (Combined)
-// ============================================
-
-export const ALL_SYMBOLS = [...FUTURES_SYMBOLS, ...FOREX_SYMBOLS];
+export const ALL_SYMBOLS = FUTURES_SYMBOLS;
 
 // ============================================
 // TRADINGVIEW SYMBOL MAPPING
@@ -563,41 +230,12 @@ export const TRADINGVIEW_SYMBOL_MAP: Record<string, string> = {
 	LE: "CME:LE1!",
 	GF: "CME:GF1!",
 	HE: "CME:HE1!",
-	// Forex pairs (FX exchange)
-	"EUR/USD": "FX:EURUSD",
-	"GBP/USD": "FX:GBPUSD",
-	"USD/JPY": "FX:USDJPY",
-	"USD/CHF": "FX:USDCHF",
-	"AUD/USD": "FX:AUDUSD",
-	"USD/CAD": "FX:USDCAD",
-	"NZD/USD": "FX:NZDUSD",
-	"EUR/JPY": "FX:EURJPY",
-	"GBP/JPY": "FX:GBPJPY",
-	"AUD/JPY": "FX:AUDJPY",
-	"NZD/JPY": "FX:NZDJPY",
-	"CAD/JPY": "FX:CADJPY",
-	"CHF/JPY": "FX:CHFJPY",
-	"EUR/GBP": "FX:EURGBP",
-	"EUR/AUD": "FX:EURAUD",
-	"EUR/CAD": "FX:EURCAD",
-	"EUR/CHF": "FX:EURCHF",
-	"EUR/NZD": "FX:EURNZD",
-	"GBP/AUD": "FX:GBPAUD",
-	"GBP/CAD": "FX:GBPCAD",
-	"GBP/CHF": "FX:GBPCHF",
-	"GBP/NZD": "FX:GBPNZD",
-	"AUD/CAD": "FX:AUDCAD",
-	"AUD/CHF": "FX:AUDCHF",
-	"AUD/NZD": "FX:AUDNZD",
-	"NZD/CAD": "FX:NZDCAD",
-	"NZD/CHF": "FX:NZDCHF",
-	"CAD/CHF": "FX:CADCHF",
 };
 
 /**
  * Convert our symbol to TradingView format
- * @param symbol - Our internal symbol (e.g., "ES", "EUR/USD", "MNQH24")
- * @returns TradingView formatted symbol (e.g., "CME_MINI:ES1!", "FX:EURUSD")
+ * @param symbol - Our internal symbol (e.g., "ES", "MNQH24")
+ * @returns TradingView formatted symbol (e.g., "CME_MINI:ES1!")
  */
 export function getTradingViewSymbol(symbol: string): string {
 	// Try exact match first
@@ -625,10 +263,6 @@ export function getSymbolInfo(symbol: string): SymbolInfo | undefined {
 
 export function getSymbolLabel(symbol: string): string {
 	return getSymbolInfo(symbol)?.label ?? symbol;
-}
-
-export function getSymbolsByType(type: "futures" | "forex"): SymbolInfo[] {
-	return type === "futures" ? FUTURES_SYMBOLS : FOREX_SYMBOLS;
 }
 
 export function isValidSymbol(symbol: string): boolean {
@@ -674,83 +308,17 @@ export function calculateFuturesPnL(
 }
 
 /**
- * Calculate P&L for a forex/CFD trade
- * @param symbol - The forex pair (e.g., "EUR/USD")
- * @param entryPrice - Entry price
- * @param exitPrice - Exit price
- * @param lotSize - Lot size (1 = standard lot, 0.1 = mini, 0.01 = micro)
- * @param direction - "long" or "short"
- * @returns P&L in USD (approximate, uses static pip values)
+ * Get the point value for a futures symbol
  */
-export function calculateForexPnL(
-	symbol: string,
-	entryPrice: number,
-	exitPrice: number,
-	lotSize: number,
-	direction: "long" | "short",
-): number {
-	const spec = FOREX_SPECS[symbol];
-	if (!spec) {
-		console.warn(`No forex spec found for ${symbol}, using raw calculation`);
-		const priceDiff =
-			direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
-		return priceDiff * lotSize * 100000; // Assume standard lot size
-	}
-
-	const priceDiff =
-		direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;
-	const pips = priceDiff / spec.pipSize;
-	// lotSize of 1 = standard lot (100k units), pip value is per standard lot
-	return pips * spec.pipValuePerLot * lotSize;
+export function getPointValue(symbol: string): number {
+	return getFuturesSpec(symbol)?.pointValue ?? 1;
 }
 
 /**
- * Calculate P&L for any trade based on instrument type
+ * Get tick size for a futures symbol
  */
-export function calculatePnL(
-	symbol: string,
-	instrumentType: "futures" | "forex",
-	entryPrice: number,
-	exitPrice: number,
-	quantity: number, // contracts for futures, lots for forex
-	direction: "long" | "short",
-): number {
-	if (instrumentType === "futures") {
-		return calculateFuturesPnL(
-			symbol,
-			entryPrice,
-			exitPrice,
-			quantity,
-			direction,
-		);
-	}
-	return calculateForexPnL(symbol, entryPrice, exitPrice, quantity, direction);
-}
-
-/**
- * Get the point/pip value for a symbol
- */
-export function getPointValue(
-	symbol: string,
-	instrumentType: "futures" | "forex",
-): number {
-	if (instrumentType === "futures") {
-		return getFuturesSpec(symbol)?.pointValue ?? 1;
-	}
-	return FOREX_SPECS[symbol]?.pipValuePerLot ?? 10;
-}
-
-/**
- * Get tick/pip size for a symbol
- */
-export function getTickSize(
-	symbol: string,
-	instrumentType: "futures" | "forex",
-): number {
-	if (instrumentType === "futures") {
-		return getFuturesSpec(symbol)?.tickSize ?? 0.01;
-	}
-	return FOREX_SPECS[symbol]?.pipSize ?? 0.0001;
+export function getTickSize(symbol: string): number {
+	return getFuturesSpec(symbol)?.tickSize ?? 0.01;
 }
 
 // ============================================

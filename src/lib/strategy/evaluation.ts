@@ -197,7 +197,7 @@ export function evaluateMaxRiskPerTrade(
 		return unavailableResult("No stop loss set - cannot calculate risk");
 	}
 
-	const pointValue = getPointValue(trade.symbol, trade.instrumentType);
+	const pointValue = getPointValue(trade.symbol);
 	const riskPerUnit = Math.abs(entry - stop);
 	const actualRisk = riskPerUnit * pointValue * quantity;
 

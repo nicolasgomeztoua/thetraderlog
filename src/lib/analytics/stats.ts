@@ -103,14 +103,13 @@ export function calculateRMultipleFromTrade(
 	stopLoss: number,
 	quantity: number,
 	symbol?: string,
-	instrumentType?: "futures" | "forex",
+	_instrumentType?: "futures" | "forex",
 ): number | null {
 	const riskPerUnit = Math.abs(entryPrice - stopLoss);
 	if (riskPerUnit === 0 || quantity === 0) return null;
 
 	// Get point value for proper risk calculation
-	const pointValue =
-		symbol && instrumentType ? getPointValue(symbol, instrumentType) : 1;
+	const pointValue = symbol ? getPointValue(symbol) : 1;
 	const plannedRisk = riskPerUnit * pointValue * quantity;
 
 	if (plannedRisk === 0) return null;

@@ -26,7 +26,7 @@ import {
 	ERR_VALIDATION_PNL_REQUIRED,
 	ERR_VALIDATION_REQUIRED_FIELDS,
 } from "@/lib/constants/errors";
-import { FOREX_SYMBOLS, FUTURES_SYMBOLS } from "@/lib/market-data";
+import { FUTURES_SYMBOLS } from "@/lib/market-data";
 import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
@@ -154,8 +154,7 @@ export default function NewTradePage() {
 		});
 	};
 
-	const symbols =
-		instrumentType === "futures" ? FUTURES_SYMBOLS : FOREX_SYMBOLS;
+	const symbols = FUTURES_SYMBOLS;
 	const isPending = createTrade.isPending;
 
 	return (

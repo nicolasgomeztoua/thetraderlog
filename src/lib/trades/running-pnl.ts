@@ -2,14 +2,11 @@
  * Running P&L calculation utilities for trade replay and charts.
  *
  * These functions calculate unrealized + realized P&L at any point in time
- * during a trade, supporting partial exits (scale-outs) and both futures and forex.
+ * during a trade, supporting partial exits (scale-outs).
  */
 
 import type { ChartBar } from "@/lib/market-data/candle-aggregation";
-import {
-	calculateForexPnL,
-	calculateFuturesPnL,
-} from "@/lib/market-data/symbols";
+import { calculateFuturesPnL } from "@/lib/market-data/symbols";
 import { toUnixTimestamp } from "@/lib/shared";
 
 // =============================================================================
@@ -60,7 +57,7 @@ export function calculateRunningPnlAtTime(
 	currentPrice: number,
 	direction: "long" | "short",
 	symbol: string,
-	instrumentType: "futures" | "forex",
+	_instrumentType: "futures" | "forex",
 ): number {
 	if (executions.length === 0) {
 		return 0;
@@ -86,21 +83,13 @@ export function calculateRunningPnlAtTime(
 	// Calculate unrealized P&L using remaining position (not original entry quantity)
 	const unrealizedPnl =
 		remainingQuantity > 0
-			? instrumentType === "futures"
-				? calculateFuturesPnL(
-						symbol,
-						entry,
-						currentPrice,
-						remainingQuantity,
-						direction,
-					)
-				: calculateForexPnL(
-						symbol,
-						entry,
-						currentPrice,
-						remainingQuantity,
-						direction,
-					)
+			? calculateFuturesPnL(
+					symbol,
+					entry,
+					currentPrice,
+					remainingQuantity,
+					direction,
+				)
 			: 0;
 
 	// Sum realized P&L from scale-outs and exits

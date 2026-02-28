@@ -549,7 +549,6 @@ export default function TradeDetailPage() {
 										stats ?? {
 											points: null,
 											ticks: null,
-											pips: null,
 											ticksPerContract: null,
 											grossPnl: null,
 											roi: null,
@@ -628,7 +627,6 @@ export default function TradeDetailPage() {
 								stats ?? {
 									points: null,
 									ticks: null,
-									pips: null,
 									ticksPerContract: null,
 									grossPnl: null,
 									roi: null,
