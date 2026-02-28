@@ -17,6 +17,7 @@ Feature: Admin Panel
 - Use correlated SQL subqueries for computed columns in list views: `sql<number>\`cast((select count(*) from "table" where ...) as integer)\``
 - `ilike` from drizzle-orm for case-insensitive search; combine with `or()` for multi-field search
 - Don't import schema tables only used in raw SQL strings — Biome flags unused imports
+- Don't use raw `sql\`${column} < ${dateVar}\`` with Date objects — postgres driver rejects Date instances in raw SQL. Use Drizzle operators (`lt`, `gte`, etc.) instead.
 ---
 
 ## 2026-02-28 - US-001
@@ -132,4 +133,46 @@ Feature: Admin Panel
   - `date_trunc('day', timestamp)::date::text` converts timestamps to date strings for daily grouping in PostgreSQL
   - Biome enforces single-line assignment for `messageCount: sql<number>\`...\`` — don't break the sql tagged template onto a new line
   - `sql\`${column} is not null\`` for null filtering in raw SQL within drizzle select
+---
+
+## 2026-02-28 - US-010
+- Created tests/integration/admin-ai.test.ts with 19 tests covering:
+  - listConversations: returns conversations with user info, includes message count and token count, filter by mode (chat/report), filter by status, pagination, sort by newest first
+  - getConversation: returns conversation with messages, messages ordered by createdAt ascending, NOT_FOUND for non-existent
+  - usageStats: total tokens used, tokens by model, conversations by mode, daily usage for last 30 days, zero tokens when no messages exist
+  - Auth: non-admin rejected on listConversations, getConversation, usageStats; unauthenticated rejected
+- Files changed: tests/integration/admin-ai.test.ts (new)
+- **Learnings for future iterations:**
+  - When tests truncate tables mid-file (e.g., "zero counts" test), subsequent tests in the same file need to re-create users — don't rely on beforeAll users after a truncation
+  - Biome flags unused variables even in test setup — if a caller is only used for seeding data, don't assign it to a variable
+  - Token counts from correlated subqueries match exactly when seeded with specific values — good for precise assertions
+---
+
+## 2026-02-28 - US-011
+- Added 4 analytics endpoints to admin.analytics sub-router:
+  - `growth` — daily new users + cumulative total for last 30 days using date_trunc and a base count query for users before the window
+  - `tradingActivity` — daily trade count, total P&L, avg trade size for last 30 days with soft-delete filtering
+  - `topTraders` — top 10 users by total P&L using innerJoin with users, grouped by userId/name/email, ordered desc by sum(netPnl)
+  - `accountBreakdown` — count of accounts grouped by accountType
+- Files changed: src/server/api/routers/admin/index.ts
+- **Learnings for future iterations:**
+  - For cumulative totals in growth charts, first query the base count before the time window, then accumulate over daily rows — avoids window functions
+  - `avg(abs(column))` works well for avg trade size — using abs ensures both winning and losing trades contribute positively
+  - Biome formatting for `.where(and(...))`: if args fit on one line Biome wraps `.where(\n  and(...),\n)` — use `bunx biome check --write` to auto-fix
+  - `trades.netPnl` is the column to use for P&L aggregations (includes fees), not `realizedPnl`
+  - Always include `isNull(trades.deletedAt)` when aggregating trade data
+---
+
+## 2026-02-28 - US-012
+- Created tests/integration/admin-analytics.test.ts with 22 tests covering:
+  - growth: daily new user counts, newUsers + cumulativeTotal fields, correct cumulative total
+  - tradingActivity: daily trade activity, tradeCount/totalPnl/avgTradeSize fields, correct trade count, correct total P&L, soft-deleted trades excluded
+  - topTraders: ranked by P&L, correct fields, correct ranking order, limit to 10
+  - accountBreakdown: counts by type, correct fields, correct per-type counts, reflects new accounts
+  - Auth: non-admin rejected on all 4 endpoints, unauthenticated rejected
+- Fixed bug in admin.analytics.growth: raw `sql\`${users.createdAt} < ${thirtyDaysAgo}\`` passed Date object to postgres driver which expects strings. Changed to `lt(users.createdAt, thirtyDaysAgo)` using Drizzle operator.
+- Files changed: tests/integration/admin-analytics.test.ts (new), src/server/api/routers/admin/index.ts (bug fix)
+- **Learnings for future iterations:**
+  - Never use raw `sql` template with Date objects as parameters — postgres driver rejects them. Use Drizzle operators (`lt`, `gte`, `eq`) which handle type conversion.
+  - Import `eq` from drizzle-orm in test files when you need to query tables directly with `.where(eq(...))`.
 ---

@@ -101,8 +101,38 @@ const trades = await ctx.db.query.trades.findMany({
 **When:** Validating that an account is a prop account (challenge or funded)
 **How:** Use `isPropAccountType(account.accountType)` from `@/lib/constants/prop`. This type-guards both `prop_challenge` and `prop_funded`. Use `ERR_ACCOUNT_NOT_PROP` error constant for the rejection message.
 
+### Zod Default Gotcha
+**When:** Using `.default({})` on a Zod object schema with required fields that have field-level `.default()`
+**Problem:** TypeScript rejects `{}` because it's missing the required fields (even though they have defaults)
+**Solution:** Don't use `.default({})` on the outer object. Just use the object schema directly — callers pass `{}` explicitly.
+
+### Correlated Subqueries for List Views
+**When:** Building paginated list endpoints that need computed counts per row (e.g., user list with account count, trade count)
+**How:** Use inline SQL subqueries in the `select()` instead of joins + GROUP BY. Cast to integer for TypeScript: `sql<number>\`cast((select count(*) from "table" where ...) as integer)\``. Reference the outer table's column directly (e.g., `"user"."id"`). Don't import the schema table if only referenced in raw SQL — Biome flags unused imports.
+
+### Raw SQL with Date Objects
+**When:** Using `sql` tagged template literals with Date variables (e.g., `sql\`${column} < ${dateVar}\``)
+**Problem:** The postgres driver rejects Date instances in raw SQL parameters — expects string or Buffer.
+**Solution:** Never pass Date objects in raw `sql` templates. Use Drizzle operators (`lt`, `gte`, `eq`, `lte`) which handle type conversion automatically: `lt(users.createdAt, thirtyDaysAgo)`.
+
+### Case-Insensitive Search
+**When:** Implementing search by name/email in admin list endpoints
+**How:** Use `ilike` from drizzle-orm with `%` wildcards: `ilike(users.name, \`%${input.search}%\`)`. Combine with `or()` for multi-field search.
+
+### Admin Bug Report Status Transitions
+**When:** Updating bug report status via admin panel
+**How:** Validate transitions with a `Record<string, string[]>` map: `open→[in_progress, closed]`, `in_progress→[resolved, open, closed]`, `resolved→[closed, open]`, `closed→[open]`. Throw `ERR_ADMIN_INVALID_STATUS_TRANSITION` if not in allowed list.
+
 ## Decisions
 
 ### AI SDK v6 Type Names
 **Choice:** Use AI SDK v6 naming conventions
 **Why:** Package `ai@6.0.86` uses `ModelMessage` (not `CoreMessage`), `maxOutputTokens` (not `maxTokens`), `inputTokens`/`outputTokens` (not `promptTokens`/`completionTokens`), `tc.input` (not `tc.args`)
+
+### Admin Procedure Middleware
+**Choice:** Define admin check inline on `protectedProcedure.use()` rather than standalone `t.middleware`
+**Why:** `t.middleware` only sees the base context type (no `user` property). Using `protectedProcedure.use()` inline gives correct TypeScript types since `authMiddleware` has already added `ctx.user`.
+
+### Admin Router Structure
+**Choice:** Nested `createTRPCRouter` for admin sub-routers in `src/server/api/routers/admin/index.ts`
+**Why:** Keeps admin endpoints organized by domain (analytics, bugReports, users, ai, system) while maintaining a single entry point. Access pattern: `admin.analytics.platformStats`, `admin.bugReports.list`, etc.
