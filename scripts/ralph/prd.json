@@ -33,8 +33,8 @@
         "Verify in browser"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced EUR/USD, GBP/USD with futures symbols in hero ticker and demo trades. Updated features card to 'Built for Futures'. Updated footer and meta descriptions."
     },
     {
       "id": "US-003",

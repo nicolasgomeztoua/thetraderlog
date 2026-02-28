@@ -228,3 +228,15 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - MT4/MT5 parsers are stubs (not yet implemented), so removal is safe
   - The Biome pre-existing error is in an archived PRD file, not our code
 ---
+
+## 2026-02-28 - US-002: Remove Forex References from Marketing Pages
+- Replaced EUR/USD, GBP/USD ticker items with MES, MNQ, YM, RTY futures
+- Replaced EUR/USD demo trade with MNQ
+- Changed hero tagline from "futures and forex" to "futures"
+- Changed features card from "Futures & Forex" to "Built for Futures", updated symbols list
+- Updated footer description to "futures traders"
+- Updated root layout meta description to "futures traders"
+- Files changed: hero.tsx, features.tsx, footer.tsx, layout.tsx
+- **Learnings for future iterations:**
+  - Marketing components are pure JSX — no imports from lib/market-data, changes are safe
+---
