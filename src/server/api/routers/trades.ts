@@ -765,7 +765,7 @@ export const tradesRouter = createTRPCRouter({
 					userId: ctx.user.id,
 					accountId,
 					symbol: trade.symbol,
-					instrumentType: "futures",
+					instrumentType: "futures" as const,
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					entryTime: new Date(trade.entryTime),
