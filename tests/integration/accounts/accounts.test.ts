@@ -65,20 +65,20 @@ describe("accounts router", () => {
 		it("should create a demo account", async () => {
 			const account = await caller.accounts.create({
 				name: "Demo Account",
-				platform: "mt5",
+				platform: "ninjatrader",
 				accountType: "demo",
 				initialBalance: "100000",
 			});
 
 			expect(account?.accountType).toBe("demo");
-			expect(account?.platform).toBe("mt5");
+			expect(account?.platform).toBe("ninjatrader");
 		});
 
 		it("should create a prop challenge account with prop firm fields", async () => {
 			const account = await caller.accounts.create({
 				name: "FTMO Challenge",
 				broker: "FTMO",
-				platform: "mt5",
+				platform: "ninjatrader",
 				accountType: "prop_challenge",
 				initialBalance: "100000",
 				maxDrawdown: "6",
@@ -340,7 +340,7 @@ describe("accounts router", () => {
 			challengeAccount = await caller.accounts.create({
 				name: "MFF Challenge Phase 1",
 				broker: "My Forex Funds",
-				platform: "mt5",
+				platform: "ninjatrader",
 				accountType: "prop_challenge",
 				initialBalance: "50000",
 				maxDrawdown: "5",

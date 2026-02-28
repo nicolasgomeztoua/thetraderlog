@@ -3,7 +3,6 @@
 // ============================================
 
 export { apexParser } from "./apex-parser";
-export { mt4Parser, mt5Parser } from "./mt4-parser";
 export { ninjatraderParser } from "./ninjatrader-parser";
 export { projectxParser } from "./projectx-parser";
 export { rithmicParser } from "./rithmic-parser";
@@ -12,7 +11,6 @@ export { tradovateParser } from "./tradovate-parser";
 export * from "./types";
 
 import { apexParser } from "./apex-parser";
-import { mt4Parser, mt5Parser } from "./mt4-parser";
 import { ninjatraderParser } from "./ninjatrader-parser";
 import { projectxParser } from "./projectx-parser";
 import { rithmicParser } from "./rithmic-parser";
@@ -22,8 +20,6 @@ import type { CSVParser, TradingPlatform } from "./types";
 
 // Registry of all available parsers
 const parsers: Record<TradingPlatform, CSVParser | null> = {
-	mt4: mt4Parser,
-	mt5: mt5Parser,
 	topstepx: topstepxParser,
 	projectx: projectxParser,
 	ninjatrader: ninjatraderParser,
@@ -49,8 +45,6 @@ export function getSupportedPlatforms(): {
 	description: string;
 }[] {
 	return [
-		{ value: "mt4", label: "MetaTrader 4", description: "MT4 history export" },
-		{ value: "mt5", label: "MetaTrader 5", description: "MT5 history export" },
 		{
 			value: "projectx",
 			label: "ProjectX",
@@ -88,8 +82,6 @@ export function getSupportedPlatforms(): {
  * All available trading platforms (for account creation)
  */
 export const TRADING_PLATFORMS = [
-	{ value: "mt4" as const, label: "MetaTrader 4" },
-	{ value: "mt5" as const, label: "MetaTrader 5" },
 	{ value: "projectx" as const, label: "ProjectX" },
 	{ value: "topstepx" as const, label: "TopstepX" },
 	{ value: "ninjatrader" as const, label: "NinjaTrader" },

@@ -167,8 +167,6 @@ const CHALLENGE_STATUS_LABELS: Record<string, string> = {
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
-	mt4: "MT4",
-	mt5: "MT5",
 	projectx: "ProjectX",
 	topstepx: "TopstepX",
 	ninjatrader: "NinjaTrader",
@@ -186,8 +184,6 @@ interface AccountFormState {
 	name: string;
 	broker: string;
 	platform:
-		| "mt4"
-		| "mt5"
 		| "projectx"
 		| "topstepx"
 		| "ninjatrader"
@@ -1497,8 +1493,6 @@ export function SettingsContent() {
 															<SelectValue />
 														</SelectTrigger>
 														<SelectContent>
-															<SelectItem value="mt4">MetaTrader 4</SelectItem>
-															<SelectItem value="mt5">MetaTrader 5</SelectItem>
 															<SelectItem value="projectx">ProjectX</SelectItem>
 															<SelectItem value="topstepx">TopstepX</SelectItem>
 															<SelectItem value="ninjatrader">

@@ -73,8 +73,6 @@ export const challengeStatusEnum = z.enum(["active", "passed", "failed"]);
 export type ChallengeStatus = z.infer<typeof challengeStatusEnum>;
 
 export const tradingPlatformEnum = z.enum([
-	"mt4",
-	"mt5",
 	"projectx",
 	"topstepx",
 	"ninjatrader",

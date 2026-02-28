@@ -85,14 +85,6 @@ const PLATFORM_INFO: Record<
 	TradingPlatform,
 	{ description: string; status: "ready" | "coming-soon" | "manual" }
 > = {
-	mt4: {
-		description: "Auto-import from MT4 history export",
-		status: "coming-soon",
-	},
-	mt5: {
-		description: "Auto-import from MT5 history export",
-		status: "coming-soon",
-	},
 	projectx: {
 		description: "Auto-import from ProjectX Trades CSV export",
 		status: "ready",

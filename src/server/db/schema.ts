@@ -73,8 +73,6 @@ export const challengeStatusEnum = pgEnum("challenge_status", [
 	"failed",
 ]);
 export const tradingPlatformEnum = pgEnum("trading_platform", [
-	"mt4", // MetaTrader 4
-	"mt5", // MetaTrader 5
 	"projectx", // ProjectX
 	"topstepx", // TopstepX
 	"ninjatrader", // NinjaTrader
