@@ -1,9 +1,21 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, gte, ilike, isNull, or, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gte,
+	ilike,
+	isNull,
+	or,
+	sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/lib/constants/admin";
 import {
 	ERR_ADMIN_BUG_REPORT_NOT_FOUND,
+	ERR_ADMIN_CONVERSATION_NOT_FOUND,
 	ERR_ADMIN_INVALID_STATUS_TRANSITION,
 	ERR_ADMIN_ROLE_UPDATE_FAILED,
 	ERR_ADMIN_USER_NOT_FOUND,
@@ -420,6 +432,195 @@ export const adminRouter = createTRPCRouter({
 				openBugReports: openBugCount?.count ?? 0,
 				aiConversationsLast7d: aiConvoCount?.count ?? 0,
 				totalTokensUsed: Number(tokenSum?.total ?? 0),
+			};
+		}),
+	}),
+
+	ai: createTRPCRouter({
+		listConversations: adminProcedure
+			.input(
+				z.object({
+					mode: z.enum(["chat", "report"]).optional(),
+					status: z
+						.enum(["active", "generating", "complete", "failed"])
+						.optional(),
+					page: z.number().int().min(1).default(1),
+					pageSize: z
+						.number()
+						.int()
+						.min(1)
+						.max(100)
+						.default(ADMIN_TABLE_PAGE_SIZE),
+				}),
+			)
+			.query(async ({ ctx, input }) => {
+				const conditions = [];
+				if (input.mode) {
+					conditions.push(eq(aiConversations.mode, input.mode));
+				}
+				if (input.status) {
+					conditions.push(eq(aiConversations.status, input.status));
+				}
+
+				const whereClause =
+					conditions.length > 0 ? and(...conditions) : undefined;
+				const offset = (input.page - 1) * input.pageSize;
+
+				const [rows, [totalRow]] = await Promise.all([
+					ctx.db
+						.select({
+							id: aiConversations.id,
+							userId: aiConversations.userId,
+							title: aiConversations.title,
+							status: aiConversations.status,
+							mode: aiConversations.mode,
+							model: aiConversations.model,
+							createdAt: aiConversations.createdAt,
+							messageCount: sql<number>`cast((select count(*) from "ai_message" where "ai_message"."conversation_id" = "ai_conversation"."id") as integer)`,
+							tokenCount: sql<number>`cast(coalesce((select sum("tokens_used") from "ai_message" where "ai_message"."conversation_id" = "ai_conversation"."id"), 0) as integer)`,
+							userName: users.name,
+							userEmail: users.email,
+							userImageUrl: users.imageUrl,
+						})
+						.from(aiConversations)
+						.innerJoin(users, eq(aiConversations.userId, users.id))
+						.where(whereClause)
+						.orderBy(desc(aiConversations.createdAt))
+						.limit(input.pageSize)
+						.offset(offset),
+					ctx.db
+						.select({ count: count() })
+						.from(aiConversations)
+						.where(whereClause),
+				]);
+
+				const total = totalRow?.count ?? 0;
+
+				return {
+					items: rows.map((r) => ({
+						id: r.id,
+						title: r.title,
+						status: r.status,
+						mode: r.mode,
+						model: r.model,
+						createdAt: r.createdAt,
+						messageCount: r.messageCount,
+						tokenCount: r.tokenCount,
+						user: {
+							id: r.userId,
+							name: r.userName,
+							email: r.userEmail,
+							imageUrl: r.userImageUrl,
+						},
+					})),
+					total,
+					page: input.page,
+					pageSize: input.pageSize,
+					totalPages: Math.ceil(total / input.pageSize),
+				};
+			}),
+
+		getConversation: adminProcedure
+			.input(z.object({ id: z.string() }))
+			.query(async ({ ctx, input }) => {
+				const conversation = await ctx.db.query.aiConversations.findFirst({
+					where: eq(aiConversations.id, input.id),
+					with: {
+						user: true,
+						messages: {
+							orderBy: [asc(aiMessages.createdAt)],
+						},
+					},
+				});
+
+				if (!conversation) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_ADMIN_CONVERSATION_NOT_FOUND,
+					});
+				}
+
+				return {
+					id: conversation.id,
+					title: conversation.title,
+					status: conversation.status,
+					mode: conversation.mode,
+					model: conversation.model,
+					initialPrompt: conversation.initialPrompt,
+					dateRangeStart: conversation.dateRangeStart,
+					dateRangeEnd: conversation.dateRangeEnd,
+					createdAt: conversation.createdAt,
+					user: {
+						id: conversation.user.id,
+						name: conversation.user.name,
+						email: conversation.user.email,
+						imageUrl: conversation.user.imageUrl,
+					},
+					messages: conversation.messages.map((m) => ({
+						id: m.id,
+						role: m.role,
+						content: m.content,
+						model: m.model,
+						tokensUsed: m.tokensUsed,
+						toolCalls: m.toolCalls,
+						createdAt: m.createdAt,
+					})),
+				};
+			}),
+
+		usageStats: adminProcedure.query(async ({ ctx }) => {
+			const thirtyDaysAgo = new Date();
+			thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+			const [[totalTokensRow], tokensByModel, conversationsByMode, dailyUsage] =
+				await Promise.all([
+					ctx.db
+						.select({
+							total: sql<string>`coalesce(sum(${aiMessages.tokensUsed}), 0)`,
+						})
+						.from(aiMessages),
+					ctx.db
+						.select({
+							model: aiMessages.model,
+							tokens: sql<string>`coalesce(sum(${aiMessages.tokensUsed}), 0)`,
+						})
+						.from(aiMessages)
+						.where(sql`${aiMessages.model} is not null`)
+						.groupBy(aiMessages.model),
+					ctx.db
+						.select({
+							mode: aiConversations.mode,
+							count: count(),
+						})
+						.from(aiConversations)
+						.groupBy(aiConversations.mode),
+					ctx.db
+						.select({
+							date: sql<string>`date_trunc('day', ${aiMessages.createdAt})::date::text`,
+							tokens: sql<string>`coalesce(sum(${aiMessages.tokensUsed}), 0)`,
+							messageCount: count(),
+						})
+						.from(aiMessages)
+						.where(gte(aiMessages.createdAt, thirtyDaysAgo))
+						.groupBy(sql`date_trunc('day', ${aiMessages.createdAt})`)
+						.orderBy(sql`date_trunc('day', ${aiMessages.createdAt})`),
+				]);
+
+			return {
+				totalTokensUsed: Number(totalTokensRow?.total ?? 0),
+				tokensByModel: tokensByModel.map((r) => ({
+					model: r.model,
+					tokens: Number(r.tokens),
+				})),
+				conversationsByMode: conversationsByMode.map((r) => ({
+					mode: r.mode,
+					count: r.count,
+				})),
+				dailyUsage: dailyUsage.map((r) => ({
+					date: r.date,
+					tokens: Number(r.tokens),
+					messageCount: r.messageCount,
+				})),
 			};
 		}),
 	}),

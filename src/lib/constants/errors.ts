@@ -201,6 +201,7 @@ export const ERR_ADMIN_INVALID_STATUS_TRANSITION =
 	"Invalid bug report status transition";
 export const ERR_ADMIN_BUG_REPORT_NOT_FOUND = "Bug report not found";
 export const ERR_ADMIN_ROLE_UPDATE_FAILED = "Failed to update user role";
+export const ERR_ADMIN_CONVERSATION_NOT_FOUND = "Conversation not found";
 
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(

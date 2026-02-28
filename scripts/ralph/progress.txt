@@ -2,3 +2,134 @@
 Started: Fri Feb 28 2026
 Feature: Admin Panel
 ---
+
+## Codebase Patterns
+- Bug report enums in schema: bugSeverityEnum (low, medium, high, critical), bugCategoryEnum (ui, data, performance, crash, other), bugReportStatusEnum (open, in_progress, resolved, closed)
+- User role enum: userRoleEnum (user, admin)
+- Constants barrel export from src/lib/constants/index.ts using `export * from "./file"`
+- Biome formatter enforces single-line for short assignments - don't break lines unnecessarily
+- Admin endpoints: use `adminProcedure` from `@/server/api/trpc` (extends protectedProcedure, checks role === 'admin')
+- Middleware chaining: to add middleware that depends on a prior middleware's ctx additions, use `procedure.use()` inline (not standalone t.middleware)
+- Admin router lives at src/server/api/routers/admin/index.ts — uses nested createTRPCRouter for sub-routers (e.g., admin.analytics.platformStats)
+- For aggregating tokens from aiMessages, use `sql<string>\`coalesce(sum(...), 0)\`` since sum can return null
+- Don't use `.default({})` on Zod objects with required fields that have field-level `.default()` — TypeScript rejects it
+- Drizzle relational queries `findMany({ with: { user: true } })` auto-join via relations — no manual join needed
+- Use correlated SQL subqueries for computed columns in list views: `sql<number>\`cast((select count(*) from "table" where ...) as integer)\``
+- `ilike` from drizzle-orm for case-insensitive search; combine with `or()` for multi-field search
+- Don't import schema tables only used in raw SQL strings — Biome flags unused imports
+---
+
+## 2026-02-28 - US-001
+- Created src/lib/constants/admin.ts with ADMIN_NAV_ITEMS, BUG_REPORT_STATUS_LABELS, BUG_REPORT_SEVERITY_LABELS, BUG_REPORT_CATEGORY_LABELS, status/severity color maps, ROLE_LABELS, ADMIN_TABLE_PAGE_SIZE, ADMIN_TABLE_PAGE_SIZE_OPTIONS
+- Added admin error constants to src/lib/constants/errors.ts: ERR_ADMIN_FORBIDDEN, ERR_ADMIN_USER_NOT_FOUND, ERR_ADMIN_INVALID_STATUS_TRANSITION, ERR_ADMIN_BUG_REPORT_NOT_FOUND, ERR_ADMIN_ROLE_UPDATE_FAILED
+- Exported admin constants from src/lib/constants/index.ts
+- **Learnings for future iterations:**
+  - Biome formatter wants short assignments on a single line - don't manually wrap
+  - Bug report schema fields: title, description, severity, category, screenshotKey, pageUrl, userAgent, metadata (jsonb), status, createdAt
+  - Nav items use icon names as strings (e.g., "LayoutDashboard") for flexibility — actual icon import happens in the component
+---
+
+## 2026-02-28 - US-002
+- Created adminProcedure in src/server/api/trpc.ts extending protectedProcedure
+- adminProcedure checks ctx.user.role === 'admin', throws FORBIDDEN with ERR_ADMIN_FORBIDDEN
+- Files changed: src/server/api/trpc.ts
+- **Learnings for future iterations:**
+  - Cannot define adminMiddleware as standalone t.middleware because ctx.user doesn't exist in base context type. Must use protectedProcedure.use() inline to get proper ctx.user typing from authMiddleware.
+  - adminProcedure is exported alongside publicProcedure and protectedProcedure for use in admin routers
+---
+
+## 2026-02-28 - US-003
+- Created admin router directory: src/server/api/routers/admin/index.ts
+- Created admin.analytics.platformStats query using adminProcedure
+- Returns: totalUsers, activeUsersLast7d, totalTrades, openBugReports, aiConversationsLast7d, totalTokensUsed
+- Active users computed by combining distinct userIds from trades and aiConversations in last 7 days
+- Registered admin router in src/server/api/root.ts
+- Files changed: src/server/api/routers/admin/index.ts (new), src/server/api/root.ts
+- **Learnings for future iterations:**
+  - Admin router uses nested createTRPCRouter pattern: `admin: createTRPCRouter({ analytics: createTRPCRouter({ ... }) })` for clean namespacing
+  - Use `sql<string>\`coalesce(sum(col), 0)\`` for nullable aggregates — sum() returns null when no rows match
+  - Drizzle `selectDistinct` works well for getting unique userIds without needing GROUP BY
+  - Token counts stored as integer in aiMessages.tokensUsed — sum and convert to Number for the response
+---
+
+## 2026-02-28 - US-004
+- Created tests/integration/admin.test.ts with 10 tests covering:
+  - Admin middleware: FORBIDDEN for non-admin, UNAUTHORIZED for unauthenticated, allows admin access
+  - Platform stats: all expected fields present, correct user count, trade count + active users from trades, open bug report count (excludes resolved), AI conversation + token counts, deduplication of active users across trades and AI, zero counts on empty database
+- Files changed: tests/integration/admin.test.ts (new)
+- **Learnings for future iterations:**
+  - Use `createTestUser({ role: "admin" })` to create admin users — the fixture supports role option
+  - Store user references from `createTestUser()` in `let adminUser: User` variables to avoid re-querying the DB in each test
+  - Tests that insert data into related tables (trades, bugReports, aiConversations, aiMessages) can use `getTestDb()` and `schema` directly — no need for tRPC callers for raw inserts
+  - Bug reports with status "open" are counted; "resolved" and "closed" are not — matches the `eq(bugReports.status, "open")` filter in platformStats
+  - Biome auto-formats short function calls to single line — run `bunx biome check --write` to fix formatting
+---
+
+## 2026-02-28 - US-005
+- Added bugReports sub-router to admin router with 3 endpoints:
+  - `admin.bugReports.list` — offset pagination, filtering by status/category/severity, returns user info, sorted newest first
+  - `admin.bugReports.getById` — single bug report with full details and user info
+  - `admin.bugReports.updateStatus` — validates status transitions (open→in_progress→resolved→closed with allowed shortcuts)
+- Files changed: src/server/api/routers/admin/index.ts
+- **Learnings for future iterations:**
+  - Don't use `.default({})` on a Zod object that has required fields with `.default()` — TypeScript will reject it. Just use the object schema directly, and callers must pass at least `{}`.
+  - Drizzle `query.bugReports.findMany({ with: { user: true } })` automatically joins via the relations defined in schema.ts — no need for manual joins.
+  - Status transition validation: store valid transitions as a record map and check `allowed.includes(input.status)` — clean and extensible.
+  - Bug report list endpoint maps user info to a subset (id, name, email, imageUrl) to avoid leaking full user data.
+---
+
+## 2026-02-28 - US-006
+- Created tests/integration/admin-bug-reports.test.ts with 18 tests covering:
+  - List: returns bug reports with user info, sorts newest first, pagination, combined filters
+  - Filter by: status, category, severity
+  - getById: returns full details with user info, NOT_FOUND for non-existent
+  - updateStatus: open→in_progress→resolved→closed transitions, reopen closed→open, rejects invalid transitions (open→resolved), NOT_FOUND for non-existent
+  - Auth: non-admin rejected on list, getById, updateStatus
+- Files changed: tests/integration/admin-bug-reports.test.ts (new)
+- **Learnings for future iterations:**
+  - Tests that build on each other (sequential status transitions) work well within a single describe block — Vitest runs tests in order within a describe
+  - Use `db.insert().returning()` to capture inserted IDs for later assertions — store in a shared array variable
+  - Biome enforces single-line for `new Date(value).getTime()` — don't break across lines
+---
+
+## 2026-02-28 - US-007
+- Added users sub-router to admin router with 3 endpoints:
+  - `admin.users.list` — offset pagination, search by name/email (ilike), returns account count, trade count, last active date via correlated subqueries, sorted newest first
+  - `admin.users.getById` — single user with accounts, recent trades (last 10, soft-delete filtered), AI conversation count, bug report count
+  - `admin.users.updateRole` — validates user exists, updates role (user ↔ admin), returns updated user subset
+- Files changed: src/server/api/routers/admin/index.ts
+- **Learnings for future iterations:**
+  - Use correlated SQL subqueries for computed columns (account count, trade count, last active) — avoids N+1 and is efficient for paginated list views
+  - `sql<number>\`cast((select count(*) from "table" where ...) as integer)\`` for inline counts in select
+  - `sql<Date | null>\`greatest(...)\`` works for computing last active across multiple tables
+  - `ilike` from drizzle-orm for case-insensitive search — combine with `or()` for multi-field search
+  - Always include `isNull(trades.deletedAt)` when counting or listing trades (soft-delete pattern)
+  - Don't import schema tables you only reference in raw SQL strings — Biome flags unused imports
+---
+
+## 2026-02-28 - US-008
+- Created tests/integration/admin-users.test.ts with 16 tests covering:
+  - List: returns users with account/trade counts, correct counts for data-rich user, search by email, search by name (case insensitive), empty search results, pagination, sort by newest first
+  - getById: returns full user details with accounts, recent trades, AI conversation count, bug report count, zero counts for user without data, NOT_FOUND for non-existent user
+  - updateRole: promote user to admin, demote admin to user, NOT_FOUND for non-existent user
+  - Auth: non-admin rejected on list, getById, updateRole
+- Files changed: tests/integration/admin-users.test.ts (new)
+- **Learnings for future iterations:**
+  - Biome enforces single-line for short `.find()` callbacks — don't break across lines
+  - When seeding test data with multiple accounts, use `.returning()` to capture the first account ID for trade inserts
+  - Test user with rich data (accounts, trades, AI convos, bug reports) should be created in beforeAll to test both getById detail views and list computed counts
+---
+
+## 2026-02-28 - US-009
+- Added ai sub-router to admin router with 3 endpoints:
+  - `admin.ai.listConversations` — offset pagination, filtering by mode/status, returns user info + message count + token count via correlated subqueries, innerJoin with users for user info, sorted newest first
+  - `admin.ai.getConversation` — single conversation with all messages (ordered asc by createdAt), user info via relational query
+  - `admin.ai.usageStats` — total tokens, tokens by model, conversations by mode, daily usage for last 30 days using date_trunc
+- Added ERR_ADMIN_CONVERSATION_NOT_FOUND to src/lib/constants/errors.ts
+- Files changed: src/server/api/routers/admin/index.ts, src/lib/constants/errors.ts
+- **Learnings for future iterations:**
+  - For list views needing computed counts + joined user info, use `ctx.db.select()` with `.innerJoin()` for user data + correlated SQL subqueries for counts — more efficient than relational queries for paginated lists
+  - `date_trunc('day', timestamp)::date::text` converts timestamps to date strings for daily grouping in PostgreSQL
+  - Biome enforces single-line assignment for `messageCount: sql<number>\`...\`` — don't break the sql tagged template onto a new line
+  - `sql\`${column} is not null\`` for null filtering in raw SQL within drizzle select
+---
