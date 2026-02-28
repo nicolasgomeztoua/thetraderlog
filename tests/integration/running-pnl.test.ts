@@ -75,7 +75,6 @@ describe("calculateRunningPnlAtTime - Long trades", () => {
 			5020, // current price
 			"long",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(1000);
@@ -93,7 +92,6 @@ describe("calculateRunningPnlAtTime - Long trades", () => {
 			4980, // current price
 			"long",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(-1000);
@@ -111,7 +109,6 @@ describe("calculateRunningPnlAtTime - Long trades", () => {
 			5010, // current price
 			"long",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(1000);
@@ -135,7 +132,6 @@ describe("calculateRunningPnlAtTime - Short trades", () => {
 			4980, // current price
 			"short",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(1000);
@@ -153,7 +149,6 @@ describe("calculateRunningPnlAtTime - Short trades", () => {
 			5020, // current price
 			"short",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(-1000);
@@ -171,7 +166,6 @@ describe("calculateRunningPnlAtTime - Short trades", () => {
 			17980, // current price
 			"short",
 			"NQ",
-			"futures",
 		);
 
 		expect(pnl).toBe(1200);
@@ -198,7 +192,6 @@ describe("calculateRunningPnlAtTime - Partial exits", () => {
 			5020, // current price
 			"long",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(1500);
@@ -221,7 +214,6 @@ describe("calculateRunningPnlAtTime - Partial exits", () => {
 			5020, // current price
 			"long",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(2250);
@@ -242,7 +234,6 @@ describe("calculateRunningPnlAtTime - Partial exits", () => {
 			5020, // current price at exit
 			"long",
 			"ES",
-			"futures",
 		);
 
 		// After full exit, unrealized = 0, only realized P&L remains
@@ -267,7 +258,6 @@ describe("calculateRunningPnlAtTime - Futures symbols", () => {
 			5010,
 			"long",
 			"ES",
-			"futures",
 		);
 
 		expect(pnl).toBe(500);
@@ -285,7 +275,6 @@ describe("calculateRunningPnlAtTime - Futures symbols", () => {
 			18010,
 			"long",
 			"NQ",
-			"futures",
 		);
 
 		expect(pnl).toBe(200);
@@ -303,7 +292,6 @@ describe("calculateRunningPnlAtTime - Futures symbols", () => {
 			5010,
 			"long",
 			"MES",
-			"futures",
 		);
 
 		expect(pnl).toBe(50);
