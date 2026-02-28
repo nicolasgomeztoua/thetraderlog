@@ -1,10 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ADMIN_TABLE_PAGE_SIZE } from "@/lib/constants/admin";
 import {
 	ERR_ADMIN_BUG_REPORT_NOT_FOUND,
 	ERR_ADMIN_INVALID_STATUS_TRANSITION,
+	ERR_ADMIN_ROLE_UPDATE_FAILED,
+	ERR_ADMIN_USER_NOT_FOUND,
 } from "@/lib/constants/errors";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
 import {
@@ -181,6 +183,188 @@ export const adminRouter = createTRPCRouter({
 					.returning();
 
 				return updated;
+			}),
+	}),
+
+	users: createTRPCRouter({
+		list: adminProcedure
+			.input(
+				z.object({
+					search: z.string().optional(),
+					page: z.number().int().min(1).default(1),
+					pageSize: z
+						.number()
+						.int()
+						.min(1)
+						.max(100)
+						.default(ADMIN_TABLE_PAGE_SIZE),
+				}),
+			)
+			.query(async ({ ctx, input }) => {
+				const conditions = [];
+				if (input.search) {
+					conditions.push(
+						or(
+							ilike(users.name, `%${input.search}%`),
+							ilike(users.email, `%${input.search}%`),
+						),
+					);
+				}
+
+				const whereClause =
+					conditions.length > 0 ? and(...conditions) : undefined;
+				const offset = (input.page - 1) * input.pageSize;
+
+				const [userRows, [totalRow]] = await Promise.all([
+					ctx.db
+						.select({
+							id: users.id,
+							clerkId: users.clerkId,
+							name: users.name,
+							email: users.email,
+							imageUrl: users.imageUrl,
+							role: users.role,
+							createdAt: users.createdAt,
+							accountCount: sql<number>`cast((select count(*) from "account" where "account"."user_id" = "user"."id") as integer)`,
+							tradeCount: sql<number>`cast((select count(*) from "trade" where "trade"."user_id" = "user"."id" and "trade"."deleted_at" is null) as integer)`,
+							lastActive: sql<Date | null>`greatest(
+								(select max("entry_time") from "trade" where "trade"."user_id" = "user"."id" and "trade"."deleted_at" is null),
+								(select max("created_at") from "ai_conversation" where "ai_conversation"."user_id" = "user"."id")
+							)`,
+						})
+						.from(users)
+						.where(whereClause)
+						.orderBy(desc(users.createdAt))
+						.limit(input.pageSize)
+						.offset(offset),
+					ctx.db.select({ count: count() }).from(users).where(whereClause),
+				]);
+
+				const total = totalRow?.count ?? 0;
+
+				return {
+					items: userRows.map((u) => ({
+						id: u.id,
+						clerkId: u.clerkId,
+						name: u.name,
+						email: u.email,
+						imageUrl: u.imageUrl,
+						role: u.role,
+						createdAt: u.createdAt,
+						accountCount: u.accountCount,
+						tradeCount: u.tradeCount,
+						lastActive: u.lastActive,
+					})),
+					total,
+					page: input.page,
+					pageSize: input.pageSize,
+					totalPages: Math.ceil(total / input.pageSize),
+				};
+			}),
+
+		getById: adminProcedure
+			.input(z.object({ id: z.string() }))
+			.query(async ({ ctx, input }) => {
+				const user = await ctx.db.query.users.findFirst({
+					where: eq(users.id, input.id),
+					with: {
+						accounts: true,
+					},
+				});
+
+				if (!user) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_ADMIN_USER_NOT_FOUND,
+					});
+				}
+
+				const [recentTrades, [aiConvoCount], [bugReportCount]] =
+					await Promise.all([
+						ctx.db.query.trades.findMany({
+							where: and(eq(trades.userId, input.id), isNull(trades.deletedAt)),
+							orderBy: [desc(trades.entryTime)],
+							limit: 10,
+						}),
+						ctx.db
+							.select({ count: count() })
+							.from(aiConversations)
+							.where(eq(aiConversations.userId, input.id)),
+						ctx.db
+							.select({ count: count() })
+							.from(bugReports)
+							.where(eq(bugReports.userId, input.id)),
+					]);
+
+				return {
+					id: user.id,
+					clerkId: user.clerkId,
+					name: user.name,
+					email: user.email,
+					imageUrl: user.imageUrl,
+					role: user.role,
+					createdAt: user.createdAt,
+					accounts: user.accounts.map((a) => ({
+						id: a.id,
+						name: a.name,
+						accountType: a.accountType,
+						broker: a.broker,
+						isActive: a.isActive,
+						createdAt: a.createdAt,
+					})),
+					recentTrades: recentTrades.map((t) => ({
+						id: t.id,
+						symbol: t.symbol,
+						direction: t.direction,
+						status: t.status,
+						entryTime: t.entryTime,
+						exitTime: t.exitTime,
+						realizedPnl: t.realizedPnl,
+						netPnl: t.netPnl,
+					})),
+					aiConversationCount: aiConvoCount?.count ?? 0,
+					bugReportCount: bugReportCount?.count ?? 0,
+				};
+			}),
+
+		updateRole: adminProcedure
+			.input(
+				z.object({
+					id: z.string(),
+					role: z.enum(["user", "admin"]),
+				}),
+			)
+			.mutation(async ({ ctx, input }) => {
+				const existing = await ctx.db.query.users.findFirst({
+					where: eq(users.id, input.id),
+				});
+
+				if (!existing) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_ADMIN_USER_NOT_FOUND,
+					});
+				}
+
+				const [updated] = await ctx.db
+					.update(users)
+					.set({ role: input.role })
+					.where(eq(users.id, input.id))
+					.returning();
+
+				if (!updated) {
+					throw new TRPCError({
+						code: "INTERNAL_SERVER_ERROR",
+						message: ERR_ADMIN_ROLE_UPDATE_FAILED,
+					});
+				}
+
+				return {
+					id: updated.id,
+					name: updated.name,
+					email: updated.email,
+					role: updated.role,
+				};
 			}),
 	}),
 
