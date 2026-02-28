@@ -1,6 +1,6 @@
 # EdgeJournal
 
-A professional trading journal for futures and forex traders. Terminal-inspired dark UI, data-dense analytics, and AI-powered insights.
+A professional trading journal for futures traders. Terminal-inspired dark UI, data-dense analytics, and AI-powered insights.
 
 ## Tech Stack
 
@@ -114,7 +114,6 @@ Required in `.env`:
 - `CLERK_SECRET_KEY` - Clerk backend key
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk frontend key
 - `DATABENTO_API_KEY` - For futures market data (ES, NQ, etc.)
-- `TWELVE_DATA_API_KEY` - For forex/crypto market data
 
 ## Documentation
 

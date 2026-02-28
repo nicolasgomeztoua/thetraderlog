@@ -125,17 +125,13 @@ EdgeJournal uses a **cache-first architecture** for market data to minimize API 
 | Provider | Instruments | Use Case |
 |----------|-------------|----------|
 | **Databento** | CME Futures (ES, NQ, MNQ, MES) | Index futures via continuous contracts |
-| **Twelve Data** | Forex, Crypto, Commodities | EUR/USD, GBP/USD, BTC/USD, XAU/USD |
 
-Symbol routing happens automatically in `market-data-service.ts`:
+Symbol routing in `market-data-service.ts`:
 
 ```typescript
 // Futures → Databento (continuous contracts)
 MNQ → MNQ.v.0  // volume-based roll, front month
 ES  → ES.v.0
-
-// Forex/Crypto → Twelve Data
-EUR/USD, GBP/USD, USD/JPY, etc.
 ```
 
 ### Cache Key Design

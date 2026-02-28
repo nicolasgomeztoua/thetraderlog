@@ -19,14 +19,13 @@
 
 ## Data Providers
 
-### Dual-Provider Strategy
+### Provider Strategy
 
-EdgeJournal uses two data providers to cover all instrument types:
+EdgeJournal uses Databento as its sole market data provider for futures:
 
 | Provider | Instruments | API Key Env Var |
 |----------|-------------|-----------------|
 | **Databento** | CME Futures (ES, NQ, MNQ, MES), NYMEX, COMEX, CBOT | `DATABENTO_API_KEY` |
-| **Twelve Data** | Forex pairs, Crypto, Commodities (XAU, XAG) | `TWELVE_DATA_API_KEY` |
 
 ### Databento Configuration
 
@@ -72,22 +71,6 @@ const DATABENTO_MAPPINGS = {
 };
 ```
 
-### Twelve Data Configuration
-
-#### Supported Instruments
-
-- **Forex**: EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD, etc.
-- **Crypto**: BTC/USD, ETH/USD, etc.
-- **Commodities**: XAU/USD (Gold), XAG/USD (Silver)
-
-#### Rate Limits
-
-| Plan | Requests/Minute | Requests/Day | Monthly Cost |
-|------|-----------------|--------------|--------------|
-| Free | 8 | 800 | $0 |
-| Basic | 60 | 8,000 | $12 |
-| Pro | 800 | 100,000 | $79 |
-
 ---
 
 ## Cache Architecture
@@ -110,7 +93,7 @@ const DATABENTO_MAPPINGS = {
 PRIMARY KEY: (symbol, interval, date)
 ```
 
-- **symbol**: Normalized symbol name ("ES", "EUR/USD")
+- **symbol**: Normalized symbol name ("ES", "NQ")
 - **interval**: Bar timeframe ("1min", "5min", "15min", "1h")
 - **date**: Start of day in UTC (e.g., `2024-12-15T00:00:00Z`)
 
@@ -151,12 +134,12 @@ Most traders don't review every trade. Lazy loading means we only pay for data t
 ```sql
 CREATE TABLE candle_cache (
   id SERIAL PRIMARY KEY,
-  symbol TEXT NOT NULL,           -- "ES", "EUR/USD"
+  symbol TEXT NOT NULL,           -- "ES", "NQ"
   interval TEXT NOT NULL,         -- "1min", "5min", "15min", "1h"
   date TIMESTAMPTZ NOT NULL,      -- Day of data (UTC start of day)
   bars TEXT NOT NULL,             -- JSON array of OHLC bars
   bar_count INTEGER NOT NULL,     -- Number of bars in JSON
-  source TEXT NOT NULL,           -- "twelve_data", "databento"
+  source TEXT NOT NULL,           -- "databento"
   fetched_at TIMESTAMPTZ NOT NULL,
 
   UNIQUE(symbol, interval, date)  -- Cache lookup key
@@ -311,7 +294,6 @@ Realistic: ~50-100 unique API calls/day
 
 | Component | Cost |
 |-----------|------|
-| Twelve Data (forex) | $0-12 (Free or Basic plan) |
 | Databento (futures) | $5-20 depending on volume |
 | PostgreSQL storage | Included in existing hosting |
 | **Total** | **~$5-32/month** |
@@ -335,8 +317,8 @@ For 100 symbols × 3 years:
 
 | File | Purpose |
 |------|---------|
-| `src/lib/market-data-service.ts` | Cache-first OHLC fetching with dual-provider support |
-| `src/lib/symbols.ts` | Symbol mappings for Databento and Twelve Data |
+| `src/lib/market-data-service.ts` | Cache-first OHLC fetching with Databento |
+| `src/lib/symbols.ts` | Symbol mappings for Databento |
 | `src/lib/trade-calculations.ts` | MAE/MFE calculation logic |
 | `src/server/db/schema.ts` | `candle_cache` table + trade MAE/MFE fields |
 | `src/server/api/routers/marketData.ts` | tRPC endpoints for chart data |
@@ -348,18 +330,9 @@ For 100 symbols × 3 years:
 
 ```typescript
 // In market-data-service.ts
-function getProvider(symbol: string): 'databento' | 'twelve_data' {
-  // Futures contracts → Databento
-  if (isFuturesSymbol(symbol)) {
-    return 'databento';
-  }
-  // Everything else → Twelve Data
-  return 'twelve_data';
-}
-
-function isFuturesSymbol(symbol: string): boolean {
-  const FUTURES = ['ES', 'MES', 'NQ', 'MNQ', 'CL', 'GC', 'ZB', 'ZN', 'RTY', 'YM'];
-  return FUTURES.includes(symbol.toUpperCase());
+// All symbols route to Databento (futures-only product)
+function getProvider(symbol: string): 'databento' {
+  return 'databento';
 }
 ```
 
@@ -408,8 +381,7 @@ async function getOHLCBars(symbol: string, interval: string, date: Date) {
 1. **Check symbol support** in `src/lib/symbols.ts`
 2. **Verify API keys** in `.env`:
    - `DATABENTO_API_KEY` for futures
-   - `TWELVE_DATA_API_KEY` for forex/crypto
-3. **Check API rate limits** (especially Twelve Data free tier)
+3. **Check API rate limits**
 
 ### "Databento API error"
 
@@ -419,14 +391,6 @@ async function getOHLCBars(symbol: string, interval: string, date: Date) {
 | Symbol not found | Check symbol format (should be `ES.v.0`, not `ES`) |
 | No data for date | Verify date is a trading day (not weekend/holiday) |
 | Rate limited | Implement exponential backoff |
-
-### "Twelve Data API error"
-
-| Error | Solution |
-|-------|----------|
-| Rate limit exceeded | Free tier: 8 req/min, upgrade or add delays |
-| Symbol not found | Verify symbol is forex/crypto, not futures |
-| No data for date | Market may have been closed |
 
 ### Slow First Load
 
@@ -463,7 +427,7 @@ For popular symbols, pre-cache recent data:
 
 ```typescript
 // Daily cron job
-const POPULAR_SYMBOLS = ["ES", "NQ", "EUR/USD", "GBP/USD"];
+const POPULAR_SYMBOLS = ["ES", "NQ", "MES", "MNQ"];
 
 async function prefetchPopularSymbols() {
   for (const symbol of POPULAR_SYMBOLS) {
@@ -499,5 +463,6 @@ The cached OHLC data can power:
 
 | Date | Change |
 |------|--------|
+| 2026-02-28 | Removed Twelve Data, now Databento-only (futures-only product) |
 | 2025-12-30 | Added Databento integration for CME futures |
-| 2024-12-29 | Initial cache-first architecture with Twelve Data |
+| 2024-12-29 | Initial cache-first architecture |

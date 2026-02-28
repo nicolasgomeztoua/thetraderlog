@@ -19,7 +19,6 @@ Add an interactive running P&L (profit/loss) area chart to the trade detail page
 
 **Audit Results** (completed during PRD creation):
 - ✅ `calculateFuturesPnL()` in `src/lib/market-data/symbols.ts:775` - Reuse
-- ✅ `calculateForexPnL()` in `src/lib/market-data/symbols.ts:805` - Reuse
 - ⚠️ `calculateRunningPnl()` in `src/components/trade-detail/replay/use-replay-engine.ts:273` - LOCAL helper, needs extraction
 - ❌ `generateRunningPnlSeries()` - Does not exist, needs creation
 
@@ -43,7 +42,7 @@ Add an interactive running P&L (profit/loss) area chart to the trade detail page
 - [ ] `generateRunningPnlSeries()` accepts: bars[], executions[], direction, symbol, instrumentType
 - [ ] Returns array of `{ time: number, pnl: number }` data points
 - [ ] Handles partial exits correctly (accumulated realized P&L + current unrealized)
-- [ ] Reuses `calculateFuturesPnL` and `calculateForexPnL` from `@/lib/market-data/symbols.ts`
+- [ ] Reuses `calculateFuturesPnL` from `@/lib/market-data/symbols.ts`
 - [ ] Export from `src/lib/trades/index.ts`
 - [ ] Update `use-replay-engine.ts` to import from shared utility (remove local helper)
 - [ ] Typecheck passes (`bun run check`)
@@ -102,7 +101,7 @@ Add an interactive running P&L (profit/loss) area chart to the trade detail page
 - [ ] Tests long trade P&L calculation (profit and loss scenarios)
 - [ ] Tests short trade P&L calculation (profit and loss scenarios)
 - [ ] Tests partial exit handling (scale-outs)
-- [ ] Tests both futures (ES, NQ) and forex symbols
+- [ ] Tests futures symbols (ES, NQ)
 - [ ] Tests empty bars/executions edge cases
 - [ ] All tests pass (`bun run test`)
 - [ ] Typecheck passes (`bun run check`)
@@ -130,7 +129,7 @@ Add an interactive running P&L (profit/loss) area chart to the trade detail page
 3. **FR-003**: Chart must use proper tick/pip values from `src/lib/market-data/symbols.ts`
 4. **FR-004**: Timestamps must display in user's configured timezone
 5. **FR-005**: Chart must handle trades without exits (show current unrealized only)
-6. **FR-006**: Chart must support both futures and forex instruments
+6. **FR-006**: Chart must support futures instruments
 
 ## Non-Goals (Out of Scope)
 
@@ -145,8 +144,8 @@ Add an interactive running P&L (profit/loss) area chart to the trade detail page
 ### Existing Code to Reuse
 | Purpose | Location |
 |---------|----------|
-| P&L calculations | `src/lib/market-data/symbols.ts` - `calculateFuturesPnL`, `calculateForexPnL`, `calculatePnL` |
-| Symbol specs (tick values) | `src/lib/market-data/symbols.ts` - `getFuturesSpec`, `getForexSpec`, `getPointValue` |
+| P&L calculations | `src/lib/market-data/symbols.ts` - `calculateFuturesPnL` |
+| Symbol specs (tick values) | `src/lib/market-data/symbols.ts` - `getFuturesSpec`, `getPointValue` |
 | Running P&L logic (to extract) | `src/components/trade-detail/replay/use-replay-engine.ts` - local `calculateRunningPnl` (lines 273-306) |
 | Chart styling | `src/lib/analytics/constants.ts` - `ANALYTICS_COLORS` |
 | Area chart pattern | `src/components/analytics/monthly-chart.tsx` |

@@ -435,3 +435,23 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - Forex test cases in running-pnl.test.ts used `calculateRunningPnlAtTime` with 5 args (function now takes 4) — these needed complete removal, not just field removal
   - Note: `bun run db:push` was NOT run — this is a schema-level change that must be applied to the actual DB separately
 ---
+
+## 2026-02-28 - US-014: Clean Up Environment Variables and Documentation
+- Updated CLAUDE.md: description to "futures traders", removed TWELVE_DATA_API_KEY from env vars section
+- Updated README.md: description to "futures traders", removed MT4/MT5 from CSV import mention
+- Updated ROADMAP.md: Phase 7 historical data (Databento-only), replay (futures-only calculations), Phase 8 brokers (removed MT4/MT5 parsers and MetaTrader from priority brokers)
+- Updated .claude/skills/architecture/SKILL.md: removed Twelve Data provider row and Forex/Crypto routing section
+- Updated .claude/skills/architecture/MARKET_DATA_REFERENCE.md: extensive rework — removed Twelve Data section, updated to single-provider (Databento), removed forex symbols from examples, removed Twelve Data troubleshooting section, updated cost analysis
+- Updated .claude/skills/testing/TESTING_REFERENCE.md: removed instrumentType from CreateTestTradeOptions
+- Updated .claude/skills/consistency-audit/SKILL.md: removed FOREX_SPECS from grep command
+- Updated .claude/skills/backend/TRPC_REFERENCE.md: updated market data router to Databento-only
+- Updated plans/prd-running-pnl.md: removed calculateForexPnL, getForexSpec references, updated FR-006 to futures-only
+- Updated plans/prd-command-center-dashboard.md: removed "Forex Factory" from deferred feature
+- Updated plans/prd-broker-live-integration.md: added futures-only pivot note, removed forex traders from target audience
+- No .env.example file exists — nothing to update there
+- Files changed: CLAUDE.md, README.md, ROADMAP.md, 5 .claude/skills files, 3 plans files, prd.json
+- **Learnings for future iterations:**
+  - MARKET_DATA_REFERENCE.md was the most extensive doc to update — had Twelve Data woven throughout (provider table, config section, troubleshooting, code examples, cost analysis)
+  - Plan files (PRDs) that describe future work can be annotated with a pivot note rather than fully rewritten
+  - The prd-futures-only-cleanup.md was intentionally left as-is since it describes the cleanup work itself
+---

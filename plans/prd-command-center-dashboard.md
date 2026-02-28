@@ -383,7 +383,7 @@ Complete redesign of the dashboard from a static stats page into a dynamic Comma
 ## Non-Goals (Out of Scope)
 
 - Real-time price feeds or live market data streaming
-- Economic calendar / Forex Factory news integration (explicitly deferred)
+- Economic calendar / news integration (explicitly deferred)
 - Customizable widget arrangement (drag-and-drop) - fixed layout for V1
 - Widget resizing by user
 - Multiple dashboard layouts/presets

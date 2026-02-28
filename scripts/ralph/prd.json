@@ -239,8 +239,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated CLAUDE.md (description + removed TWELVE_DATA_API_KEY env var). Updated README.md (description + removed MT4/MT5 from CSV import). Updated ROADMAP.md (Phase 7 historical data, replay, brokers — removed forex/MT4/MT5/Twelve Data refs). Updated .claude/skills/ (architecture SKILL.md, MARKET_DATA_REFERENCE.md, testing TESTING_REFERENCE.md, consistency-audit SKILL.md, backend TRPC_REFERENCE.md). Updated plans/ (prd-running-pnl.md, prd-command-center-dashboard.md, prd-broker-live-integration.md with futures-only pivot note). No .env.example exists."
     },
     {
       "id": "US-015",
