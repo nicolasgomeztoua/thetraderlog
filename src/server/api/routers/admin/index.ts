@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { TRPCError } from "@trpc/server";
 import {
 	and,
@@ -10,8 +8,6 @@ import {
 	gte,
 	ilike,
 	isNull,
-	lt,
-	max,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -26,7 +22,6 @@ import {
 } from "@/lib/constants/errors";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
 import {
-	accounts,
 	aiConversationModeEnum,
 	aiConversationStatusEnum,
 	aiConversations,
@@ -429,113 +424,6 @@ export const adminRouter = createTRPCRouter({
 				totalTokensUsed: Number(tokenSum?.total ?? 0),
 			};
 		}),
-
-		growth: adminProcedure.query(async ({ ctx }) => {
-			const thirtyDaysAgo = new Date();
-			thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-			const dailyNewUsers = await ctx.db
-				.select({
-					date: sql<string>`date_trunc('day', ${users.createdAt})::date::text`,
-					count: count(),
-				})
-				.from(users)
-				.where(gte(users.createdAt, thirtyDaysAgo))
-				.groupBy(sql`date_trunc('day', ${users.createdAt})`)
-				.orderBy(sql`date_trunc('day', ${users.createdAt})`);
-
-			// Build cumulative totals
-			// First get the total users before the 30-day window
-			const [baseCountRow] = await ctx.db
-				.select({ count: count() })
-				.from(users)
-				.where(lt(users.createdAt, thirtyDaysAgo));
-
-			let cumulative = baseCountRow?.count ?? 0;
-
-			return {
-				daily: dailyNewUsers.map((r) => {
-					cumulative += r.count;
-					return {
-						date: r.date,
-						newUsers: r.count,
-						cumulativeTotal: cumulative,
-					};
-				}),
-			};
-		}),
-
-		tradingActivity: adminProcedure.query(async ({ ctx }) => {
-			const thirtyDaysAgo = new Date();
-			thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-			const dailyActivity = await ctx.db
-				.select({
-					date: sql<string>`date_trunc('day', ${trades.entryTime})::date::text`,
-					tradeCount: count(),
-					totalPnl: sql<string>`coalesce(sum(${trades.netPnl}), 0)`,
-					avgTradeSize: sql<string>`coalesce(avg(abs(${trades.netPnl})), 0)`,
-				})
-				.from(trades)
-				.where(
-					and(gte(trades.entryTime, thirtyDaysAgo), isNull(trades.deletedAt)),
-				)
-				.groupBy(sql`date_trunc('day', ${trades.entryTime})`)
-				.orderBy(sql`date_trunc('day', ${trades.entryTime})`);
-
-			return {
-				daily: dailyActivity.map((r) => ({
-					date: r.date,
-					tradeCount: r.tradeCount,
-					totalPnl: Number(r.totalPnl),
-					avgTradeSize: Number(r.avgTradeSize),
-				})),
-			};
-		}),
-
-		topTraders: adminProcedure.query(async ({ ctx }) => {
-			const rows = await ctx.db
-				.select({
-					userId: trades.userId,
-					name: users.name,
-					email: users.email,
-					tradeCount: count(),
-					totalPnl: sql<string>`coalesce(sum(${trades.netPnl}), 0)`,
-				})
-				.from(trades)
-				.innerJoin(users, eq(trades.userId, users.id))
-				.where(isNull(trades.deletedAt))
-				.groupBy(trades.userId, users.name, users.email)
-				.orderBy(sql`sum(${trades.netPnl}) desc`)
-				.limit(10);
-
-			return {
-				traders: rows.map((r) => ({
-					userId: r.userId,
-					name: r.name,
-					email: r.email,
-					tradeCount: r.tradeCount,
-					totalPnl: Number(r.totalPnl),
-				})),
-			};
-		}),
-
-		accountBreakdown: adminProcedure.query(async ({ ctx }) => {
-			const breakdown = await ctx.db
-				.select({
-					accountType: accounts.accountType,
-					count: count(),
-				})
-				.from(accounts)
-				.groupBy(accounts.accountType);
-
-			return {
-				breakdown: breakdown.map((r) => ({
-					accountType: r.accountType,
-					count: r.count,
-				})),
-			};
-		}),
 	}),
 
 	ai: createTRPCRouter({
@@ -721,71 +609,6 @@ export const adminRouter = createTRPCRouter({
 					tokens: Number(r.tokens),
 					messageCount: r.messageCount,
 				})),
-			};
-		}),
-	}),
-
-	system: createTRPCRouter({
-		health: adminProcedure.query(async ({ ctx }) => {
-			// Get all row counts and last activity dates in parallel
-			const [
-				[userCount],
-				[tradeCount],
-				[accountCount],
-				[aiConversationCount],
-				[aiMessageCount],
-				[bugReportCount],
-				[lastSignup],
-				[lastTrade],
-				[lastAiConversation],
-			] = await Promise.all([
-				ctx.db.select({ count: count() }).from(users),
-				ctx.db.select({ count: count() }).from(trades),
-				ctx.db.select({ count: count() }).from(accounts),
-				ctx.db.select({ count: count() }).from(aiConversations),
-				ctx.db.select({ count: count() }).from(aiMessages),
-				ctx.db.select({ count: count() }).from(bugReports),
-				ctx.db.select({ date: max(users.createdAt) }).from(users),
-				ctx.db.select({ date: max(trades.entryTime) }).from(trades),
-				ctx.db
-					.select({ date: max(aiConversations.createdAt) })
-					.from(aiConversations),
-			]);
-
-			// Check database connection with a simple query
-			let databaseStatus: "connected" | "error" = "connected";
-			try {
-				await ctx.db.execute(sql`select 1`);
-			} catch {
-				databaseStatus = "error";
-			}
-
-			// Read app version from package.json
-			let appVersion = "unknown";
-			try {
-				const pkgPath = resolve(process.cwd(), "package.json");
-				const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-				appVersion = pkg.version ?? "unknown";
-			} catch {
-				// Fall through with "unknown"
-			}
-
-			return {
-				databaseStatus,
-				appVersion,
-				tableCounts: {
-					users: userCount?.count ?? 0,
-					trades: tradeCount?.count ?? 0,
-					accounts: accountCount?.count ?? 0,
-					aiConversations: aiConversationCount?.count ?? 0,
-					aiMessages: aiMessageCount?.count ?? 0,
-					bugReports: bugReportCount?.count ?? 0,
-				},
-				lastActivity: {
-					lastSignup: lastSignup?.date ?? null,
-					lastTrade: lastTrade?.date ?? null,
-					lastAiConversation: lastAiConversation?.date ?? null,
-				},
 			};
 		}),
 	}),

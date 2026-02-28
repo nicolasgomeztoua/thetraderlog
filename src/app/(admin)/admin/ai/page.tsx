@@ -12,7 +12,7 @@ import {
 	MessageSquare,
 	Zap,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -366,10 +366,9 @@ export default function AdminAIPage() {
 								const isExpanded = expandedId === convo.id;
 
 								return (
-									<>
+									<Fragment key={convo.id}>
 										<TableRow
 											className="cursor-pointer"
-											key={convo.id}
 											onClick={() =>
 												setExpandedId(isExpanded ? null : convo.id)
 											}
@@ -417,10 +416,7 @@ export default function AdminAIPage() {
 
 										{/* Expanded messages */}
 										{isExpanded && (
-											<TableRow
-												className="hover:bg-transparent"
-												key={`${convo.id}-detail`}
-											>
+											<TableRow className="hover:bg-transparent">
 												<TableCell
 													className="border-t-0 bg-muted/20 p-0"
 													colSpan={8}
@@ -484,7 +480,7 @@ export default function AdminAIPage() {
 												</TableCell>
 											</TableRow>
 										)}
-									</>
+									</Fragment>
 								);
 							})}
 						</TableBody>

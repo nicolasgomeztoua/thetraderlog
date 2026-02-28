@@ -30,7 +30,7 @@ const OVERVIEW_CARDS = [
 	{
 		label: "Total Trades",
 		key: "totalTrades" as const,
-		href: "/admin/analytics",
+		href: "/admin",
 		icon: BarChart3,
 		format: "number" as const,
 	},

@@ -8,8 +8,6 @@ export const ADMIN_NAV_ITEMS = [
 	{ label: "Bug Reports", href: "/admin/bug-reports", icon: "Bug" },
 	{ label: "Users", href: "/admin/users", icon: "Users" },
 	{ label: "AI Usage", href: "/admin/ai", icon: "Bot" },
-	{ label: "Analytics", href: "/admin/analytics", icon: "BarChart3" },
-	{ label: "System Health", href: "/admin/system", icon: "Activity" },
 ] as const;
 
 // =============================================================================

@@ -327,7 +327,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 								>
 									{CAPABILITY_PILLS.map((pill) => (
 										<span
-											className="rounded border border-white/10 bg-white/[0.02] px-2.5 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider"
+											className="rounded border border-white/10 bg-white/2 px-2.5 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider"
 											key={pill}
 										>
 											{pill}
@@ -345,7 +345,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 										const Icon = card.icon;
 										return (
 											<button
-												className="group rounded border border-white/5 bg-white/[0.02] p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/[0.02]"
+												className="group rounded border border-white/5 bg-white/2 p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/2"
 												data-testid="chat-suggested-query"
 												key={card.title}
 												onClick={() => void handleSend(card.query)}
