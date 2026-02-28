@@ -233,3 +233,17 @@ Feature: Admin Panel
   - Pass `initialRole` from server component to client guard to avoid double-fetch and loading flash
   - Use `staleTime: 30_000` on the `settings.me` query to avoid excessive refetching during admin navigation
 ---
+
+## 2026-02-28 - US-017
+- Added conditional Admin navigation link to app-sidebar.tsx footer
+- Uses existing `settings.me` tRPC query to check `me?.role === "admin"`
+- Shield icon (already imported) with link to /admin
+- Active state uses `pathname.startsWith("/admin")` for sub-page highlighting
+- Hidden for non-admin users (conditional rendering with `&&`)
+- Files changed: src/app/(protected)/_components/app-sidebar.tsx
+- **Learnings for future iterations:**
+  - `settings.me` query is already available in the sidebar — no need to create a new endpoint for role checking
+  - Shield icon was already imported in app-sidebar.tsx (used for Prop nav item)
+  - Admin link placed in footer (after Settings, before UserButton) to distinguish it from main navigation items
+  - Use `pathname.startsWith("/admin")` for active state since admin has sub-routes
+---
