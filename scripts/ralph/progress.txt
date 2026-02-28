@@ -247,3 +247,18 @@ Feature: Admin Panel
   - Admin link placed in footer (after Settings, before UserButton) to distinguish it from main navigation items
   - Use `pathname.startsWith("/admin")` for active state since admin has sub-routes
 ---
+
+## 2026-02-28 - US-018
+- Replaced placeholder admin overview page with full dashboard using `admin.analytics.platformStats` endpoint
+- 6 stat cards: Total Users, Active Users (7d), Total Trades, Open Bug Reports, AI Conversations (7d), Total AI Tokens
+- Each card links to its detailed admin panel page
+- Compact number formatting for large values (K/M suffixes for tokens)
+- Loading skeleton, error state, and hover effects on cards
+- Terminal design: monospace labels, chartreuse accent values, card hover with primary border
+- Files changed: src/app/(admin)/admin/page.tsx
+- **Learnings for future iterations:**
+  - Admin overview is a client component ("use client") since it fetches data via tRPC React hooks
+  - Biome auto-formats long `.useQuery()` chains to multi-line — let it handle the formatting
+  - Card config array with `as const` gives type-safe key access to the data object
+  - Use `Link` from next/link for card navigation — whole card is clickable
+---
