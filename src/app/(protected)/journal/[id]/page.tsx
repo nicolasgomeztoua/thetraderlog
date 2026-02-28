@@ -508,7 +508,7 @@ export default function TradeDetailPage() {
 								symbol: trade.symbol,
 								direction: trade.direction,
 								status: trade.status,
-								instrumentType: trade.instrumentType,
+
 								entryPrice: trade.entryPrice,
 								exitPrice: trade.exitPrice,
 								entryTime: trade.entryTime,
@@ -561,7 +561,7 @@ export default function TradeDetailPage() {
 										symbol: trade.symbol,
 										direction: trade.direction,
 										status: trade.status,
-										instrumentType: trade.instrumentType,
+		
 										quantity: trade.quantity,
 										entryPrice: trade.entryPrice,
 										exitPrice: trade.exitPrice,
@@ -639,7 +639,7 @@ export default function TradeDetailPage() {
 								symbol: trade.symbol,
 								direction: trade.direction,
 								status: trade.status,
-								instrumentType: trade.instrumentType,
+
 								quantity: trade.quantity,
 								entryPrice: trade.entryPrice,
 								exitPrice: trade.exitPrice,
@@ -695,7 +695,7 @@ export default function TradeDetailPage() {
 								symbol: trade.symbol,
 								direction: trade.direction,
 								status: trade.status,
-								instrumentType: trade.instrumentType,
+
 								entryPrice: trade.entryPrice,
 								exitPrice: trade.exitPrice,
 								entryTime: trade.entryTime,

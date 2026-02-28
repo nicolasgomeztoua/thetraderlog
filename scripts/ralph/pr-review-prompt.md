@@ -6,7 +6,8 @@ You are reviewing code quality comments from Greptile AI on a pull request.
 
 - Read `CLAUDE.md` for codebase conventions
 - PR number is in `scripts/ralph/.pr-number`
-- Greptile comments are in `scripts/ralph/.greptile-comments.json`
+- Greptile inline comments are in `scripts/ralph/.greptile-comments.json`
+- If the inline comments array is empty, check `scripts/ralph/.greptile-summary-context.md` for the Greptile summary to address proactively
 
 ## Your Task
 
@@ -100,20 +101,15 @@ Only commit if all checks pass.
 - If you make fixes, push to the branch after all fixes are done
 - Don't make unnecessary changes just to appease Greptile
 
-## Early Exit Signal
+## Summary-Only Mode
 
-When you have addressed ALL comments in the current batch and believe the PR is ready:
+When `scripts/ralph/.greptile-comments.json` is an empty array `[]`, it means Greptile didn't leave new inline comments but the confidence score is still below 5/5.
 
-Output this signal at the end of your response:
-```
-<review>COMPLETE</review>
-```
+In this case:
+1. Read `scripts/ralph/.greptile-summary-context.md` for the full Greptile summary
+2. Analyze the concerns mentioned in the summary
+3. Proactively identify and fix the issues Greptile is flagging
+4. Commit fixes and push to the branch
+5. Run quality checks as usual
 
-This tells Ralph you're done with this review cycle and it can immediately check for new comments instead of waiting 3 minutes.
-
-**Only use this signal when:**
-- You have responded to every comment in the batch
-- All fixes have been committed and pushed
-- All quality checks pass
-
-If you're unsure or there might be more work needed, don't output the signal - let Ralph wait and check again.
+The goal is to raise the confidence score to 5/5 by addressing every concern in the summary, even without specific inline comments pointing to exact lines.

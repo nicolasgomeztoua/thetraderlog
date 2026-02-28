@@ -133,7 +133,6 @@ export default function NewTradePage() {
 
 		createTrade.mutate({
 			symbol,
-			instrumentType: "futures",
 			direction,
 			entryPrice,
 			entryTime: entryDateTime,

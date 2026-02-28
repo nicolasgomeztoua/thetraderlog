@@ -31,7 +31,6 @@ import {
 	emotionalStateEnum,
 	executionTypeEnum,
 	exitReasonEnum,
-	instrumentTypeEnum,
 	tradeStatusEnum,
 } from "@/lib/shared";
 import {
@@ -249,7 +248,6 @@ async function autoEvaluateTradeRules(
 // Input schemas
 const createTradeSchema = z.object({
 	symbol: z.string().min(1),
-	instrumentType: instrumentTypeEnum,
 	direction: directionEnum,
 	entryPrice: z.string(),
 	entryTime: z.iso.datetime(),
@@ -277,7 +275,6 @@ const createTradeSchema = z.object({
 const updateTradeSchema = z.object({
 	id: z.string(),
 	symbol: z.string().optional(),
-	instrumentType: instrumentTypeEnum.optional(),
 	direction: directionEnum.optional(),
 	entryPrice: z.string().optional(),
 	exitPrice: z.string().optional(),
@@ -321,7 +318,6 @@ const addExecutionSchema = z.object({
 // Batch import schema for CSV imports
 const batchImportTradeSchema = z.object({
 	symbol: z.string().min(1),
-	instrumentType: instrumentTypeEnum,
 	direction: directionEnum,
 	entryPrice: z.string(),
 	entryTime: z.string(), // ISO string
@@ -677,6 +673,7 @@ export const tradesRouter = createTRPCRouter({
 				.insert(trades)
 				.values({
 					...tradeData,
+					instrumentType: "futures",
 					userId: ctx.user.id,
 					entryTime: new Date(input.entryTime),
 					exitTime: input.exitTime ? new Date(input.exitTime) : null,
@@ -768,7 +765,7 @@ export const tradesRouter = createTRPCRouter({
 					userId: ctx.user.id,
 					accountId,
 					symbol: trade.symbol,
-					instrumentType: trade.instrumentType,
+					instrumentType: "futures",
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					entryTime: new Date(trade.entryTime),

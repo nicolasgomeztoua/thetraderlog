@@ -191,11 +191,11 @@ cp scripts/ralph/prd.example.json scripts/ralph/prd.json
 │   - Push branch to remote                                   │
 │   - Create PR with summary from prd.json                    │
 ├─────────────────────────────────────────────────────────────┤
-│ PHASE 4: Greptile Review Loop (every 3 minutes)             │
-│   - Check for new Greptile AI comments                      │
-│   - Evaluate each comment skeptically                       │
-│   - Fix valid issues, commit                                │
-│   - Reply to @greptileai (valid or invalid)                 │
+│ PHASE 4: Score-Driven Greptile Review Loop                   │
+│   - Poll for Greptile summary (30s intervals, 10min timeout)│
+│   - Target: Confidence Score 5/5                            │
+│   - Fix inline comments + summary-only concerns             │
+│   - Tag @greptileai to trigger re-review after fixes        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -238,11 +238,13 @@ After each story, Ralph adds learnings (patterns, mistakes, decisions) so future
 
 ### Greptile Review Handling
 
-Ralph monitors PR comments from Greptile AI and:
+Ralph uses a **score-driven review loop** targeting Confidence Score 5/5:
+- **Polls every 30s** for Greptile's summary comment (10min timeout per cycle)
 - **Evaluates skeptically** - Greptile can be wrong
 - **Fixes valid issues** - commits with `fix: address Greptile review`
-- **Replies to all comments** - tags @greptileai with verdict
-- **Pushes after all fixes** - keeps PR updated
+- **Summary-only mode** - when no inline comments but score < 5, reads summary context to proactively fix flagged concerns
+- **Tags @greptileai** after each fix cycle to trigger re-review
+- **Exits early** when score reaches 5/5
 
 ### Debugging
 

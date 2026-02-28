@@ -347,7 +347,6 @@ export default function ImportPage() {
 			// Prepare trades array for batch import
 			let tradesToInsert: Array<{
 				symbol: string;
-				instrumentType: "futures";
 				direction: "long" | "short";
 				entryPrice: string;
 				entryTime: string;
@@ -368,7 +367,6 @@ export default function ImportPage() {
 				// Using platform-parsed data
 				tradesToInsert = parsedTrades.map((trade) => ({
 					symbol: trade.symbol.toUpperCase(),
-					instrumentType: "futures" as const,
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					entryTime: trade.entryTime.toISOString(),
@@ -393,7 +391,6 @@ export default function ImportPage() {
 
 					return {
 						symbol: getMappedValue(csvRow, "symbol").toUpperCase(),
-						instrumentType: "futures" as const,
 						direction: parseDirection(getMappedValue(csvRow, "direction")),
 						entryPrice: getMappedValue(csvRow, "entryPrice"),
 						entryTime,
