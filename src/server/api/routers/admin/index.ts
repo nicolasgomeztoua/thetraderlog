@@ -1,4 +1,11 @@
-import { count, eq, gte, sql } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { z } from "zod";
+import { ADMIN_TABLE_PAGE_SIZE } from "@/lib/constants/admin";
+import {
+	ERR_ADMIN_BUG_REPORT_NOT_FOUND,
+	ERR_ADMIN_INVALID_STATUS_TRANSITION,
+} from "@/lib/constants/errors";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
 import {
 	aiConversations,
@@ -8,7 +15,175 @@ import {
 	users,
 } from "@/server/db/schema";
 
+const bugReportStatusValues = [
+	"open",
+	"in_progress",
+	"resolved",
+	"closed",
+] as const;
+const bugReportSeverityValues = ["low", "medium", "high", "critical"] as const;
+const bugReportCategoryValues = [
+	"ui",
+	"data",
+	"performance",
+	"crash",
+	"other",
+] as const;
+
 export const adminRouter = createTRPCRouter({
+	bugReports: createTRPCRouter({
+		list: adminProcedure
+			.input(
+				z.object({
+					status: z.enum(bugReportStatusValues).optional(),
+					category: z.enum(bugReportCategoryValues).optional(),
+					severity: z.enum(bugReportSeverityValues).optional(),
+					page: z.number().int().min(1).default(1),
+					pageSize: z
+						.number()
+						.int()
+						.min(1)
+						.max(100)
+						.default(ADMIN_TABLE_PAGE_SIZE),
+				}),
+			)
+			.query(async ({ ctx, input }) => {
+				const conditions = [];
+				if (input.status) {
+					conditions.push(eq(bugReports.status, input.status));
+				}
+				if (input.category) {
+					conditions.push(eq(bugReports.category, input.category));
+				}
+				if (input.severity) {
+					conditions.push(eq(bugReports.severity, input.severity));
+				}
+
+				const whereClause =
+					conditions.length > 0 ? and(...conditions) : undefined;
+				const offset = (input.page - 1) * input.pageSize;
+
+				const [items, [totalRow]] = await Promise.all([
+					ctx.db.query.bugReports.findMany({
+						where: whereClause,
+						with: { user: true },
+						orderBy: [desc(bugReports.createdAt)],
+						limit: input.pageSize,
+						offset,
+					}),
+					ctx.db.select({ count: count() }).from(bugReports).where(whereClause),
+				]);
+
+				const total = totalRow?.count ?? 0;
+
+				return {
+					items: items.map((item) => ({
+						id: item.id,
+						title: item.title,
+						description: item.description,
+						severity: item.severity,
+						category: item.category,
+						status: item.status,
+						screenshotKey: item.screenshotKey,
+						pageUrl: item.pageUrl,
+						userAgent: item.userAgent,
+						metadata: item.metadata,
+						createdAt: item.createdAt,
+						user: {
+							id: item.user.id,
+							name: item.user.name,
+							email: item.user.email,
+							imageUrl: item.user.imageUrl,
+						},
+					})),
+					total,
+					page: input.page,
+					pageSize: input.pageSize,
+					totalPages: Math.ceil(total / input.pageSize),
+				};
+			}),
+
+		getById: adminProcedure
+			.input(z.object({ id: z.string() }))
+			.query(async ({ ctx, input }) => {
+				const report = await ctx.db.query.bugReports.findFirst({
+					where: eq(bugReports.id, input.id),
+					with: { user: true },
+				});
+
+				if (!report) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_ADMIN_BUG_REPORT_NOT_FOUND,
+					});
+				}
+
+				return {
+					id: report.id,
+					title: report.title,
+					description: report.description,
+					severity: report.severity,
+					category: report.category,
+					status: report.status,
+					screenshotKey: report.screenshotKey,
+					pageUrl: report.pageUrl,
+					userAgent: report.userAgent,
+					metadata: report.metadata,
+					createdAt: report.createdAt,
+					user: {
+						id: report.user.id,
+						name: report.user.name,
+						email: report.user.email,
+						imageUrl: report.user.imageUrl,
+					},
+				};
+			}),
+
+		updateStatus: adminProcedure
+			.input(
+				z.object({
+					id: z.string(),
+					status: z.enum(bugReportStatusValues),
+				}),
+			)
+			.mutation(async ({ ctx, input }) => {
+				const existing = await ctx.db.query.bugReports.findFirst({
+					where: eq(bugReports.id, input.id),
+				});
+
+				if (!existing) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_ADMIN_BUG_REPORT_NOT_FOUND,
+					});
+				}
+
+				// Validate status transitions: open → in_progress → resolved → closed
+				const validTransitions: Record<string, string[]> = {
+					open: ["in_progress", "closed"],
+					in_progress: ["resolved", "open", "closed"],
+					resolved: ["closed", "open"],
+					closed: ["open"],
+				};
+
+				const allowed = validTransitions[existing.status] ?? [];
+				if (!allowed.includes(input.status)) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: ERR_ADMIN_INVALID_STATUS_TRANSITION,
+					});
+				}
+
+				const [updated] = await ctx.db
+					.update(bugReports)
+					.set({ status: input.status })
+					.where(eq(bugReports.id, input.id))
+					.returning();
+
+				return updated;
+			}),
+	}),
+
 	analytics: createTRPCRouter({
 		platformStats: adminProcedure.query(async ({ ctx }) => {
 			const sevenDaysAgo = new Date();
