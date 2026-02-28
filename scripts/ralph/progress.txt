@@ -349,3 +349,17 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - ParsedTrade type still has `instrumentType` — that's handled by US-012
   - Direction tabs in trade/new/page.tsx still use Tabs components, so those imports must stay
 ---
+
+## 2026-02-28 - US-009: Remove defaultInstrumentType from Settings
+- Removed `defaultInstrumentType` from `APISettings` interface and `SettingsState` interface in settings-store.ts
+- Removed `defaultInstrumentType` from Zustand store default values and `hydrate()` function
+- Removed `defaultInstrumentType` from tRPC settings update input schema in settings.ts
+- Removed `defaultInstrument` from settings-content.tsx: local state, hydration from DB, save handler mutation, Zustand sync on save success
+- Removed the "Default Instrument" Select UI (Futures/Forex dropdown) from Trading Defaults card
+- Removed `defaultInstrumentType` from use-settings-hydration.tsx `hydrate()` call
+- Files changed: settings-store.ts, settings.ts, settings-content.tsx, use-settings-hydration.tsx
+- **Learnings for future iterations:**
+  - Settings flow spans 4 files: DB column → tRPC router input → settings-content.tsx UI/state → settings-store.ts Zustand → use-settings-hydration.tsx hydration
+  - settings-content.tsx uses a local `settings` state object with different field names than the DB (e.g., `defaultInstrument` maps to `defaultInstrumentType`)
+  - The DB column still exists (US-013 will drop it) — removing from tRPC input/Zustand is safe since the column has a default value
+---

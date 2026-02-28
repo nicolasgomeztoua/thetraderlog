@@ -155,8 +155,8 @@
         "Verify in browser — settings page renders without instrument type option"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed defaultInstrumentType from APISettings and SettingsState interfaces in settings-store.ts. Removed from hydrate() and default values. Removed defaultInstrumentType from settings.ts tRPC update input schema. Removed defaultInstrument from settings-content.tsx state, hydration, save handler, Zustand sync, and Default Instrument Select UI. Removed from use-settings-hydration.tsx hydrate call."
     },
     {
       "id": "US-010",
