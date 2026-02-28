@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { TRPCError } from "@trpc/server";
 import {
 	and,
@@ -9,6 +11,7 @@ import {
 	ilike,
 	isNull,
 	lt,
+	max,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -730,6 +733,71 @@ export const adminRouter = createTRPCRouter({
 					tokens: Number(r.tokens),
 					messageCount: r.messageCount,
 				})),
+			};
+		}),
+	}),
+
+	system: createTRPCRouter({
+		health: adminProcedure.query(async ({ ctx }) => {
+			// Get all row counts and last activity dates in parallel
+			const [
+				[userCount],
+				[tradeCount],
+				[accountCount],
+				[aiConversationCount],
+				[aiMessageCount],
+				[bugReportCount],
+				[lastSignup],
+				[lastTrade],
+				[lastAiConversation],
+			] = await Promise.all([
+				ctx.db.select({ count: count() }).from(users),
+				ctx.db.select({ count: count() }).from(trades),
+				ctx.db.select({ count: count() }).from(accounts),
+				ctx.db.select({ count: count() }).from(aiConversations),
+				ctx.db.select({ count: count() }).from(aiMessages),
+				ctx.db.select({ count: count() }).from(bugReports),
+				ctx.db.select({ date: max(users.createdAt) }).from(users),
+				ctx.db.select({ date: max(trades.entryTime) }).from(trades),
+				ctx.db
+					.select({ date: max(aiConversations.createdAt) })
+					.from(aiConversations),
+			]);
+
+			// Check database connection with a simple query
+			let databaseStatus: "connected" | "error" = "connected";
+			try {
+				await ctx.db.execute(sql`select 1`);
+			} catch {
+				databaseStatus = "error";
+			}
+
+			// Read app version from package.json
+			let appVersion = "unknown";
+			try {
+				const pkgPath = resolve(process.cwd(), "package.json");
+				const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+				appVersion = pkg.version ?? "unknown";
+			} catch {
+				// Fall through with "unknown"
+			}
+
+			return {
+				databaseStatus,
+				appVersion,
+				tableCounts: {
+					users: userCount?.count ?? 0,
+					trades: tradeCount?.count ?? 0,
+					accounts: accountCount?.count ?? 0,
+					aiConversations: aiConversationCount?.count ?? 0,
+					aiMessages: aiMessageCount?.count ?? 0,
+					bugReports: bugReportCount?.count ?? 0,
+				},
+				lastActivity: {
+					lastSignup: lastSignup?.date ?? null,
+					lastTrade: lastTrade?.date ?? null,
+					lastAiConversation: lastAiConversation?.date ?? null,
+				},
 			};
 		}),
 	}),
