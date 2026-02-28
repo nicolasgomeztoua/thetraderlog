@@ -3,7 +3,7 @@
 // Shared module for calculating win rate, profit factor, avg win/loss, etc.
 // =============================================================================
 
-import { getPointValue } from "@/lib/market-data/symbols";
+import { getPointValue } from "@/lib/market-data";
 
 /**
  * Minimal trade interface for stats calculations

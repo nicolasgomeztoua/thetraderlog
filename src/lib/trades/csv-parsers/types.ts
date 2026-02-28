@@ -34,7 +34,6 @@ export interface ParsedTrade {
 	// Metadata
 	externalId?: string; // Platform's trade ID
 	comment?: string;
-	magicNumber?: string;
 }
 
 export interface ParseResult {

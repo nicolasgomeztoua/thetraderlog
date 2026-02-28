@@ -34,7 +34,7 @@ export type ReviewedFilter = "all" | "reviewed" | "unreviewed";
  * Used for filtering trades across all analytics tabs
  */
 export interface AnalyticsFilters {
-	/** Filter by specific symbols (e.g., "ES", "NQ", "EURUSD") */
+	/** Filter by specific symbols (e.g., "ES", "NQ", "MES") */
 	symbols: string[];
 
 	/** Filter by date range */
