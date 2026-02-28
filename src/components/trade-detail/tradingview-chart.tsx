@@ -66,7 +66,6 @@ function getChartColors(themeConfig: ReturnType<typeof getThemeById>) {
 
 interface ChartProps {
 	symbol: string;
-	instrumentType?: "futures" | "forex";
 	entryTime?: Date | string | null;
 	exitTime?: Date | string | null;
 	stopLoss?: string | null;

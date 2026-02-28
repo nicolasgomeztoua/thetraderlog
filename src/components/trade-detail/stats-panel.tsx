@@ -734,7 +734,6 @@ export function StatsPanel({
 				>
 					<ExecutionTimeline
 						executions={trade.executions ?? []}
-						instrumentType={trade.instrumentType}
 						onAddExecution={() => {
 							// TODO: Implement add execution
 						}}
