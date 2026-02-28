@@ -222,8 +222,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed instrumentTypeEnum pgEnum definition. Removed instrumentType column from trades table. Removed defaultInstrumentType column from userSettings table. Updated candleCache source comment to 'databento'. Updated symbol comments to remove EUR/USD. Removed instrumentType: 'futures' from trades.ts create and batchImport inserts. Removed instrumentType from test fixtures (trades.ts, scenarios.ts), batch-import test, rule-relevance test, rule-compliance test, strategy-evaluation test. Removed forex test cases and 5th arg from running-pnl.test.ts. Updated README.md."
     },
     {
       "id": "US-014",

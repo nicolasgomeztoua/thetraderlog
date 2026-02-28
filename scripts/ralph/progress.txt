@@ -409,3 +409,29 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - ParsedTrade.instrumentType was set by parsers but no longer read by the import page (removed in US-008) — the field was already unused at the consumer side
   - The DB column still exists (US-013), so trades.ts router still hardcodes `instrumentType: "futures" as const` in inserts
 ---
+
+## 2026-02-28 - US-013: Drop instrumentType Column and Enum from Database Schema
+- Removed `instrumentTypeEnum` pgEnum definition from schema.ts
+- Removed `instrumentType` column from trades table
+- Removed `defaultInstrumentType` column from userSettings table
+- Updated candleCache `source` comment from "twelve_data", "polygon" to "databento"
+- Updated symbol comments to remove "EUR/USD" references
+- Removed `instrumentType: "futures"` from trades.ts create insert
+- Removed `instrumentType: "futures" as const` from trades.ts batchImport insert
+- Removed `instrumentType` from test fixtures: trades.ts (interface + usage), scenarios.ts (converted forex trade to MES futures)
+- Removed `instrumentType` from batch-import.test.ts (helper interface, helper usage, test override, assertion)
+- Removed `instrumentType: "futures"` from rule-relevance.test.ts (13 occurrences), rule-compliance.test.ts (7 occurrences), strategy-evaluation.test.ts (26 occurrences)
+- Removed entire "Forex symbols" describe block from running-pnl.test.ts (3 forex-specific tests)
+- Removed forex `generateRunningPnlSeries` test case from running-pnl.test.ts
+- Removed 5th "futures" argument from `calculateRunningPnlAtTime` calls in edge case tests
+- Removed `instrumentType` from all `RunningPnlOptions` objects in running-pnl.test.ts (13 occurrences)
+- Updated tests/README.md example
+- Files changed: schema.ts, trades.ts, analytics.ts (format), journal/[id]/page.tsx (format), tests/README.md, trades.ts fixture, scenarios.ts fixture, batch-import.test.ts, rule-relevance.test.ts, rule-compliance.test.ts, strategy-evaluation.test.ts, running-pnl.test.ts
+- **Learnings for future iterations:**
+  - Removing a DB column from schema.ts cascades to: insert statements in routers, test fixtures, and every test file that creates trade objects with the column
+  - `replace_all` with Edit tool is effective for removing repeated lines (e.g., `instrumentType: "futures"`) but watch for different indentation levels
+  - Biome auto-fix (`bunx biome check --write <files>`) cleans up blank lines left from removals
+  - The `source` column in candleCache was kept — it still stores provider info ("databento") and could support future providers
+  - Forex test cases in running-pnl.test.ts used `calculateRunningPnlAtTime` with 5 args (function now takes 4) — these needed complete removal, not just field removal
+  - Note: `bun run db:push` was NOT run — this is a schema-level change that must be applied to the actual DB separately
+---
