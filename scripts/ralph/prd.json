@@ -16,8 +16,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Complete audit documented in progress.txt with file:line references for all forex, pip, Twelve Data, MT4/MT5, instrumentType, and EUR/USD/GBP/USD references across src/, tests/, and env.js"
     },
     {
       "id": "US-002",

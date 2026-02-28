@@ -1,3 +1,230 @@
 # Ralph Progress Log
 Started: Sat Feb 28 11:47:18 WET 2026
 ---
+
+## Codebase Patterns
+- Pre-existing Biome error in scripts/ralph/prd.prop-compliance.archived.json — not a blocker, use `bunx biome check <specific-files>` to verify your changes
+- instrumentType is deeply embedded: DB schema, tRPC routers, UI components, shared schemas, CSV parsers, calculations, analytics, AI prompts
+- Twelve Data integration spans: env.js, service.ts, symbols.ts (TWELVE_DATA_SYMBOL_MAP), AI tool definitions
+- MT4/MT5 parsers live in a single file: src/lib/trades/csv-parsers/mt4-parser.ts (exports both parsers)
+- Forex removal touches every layer: DB → server → lib → components → app → tests
+
+---
+
+## 2026-02-28 - US-001: Audit All Forex and Non-Futures References
+
+### src/lib/ — Forex/Pip/Twelve Data References
+
+**src/lib/market-data/symbols.ts:**
+- L97-305: FOREX_SPECS constant (27 forex pair specifications with pipSize, pipValuePerLot)
+- L101-105: ForexSpec interface
+- L312-323: getForexSpec(), getForexPipSize() functions
+- L396-498: FOREX_SYMBOLS array (27 forex symbol definitions)
+- L499: ALL_SYMBOLS includes FOREX_SYMBOLS
+- L520-577: TWELVE_DATA_SYMBOL_MAP constant
+- L686-718: Forex pairs in TradingView symbol map
+- L750-751: getSymbolsByType() returns FOREX_SYMBOLS for "forex"
+- L797-824: calculateForexPnL() function
+- L832-873: getPointValue(), getTickSize() with forex branches
+- L964+: Forex pairs marked as "NOT supported by Databento"
+
+**src/lib/market-data/service.ts:**
+- L8: Comment mentions Twelve Data for forex/crypto
+- L23: Import TWELVE_DATA_SYMBOL_MAP
+- L49-59: TwelveDataBar, TwelveDataResponse interfaces
+- L286: Provider type includes "twelve_data"
+- L297-312: fetchFromProvider() routes forex/crypto to Twelve Data
+- L318-407: fetchFromTwelveData() entire function
+
+**src/lib/market-data/maemfe.ts:**
+- L135: trade.instrumentType passed to function
+
+**src/lib/trades/calculations.ts:**
+- L2: Import getForexPipSize
+- L41-49: calculatePips() function (forex-specific)
+- L53+: getTickOrPipSize() references
+- L78-85: calculatePositionSize() with instrumentType param
+- L150-160: calculateROI() with forex branch
+- L175: pips field in TradeStats
+- L199-231: computeTradeStats() with instrumentType, pips calc
+- L264-328: calculateRMultiple() with instrumentType
+
+**src/lib/trades/running-pnl.ts:**
+- L5: Comment mentions "both futures and forex"
+- L10: Import calculateForexPnL
+- L38: RunningPnLOptions.instrumentType
+- L55-63: calculateCurrentPnL() with instrumentType
+- L89-97: Forex branch calling calculateForexPnL
+
+**src/lib/trades/csv-parsers/mt4-parser.ts:**
+- L4-87: mt4Parser (MetaTrader 4 CSV parser)
+- L96-157: mt5Parser (MetaTrader 5 CSV parser)
+
+**src/lib/trades/csv-parsers/index.ts:**
+- L6, 15: Import mt4Parser, mt5Parser
+- L25-26: Registry entries for mt4, mt5
+- L52-53, 91-92: Platform option lists include MT4, MT5
+
+**src/lib/trades/csv-parsers/types.ts:**
+- L6-7: "mt4" | "mt5" in TradingPlatform union
+- L19: instrumentType in ParsedTrade type
+- L40: magicNumber for MT4/5
+
+**src/lib/shared/schemas.ts:**
+- L16-17: instrumentTypeEnum Zod schema, InstrumentType type
+- L76-77: "mt4", "mt5" in tradingPlatformEnum
+- L110: instrumentType in tradeFormSchema
+
+**src/lib/analytics/stats.ts:**
+- L17, 106, 197, 204, 221: instrumentType parameter and usage
+
+**src/lib/strategy/evaluation.ts:**
+- L61, 200, 618, 671: instrumentType in trade interfaces and evaluation logic
+
+**src/lib/ai/prompts/trading-analyst.ts:**
+- L17: PERSONA mentions "futures and forex trading journal"
+- L21: "Forex pairs (EUR/USD, GBP/USD, USD/JPY, etc.)"
+
+**src/lib/ai/tools/definitions.ts:**
+- L118-119: Tool description mentions forex pairs and Twelve Data
+- L127-129: Symbol description mentions forex format
+
+**src/lib/ai/schema-context.ts:**
+- L15: instrument_type enum includes forex
+- L26: trading_platform includes mt4, mt5
+- L99: instrument_type column documented
+- L174: default_instrument_type column documented
+- L351: source column references twelve_data
+
+**src/lib/ai/context-builder.ts:**
+- L101, 219: defaultInstrumentType in settings context
+
+**src/lib/ai/report-pipeline/planner.ts:**
+- L65: Tool description mentions EUR/USD
+
+### src/server/ — instrumentType References
+
+**src/server/db/schema.ts:**
+- L24: instrumentTypeEnum pgEnum definition
+- L76-77: "mt4", "mt5" in tradingPlatformEnum
+- L271: symbol column comment mentions "EUR/USD"
+- L272: instrumentType column on trades table
+- L458: defaultInstrumentType column on userSettings table
+- L887: symbol column in candleCache comment mentions "EUR/USD"
+
+**src/server/api/routers/trades.ts:**
+- L34: Import instrumentTypeEnum
+- L166, 207: instrumentType in trade serialization
+- L254, 282, 326: instrumentType in input schemas
+- L567: instrumentType passed to calculations
+- L774: instrumentType in trade response
+
+**src/server/api/routers/analytics.ts:**
+- L172: instrumentType in type definition
+- L273, 1492, 1653, 3681: instrumentType cast to "futures" | "forex"
+- L352, 515, 613, 707, 801, 978, 1121, 1259, 1344, 1434, 1591, 1777, 1941, 2080, 2220, 2466, 2698, 2907, 3047, 3219, 3600, 3784: instrumentType in query select clauses
+
+**src/server/api/routers/strategies.ts:**
+- L890, 1409, 1460: instrumentType in trade processing
+
+**src/server/api/routers/settings.ts:**
+- L36: defaultInstrumentType in settings input
+
+### src/components/ — UI References
+
+**src/components/trade-detail/stats-panel.tsx:**
+- L555: "Contracts" vs "Lots" based on instrumentType
+- L570, 589-595: Conditional display for futures ticks vs forex pips
+
+**src/components/trade-detail/running-pnl-tab.tsx:**
+- L20, 48, 144, 146: instrumentType prop and usage
+
+**src/components/trade-detail/content-panel.tsx:**
+- L183, 208: instrumentType passed to child components
+
+**src/components/trade-detail/tradingview-chart.tsx:**
+- L69: instrumentType optional prop
+
+**src/components/trade-detail/replay/time-sales-panel.tsx:**
+- L16, 26, 68: instrumentType with "cts" vs "lots" label
+
+**src/components/trade-detail/execution-timeline.tsx:**
+- L35, 47, 106: instrumentType with "cts" vs "lots" label
+
+**src/components/trade-detail/replay/use-replay-engine.ts:**
+- L35, 59, 186: instrumentType in replay options
+
+**src/components/trade-detail/replay/trade-replay.tsx:**
+- L33, 60, 154: instrumentType prop
+
+### src/app/ — Page-Level References
+
+**src/app/layout.tsx:**
+- L14: "Futures and Forex traders" in meta description
+
+**src/app/(marketing)/_components/hero.tsx:**
+- L13-14: EUR/USD, GBP/USD example trades
+- L25: EUR/USD trade example
+- L321: "futures and forex traders" tagline
+
+**src/app/(marketing)/_components/features.tsx:**
+- L42: EUR/USD reference
+- L146-148: "Futures & Forex" title and description
+
+**src/app/(marketing)/_components/footer.tsx:**
+- L53: "futures and forex traders"
+
+**src/app/(protected)/trade/new/page.tsx:**
+- L29: Import FOREX_SYMBOLS
+- L62: instrumentType state
+- L139, 158: instrumentType usage and symbol list selection
+- L232-248: Futures/Forex tabs UI
+
+**src/app/(protected)/import/page.tsx:**
+- L88-93: MT4, MT5 platform descriptions
+- L136: instrumentType state
+- L363-409: instrumentType in trade processing
+- L656-665: Instrument type tabs UI
+
+**src/app/(protected)/settings/_components/settings-content.tsx:**
+- L170-171: MT4, MT5 labels
+- L189-190: MT4, MT5 in type union
+- L660, 680: "forex" in type unions
+- L858: Forex select item
+- L1500-1501: MetaTrader 4/5 select items
+
+**src/app/(protected)/journal/page.tsx:**
+- L561, 695: instrumentType in trade processing
+
+**src/app/(protected)/journal/[id]/page.tsx:**
+- L285, 512, 552, 566, 631, 645, 701: instrumentType in trade detail
+
+### src/stores/ — State Management
+
+**src/stores/settings-store.ts:**
+- L24, 35: defaultInstrumentType in store
+
+### src/env.js — Environment
+
+- L17, 61: TWELVE_DATA_API_KEY
+
+### tests/ — Test References
+
+**tests/utils/fixtures/trades.ts:** L5, 37, 74 — instrumentType in trade fixtures
+**tests/utils/fixtures/scenarios.ts:** L323 — instrumentType: "forex" in fixture
+**tests/unit/csv-parsers.test.ts:** L37 — asserts instrumentType
+**tests/integration/running-pnl.test.ts:** L314-366 — Forex symbol tests, L440-791 — instrumentType in test data
+**tests/integration/trades/batch-import.test.ts:** L19, 41, 181, 211 — instrumentType in batch tests
+**tests/integration/rule-relevance.test.ts:** Many lines — instrumentType: "futures" in test data
+**tests/integration/rule-compliance.test.ts:** Many lines — instrumentType: "futures" in test data
+**tests/integration/strategy-evaluation.test.ts:** Many lines — instrumentType: "futures" in test data
+**tests/integration/analytics/export.test.ts:** L685-689 — forexTrade reference
+
+- Files changed: scripts/ralph/progress.txt (audit documented)
+- **Learnings for future iterations:**
+  - instrumentType touches ~30+ files across every layer
+  - analytics.ts is the heaviest file — instrumentType appears in ~25+ query select clauses
+  - Tests also need updating (fixtures, running-pnl forex tests, batch-import, export)
+  - MT4/MT5 parsers are stubs (not yet implemented), so removal is safe
+  - The Biome pre-existing error is in an archived PRD file, not our code
+---
