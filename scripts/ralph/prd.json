@@ -84,8 +84,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed TwelveDataBar/TwelveDataResponse interfaces, fetchFromTwelveData() function, and TWELVE_DATA_SYMBOL_MAP. Simplified fetchFromProvider() to Databento-only. Removed TWELVE_DATA_API_KEY from env.js. Updated service.ts comments. Removed forex pairs from DATABENTO_SYMBOL_MAP."
     },
     {
       "id": "US-006",

@@ -270,3 +270,20 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - Tests in accounts.test.ts used "mt5" platform — always grep tests/ for removed enum values
   - The magicNumber field in ParsedTrade was MT4/5-specific but can stay as a generic optional field
 ---
+
+## 2026-02-28 - US-005: Remove Twelve Data Service Integration
+- Removed TwelveDataBar and TwelveDataResponse interfaces from service.ts
+- Removed entire fetchFromTwelveData() function (~90 lines)
+- Simplified fetchFromProvider() to only route to Databento; returns error for non-futures symbols
+- Removed TWELVE_DATA_SYMBOL_MAP (~100 entries) from symbols.ts
+- Removed forex pairs from DATABENTO_SYMBOL_MAP (they were all null entries)
+- Removed TWELVE_DATA_API_KEY from env.js (server schema + runtimeEnv)
+- Updated service.ts header comment to remove Twelve Data mention
+- Removed formatDateForAPI() helper (was only used by Twelve Data)
+- Files changed: service.ts, symbols.ts, env.js
+- **Learnings for future iterations:**
+  - env.js uses @t3-oss/env-nextjs — removing an env var requires removing from both `server` schema and `runtimeEnv` sections
+  - The `env` import in service.ts is still needed for DATABENTO_API_KEY
+  - DATABENTO_SYMBOL_MAP still had null entries for forex pairs — those were removed since forex is no longer supported
+  - The FetchResult provider type was simplified from `"twelve_data" | "databento"` to just `"databento"`
+---
