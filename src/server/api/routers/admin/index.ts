@@ -8,6 +8,7 @@ import {
 	gte,
 	ilike,
 	isNull,
+	lt,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -455,7 +456,7 @@ export const adminRouter = createTRPCRouter({
 			const [baseCountRow] = await ctx.db
 				.select({ count: count() })
 				.from(users)
-				.where(sql`${users.createdAt} < ${thirtyDaysAgo}`);
+				.where(lt(users.createdAt, thirtyDaysAgo));
 
 			let cumulative = baseCountRow?.count ?? 0;
 
