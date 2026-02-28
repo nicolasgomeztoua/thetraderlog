@@ -262,3 +262,21 @@ Feature: Admin Panel
   - Card config array with `as const` gives type-safe key access to the data object
   - Use `Link` from next/link for card navigation — whole card is clickable
 ---
+
+## 2026-02-28 - US-019
+- Created /admin/bug-reports page with full list view
+- Table with columns: title, category, severity, status, reporter, date
+- Filter dropdowns for status, category, and severity using Select components
+- Severity badges with color coding from BUG_REPORT_SEVERITY_COLORS
+- Status badges with dropdown for inline status updates via updateStatus mutation
+- Click row to expand/collapse detail view showing: description, page URL, user agent, screenshot indicator, raw metadata (JSON)
+- Pagination with prev/next buttons and page counter
+- Loading skeleton rows, empty state, and error state
+- Terminal design: monospace table, data-dense layout, chartreuse accents
+- Files changed: src/app/(admin)/admin/bug-reports/page.tsx (new)
+- **Learnings for future iterations:**
+  - Use `Fragment (<>)` wrapper for expandable table rows — two adjacent `<tr>` elements (main row + detail row) need a common parent inside `.map()`
+  - Status transition dropdown: duplicate STATUS_TRANSITIONS map on client matching server validation — keeps UX in sync with backend constraints
+  - `e.stopPropagation()` on DropdownMenuTrigger onClick prevents row expand/collapse when clicking the status dropdown
+  - Biome auto-formats single-line ternaries and nullish coalescing — run `bunx biome check --write` after writing JSX
+---
