@@ -176,3 +176,17 @@ Feature: Admin Panel
   - Never use raw `sql` template with Date objects as parameters — postgres driver rejects them. Use Drizzle operators (`lt`, `gte`, `eq`) which handle type conversion.
   - Import `eq` from drizzle-orm in test files when you need to query tables directly with `.where(eq(...))`.
 ---
+
+## 2026-02-28 - US-013
+- Added system sub-router to admin router with health endpoint
+- `admin.system.health` returns: databaseStatus, appVersion, tableCounts (users, trades, accounts, aiConversations, aiMessages, bugReports), lastActivity (lastSignup, lastTrade, lastAiConversation)
+- Database connection checked via `sql\`select 1\`` with try/catch
+- App version read from package.json using `readFileSync` at `process.cwd()`
+- Row counts use `count()` from drizzle-orm, last activity dates use `max()` from drizzle-orm
+- Files changed: src/server/api/routers/admin/index.ts
+- **Learnings for future iterations:**
+  - Use `max()` from drizzle-orm for last activity date queries — returns the most recent date from a column
+  - Biome enforces line breaks on chained `.select().from()` when the select object is long — split across lines
+  - For database health checks, `ctx.db.execute(sql\`select 1\`)` is a lightweight connectivity test
+  - `readFileSync` from `node:fs` with `resolve(process.cwd(), "package.json")` works reliably for reading app version in tRPC server context
+---
