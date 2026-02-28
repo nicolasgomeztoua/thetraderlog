@@ -298,7 +298,7 @@ export async function setupTraderWithAnalyticsData() {
 		}),
 	);
 
-	// Wednesday trades (1 win, 1 loss) - ES and EURUSD
+	// Wednesday trades (1 win, 1 loss) - ES and MES
 	trades.push(
 		await createTestTrade(user.id, account.id, {
 			symbol: "ES",
@@ -374,28 +374,28 @@ export async function setupTraderWithAnalyticsData() {
 	// Expected metrics for validation:
 	// Total trades: 7
 	// Wins: 4 (Monday x2, Wednesday ES, Thursday)
-	// Losses: 2 (Tuesday, Wednesday EURUSD)
+	// Losses: 2 (Tuesday, Wednesday MES)
 	// Breakeven: 1 (Friday)
 	// Win rate: 4/6 = 66.67% (excluding breakeven) or 4/7 = 57.14%
-	// Total P&L: 995 + 1490 - 1005 + 995 - 202 + 1995 - 5 = 4263
+	// Total P&L: 995 + 1490 - 1005 + 995 - 42 + 1995 - 5 = 4423
 	// Gross profit: 995 + 1490 + 995 + 1995 = 5475
-	// Gross loss: 1005 + 202 = 1207
-	// Profit factor: 5475 / 1207 = 4.53
+	// Gross loss: 1005 + 42 = 1047
+	// Profit factor: 5475 / 1047 = 5.23
 
 	const expectedMetrics = {
 		totalTrades: 7,
 		wins: 4,
 		losses: 2,
 		breakevens: 1,
-		totalPnl: 4263,
+		totalPnl: 4423,
 		grossProfit: 5475,
-		grossLoss: 1207,
-		profitFactor: 4.53,
+		grossLoss: 1047,
+		profitFactor: 5.23,
 		winRate: 66.67, // wins / (wins + losses)
-		symbols: ["ES", "NQ", "EURUSD"],
+		symbols: ["ES", "NQ", "MES"],
 		esTrades: 4,
 		nqTrades: 2,
-		eurusdTrades: 1,
+		mesTrades: 1,
 	};
 
 	return { user, account, trades, expectedMetrics };

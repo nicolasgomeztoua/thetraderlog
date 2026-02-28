@@ -501,12 +501,12 @@ describe("Analytics Export", () => {
 			const result = await caller.analytics.exportFilteredTrades({
 				accountId: testData.account.id,
 				filters: {
-					symbols: ["EURUSD"],
+					symbols: ["MES"],
 					outcome: "win",
 				},
 			});
 
-			// EURUSD only has 1 trade and it's a loss
+			// MES only has 1 trade and it's a loss
 			expect(result).toEqual([]);
 		});
 	});
@@ -623,7 +623,7 @@ describe("Analytics Export", () => {
 			const result = await caller.analytics.exportFilteredTrades({
 				accountId: testData.account.id,
 				filters: {
-					symbols: ["EURUSD"],
+					symbols: ["MES"],
 				},
 			});
 
@@ -631,7 +631,7 @@ describe("Analytics Export", () => {
 			const trade = result[0];
 			expect(trade).toBeDefined();
 			if (!trade) return;
-			expect(trade.symbol).toBe("EURUSD");
+			expect(trade.symbol).toBe("MES");
 		});
 	});
 
@@ -681,12 +681,12 @@ describe("Analytics Export", () => {
 				accountId: testData.account.id,
 			});
 
-			// Find EURUSD trade (has decimal precision)
-			const forexTrade = result.find((t) => t.symbol === "EURUSD");
-			if (forexTrade) {
+			// Find MES trade (has decimal precision in price)
+			const mesTrade = result.find((t) => t.symbol === "MES");
+			if (mesTrade) {
 				// Database stores decimals with 8 decimal places
-				expect(parseFloat(forexTrade.entryPrice ?? "0")).toBeCloseTo(1.08, 4);
-				expect(parseFloat(forexTrade.exitPrice ?? "0")).toBeCloseTo(1.078, 4);
+				expect(parseFloat(mesTrade.entryPrice ?? "0")).toBeCloseTo(5000, 0);
+				expect(parseFloat(mesTrade.exitPrice ?? "0")).toBeCloseTo(4996, 0);
 			}
 		});
 	});
@@ -801,7 +801,7 @@ describe("Analytics Export", () => {
 				},
 			});
 
-			// Monday afternoon trade has quantity 2, EURUSD has 100000
+			// Monday afternoon trade has quantity 2, MES has quantity 2
 			expect(result.length).toBe(2);
 		});
 

@@ -32,7 +32,7 @@ const db = getTestDb();
 beforeAll(async () => {
 	await truncateAllTables();
 
-	// userA: trader with 7 trades and known P&L of 4263
+	// userA: trader with 7 trades and known P&L of 4423
 	const fixtureData = await setupTraderWithAnalyticsData();
 	userA = fixtureData.user;
 
@@ -70,11 +70,11 @@ describe("executeRunQuery", () => {
 
 			const esRow = rows.find((r) => r.symbol === "ES");
 			const nqRow = rows.find((r) => r.symbol === "NQ");
-			const eurusdRow = rows.find((r) => r.symbol === "EURUSD");
+			const mesRow = rows.find((r) => r.symbol === "MES");
 
 			expect(esRow?.trade_count).toBe("4");
 			expect(nqRow?.trade_count).toBe("2");
-			expect(eurusdRow?.trade_count).toBe("1");
+			expect(mesRow?.trade_count).toBe("1");
 		});
 
 		it("should sum net_pnl with CAST to get total P&L", async () => {
@@ -87,7 +87,7 @@ describe("executeRunQuery", () => {
 			expect(result.success).toBe(true);
 			const rows = result.data as Array<{ total_pnl: string }>;
 			expect(rows).toHaveLength(1);
-			expect(Number.parseFloat(rows[0]?.total_pnl ?? "0")).toBeCloseTo(4263, 0);
+			expect(Number.parseFloat(rows[0]?.total_pnl ?? "0")).toBeCloseTo(4423, 0);
 		});
 
 		it("should support queries across multiple user-scoped CTEs", async () => {
@@ -427,7 +427,7 @@ describe("executeCallAnalytics", () => {
 	// -------------------------------------------------------------------------
 
 	describe("valid endpoints", () => {
-		it("should return overview with 7 trades and P&L ≈ 4263", async () => {
+		it("should return overview with 7 trades and P&L ≈ 4423", async () => {
 			const result = await executeCallAnalytics(
 				userA.id,
 				"analytics",
@@ -441,10 +441,10 @@ describe("executeCallAnalytics", () => {
 
 			const data = result.data as { totalTrades: number; totalPnl: number };
 			expect(data.totalTrades).toBe(7);
-			expect(data.totalPnl).toBeCloseTo(4263, 0);
+			expect(data.totalPnl).toBeCloseTo(4423, 0);
 		});
 
-		it("should return performance by symbol with ES, NQ, EURUSD", async () => {
+		it("should return performance by symbol with ES, NQ, MES", async () => {
 			const result = await executeCallAnalytics(
 				userA.id,
 				"analytics",
@@ -458,7 +458,7 @@ describe("executeCallAnalytics", () => {
 			const symbols = data.map((d) => d.symbol);
 			expect(symbols).toContain("ES");
 			expect(symbols).toContain("NQ");
-			expect(symbols).toContain("EURUSD");
+			expect(symbols).toContain("MES");
 		});
 
 		it("should return trade stats from trades router", async () => {
