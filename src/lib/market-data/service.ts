@@ -3,9 +3,7 @@
  *
  * Provides a cache-first approach to fetching OHLC data.
  * - Checks PostgreSQL cache first (candle_cache table)
- * - Fetches from appropriate API on cache miss:
- *   - Databento for futures (CME, NYMEX, COMEX, CBOT)
- *   - Twelve Data for forex, crypto, commodities
+ * - Fetches from Databento on cache miss (CME, NYMEX, COMEX, CBOT)
  * - Stores fetched data permanently for cross-user reuse
  *
  * Data is cached by symbol + interval + date (normalized to midnight UTC).
@@ -17,11 +15,7 @@ import { and, eq } from "drizzle-orm";
 import { env } from "@/env";
 import { db } from "@/server/db";
 import { candleCache } from "@/server/db/schema";
-import {
-	getDatabentSymbol,
-	isFuturesSymbol,
-	TWELVE_DATA_SYMBOL_MAP,
-} from "./symbols";
+import { getDatabentSymbol, isFuturesSymbol } from "./symbols";
 
 // =============================================================================
 // TYPES
@@ -46,21 +40,6 @@ export interface CacheResult {
 
 export type CacheInterval = "1min" | "5min" | "15min" | "30min" | "1h" | "4h";
 
-interface TwelveDataBar {
-	datetime: string;
-	open: string;
-	high: string;
-	low: string;
-	close: string;
-	volume?: string;
-}
-
-interface TwelveDataResponse {
-	values?: TwelveDataBar[];
-	status?: string;
-	message?: string;
-}
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -75,13 +54,6 @@ function normalizeDateToUTC(date: Date): Date {
 	);
 }
 
-/**
- * Format date for Twelve Data API (YYYY-MM-DD)
- */
-function formatDateForAPI(date: Date): string {
-	return date.toISOString().split("T")[0] ?? "";
-}
-
 // =============================================================================
 // CORE CACHE FUNCTIONS
 // =============================================================================
@@ -90,7 +62,7 @@ function formatDateForAPI(date: Date): string {
  * Get OHLC bars for a specific symbol, interval, and date.
  * Uses cache-first strategy: checks DB cache, fetches from API on miss.
  *
- * @param symbol - Trading symbol (e.g., "ES", "MNQ", "EUR/USD")
+ * @param symbol - Trading symbol (e.g., "ES", "MNQ", "CL")
  * @param interval - Bar interval (e.g., "5min", "15min", "1h")
  * @param date - The date to fetch data for (will be normalized to midnight UTC)
  * @returns CacheResult with bars and metadata
@@ -146,7 +118,7 @@ export async function getOHLCBars(
 				date: dateKey,
 				bars: JSON.stringify(apiResult.bars),
 				barCount: apiResult.bars.length,
-				source: apiResult.provider ?? "unknown",
+				source: apiResult.provider ?? "databento",
 				fetchedAt: new Date(),
 			})
 			.onConflictDoNothing();
@@ -277,137 +249,35 @@ export async function getOHLCForChart(
 }
 
 // =============================================================================
-// TWELVE DATA API
+// PROVIDER ROUTING
 // =============================================================================
 
 interface FetchResult {
 	success: boolean;
 	bars: OHLCBar[];
-	provider?: "twelve_data" | "databento";
+	provider?: "databento";
 	error?: string;
 }
 
-// =============================================================================
-// PROVIDER ROUTING
-// =============================================================================
-
 /**
- * Route to the appropriate data provider based on symbol type
- * - Futures → Databento
- * - Forex/Crypto/Commodities → Twelve Data
+ * Fetch data from Databento for futures symbols
  */
 async function fetchFromProvider(
 	symbol: string,
 	interval: string,
 	date: Date,
 ): Promise<FetchResult> {
-	// Check if this is a futures symbol that Databento supports
 	const databentoSymbol = getDatabentSymbol(symbol);
 
-	if (databentoSymbol && isFuturesSymbol(symbol)) {
-		return fetchFromDatabento(symbol, databentoSymbol, interval, date);
-	}
-
-	// Fallback to Twelve Data for forex/crypto/commodities
-	return fetchFromTwelveData(symbol, interval, date);
-}
-
-/**
- * Fetch OHLC data from Twelve Data API
- */
-async function fetchFromTwelveData(
-	symbol: string,
-	interval: string,
-	date: Date,
-): Promise<FetchResult> {
-	const apiKey = env.TWELVE_DATA_API_KEY;
-	const dateStr = formatDateForAPI(date);
-
-	if (!apiKey) {
+	if (!databentoSymbol || !isFuturesSymbol(symbol)) {
 		return {
 			success: false,
 			bars: [],
-			provider: "twelve_data",
-			error: "API key not configured",
+			error: `Symbol ${symbol} is not a supported futures symbol`,
 		};
 	}
 
-	// Map symbol to Twelve Data format
-	// Returns null for unsupported symbols (most CME futures)
-	const mappedSymbol = TWELVE_DATA_SYMBOL_MAP[symbol];
-
-	if (mappedSymbol === null) {
-		return {
-			success: false,
-			bars: [],
-			provider: "twelve_data",
-			error: `Symbol ${symbol} not supported by Twelve Data`,
-		};
-	}
-
-	// Use mapped symbol or fall back to original (for unmapped symbols)
-	const apiSymbol = mappedSymbol ?? symbol;
-
-	const params = new URLSearchParams({
-		symbol: apiSymbol,
-		interval,
-		start_date: dateStr,
-		end_date: dateStr,
-		apikey: apiKey,
-		format: "JSON",
-	});
-
-	try {
-		const response = await fetch(
-			`https://api.twelvedata.com/time_series?${params.toString()}`,
-		);
-
-		if (!response.ok) {
-			return {
-				success: false,
-				bars: [],
-				provider: "twelve_data",
-				error: `API returned ${response.status}`,
-			};
-		}
-
-		const data = (await response.json()) as TwelveDataResponse;
-
-		if (data.status === "error") {
-			return {
-				success: false,
-				bars: [],
-				provider: "twelve_data",
-				error: data.message,
-			};
-		}
-
-		if (!data.values || data.values.length === 0) {
-			return { success: true, bars: [], provider: "twelve_data" };
-		}
-
-		// Convert to our format
-		const bars: OHLCBar[] = data.values.map((bar) => ({
-			timestamp: new Date(bar.datetime).getTime(),
-			open: parseFloat(bar.open),
-			high: parseFloat(bar.high),
-			low: parseFloat(bar.low),
-			close: parseFloat(bar.close),
-			volume: bar.volume ? parseFloat(bar.volume) : undefined,
-		}));
-
-		// Sort by timestamp ascending
-		bars.sort((a, b) => a.timestamp - b.timestamp);
-
-		return { success: true, bars, provider: "twelve_data" };
-	} catch (error) {
-		return {
-			success: false,
-			bars: [],
-			provider: "twelve_data",
-			error: error instanceof Error ? error.message : "Unknown error",
-		};
-	}
+	return fetchFromDatabento(symbol, databentoSymbol, interval, date);
 }
 
 // =============================================================================
