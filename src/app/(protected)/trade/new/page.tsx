@@ -59,9 +59,6 @@ export default function NewTradePage() {
 	const { selectedAccountId, accounts } = useAccount();
 
 	// Form state
-	const [instrumentType, setInstrumentType] = useState<"futures" | "forex">(
-		"futures",
-	);
 	const [symbol, setSymbol] = useState("");
 	const [direction, setDirection] = useState<"long" | "short">("long");
 	const [entryPrice, setEntryPrice] = useState("");
@@ -136,7 +133,7 @@ export default function NewTradePage() {
 
 		createTrade.mutate({
 			symbol,
-			instrumentType,
+			instrumentType: "futures",
 			direction,
 			entryPrice,
 			entryTime: entryDateTime,
@@ -216,61 +213,31 @@ export default function NewTradePage() {
 					</div>
 				)}
 
-				{/* Instrument Type */}
+				{/* Symbol */}
 				<div className="space-y-4 rounded border border-border bg-card p-3 sm:p-4">
 					<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 						Instrument
 					</div>
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Type
-							</Label>
-							<Tabs
-								onValueChange={(v) => {
-									setInstrumentType(v as "futures" | "forex");
-									setSymbol("");
-								}}
-								value={instrumentType}
-							>
-								<TabsList className="grid w-full grid-cols-2 border border-border bg-secondary">
-									<TabsTrigger
-										className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-muted/300"
-										value="futures"
+					<div className="space-y-2">
+						<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+							Symbol <span className="text-loss">*</span>
+						</Label>
+						<Select onValueChange={setSymbol} value={symbol}>
+							<SelectTrigger className="font-mono text-xs">
+								<SelectValue placeholder="Select a symbol" />
+							</SelectTrigger>
+							<SelectContent>
+								{symbols.map((s) => (
+									<SelectItem
+										className="font-mono text-xs"
+										key={s.value}
+										value={s.value}
 									>
-										Futures
-									</TabsTrigger>
-									<TabsTrigger
-										className="font-mono text-xs uppercase tracking-wider data-[state=active]:bg-muted/300"
-										value="forex"
-									>
-										Forex
-									</TabsTrigger>
-								</TabsList>
-							</Tabs>
-						</div>
-
-						<div className="space-y-2">
-							<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-								Symbol <span className="text-loss">*</span>
-							</Label>
-							<Select onValueChange={setSymbol} value={symbol}>
-								<SelectTrigger className="font-mono text-xs">
-									<SelectValue placeholder="Select a symbol" />
-								</SelectTrigger>
-								<SelectContent>
-									{symbols.map((s) => (
-										<SelectItem
-											className="font-mono text-xs"
-											key={s.value}
-											value={s.value}
-										>
-											{s.label}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
+										{s.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 				</div>
 
@@ -323,14 +290,13 @@ export default function NewTradePage() {
 
 							<div className="space-y-2">
 								<Label className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-									{instrumentType === "futures" ? "Contracts" : "Lot Size"}{" "}
-									<span className="text-loss">*</span>
+									Contracts <span className="text-loss">*</span>
 								</Label>
 								<Input
 									className="font-mono text-sm"
 									inputMode="decimal"
 									onChange={(e) => setQuantity(e.target.value)}
-									placeholder={instrumentType === "futures" ? "1" : "0.01"}
+									placeholder="1"
 									step="any"
 									type="number"
 									value={quantity}

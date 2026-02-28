@@ -39,7 +39,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/contexts/account-context";
 import { useImportProgressContext } from "@/contexts/import-progress-context";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -125,10 +124,6 @@ export default function ImportPage() {
 	const [selectedImportAccountId, setSelectedImportAccountId] = useState<
 		string | null
 	>(selectedAccountId);
-	const [instrumentType, setInstrumentType] = useState<"futures" | "forex">(
-		"futures",
-	);
-
 	// Manual mapping state
 	const [csvData, setCsvData] = useState<ParsedRow[]>([]);
 	const [headers, setHeaders] = useState<string[]>([]);
@@ -352,7 +347,7 @@ export default function ImportPage() {
 			// Prepare trades array for batch import
 			let tradesToInsert: Array<{
 				symbol: string;
-				instrumentType: "futures" | "forex";
+				instrumentType: "futures";
 				direction: "long" | "short";
 				entryPrice: string;
 				entryTime: string;
@@ -373,7 +368,7 @@ export default function ImportPage() {
 				// Using platform-parsed data
 				tradesToInsert = parsedTrades.map((trade) => ({
 					symbol: trade.symbol.toUpperCase(),
-					instrumentType: trade.instrumentType,
+					instrumentType: "futures" as const,
 					direction: trade.direction,
 					entryPrice: trade.entryPrice,
 					entryTime: trade.entryTime.toISOString(),
@@ -398,7 +393,7 @@ export default function ImportPage() {
 
 					return {
 						symbol: getMappedValue(csvRow, "symbol").toUpperCase(),
-						instrumentType,
+						instrumentType: "futures" as const,
 						direction: parseDirection(getMappedValue(csvRow, "direction")),
 						entryPrice: getMappedValue(csvRow, "entryPrice"),
 						entryTime,
@@ -639,28 +634,6 @@ export default function ImportPage() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4 p-4 pt-0 sm:space-y-6 sm:p-6 sm:pt-0">
-						{platformStatus !== "ready" && (
-							<div>
-								<span className="font-medium text-sm">Instrument Type</span>
-								<Tabs
-									className="mt-2"
-									onValueChange={(v) =>
-										setInstrumentType(v as "futures" | "forex")
-									}
-									value={instrumentType}
-								>
-									<TabsList className="grid w-full grid-cols-2">
-										<TabsTrigger className="min-h-[40px]" value="futures">
-											Futures
-										</TabsTrigger>
-										<TabsTrigger className="min-h-[40px]" value="forex">
-											Forex
-										</TabsTrigger>
-									</TabsList>
-								</Tabs>
-							</div>
-						)}
-
 						{/* Standard Single-File Upload */}
 						<section
 							aria-label="File drop zone"
