@@ -1,488 +1,370 @@
 # Ralph Progress Log
-Started: Sat Feb 28 11:47:18 WET 2026
+Started: Fri Feb 28 2026
+Feature: Admin Panel
 ---
 
 ## Codebase Patterns
-- Pre-existing Biome error in scripts/ralph/prd.prop-compliance.archived.json — not a blocker, use `bunx biome check <specific-files>` to verify your changes
-- instrumentType is deeply embedded: DB schema, tRPC routers, UI components, shared schemas, CSV parsers, calculations, analytics, AI prompts
-- Twelve Data integration spans: env.js, service.ts, symbols.ts (TWELVE_DATA_SYMBOL_MAP), AI tool definitions
-- MT4/MT5 parsers removed — were in a single file (mt4-parser.ts), both stub implementations
-- Forex removal touches every layer: DB → server → lib → components → app → tests
-
+- Bug report enums in schema: bugSeverityEnum (low, medium, high, critical), bugCategoryEnum (ui, data, performance, crash, other), bugReportStatusEnum (open, in_progress, resolved, closed)
+- User role enum: userRoleEnum (user, admin)
+- Constants barrel export from src/lib/constants/index.ts using `export * from "./file"`
+- Biome formatter enforces single-line for short assignments - don't break lines unnecessarily
+- Admin endpoints: use `adminProcedure` from `@/server/api/trpc` (extends protectedProcedure, checks role === 'admin')
+- Middleware chaining: to add middleware that depends on a prior middleware's ctx additions, use `procedure.use()` inline (not standalone t.middleware)
+- Admin router lives at src/server/api/routers/admin/index.ts — uses nested createTRPCRouter for sub-routers (e.g., admin.analytics.platformStats)
+- For aggregating tokens from aiMessages, use `sql<string>\`coalesce(sum(...), 0)\`` since sum can return null
+- Don't use `.default({})` on Zod objects with required fields that have field-level `.default()` — TypeScript rejects it
+- Drizzle relational queries `findMany({ with: { user: true } })` auto-join via relations — no manual join needed
+- Use correlated SQL subqueries for computed columns in list views: `sql<number>\`cast((select count(*) from "table" where ...) as integer)\``
+- `ilike` from drizzle-orm for case-insensitive search; combine with `or()` for multi-field search
+- Don't import schema tables only used in raw SQL strings — Biome flags unused imports
+- Don't use raw `sql\`${column} < ${dateVar}\`` with Date objects — postgres driver rejects Date instances in raw SQL. Use Drizzle operators (`lt`, `gte`, etc.) instead.
+- Admin layout: `(admin)` route group at app root with server-side role check via `api.settings.me()` + `redirect()`
+- `settings.me` query returns current user's `{ id, role, name, email, imageUrl }` — use for role-based UI
 ---
 
-## 2026-02-28 - US-001: Audit All Forex and Non-Futures References
-
-### src/lib/ — Forex/Pip/Twelve Data References
-
-**src/lib/market-data/symbols.ts:**
-- L97-305: FOREX_SPECS constant (27 forex pair specifications with pipSize, pipValuePerLot)
-- L101-105: ForexSpec interface
-- L312-323: getForexSpec(), getForexPipSize() functions
-- L396-498: FOREX_SYMBOLS array (27 forex symbol definitions)
-- L499: ALL_SYMBOLS includes FOREX_SYMBOLS
-- L520-577: TWELVE_DATA_SYMBOL_MAP constant
-- L686-718: Forex pairs in TradingView symbol map
-- L750-751: getSymbolsByType() returns FOREX_SYMBOLS for "forex"
-- L797-824: calculateForexPnL() function
-- L832-873: getPointValue(), getTickSize() with forex branches
-- L964+: Forex pairs marked as "NOT supported by Databento"
-
-**src/lib/market-data/service.ts:**
-- L8: Comment mentions Twelve Data for forex/crypto
-- L23: Import TWELVE_DATA_SYMBOL_MAP
-- L49-59: TwelveDataBar, TwelveDataResponse interfaces
-- L286: Provider type includes "twelve_data"
-- L297-312: fetchFromProvider() routes forex/crypto to Twelve Data
-- L318-407: fetchFromTwelveData() entire function
-
-**src/lib/market-data/maemfe.ts:**
-- L135: trade.instrumentType passed to function
-
-**src/lib/trades/calculations.ts:**
-- L2: Import getForexPipSize
-- L41-49: calculatePips() function (forex-specific)
-- L53+: getTickOrPipSize() references
-- L78-85: calculatePositionSize() with instrumentType param
-- L150-160: calculateROI() with forex branch
-- L175: pips field in TradeStats
-- L199-231: computeTradeStats() with instrumentType, pips calc
-- L264-328: calculateRMultiple() with instrumentType
-
-**src/lib/trades/running-pnl.ts:**
-- L5: Comment mentions "both futures and forex"
-- L10: Import calculateForexPnL
-- L38: RunningPnLOptions.instrumentType
-- L55-63: calculateCurrentPnL() with instrumentType
-- L89-97: Forex branch calling calculateForexPnL
-
-**src/lib/trades/csv-parsers/mt4-parser.ts:**
-- L4-87: mt4Parser (MetaTrader 4 CSV parser)
-- L96-157: mt5Parser (MetaTrader 5 CSV parser)
-
-**src/lib/trades/csv-parsers/index.ts:**
-- L6, 15: Import mt4Parser, mt5Parser
-- L25-26: Registry entries for mt4, mt5
-- L52-53, 91-92: Platform option lists include MT4, MT5
-
-**src/lib/trades/csv-parsers/types.ts:**
-- L6-7: "mt4" | "mt5" in TradingPlatform union
-- L19: instrumentType in ParsedTrade type
-- L40: magicNumber for MT4/5
-
-**src/lib/shared/schemas.ts:**
-- L16-17: instrumentTypeEnum Zod schema, InstrumentType type
-- L76-77: "mt4", "mt5" in tradingPlatformEnum
-- L110: instrumentType in tradeFormSchema
-
-**src/lib/analytics/stats.ts:**
-- L17, 106, 197, 204, 221: instrumentType parameter and usage
-
-**src/lib/strategy/evaluation.ts:**
-- L61, 200, 618, 671: instrumentType in trade interfaces and evaluation logic
-
-**src/lib/ai/prompts/trading-analyst.ts:**
-- L17: PERSONA mentions "futures and forex trading journal"
-- L21: "Forex pairs (EUR/USD, GBP/USD, USD/JPY, etc.)"
-
-**src/lib/ai/tools/definitions.ts:**
-- L118-119: Tool description mentions forex pairs and Twelve Data
-- L127-129: Symbol description mentions forex format
-
-**src/lib/ai/schema-context.ts:**
-- L15: instrument_type enum includes forex
-- L26: trading_platform includes mt4, mt5
-- L99: instrument_type column documented
-- L174: default_instrument_type column documented
-- L351: source column references twelve_data
-
-**src/lib/ai/context-builder.ts:**
-- L101, 219: defaultInstrumentType in settings context
-
-**src/lib/ai/report-pipeline/planner.ts:**
-- L65: Tool description mentions EUR/USD
-
-### src/server/ — instrumentType References
-
-**src/server/db/schema.ts:**
-- L24: instrumentTypeEnum pgEnum definition
-- L76-77: "mt4", "mt5" in tradingPlatformEnum
-- L271: symbol column comment mentions "EUR/USD"
-- L272: instrumentType column on trades table
-- L458: defaultInstrumentType column on userSettings table
-- L887: symbol column in candleCache comment mentions "EUR/USD"
-
-**src/server/api/routers/trades.ts:**
-- L34: Import instrumentTypeEnum
-- L166, 207: instrumentType in trade serialization
-- L254, 282, 326: instrumentType in input schemas
-- L567: instrumentType passed to calculations
-- L774: instrumentType in trade response
-
-**src/server/api/routers/analytics.ts:**
-- L172: instrumentType in type definition
-- L273, 1492, 1653, 3681: instrumentType cast to "futures" | "forex"
-- L352, 515, 613, 707, 801, 978, 1121, 1259, 1344, 1434, 1591, 1777, 1941, 2080, 2220, 2466, 2698, 2907, 3047, 3219, 3600, 3784: instrumentType in query select clauses
-
-**src/server/api/routers/strategies.ts:**
-- L890, 1409, 1460: instrumentType in trade processing
-
-**src/server/api/routers/settings.ts:**
-- L36: defaultInstrumentType in settings input
-
-### src/components/ — UI References
-
-**src/components/trade-detail/stats-panel.tsx:**
-- L555: "Contracts" vs "Lots" based on instrumentType
-- L570, 589-595: Conditional display for futures ticks vs forex pips
-
-**src/components/trade-detail/running-pnl-tab.tsx:**
-- L20, 48, 144, 146: instrumentType prop and usage
-
-**src/components/trade-detail/content-panel.tsx:**
-- L183, 208: instrumentType passed to child components
-
-**src/components/trade-detail/tradingview-chart.tsx:**
-- L69: instrumentType optional prop
-
-**src/components/trade-detail/replay/time-sales-panel.tsx:**
-- L16, 26, 68: instrumentType with "cts" vs "lots" label
-
-**src/components/trade-detail/execution-timeline.tsx:**
-- L35, 47, 106: instrumentType with "cts" vs "lots" label
-
-**src/components/trade-detail/replay/use-replay-engine.ts:**
-- L35, 59, 186: instrumentType in replay options
-
-**src/components/trade-detail/replay/trade-replay.tsx:**
-- L33, 60, 154: instrumentType prop
-
-### src/app/ — Page-Level References
-
-**src/app/layout.tsx:**
-- L14: "Futures and Forex traders" in meta description
-
-**src/app/(marketing)/_components/hero.tsx:**
-- L13-14: EUR/USD, GBP/USD example trades
-- L25: EUR/USD trade example
-- L321: "futures and forex traders" tagline
-
-**src/app/(marketing)/_components/features.tsx:**
-- L42: EUR/USD reference
-- L146-148: "Futures & Forex" title and description
-
-**src/app/(marketing)/_components/footer.tsx:**
-- L53: "futures and forex traders"
-
-**src/app/(protected)/trade/new/page.tsx:**
-- L29: Import FOREX_SYMBOLS
-- L62: instrumentType state
-- L139, 158: instrumentType usage and symbol list selection
-- L232-248: Futures/Forex tabs UI
-
-**src/app/(protected)/import/page.tsx:**
-- L88-93: MT4, MT5 platform descriptions
-- L136: instrumentType state
-- L363-409: instrumentType in trade processing
-- L656-665: Instrument type tabs UI
-
-**src/app/(protected)/settings/_components/settings-content.tsx:**
-- L170-171: MT4, MT5 labels
-- L189-190: MT4, MT5 in type union
-- L660, 680: "forex" in type unions
-- L858: Forex select item
-- L1500-1501: MetaTrader 4/5 select items
-
-**src/app/(protected)/journal/page.tsx:**
-- L561, 695: instrumentType in trade processing
-
-**src/app/(protected)/journal/[id]/page.tsx:**
-- L285, 512, 552, 566, 631, 645, 701: instrumentType in trade detail
-
-### src/stores/ — State Management
-
-**src/stores/settings-store.ts:**
-- L24, 35: defaultInstrumentType in store
-
-### src/env.js — Environment
-
-- L17, 61: TWELVE_DATA_API_KEY
-
-### tests/ — Test References
-
-**tests/utils/fixtures/trades.ts:** L5, 37, 74 — instrumentType in trade fixtures
-**tests/utils/fixtures/scenarios.ts:** L323 — instrumentType: "forex" in fixture
-**tests/unit/csv-parsers.test.ts:** L37 — asserts instrumentType
-**tests/integration/running-pnl.test.ts:** L314-366 — Forex symbol tests, L440-791 — instrumentType in test data
-**tests/integration/trades/batch-import.test.ts:** L19, 41, 181, 211 — instrumentType in batch tests
-**tests/integration/rule-relevance.test.ts:** Many lines — instrumentType: "futures" in test data
-**tests/integration/rule-compliance.test.ts:** Many lines — instrumentType: "futures" in test data
-**tests/integration/strategy-evaluation.test.ts:** Many lines — instrumentType: "futures" in test data
-**tests/integration/analytics/export.test.ts:** L685-689 — forexTrade reference
-
-- Files changed: scripts/ralph/progress.txt (audit documented)
+## 2026-02-28 - US-001
+- Created src/lib/constants/admin.ts with ADMIN_NAV_ITEMS, BUG_REPORT_STATUS_LABELS, BUG_REPORT_SEVERITY_LABELS, BUG_REPORT_CATEGORY_LABELS, status/severity color maps, ROLE_LABELS, ADMIN_TABLE_PAGE_SIZE, ADMIN_TABLE_PAGE_SIZE_OPTIONS
+- Added admin error constants to src/lib/constants/errors.ts: ERR_ADMIN_FORBIDDEN, ERR_ADMIN_USER_NOT_FOUND, ERR_ADMIN_INVALID_STATUS_TRANSITION, ERR_ADMIN_BUG_REPORT_NOT_FOUND, ERR_ADMIN_ROLE_UPDATE_FAILED
+- Exported admin constants from src/lib/constants/index.ts
 - **Learnings for future iterations:**
-  - instrumentType touches ~30+ files across every layer
-  - analytics.ts is the heaviest file — instrumentType appears in ~25+ query select clauses
-  - Tests also need updating (fixtures, running-pnl forex tests, batch-import, export)
-  - MT4/MT5 parsers are stubs (not yet implemented), so removal is safe
-  - The Biome pre-existing error is in an archived PRD file, not our code
+  - Biome formatter wants short assignments on a single line - don't manually wrap
+  - Bug report schema fields: title, description, severity, category, screenshotKey, pageUrl, userAgent, metadata (jsonb), status, createdAt
+  - Nav items use icon names as strings (e.g., "LayoutDashboard") for flexibility — actual icon import happens in the component
 ---
 
-## 2026-02-28 - US-002: Remove Forex References from Marketing Pages
-- Replaced EUR/USD, GBP/USD ticker items with MES, MNQ, YM, RTY futures
-- Replaced EUR/USD demo trade with MNQ
-- Changed hero tagline from "futures and forex" to "futures"
-- Changed features card from "Futures & Forex" to "Built for Futures", updated symbols list
-- Updated footer description to "futures traders"
-- Updated root layout meta description to "futures traders"
-- Files changed: hero.tsx, features.tsx, footer.tsx, layout.tsx
+## 2026-02-28 - US-002
+- Created adminProcedure in src/server/api/trpc.ts extending protectedProcedure
+- adminProcedure checks ctx.user.role === 'admin', throws FORBIDDEN with ERR_ADMIN_FORBIDDEN
+- Files changed: src/server/api/trpc.ts
 - **Learnings for future iterations:**
-  - Marketing components are pure JSX — no imports from lib/market-data, changes are safe
+  - Cannot define adminMiddleware as standalone t.middleware because ctx.user doesn't exist in base context type. Must use protectedProcedure.use() inline to get proper ctx.user typing from authMiddleware.
+  - adminProcedure is exported alongside publicProcedure and protectedProcedure for use in admin routers
 ---
 
-## 2026-02-28 - US-003: Remove Forex References from AI Prompts and Tool Definitions
-- Updated get_market_data tool description: removed forex pairs, Twelve Data reference; now futures-only with Databento
-- Updated symbol input description: removed forex slash format examples
-- Updated schema-context.ts: removed instrument_type enum, mt4/mt5 from trading_platform, instrument_type columns from trade and user_settings tables, changed twelve_data to databento
-- Updated trading-analyst.ts PERSONA: removed "and forex" from description, removed forex pairs knowledge line
-- Updated planner.ts: removed EUR/USD from get_market_data description
-- Updated context-builder.ts: removed defaultInstrumentType from settings query and formatting
-- Files changed: definitions.ts, schema-context.ts, trading-analyst.ts, planner.ts, context-builder.ts
+## 2026-02-28 - US-003
+- Created admin router directory: src/server/api/routers/admin/index.ts
+- Created admin.analytics.platformStats query using adminProcedure
+- Returns: totalUsers, activeUsersLast7d, totalTrades, openBugReports, aiConversationsLast7d, totalTokensUsed
+- Active users computed by combining distinct userIds from trades and aiConversations in last 7 days
+- Registered admin router in src/server/api/root.ts
+- Files changed: src/server/api/routers/admin/index.ts (new), src/server/api/root.ts
 - **Learnings for future iterations:**
-  - AI prompt files are static strings — no runtime dependencies, safe to edit
-  - context-builder.ts loads settings from DB — when removing DB columns later (US-013), remember the column reference here is already removed
-  - schema-context.ts is a manual documentation of the DB schema for AI — must be kept in sync with actual schema changes
+  - Admin router uses nested createTRPCRouter pattern: `admin: createTRPCRouter({ analytics: createTRPCRouter({ ... }) })` for clean namespacing
+  - Use `sql<string>\`coalesce(sum(col), 0)\`` for nullable aggregates — sum() returns null when no rows match
+  - Drizzle `selectDistinct` works well for getting unique userIds without needing GROUP BY
+  - Token counts stored as integer in aiMessages.tokensUsed — sum and convert to Number for the response
 ---
 
-## 2026-02-28 - US-004: Remove MT4 and MT5 CSV Parsers
-- Deleted src/lib/trades/csv-parsers/mt4-parser.ts (contained both mt4Parser and mt5Parser)
-- Removed MT4/MT5 from parser registry, getSupportedPlatforms(), TRADING_PLATFORMS in index.ts
-- Removed "mt4" | "mt5" from TradingPlatform type in types.ts
-- Removed "mt4", "mt5" from tradingPlatformEnum Zod schema in shared/schemas.ts
-- Removed "mt4", "mt5" from tradingPlatformEnum pgEnum in server/db/schema.ts
-- Removed MT4/MT5 entries from PLATFORM_INFO in import page
-- Removed MT4/MT5 from PLATFORM_LABELS, AccountFormState union, and SelectItem entries in settings page
-- Updated test fixtures (accounts.ts) and accounts test to use "ninjatrader" instead of "mt5"
-- Files changed: mt4-parser.ts (deleted), index.ts, types.ts, schemas.ts, schema.ts, import/page.tsx, settings-content.tsx, accounts.ts fixture, accounts.test.ts
+## 2026-02-28 - US-004
+- Created tests/integration/admin.test.ts with 10 tests covering:
+  - Admin middleware: FORBIDDEN for non-admin, UNAUTHORIZED for unauthenticated, allows admin access
+  - Platform stats: all expected fields present, correct user count, trade count + active users from trades, open bug report count (excludes resolved), AI conversation + token counts, deduplication of active users across trades and AI, zero counts on empty database
+- Files changed: tests/integration/admin.test.ts (new)
 - **Learnings for future iterations:**
-  - Removing a platform from tradingPlatformEnum requires cascading to: DB schema pgEnum, shared Zod schema, CSV parser types, import page UI, settings page UI, and test fixtures
-  - Tests in accounts.test.ts used "mt5" platform — always grep tests/ for removed enum values
-  - The magicNumber field in ParsedTrade was MT4/5-specific but can stay as a generic optional field
+  - Use `createTestUser({ role: "admin" })` to create admin users — the fixture supports role option
+  - Store user references from `createTestUser()` in `let adminUser: User` variables to avoid re-querying the DB in each test
+  - Tests that insert data into related tables (trades, bugReports, aiConversations, aiMessages) can use `getTestDb()` and `schema` directly — no need for tRPC callers for raw inserts
+  - Bug reports with status "open" are counted; "resolved" and "closed" are not — matches the `eq(bugReports.status, "open")` filter in platformStats
+  - Biome auto-formats short function calls to single line — run `bunx biome check --write` to fix formatting
 ---
 
-## 2026-02-28 - US-005: Remove Twelve Data Service Integration
-- Removed TwelveDataBar and TwelveDataResponse interfaces from service.ts
-- Removed entire fetchFromTwelveData() function (~90 lines)
-- Simplified fetchFromProvider() to only route to Databento; returns error for non-futures symbols
-- Removed TWELVE_DATA_SYMBOL_MAP (~100 entries) from symbols.ts
-- Removed forex pairs from DATABENTO_SYMBOL_MAP (they were all null entries)
-- Removed TWELVE_DATA_API_KEY from env.js (server schema + runtimeEnv)
-- Updated service.ts header comment to remove Twelve Data mention
-- Removed formatDateForAPI() helper (was only used by Twelve Data)
-- Files changed: service.ts, symbols.ts, env.js
+## 2026-02-28 - US-005
+- Added bugReports sub-router to admin router with 3 endpoints:
+  - `admin.bugReports.list` — offset pagination, filtering by status/category/severity, returns user info, sorted newest first
+  - `admin.bugReports.getById` — single bug report with full details and user info
+  - `admin.bugReports.updateStatus` — validates status transitions (open→in_progress→resolved→closed with allowed shortcuts)
+- Files changed: src/server/api/routers/admin/index.ts
 - **Learnings for future iterations:**
-  - env.js uses @t3-oss/env-nextjs — removing an env var requires removing from both `server` schema and `runtimeEnv` sections
-  - The `env` import in service.ts is still needed for DATABENTO_API_KEY
-  - DATABENTO_SYMBOL_MAP still had null entries for forex pairs — those were removed since forex is no longer supported
-  - The FetchResult provider type was simplified from `"twelve_data" | "databento"` to just `"databento"`
+  - Don't use `.default({})` on a Zod object that has required fields with `.default()` — TypeScript will reject it. Just use the object schema directly, and callers must pass at least `{}`.
+  - Drizzle `query.bugReports.findMany({ with: { user: true } })` automatically joins via the relations defined in schema.ts — no need for manual joins.
+  - Status transition validation: store valid transitions as a record map and check `allowed.includes(input.status)` — clean and extensible.
+  - Bug report list endpoint maps user info to a subset (id, name, email, imageUrl) to avoid leaking full user data.
 ---
 
-## 2026-02-28 - US-006: Remove Forex Specs, Symbols, and Helper Functions from symbols.ts
-- Removed ForexSpec interface, FOREX_SPECS (27 forex pair specs), FOREX_SYMBOLS array (27 symbols)
-- Removed getForexSpec(), getForexPipSize(), calculateForexPnL(), calculatePnL() (wrapper), getSymbolsByType()
-- Simplified getPointValue(symbol) and getTickSize(symbol) — removed instrumentType parameter, futures-only
-- Removed 27 forex pairs from TRADINGVIEW_SYMBOL_MAP
-- ALL_SYMBOLS now equals FUTURES_SYMBOLS (not a spread concat)
-- Updated callers for build to pass:
-  - calculations.ts: removed calculatePips() (forex-specific), removed pips from TradeStats, simplified calculateROI() to futures-only
-  - running-pnl.ts: removed calculateForexPnL import and forex branch
-  - stats.ts, evaluation.ts: updated getPointValue() calls (dropped instrumentType arg)
-  - stats-panel.tsx: removed forex pips display, hardcoded "Contracts" label
-  - journal/[id]/page.tsx: removed pips from TradeStats fallback objects
-  - trade/new/page.tsx: removed FOREX_SYMBOLS import, hardcoded FUTURES_SYMBOLS
-- Files changed: symbols.ts, calculations.ts, running-pnl.ts, stats.ts, evaluation.ts, stats-panel.tsx, journal/[id]/page.tsx, trade/new/page.tsx
+## 2026-02-28 - US-006
+- Created tests/integration/admin-bug-reports.test.ts with 18 tests covering:
+  - List: returns bug reports with user info, sorts newest first, pagination, combined filters
+  - Filter by: status, category, severity
+  - getById: returns full details with user info, NOT_FOUND for non-existent
+  - updateStatus: open→in_progress→resolved→closed transitions, reopen closed→open, rejects invalid transitions (open→resolved), NOT_FOUND for non-existent
+  - Auth: non-admin rejected on list, getById, updateStatus
+- Files changed: tests/integration/admin-bug-reports.test.ts (new)
 - **Learnings for future iterations:**
-  - Removing an export from symbols.ts cascades to callers — getPointValue/getTickSize signature changes required updating 4+ files
-  - TradeStats.pips was referenced in journal/[id]/page.tsx fallback objects (2 places) — easy to miss
-  - Biome auto-fix (`bunx biome check --write --unsafe`) renames unused params to `_` prefix — useful for staged removal
-  - instrumentType params still exist on many functions (prefixed with _) — US-007 should fully remove them
+  - Tests that build on each other (sequential status transitions) work well within a single describe block — Vitest runs tests in order within a describe
+  - Use `db.insert().returning()` to capture inserted IDs for later assertions — store in a shared array variable
+  - Biome enforces single-line for `new Date(value).getTime()` — don't break across lines
 ---
 
-## 2026-02-28 - US-007: Remove Forex P&L Calculations and Pip Functions
-- Removed `_instrumentType` parameter from `calculateActualRMultiple()`, `calculateROI()`, `calculateMAEMFE()` in calculations.ts
-- Removed `instrumentType` from `calculateAllStats()` input type in calculations.ts
-- Removed `instrumentType` from `RunningPnlOptions`, `calculateRunningPnlAtTime()` in running-pnl.ts
-- Removed `instrumentType` from `TradeForStats`, `calculateRMultipleFromTrade()`, type guard in stats.ts
-- Removed `instrumentType` from `TradeForEvaluation`, `TradeWithAccount` in evaluation.ts
-- Updated all callers:
-  - trades.ts: 3 sites (calculateActualRMultiple, buildEvaluationContext, evaluateAutoCondition)
-  - analytics.ts: 4 sites (all calculateActualRMultiple calls)
-  - strategies.ts: 3 sites (calculateMfeInR, buildEvaluationContext, evaluateAutoCondition)
-  - marketData.ts: 1 site (calculateMAEMFE)
-  - maemfe.ts: 1 site (calculateMAEMFE)
-  - journal/page.tsx: 2 sites (calculateActualRMultiple)
-  - journal/[id]/page.tsx: 1 site (calculateAllStats)
-  - content-panel.tsx: 2 sites (RunningPnlTab, TradeReplay props)
-  - running-pnl-tab.tsx: prop + generateRunningPnlSeries call
-  - trade-replay.tsx: prop + useReplayEngine call
-  - use-replay-engine.ts: interface + calculateRunningPnlAtTime call
-- Files changed: calculations.ts, running-pnl.ts, stats.ts, evaluation.ts, trades.ts, analytics.ts, strategies.ts, marketData.ts, maemfe.ts, journal/page.tsx, journal/[id]/page.tsx, content-panel.tsx, running-pnl-tab.tsx, trade-replay.tsx, use-replay-engine.ts
+## 2026-02-28 - US-007
+- Added users sub-router to admin router with 3 endpoints:
+  - `admin.users.list` — offset pagination, search by name/email (ilike), returns account count, trade count, last active date via correlated subqueries, sorted newest first
+  - `admin.users.getById` — single user with accounts, recent trades (last 10, soft-delete filtered), AI conversation count, bug report count
+  - `admin.users.updateRole` — validates user exists, updates role (user ↔ admin), returns updated user subset
+- Files changed: src/server/api/routers/admin/index.ts
 - **Learnings for future iterations:**
-  - `TradeWithAccount` and `TradeForEvaluation` in evaluation.ts are used to construct objects in trades.ts and strategies.ts — removing a field from these interfaces requires updating all object literals that populate them
-  - `calculateActualRMultiple` is called in 4 places in analytics.ts — some cast `trade.instrumentType as "futures" | "forex"` which are now unnecessary
-  - The DB schema still has `instrumentType` column on trades — that's a separate story (US-013). This story only removed it from calculation function signatures
-  - instrumentType still exists as a DB column, tRPC input/output schemas, and UI state — those are handled by US-008 through US-013
+  - Use correlated SQL subqueries for computed columns (account count, trade count, last active) — avoids N+1 and is efficient for paginated list views
+  - `sql<number>\`cast((select count(*) from "table" where ...) as integer)\`` for inline counts in select
+  - `sql<Date | null>\`greatest(...)\`` works for computing last active across multiple tables
+  - `ilike` from drizzle-orm for case-insensitive search — combine with `or()` for multi-field search
+  - Always include `isNull(trades.deletedAt)` when counting or listing trades (soft-delete pattern)
+  - Don't import schema tables you only reference in raw SQL strings — Biome flags unused imports
 ---
 
-## 2026-02-28 - US-008: Remove Instrument Type UI from Trade Entry and Import Pages
-- Removed `instrumentType` state and Futures/Forex `Tabs` toggle from trade/new/page.tsx
-- Removed `instrumentType` state and Instrument Type `Tabs` toggle from import/page.tsx
-- Hardcoded `instrumentType: "futures"` in createTrade.mutate() call
-- Hardcoded `instrumentType: "futures" as const` in both platform-parsed and manual mapping branches of handleImport
-- Simplified quantity label from conditional "Contracts"/"Lot Size" to just "Contracts"
-- Simplified quantity placeholder from conditional "1"/"0.01" to just "1"
-- Removed unused Tabs/TabsList/TabsTrigger imports from import page
-- Files changed: trade/new/page.tsx, import/page.tsx
+## 2026-02-28 - US-008
+- Created tests/integration/admin-users.test.ts with 16 tests covering:
+  - List: returns users with account/trade counts, correct counts for data-rich user, search by email, search by name (case insensitive), empty search results, pagination, sort by newest first
+  - getById: returns full user details with accounts, recent trades, AI conversation count, bug report count, zero counts for user without data, NOT_FOUND for non-existent user
+  - updateRole: promote user to admin, demote admin to user, NOT_FOUND for non-existent user
+  - Auth: non-admin rejected on list, getById, updateRole
+- Files changed: tests/integration/admin-users.test.ts (new)
 - **Learnings for future iterations:**
-  - The tRPC mutations still expect `instrumentType` in their input schemas — hardcode "futures" until US-011 removes it from the server
-  - ParsedTrade type still has `instrumentType` — that's handled by US-012
-  - Direction tabs in trade/new/page.tsx still use Tabs components, so those imports must stay
+  - Biome enforces single-line for short `.find()` callbacks — don't break across lines
+  - When seeding test data with multiple accounts, use `.returning()` to capture the first account ID for trade inserts
+  - Test user with rich data (accounts, trades, AI convos, bug reports) should be created in beforeAll to test both getById detail views and list computed counts
 ---
 
-## 2026-02-28 - US-009: Remove defaultInstrumentType from Settings
-- Removed `defaultInstrumentType` from `APISettings` interface and `SettingsState` interface in settings-store.ts
-- Removed `defaultInstrumentType` from Zustand store default values and `hydrate()` function
-- Removed `defaultInstrumentType` from tRPC settings update input schema in settings.ts
-- Removed `defaultInstrument` from settings-content.tsx: local state, hydration from DB, save handler mutation, Zustand sync on save success
-- Removed the "Default Instrument" Select UI (Futures/Forex dropdown) from Trading Defaults card
-- Removed `defaultInstrumentType` from use-settings-hydration.tsx `hydrate()` call
-- Files changed: settings-store.ts, settings.ts, settings-content.tsx, use-settings-hydration.tsx
+## 2026-02-28 - US-009
+- Added ai sub-router to admin router with 3 endpoints:
+  - `admin.ai.listConversations` — offset pagination, filtering by mode/status, returns user info + message count + token count via correlated subqueries, innerJoin with users for user info, sorted newest first
+  - `admin.ai.getConversation` — single conversation with all messages (ordered asc by createdAt), user info via relational query
+  - `admin.ai.usageStats` — total tokens, tokens by model, conversations by mode, daily usage for last 30 days using date_trunc
+- Added ERR_ADMIN_CONVERSATION_NOT_FOUND to src/lib/constants/errors.ts
+- Files changed: src/server/api/routers/admin/index.ts, src/lib/constants/errors.ts
 - **Learnings for future iterations:**
-  - Settings flow spans 4 files: DB column → tRPC router input → settings-content.tsx UI/state → settings-store.ts Zustand → use-settings-hydration.tsx hydration
-  - settings-content.tsx uses a local `settings` state object with different field names than the DB (e.g., `defaultInstrument` maps to `defaultInstrumentType`)
-  - The DB column still exists (US-013 will drop it) — removing from tRPC input/Zustand is safe since the column has a default value
+  - For list views needing computed counts + joined user info, use `ctx.db.select()` with `.innerJoin()` for user data + correlated SQL subqueries for counts — more efficient than relational queries for paginated lists
+  - `date_trunc('day', timestamp)::date::text` converts timestamps to date strings for daily grouping in PostgreSQL
+  - Biome enforces single-line assignment for `messageCount: sql<number>\`...\`` — don't break the sql tagged template onto a new line
+  - `sql\`${column} is not null\`` for null filtering in raw SQL within drizzle select
 ---
 
-## 2026-02-28 - US-010: Remove instrumentType from Trade Detail Components
-- Removed `instrumentType` prop from `ExecutionTimeline` interface/destructure, hardcoded `sizeLabel = "cts"`
-- Removed `instrumentType` prop from `TimeSalesPanel` interface/destructure, hardcoded `sizeLabel = "cts"`
-- Removed `instrumentType?: "futures" | "forex"` from `ChartProps` in tradingview-chart.tsx
-- Removed `instrumentType={trade.instrumentType}` from StatsPanel's ExecutionTimeline call
-- running-pnl-tab.tsx and trade-replay.tsx had no instrumentType references (already cleaned in US-007)
-- use-replay-engine.ts had no instrumentType references (already cleaned in US-007)
-- content-panel.tsx doesn't pass instrumentType to child components (TradingViewChart, TradeReplay, RunningPnlTab)
-- Files changed: execution-timeline.tsx, time-sales-panel.tsx, tradingview-chart.tsx, stats-panel.tsx
+## 2026-02-28 - US-010
+- Created tests/integration/admin-ai.test.ts with 19 tests covering:
+  - listConversations: returns conversations with user info, includes message count and token count, filter by mode (chat/report), filter by status, pagination, sort by newest first
+  - getConversation: returns conversation with messages, messages ordered by createdAt ascending, NOT_FOUND for non-existent
+  - usageStats: total tokens used, tokens by model, conversations by mode, daily usage for last 30 days, zero tokens when no messages exist
+  - Auth: non-admin rejected on listConversations, getConversation, usageStats; unauthenticated rejected
+- Files changed: tests/integration/admin-ai.test.ts (new)
 - **Learnings for future iterations:**
-  - Several trade-detail components were already cleaned of instrumentType in US-007 (when calculation signatures changed) — always check before editing
-  - The journal/[id]/page.tsx still passes instrumentType in trade objects to StatsPanel and ContentPanel, but that's from the DB-inferred type (TradeForStatsPanel) — will be removed in US-012/US-013
-  - TimeSalesPanel had a formatting issue after removing a prop — Biome auto-fix collapses short destructure to single line
+  - When tests truncate tables mid-file (e.g., "zero counts" test), subsequent tests in the same file need to re-create users — don't rely on beforeAll users after a truncation
+  - Biome flags unused variables even in test setup — if a caller is only used for seeding data, don't assign it to a variable
+  - Token counts from correlated subqueries match exactly when seeded with specific values — good for precise assertions
 ---
 
-## 2026-02-28 - US-011: Remove instrumentType from tRPC Routers
-- analytics.ts and marketData.ts were already clean from US-007 (no instrumentType references left)
-- Updated marketData.ts comment: removed "Supports both Databento (futures) and Twelve Data (forex)" → "Uses Databento for futures market data"
-- trades.ts still has `instrumentType: "futures" as const` in 2 insert statements (create + batchImport) — required while DB column is NOT NULL with no default
-- Removed `instrumentType` from `TradeForStatsPanel`, `TradeForContentPanel`, `TradeForTable` Pick types in src/types/index.ts
-- Removed `export type InstrumentType = Trade["instrumentType"]` from types/index.ts
-- Fixed pre-existing build error: journal/[id]/page.tsx was constructing ContentPanel trade objects without instrumentType, which was required by the old Pick type
-- Added `as const` to batch import `instrumentType: "futures"` to satisfy Drizzle's enum literal type
-- Files changed: marketData.ts, trades.ts, src/types/index.ts
+## 2026-02-28 - US-011
+- Added 4 analytics endpoints to admin.analytics sub-router:
+  - `growth` — daily new users + cumulative total for last 30 days using date_trunc and a base count query for users before the window
+  - `tradingActivity` — daily trade count, total P&L, avg trade size for last 30 days with soft-delete filtering
+  - `topTraders` — top 10 users by total P&L using innerJoin with users, grouped by userId/name/email, ordered desc by sum(netPnl)
+  - `accountBreakdown` — count of accounts grouped by accountType
+- Files changed: src/server/api/routers/admin/index.ts
 - **Learnings for future iterations:**
-  - When removing a field from Pick types, check that NO callers still construct objects with that field — the types file error manifested in journal/[id]/page.tsx, not in types/index.ts itself
-  - Drizzle enum columns require literal string types (not `string`), so hardcoded values need `as const` assertions
-  - The `InstrumentType` type export from `@/types` was unused anywhere — safe to remove
-  - There's a SEPARATE `InstrumentType` in `src/lib/shared/schemas.ts` (from Zod) — that's for US-012
+  - For cumulative totals in growth charts, first query the base count before the time window, then accumulate over daily rows — avoids window functions
+  - `avg(abs(column))` works well for avg trade size — using abs ensures both winning and losing trades contribute positively
+  - Biome formatting for `.where(and(...))`: if args fit on one line Biome wraps `.where(\n  and(...),\n)` — use `bunx biome check --write` to auto-fix
+  - `trades.netPnl` is the column to use for P&L aggregations (includes fees), not `realizedPnl`
+  - Always include `isNull(trades.deletedAt)` when aggregating trade data
 ---
 
-## 2026-02-28 - US-012: Remove instrumentType from Shared Types and Schemas
-- Removed `instrumentTypeEnum` Zod schema and `InstrumentType` type export from src/lib/shared/schemas.ts
-- Removed `instrumentType: instrumentTypeEnum` from `tradeBaseFields` in schemas.ts
-- Removed `instrumentType: "futures" | "forex"` from `ParsedTrade` interface in csv-parsers/types.ts
-- Removed `instrumentType: "futures"` from trade objects in csv-parsers/utils.ts and projectx-parser.ts
-- Removed `instrumentType` assertion from tests/unit/csv-parsers.test.ts
-- Verified no remaining imports of `instrumentTypeEnum` or `InstrumentType` from shared schemas
-- Verified no remaining `'futures' | 'forex'` union types in src/
-- Files changed: schemas.ts, types.ts, utils.ts, projectx-parser.ts, csv-parsers.test.ts
+## 2026-02-28 - US-012
+- Created tests/integration/admin-analytics.test.ts with 22 tests covering:
+  - growth: daily new user counts, newUsers + cumulativeTotal fields, correct cumulative total
+  - tradingActivity: daily trade activity, tradeCount/totalPnl/avgTradeSize fields, correct trade count, correct total P&L, soft-deleted trades excluded
+  - topTraders: ranked by P&L, correct fields, correct ranking order, limit to 10
+  - accountBreakdown: counts by type, correct fields, correct per-type counts, reflects new accounts
+  - Auth: non-admin rejected on all 4 endpoints, unauthenticated rejected
+- Fixed bug in admin.analytics.growth: raw `sql\`${users.createdAt} < ${thirtyDaysAgo}\`` passed Date object to postgres driver which expects strings. Changed to `lt(users.createdAt, thirtyDaysAgo)` using Drizzle operator.
+- Files changed: tests/integration/admin-analytics.test.ts (new), src/server/api/routers/admin/index.ts (bug fix)
 - **Learnings for future iterations:**
-  - `tradeBaseFields` was defined in schemas.ts but never imported anywhere — it was dead code used only as a schema reference. Safe to remove fields without cascading.
-  - ParsedTrade.instrumentType was set by parsers but no longer read by the import page (removed in US-008) — the field was already unused at the consumer side
-  - The DB column still exists (US-013), so trades.ts router still hardcodes `instrumentType: "futures" as const` in inserts
+  - Never use raw `sql` template with Date objects as parameters — postgres driver rejects them. Use Drizzle operators (`lt`, `gte`, `eq`) which handle type conversion.
+  - Import `eq` from drizzle-orm in test files when you need to query tables directly with `.where(eq(...))`.
 ---
 
-## 2026-02-28 - US-013: Drop instrumentType Column and Enum from Database Schema
-- Removed `instrumentTypeEnum` pgEnum definition from schema.ts
-- Removed `instrumentType` column from trades table
-- Removed `defaultInstrumentType` column from userSettings table
-- Updated candleCache `source` comment from "twelve_data", "polygon" to "databento"
-- Updated symbol comments to remove "EUR/USD" references
-- Removed `instrumentType: "futures"` from trades.ts create insert
-- Removed `instrumentType: "futures" as const` from trades.ts batchImport insert
-- Removed `instrumentType` from test fixtures: trades.ts (interface + usage), scenarios.ts (converted forex trade to MES futures)
-- Removed `instrumentType` from batch-import.test.ts (helper interface, helper usage, test override, assertion)
-- Removed `instrumentType: "futures"` from rule-relevance.test.ts (13 occurrences), rule-compliance.test.ts (7 occurrences), strategy-evaluation.test.ts (26 occurrences)
-- Removed entire "Forex symbols" describe block from running-pnl.test.ts (3 forex-specific tests)
-- Removed forex `generateRunningPnlSeries` test case from running-pnl.test.ts
-- Removed 5th "futures" argument from `calculateRunningPnlAtTime` calls in edge case tests
-- Removed `instrumentType` from all `RunningPnlOptions` objects in running-pnl.test.ts (13 occurrences)
-- Updated tests/README.md example
-- Files changed: schema.ts, trades.ts, analytics.ts (format), journal/[id]/page.tsx (format), tests/README.md, trades.ts fixture, scenarios.ts fixture, batch-import.test.ts, rule-relevance.test.ts, rule-compliance.test.ts, strategy-evaluation.test.ts, running-pnl.test.ts
+## 2026-02-28 - US-013
+- Added system sub-router to admin router with health endpoint
+- `admin.system.health` returns: databaseStatus, appVersion, tableCounts (users, trades, accounts, aiConversations, aiMessages, bugReports), lastActivity (lastSignup, lastTrade, lastAiConversation)
+- Database connection checked via `sql\`select 1\`` with try/catch
+- App version read from package.json using `readFileSync` at `process.cwd()`
+- Row counts use `count()` from drizzle-orm, last activity dates use `max()` from drizzle-orm
+- Files changed: src/server/api/routers/admin/index.ts
 - **Learnings for future iterations:**
-  - Removing a DB column from schema.ts cascades to: insert statements in routers, test fixtures, and every test file that creates trade objects with the column
-  - `replace_all` with Edit tool is effective for removing repeated lines (e.g., `instrumentType: "futures"`) but watch for different indentation levels
-  - Biome auto-fix (`bunx biome check --write <files>`) cleans up blank lines left from removals
-  - The `source` column in candleCache was kept — it still stores provider info ("databento") and could support future providers
-  - Forex test cases in running-pnl.test.ts used `calculateRunningPnlAtTime` with 5 args (function now takes 4) — these needed complete removal, not just field removal
-  - Note: `bun run db:push` was NOT run — this is a schema-level change that must be applied to the actual DB separately
+  - Use `max()` from drizzle-orm for last activity date queries — returns the most recent date from a column
+  - Biome enforces line breaks on chained `.select().from()` when the select object is long — split across lines
+  - For database health checks, `ctx.db.execute(sql\`select 1\`)` is a lightweight connectivity test
+  - `readFileSync` from `node:fs` with `resolve(process.cwd(), "package.json")` works reliably for reading app version in tRPC server context
 ---
 
-## 2026-02-28 - US-014: Clean Up Environment Variables and Documentation
-- Updated CLAUDE.md: description to "futures traders", removed TWELVE_DATA_API_KEY from env vars section
-- Updated README.md: description to "futures traders", removed MT4/MT5 from CSV import mention
-- Updated ROADMAP.md: Phase 7 historical data (Databento-only), replay (futures-only calculations), Phase 8 brokers (removed MT4/MT5 parsers and MetaTrader from priority brokers)
-- Updated .claude/skills/architecture/SKILL.md: removed Twelve Data provider row and Forex/Crypto routing section
-- Updated .claude/skills/architecture/MARKET_DATA_REFERENCE.md: extensive rework — removed Twelve Data section, updated to single-provider (Databento), removed forex symbols from examples, removed Twelve Data troubleshooting section, updated cost analysis
-- Updated .claude/skills/testing/TESTING_REFERENCE.md: removed instrumentType from CreateTestTradeOptions
-- Updated .claude/skills/consistency-audit/SKILL.md: removed FOREX_SPECS from grep command
-- Updated .claude/skills/backend/TRPC_REFERENCE.md: updated market data router to Databento-only
-- Updated plans/prd-running-pnl.md: removed calculateForexPnL, getForexSpec references, updated FR-006 to futures-only
-- Updated plans/prd-command-center-dashboard.md: removed "Forex Factory" from deferred feature
-- Updated plans/prd-broker-live-integration.md: added futures-only pivot note, removed forex traders from target audience
-- No .env.example file exists — nothing to update there
-- Files changed: CLAUDE.md, README.md, ROADMAP.md, 5 .claude/skills files, 3 plans files, prd.json
+## 2026-02-28 - US-014
+- Created tests/integration/admin-system.test.ts with 14 tests covering:
+  - Auth: non-admin rejected with FORBIDDEN, unauthenticated rejected with UNAUTHORIZED
+  - Response fields: all top-level fields present, databaseStatus is "connected", appVersion is a non-"unknown" string, all tableCounts fields, all lastActivity fields
+  - Database counts: correct user count (2 from beforeAll), zero for empty tables, accurate counts after inserting accounts/trades/bugReports/aiConversations/aiMessages
+  - Last activity: lastSignup present, lastTrade present after data insertion, lastAiConversation present after data insertion, null for trade/AI when no data exists
+- Files changed: tests/integration/admin-system.test.ts (new)
 - **Learnings for future iterations:**
-  - MARKET_DATA_REFERENCE.md was the most extensive doc to update — had Twelve Data woven throughout (provider table, config section, troubleshooting, code examples, cost analysis)
-  - Plan files (PRDs) that describe future work can be annotated with a pivot note rather than fully rewritten
-  - The prd-futures-only-cleanup.md was intentionally left as-is since it describes the cleanup work itself
+  - System health tests build on each other within describes — data inserted in "accurate counts" test is visible in subsequent "last activity" tests since Vitest runs tests in order within a describe
+  - The health endpoint returns `databaseStatus` as a union type "connected" | "error" — test the happy path (connected) since we can't easily break the DB connection in tests
+  - `appVersion` comes from package.json at process.cwd() — always a valid string in the test environment
 ---
 
-## 2026-02-28 - US-015: Integration Tests — Verify Forex Removal Complete
-- All greps confirmed zero forex/Twelve Data/pip/instrumentType references in src/
-- Found 31 test failures caused by stale EURUSD references from US-013's MES migration
-- Root cause: US-013 changed the scenario fixture's EURUSD trade to MES but didn't update expectedMetrics or test assertions
-- Updated tests/utils/fixtures/scenarios.ts: comments, expectedMetrics (totalPnl 4263→4423, grossLoss 1207→1047, profitFactor 4.53→5.23, symbols array EURUSD→MES)
-- Updated tests/integration/analytics/symbols.test.ts: EURUSD→MES references, variable names, P&L values (-202→-42)
-- Updated tests/integration/analytics/overview.test.ts: expectedWithDefaultThreshold (totalPnl 4263→4423, grossLoss 1212→1052)
-- Updated tests/integration/analytics/filters.test.ts: EURUSD→MES, loss P&L -1212→-1052, position size count 6→7 (MES qty=2 vs EURUSD qty=100000)
-- Updated tests/integration/ai-tools.test.ts: EURUSD→MES, totalPnl 4263→4423
-- Updated tests/integration/analytics/export.test.ts: EURUSD→MES, forex price assertions (1.08/1.078→5000/4996)
-- Updated tests/integration/analytics/presets.test.ts: EURUSD→MES in filter string
-- Fixed pre-existing prop-compliance.test.ts: overallStatus "danger"→"safe" (code excludes profit target from overall status)
-- All 1027 tests pass across 32 test files, build passes
-- Files changed: scenarios.ts, symbols.test.ts, overview.test.ts, filters.test.ts, ai-tools.test.ts, export.test.ts, presets.test.ts, prop-compliance.test.ts
+## 2026-02-28 - US-015
+- Created admin route group `(admin)` with layout, loading state, sidebar, and placeholder page
+- Added `settings.me` tRPC query returning `{ id, role, name, email, imageUrl }` for client-side role access
+- Admin layout (server component) checks user role via `api.settings.me()` and redirects non-admins to `/dashboard`
+- Admin sidebar uses `ADMIN_NAV_ITEMS` from constants with icon map pattern (string icon names → Lucide components)
+- Loading state shows spinner with "Verifying admin access..." while role is being checked
+- Terminal design: monospace labels, chartreuse accent for "Admin" badge and active nav items, muted nav items
+- Files changed: src/server/api/routers/settings.ts, src/app/(admin)/layout.tsx (new), src/app/(admin)/loading.tsx (new), src/app/(admin)/_components/admin-sidebar.tsx (new), src/app/(admin)/admin/page.tsx (new)
 - **Learnings for future iterations:**
-  - When changing trade data in fixtures (e.g., EURUSD→MES), the expectedMetrics and ALL downstream test assertions must be updated — P&L changes cascade to totalPnl, grossLoss, profitFactor, avgLoss, position size ranges
-  - The `replace_all` Edit tool changes string literals but not variable names — need separate passes for `EURUSD`→`MES` and `eurusd`→`mes`
-  - The $3 breakeven threshold in analytics affects win/loss classification — overview.test.ts uses a different threshold than scenarios.ts expectedMetrics (which uses no threshold)
-  - prop-compliance.test.ts had a pre-existing bug: code at accounts.ts:653-654 excludes profit target from overallStatus calculation, so empty account is "safe" not "danger"
+  - Admin layout is a separate route group `(admin)` at app root, parallel to `(protected)` — gives completely independent layout
+  - `settings.me` query returns current user info including role — use this for any client-side role checks
+  - Admin layout uses server-side role check with `redirect()` from next/navigation — no client-side loading flash for non-admins
+  - Icon map pattern: ADMIN_NAV_ITEMS stores icon names as strings, sidebar maps them to Lucide components via `ICON_MAP` record
+  - Active nav detection: exact match for `/admin` (overview), `startsWith` for sub-pages like `/admin/bug-reports`
 ---
 
-## 2026-02-28 - US-016: Final Build Verification and Smoke Test
-- bun run check: passes (only pre-existing error in scripts/ralph/prd.prop-compliance.archived.json)
-- bun run build: passes with zero errors, all 16 static + dynamic routes built
-- bun run test: all 1027 tests pass across 32 test files
-- Zero instrumentType references in src/
-- Dev server starts without errors on port 3000
-- No dead imports or unused variables detected
-- **All 16 user stories complete. Futures-only cleanup PRD is finished.**
+## 2026-02-28 - US-016
+- Created `AdminGuard` client component for belt-and-suspenders admin route protection
+- Guard takes `initialRole` from server to avoid loading flash, then validates client-side via `settings.me` query
+- Redirects non-admins to `/dashboard` via `useRouter().replace()` if role changes mid-session
+- Updated admin layout to wrap children in `AdminGuard` alongside existing server-side redirect
+- Files changed: src/app/(admin)/_components/admin-guard.tsx (new), src/app/(admin)/layout.tsx
+- **Learnings for future iterations:**
+  - Server-side layout `redirect()` is the primary guard; client-side `AdminGuard` is secondary for mid-session role changes
+  - Pass `initialRole` from server component to client guard to avoid double-fetch and loading flash
+  - Use `staleTime: 30_000` on the `settings.me` query to avoid excessive refetching during admin navigation
+---
+
+## 2026-02-28 - US-017
+- Added conditional Admin navigation link to app-sidebar.tsx footer
+- Uses existing `settings.me` tRPC query to check `me?.role === "admin"`
+- Shield icon (already imported) with link to /admin
+- Active state uses `pathname.startsWith("/admin")` for sub-page highlighting
+- Hidden for non-admin users (conditional rendering with `&&`)
+- Files changed: src/app/(protected)/_components/app-sidebar.tsx
+- **Learnings for future iterations:**
+  - `settings.me` query is already available in the sidebar — no need to create a new endpoint for role checking
+  - Shield icon was already imported in app-sidebar.tsx (used for Prop nav item)
+  - Admin link placed in footer (after Settings, before UserButton) to distinguish it from main navigation items
+  - Use `pathname.startsWith("/admin")` for active state since admin has sub-routes
+---
+
+## 2026-02-28 - US-018
+- Replaced placeholder admin overview page with full dashboard using `admin.analytics.platformStats` endpoint
+- 6 stat cards: Total Users, Active Users (7d), Total Trades, Open Bug Reports, AI Conversations (7d), Total AI Tokens
+- Each card links to its detailed admin panel page
+- Compact number formatting for large values (K/M suffixes for tokens)
+- Loading skeleton, error state, and hover effects on cards
+- Terminal design: monospace labels, chartreuse accent values, card hover with primary border
+- Files changed: src/app/(admin)/admin/page.tsx
+- **Learnings for future iterations:**
+  - Admin overview is a client component ("use client") since it fetches data via tRPC React hooks
+  - Biome auto-formats long `.useQuery()` chains to multi-line — let it handle the formatting
+  - Card config array with `as const` gives type-safe key access to the data object
+  - Use `Link` from next/link for card navigation — whole card is clickable
+---
+
+## 2026-02-28 - US-019
+- Created /admin/bug-reports page with full list view
+- Table with columns: title, category, severity, status, reporter, date
+- Filter dropdowns for status, category, and severity using Select components
+- Severity badges with color coding from BUG_REPORT_SEVERITY_COLORS
+- Status badges with dropdown for inline status updates via updateStatus mutation
+- Click row to expand/collapse detail view showing: description, page URL, user agent, screenshot indicator, raw metadata (JSON)
+- Pagination with prev/next buttons and page counter
+- Loading skeleton rows, empty state, and error state
+- Terminal design: monospace table, data-dense layout, chartreuse accents
+- Files changed: src/app/(admin)/admin/bug-reports/page.tsx (new)
+- **Learnings for future iterations:**
+  - Use `Fragment (<>)` wrapper for expandable table rows — two adjacent `<tr>` elements (main row + detail row) need a common parent inside `.map()`
+  - Status transition dropdown: duplicate STATUS_TRANSITIONS map on client matching server validation — keeps UX in sync with backend constraints
+  - `e.stopPropagation()` on DropdownMenuTrigger onClick prevents row expand/collapse when clicking the status dropdown
+  - Biome auto-formats single-line ternaries and nullish coalescing — run `bunx biome check --write` after writing JSX
+---
+
+## 2026-02-28 - US-020
+- Created /admin/users page with full list view
+- Table with columns: name, email, role, accounts count, trades count, joined date, last active
+- Search bar with Enter key support and Clear button for name/email filtering
+- Role badges with color coding: admin=chartreuse (primary), user=gray
+- Click row navigates to /admin/users/[userId] detail page via `router.push()`
+- Pagination with prev/next buttons and page counter
+- Loading skeleton rows, empty state, and error state
+- Added ROLE_COLORS constant to src/lib/constants/admin.ts
+- Terminal design: monospace table, data-dense layout
+- Files changed: src/app/(admin)/admin/users/page.tsx (new), src/lib/constants/admin.ts
+- **Learnings for future iterations:**
+  - Biome formats short lucide-react imports onto a single line — always run `bunx biome check --write` after creating new files
+  - Search pattern: use separate `searchInput` (for controlled input) and `search` (for query) state to avoid re-fetching on every keystroke
+  - `router.push()` for row click navigation to detail pages — more appropriate than `Link` wrapping table rows
+  - ROLE_COLORS constant follows same pattern as BUG_REPORT_STATUS_COLORS: `"text-{color} bg-{color}/10"`
+---
+
+## 2026-02-28 - US-021
+- Created /admin/users/[userId] user detail page
+- Header: avatar (Next.js Image), name, email, role badge, joined date
+- Role toggle button with AlertDialog confirmation dialog (promote to admin / demote to user)
+- Summary stat cards: accounts, recent trades, AI conversations, bug reports
+- Accounts table: name, type (with color badges), broker, active status, created date
+- Recent trades table: symbol, direction (with trending icons), status, entry/exit dates, net P&L (color-coded)
+- AI Conversations and Bug Reports summary sections with counts
+- Loading skeleton, error state, back-to-users link
+- Terminal design: monospace values, data-dense layout, chartreuse accents
+- Files changed: src/app/(admin)/admin/users/[userId]/page.tsx (new)
+- **Learnings for future iterations:**
+  - Use Next.js `Image` component instead of `<img>` — Biome warns about LCP/bandwidth for raw img elements
+  - `useParams()` returns `Record<string, string | string[]>` — cast `params.userId as string` for dynamic route params
+  - AlertDialog from Radix: control with `open`/`onOpenChange` state, use `AlertDialogAction` onClick for the confirm action
+  - ACCOUNT_TYPE_LABELS/COLORS not centralized in constants — duplicated locally (also in app-sidebar and settings). Consider centralizing if it comes up again.
+  - `admin.users.getById` returns `recentTrades` with string P&L values — parse with `Number.parseFloat()` for color logic
+---
+
+## 2026-02-28 - US-022
+- Created /admin/ai page with full AI usage monitoring
+- Top stats: total conversations, total reports, total tokens, avg tokens per conversation (4 stat cards)
+- Token usage bar chart using AG Charts (ag-charts-react) showing daily token consumption for last 30 days
+- Conversations table: user, title, mode (chat/report), status, messages count, tokens, date
+- Filter dropdowns for mode (chat/report) and status (active/generating/complete/failed)
+- Click row to expand and view full conversation messages inline with role coloring
+- Ice blue (#00d4ff) accent for AI section per design system
+- Files changed: src/app/(admin)/admin/ai/page.tsx (new)
+- **Learnings for future iterations:**
+  - AG Charts pattern: use `AgCartesianChartOptions<DataType>` with `useMemo`, `AgCharts` component with `style={{ height: N }}`
+  - Chart theme: transparent background, `#64748b` label color, `JetBrains Mono` font, `#1e293b` line stroke, `#ffffff08` gridline
+  - AI conversation mode can be null — use nullish coalescing for MODE_LABELS/MODE_COLORS lookup: `convo.mode ?? ""`
+  - `getConversation` query with `enabled: !!expandedId` prevents fetching until a row is expanded
+  - Biome flags unused computed variables even if derived from used data — remove or prefix with `_`
+---
+
+## 2026-02-28 - US-023
+- Created /admin/analytics page with full platform analytics dashboard
+- User Growth chart: bar chart for daily new users + line overlay for cumulative total (dual Y-axes)
+- Trading Activity chart: bar chart for daily trade count + line overlay for total P&L (dual Y-axes)
+- Top 10 Traders leaderboard table: ranked by total P&L with color-coded profit/loss values
+- Account Type Breakdown donut chart: demo, live, challenge, funded with distinct colors
+- All charts use AG Charts (ag-charts-community) with Terminal design theming
+- Loading skeletons, error state, empty state for each section
+- Terminal design: chartreuse accent for positive metrics, red for losses, monospace throughout
+- Files changed: src/app/(admin)/admin/analytics/page.tsx (new)
+- **Learnings for future iterations:**
+  - AG Charts dual Y-axis pattern: use `keys: ["fieldName"]` on each number axis to bind series to specific axes
+  - `AgPolarChartOptions` for donut/pie charts — import from `ag-charts-community`
+  - `name` field from `users` table is `string | null` — always account for null in TopTrader interfaces
+  - Biome auto-removes unused imports with `--write --unsafe` flag — run after initial file creation to clean up
+  - Account type labels/colors duplicated across admin pages — consider centralizing in constants if pattern continues
+---
+
+## 2026-02-28 - US-024
+- Created /admin/system page with full system health dashboard
+- Database connection status indicator: green CheckCircle for connected, red XCircle for error
+- App version display from package.json with "v" prefix
+- 6 stat cards for database row counts: users, trades, accounts, AI conversations, AI messages, bug reports
+- Last activity section: last signup, last trade, last AI conversation with formatted timestamps
+- Loading skeletons, error state
+- Terminal design: green (#00ff88) for healthy, red (#ff3b3b) for issues, chartreuse primary accent, monospace throughout
+- Files changed: src/app/(admin)/admin/system/page.tsx (new)
+- **Learnings for future iterations:**
+  - System health page is simpler than analytics pages — single endpoint, no charts, just stat cards and status indicators
+  - `CheckCircle`/`XCircle` from lucide-react work well for binary status indicators
+  - `toLocaleString()` with date options gives clean timestamp formatting for "last activity" displays
+  - Divide-y on a container with child rows gives clean separator lines without manual borders
 ---

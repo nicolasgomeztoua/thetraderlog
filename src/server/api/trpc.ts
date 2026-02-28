@@ -12,6 +12,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { ERR_ADMIN_FORBIDDEN } from "@/lib/constants/errors";
 import { db } from "@/server/db";
 import type { Database } from "@/server/db/create-db";
 import type { User } from "@/server/db/schema";
@@ -221,3 +222,19 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
 export const protectedProcedure = t.procedure
 	.use(timingMiddleware)
 	.use(authMiddleware);
+
+/**
+ * Admin procedure
+ *
+ * This procedure requires the user to be authenticated AND have the admin role.
+ * Use this for all admin panel endpoints.
+ */
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+	if (ctx.user.role !== "admin") {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: ERR_ADMIN_FORBIDDEN,
+		});
+	}
+	return next({ ctx });
+});

@@ -96,6 +96,7 @@ export function AppSidebar() {
 	const { accounts, selectedAccount, setSelectedAccountId, isLoading } =
 		useAccount();
 	const [mounted, setMounted] = useState(false);
+	const { data: me } = api.settings.me.useQuery();
 
 	// Prevent hydration mismatch with Clerk UserButton
 	useEffect(() => {
@@ -416,6 +417,20 @@ export function AppSidebar() {
 							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
+					{me?.role === "admin" && (
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								asChild
+								className="font-mono text-xs uppercase tracking-wider"
+								isActive={pathname.startsWith("/admin")}
+							>
+								<Link href="/admin">
+									<Shield className="h-4 w-4" />
+									<span>Admin</span>
+								</Link>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					)}
 					<SidebarMenuItem>
 						<div className="flex items-center gap-3 px-2 py-2">
 							{mounted ? (

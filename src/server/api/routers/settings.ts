@@ -69,6 +69,17 @@ export const settingsRouter = createTRPCRouter({
 			}
 		}),
 
+	// Get current user info (id, role, name, email, imageUrl)
+	me: protectedProcedure.query(({ ctx }) => {
+		return {
+			id: ctx.user.id,
+			role: ctx.user.role,
+			name: ctx.user.name,
+			email: ctx.user.email,
+			imageUrl: ctx.user.imageUrl,
+		};
+	}),
+
 	// Get just the breakeven threshold (for stats calculations)
 	getBreakevenThreshold: protectedProcedure.query(async ({ ctx }) => {
 		const settings = await ctx.db.query.userSettings.findFirst({

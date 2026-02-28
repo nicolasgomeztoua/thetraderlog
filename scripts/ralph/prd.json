@@ -1,281 +1,429 @@
 {
   "project": "EdgeJournal",
-  "branchName": "ralph/futures-only-cleanup",
-  "description": "Strip all forex, crypto, Twelve Data, and non-futures code to launch as a futures-only trading journal",
+  "branchName": "ralph/admin-panel",
+  "description": "Full admin panel with bug report triage, user management, AI usage monitoring, platform analytics, and system health",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Audit All Forex and Non-Futures References",
-      "description": "As a developer, I want to audit every forex reference before removing anything so that we have a complete removal checklist and don't miss anything.",
+      "title": "Admin Constants & Error Messages",
+      "description": "As a developer, I want shared constants for the admin panel so nothing is hardcoded in UI components or routers.",
       "acceptanceCriteria": [
-        "Search src/lib/ for all forex/pip/twelve-data references with file:line",
-        "Search src/server/ for all instrumentType usages with file:line",
-        "Search src/components/ and src/app/ for forex UI references with file:line",
-        "Search for EUR/USD, GBP/USD, MT4, MT5, MetaTrader references",
-        "Document complete findings in scripts/ralph/progress.txt",
-        "Typecheck passes (bun run check)"
+        "Create src/lib/constants/admin.ts with: admin nav items array, bug report status/severity/category label maps, role labels, table page sizes",
+        "Add admin error messages to src/lib/constants/errors.ts: ERR_ADMIN_FORBIDDEN, ERR_ADMIN_USER_NOT_FOUND, ERR_ADMIN_INVALID_STATUS_TRANSITION",
+        "Export all constants with clear naming (ADMIN_NAV_ITEMS, BUG_REPORT_STATUS_LABELS, etc.)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Complete audit documented in progress.txt with file:line references for all forex, pip, Twelve Data, MT4/MT5, instrumentType, and EUR/USD/GBP/USD references across src/, tests/, and env.js"
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Remove Forex References from Marketing Pages",
-      "description": "As a visitor, I want the landing page to clearly communicate this is a futures trading journal so that expectations are set correctly.",
+      "title": "Admin Procedure Middleware",
+      "description": "As a developer, I want an adminProcedure tRPC middleware so that all admin endpoints enforce role-based access.",
       "acceptanceCriteria": [
-        "src/app/(marketing)/_components/hero.tsx — Remove 'and forex' from tagline, remove forex example trades (EUR/USD, pips), replace with futures examples",
-        "src/app/(marketing)/_components/features.tsx — Change 'Futures & Forex' to 'Futures', remove forex pairs from descriptions",
-        "src/app/(marketing)/layout.tsx — Update meta description to 'futures traders' only",
-        "Remove any other marketing page forex references found during audit",
+        "Create adminProcedure in src/server/api/trpc.ts that extends protectedProcedure",
+        "Middleware checks ctx.user.role === 'admin', throws FORBIDDEN TRPCError with ERR_ADMIN_FORBIDDEN message if not",
+        "Export adminProcedure alongside existing procedures",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
+        "Build passes (bun run build)"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Replaced EUR/USD, GBP/USD with futures symbols in hero ticker and demo trades. Updated features card to 'Built for Futures'. Updated footer and meta descriptions."
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Remove Forex References from AI Prompts and Tool Definitions",
-      "description": "As a developer, I want AI prompts and tools to only reference futures so that AI responses are accurate for a futures-only product.",
+      "title": "Admin Platform Stats Endpoint",
+      "description": "As a developer, I want a tRPC endpoint returning platform summary stats for the admin overview dashboard.",
       "acceptanceCriteria": [
-        "src/lib/ai/tools/definitions.ts — Remove forex pairs from tool descriptions, remove Twelve Data references",
-        "src/lib/ai/schema-context.ts — Remove instrument_type from schema docs, remove twelve_data source reference",
-        "src/lib/ai/prompts/trading-analyst.ts — Change persona to 'futures trading journal', remove forex pair references",
-        "src/lib/ai/report-pipeline/planner.ts — Remove forex from market data tool description",
+        "Create admin router directory: src/server/api/routers/admin/index.ts",
+        "Create admin.analytics.platformStats query using adminProcedure",
+        "Returns: totalUsers, activeUsersLast7d, totalTrades, openBugReports, aiConversationsLast7d, totalTokensUsed",
+        "Active users = users with trades or AI conversations in last 7 days",
+        "Register admin router in src/server/api/root.ts",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Removed forex pairs and Twelve Data from tool descriptions, schema context, trading analyst persona, report planner, and context builder. Updated to futures-only references."
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Remove MT4 and MT5 CSV Parsers",
-      "description": "As a developer, I want to remove MetaTrader parsers since they are forex-only platforms not relevant to futures traders.",
+      "title": "Integration Tests for Admin Middleware & Platform Stats",
+      "description": "As a developer, I want integration tests for the admin middleware and platform stats endpoint.",
       "acceptanceCriteria": [
-        "Delete src/lib/trades/csv-parsers/mt4-parser.ts",
-        "Delete src/lib/trades/csv-parsers/mt5-parser.ts",
-        "Remove MT4/MT5 from parser registry in src/lib/trades/csv-parsers/index.ts",
-        "Remove 'mt4' and 'mt5' from tradingPlatformEnum in src/server/db/schema.ts if safe (no existing data)",
-        "Remove any MT4/MT5 references in import page UI",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Test file created: tests/integration/admin.test.ts",
+        "Test: non-admin user gets FORBIDDEN on admin endpoints",
+        "Test: admin user can access platform stats",
+        "Test: platform stats returns correct counts",
+        "Uses setupTrader() fixtures, manually set role to admin for admin user",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Deleted mt4-parser.ts (both MT4 and MT5 parsers were in one file). Removed mt4/mt5 from parser registry, TradingPlatform type, shared Zod schemas, DB pgEnum, import page PLATFORM_INFO, settings page labels/select/type. Updated test fixtures and accounts test to use ninjatrader instead of mt5."
+      "notes": ""
     },
     {
       "id": "US-005",
-      "title": "Remove Twelve Data Service Integration",
-      "description": "As a developer, I want to remove the Twelve Data API integration so that Databento is the sole market data provider.",
+      "title": "Admin Bug Reports Backend — List & Update Endpoints",
+      "description": "As a developer, I want tRPC endpoints to list and update bug reports for admin triage.",
       "acceptanceCriteria": [
-        "src/lib/market-data/service.ts — Remove TwelveDataBar and TwelveDataResponse interfaces",
-        "Remove fetchFromTwelveData() function entirely",
-        "Simplify fetchFromProvider() to only call Databento (remove forex/crypto routing logic)",
-        "Remove TWELVE_DATA_API_KEY from src/env.js or env schema if present",
-        "Remove TWELVE_DATA_SYMBOL_MAP from src/lib/market-data/symbols.ts",
-        "Update comments referencing Twelve Data in the service file",
+        "Create admin.bugReports.list query — returns all bug reports with user info, supports filtering by status/category/severity, pagination (cursor-based or offset), sorted by newest first",
+        "Create admin.bugReports.updateStatus mutation — updates bug report status (open → in_progress → resolved → closed)",
+        "Create admin.bugReports.getById query — returns single bug report with full details",
+        "All use adminProcedure",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Removed TwelveDataBar/TwelveDataResponse interfaces, fetchFromTwelveData() function, and TWELVE_DATA_SYMBOL_MAP. Simplified fetchFromProvider() to Databento-only. Removed TWELVE_DATA_API_KEY from env.js. Updated service.ts comments. Removed forex pairs from DATABENTO_SYMBOL_MAP."
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Remove Forex Specs, Symbols, and Helper Functions from symbols.ts",
-      "description": "As a developer, I want to remove all forex-specific data structures and functions from the symbols module so that only futures remain.",
+      "title": "Integration Tests for Admin Bug Reports Endpoints",
+      "description": "As a developer, I want integration tests for admin bug report management endpoints.",
       "acceptanceCriteria": [
-        "Remove ForexSpec interface from src/lib/market-data/symbols.ts",
-        "Remove FOREX_SPECS constant (all 27 forex pair specifications)",
-        "Remove FOREX_SYMBOLS array (all 27 forex symbol definitions)",
-        "Remove getForexSpec() function",
-        "Remove getForexPipSize() function",
-        "Remove calculateForexPnL() function",
-        "Simplify getSymbolsByType() — remove or just return FUTURES_SYMBOLS",
-        "Simplify getPointValue() and getTickSize() — remove forex branches",
-        "Remove forex-related exports from src/lib/market-data/index.ts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Test file created: tests/integration/admin-bug-reports.test.ts",
+        "Test: list returns bug reports with user info",
+        "Test: filter by status works",
+        "Test: updateStatus transitions correctly",
+        "Test: getById returns full details",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Removed ForexSpec interface, FOREX_SPECS (27 pairs), FOREX_SYMBOLS (27 symbols), getForexSpec(), getForexPipSize(), calculateForexPnL(), calculatePnL(), getSymbolsByType(). Simplified getPointValue() and getTickSize() to futures-only (removed instrumentType param). Removed forex pairs from TRADINGVIEW_SYMBOL_MAP. Updated callers: calculations.ts (removed calculatePips, simplified ROI), running-pnl.ts (removed forex branch), stats.ts, evaluation.ts, stats-panel.tsx (removed pips display), journal detail page, trade/new page."
+      "notes": ""
     },
     {
       "id": "US-007",
-      "title": "Remove Forex P&L Calculations and Pip Functions",
-      "description": "As a developer, I want to remove forex-specific calculation functions so that only futures tick-based math remains.",
+      "title": "Admin Users Backend — List & Management Endpoints",
+      "description": "As a developer, I want tRPC endpoints to list users and update their roles.",
       "acceptanceCriteria": [
-        "src/lib/trades/calculations.ts — Remove calculatePips(), getPipValue(), getTickOrPipSize() or simplify to tick-only",
-        "Remove getForexPipSize import from calculations.ts",
-        "Simplify any functions that branch on instrumentType to only handle futures",
-        "src/lib/trades/running-pnl.ts — Remove forex branches, remove calculateForexPnL references, remove instrumentType parameter if only for forex",
-        "src/lib/analytics/stats.ts — Remove instrumentType parameter if present",
-        "src/lib/strategy/evaluation.ts — Remove instrumentType parameter if present",
+        "Create admin.users.list query — returns all users with account count, trade count, last active date, role; supports search by name/email, pagination",
+        "Create admin.users.getById query — returns single user with full details: accounts, recent trades (last 10), AI conversation count, bug report count",
+        "Create admin.users.updateRole mutation — updates user role (user ↔ admin)",
+        "All use adminProcedure",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Removed _instrumentType parameter from calculateActualRMultiple(), calculateROI(), calculateMAEMFE() in calculations.ts. Removed instrumentType from calculateAllStats() input type. Removed instrumentType from RunningPnlOptions, calculateRunningPnlAtTime() in running-pnl.ts. Removed instrumentType from TradeForStats, calculateRMultipleFromTrade() in stats.ts. Removed instrumentType from TradeForEvaluation, TradeWithAccount in evaluation.ts. Updated all callers in trades.ts, analytics.ts, strategies.ts, marketData.ts, maemfe.ts, journal pages, and trade-detail components."
+      "notes": ""
     },
     {
       "id": "US-008",
-      "title": "Remove Instrument Type UI from Trade Entry and Import Pages",
-      "description": "As a trader, I should not see instrument type toggles since the product is futures-only.",
+      "title": "Integration Tests for Admin Users Endpoints",
+      "description": "As a developer, I want integration tests for admin user management endpoints.",
       "acceptanceCriteria": [
-        "src/app/(protected)/trade/new/page.tsx — Remove instrumentType state, remove futures/forex tabs, remove FOREX_SYMBOLS import, always use FUTURES_SYMBOLS",
-        "src/app/(protected)/import/page.tsx — Remove instrument type toggle, remove setInstrumentType, hardcode to futures behavior",
-        "Remove any instrument type selection UI patterns in these pages",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser — new trade and import pages work without instrument type toggle"
+        "Test file created: tests/integration/admin-users.test.ts",
+        "Test: list returns users with counts",
+        "Test: search by email works",
+        "Test: getById returns full user details",
+        "Test: updateRole toggles role correctly",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 8,
       "passes": true,
-      "notes": "Removed instrumentType state and Futures/Forex tabs from trade/new/page.tsx. Removed instrumentType state and Tabs UI from import/page.tsx. Hardcoded instrumentType: 'futures' in mutation calls. Simplified quantity label to 'Contracts'. Removed unused Tabs imports from import page."
+      "notes": ""
     },
     {
       "id": "US-009",
-      "title": "Remove defaultInstrumentType from Settings",
-      "description": "As a developer, I want to remove the instrument type preference from settings since there is only one option now.",
+      "title": "Admin AI Usage Backend — Chat & Report Endpoints",
+      "description": "As a developer, I want tRPC endpoints to view AI usage across all users.",
       "acceptanceCriteria": [
-        "src/app/(protected)/settings/_components/settings-content.tsx — Remove instrument type dropdown/selector",
-        "src/stores/settings-store.ts — Remove defaultInstrumentType from store state",
-        "src/server/api/routers/settings.ts — Remove defaultInstrumentType from settings input/output schemas",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser — settings page renders without instrument type option"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Removed defaultInstrumentType from APISettings and SettingsState interfaces in settings-store.ts. Removed from hydrate() and default values. Removed defaultInstrumentType from settings.ts tRPC update input schema. Removed defaultInstrument from settings-content.tsx state, hydration, save handler, Zustand sync, and Default Instrument Select UI. Removed from use-settings-hydration.tsx hydrate call."
-    },
-    {
-      "id": "US-010",
-      "title": "Remove instrumentType from Trade Detail Components",
-      "description": "As a developer, I want to simplify trade detail components by removing the instrumentType parameter since all trades are futures.",
-      "acceptanceCriteria": [
-        "src/components/trade-detail/stats-panel.tsx — Remove pip display logic, remove instrumentType prop/parameter",
-        "src/components/trade-detail/running-pnl-tab.tsx — Remove instrumentType parameter",
-        "src/components/trade-detail/trade-replay.tsx — Remove instrumentType parameter",
-        "src/components/trade-detail/tradingview-chart.tsx — Remove instrumentType optional parameter",
-        "src/components/trade-detail/replay/time-sales-panel.tsx — Remove instrumentType parameter",
-        "Update all parent components passing instrumentType to these children",
+        "Create admin.ai.listConversations query — returns all AI conversations with user info, token count, message count, mode (chat/report), status; supports filtering by mode/status, pagination, sorted newest first",
+        "Create admin.ai.getConversation query — returns single conversation with all messages",
+        "Create admin.ai.usageStats query — returns total tokens used, tokens by model, conversations by mode, daily usage for last 30 days",
+        "All use adminProcedure",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Integration Tests for Admin AI Endpoints",
+      "description": "As a developer, I want integration tests for admin AI usage endpoints.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/admin-ai.test.ts",
+        "Test: listConversations returns conversations with user info",
+        "Test: filter by mode (chat vs report) works",
+        "Test: getConversation returns messages",
+        "Test: usageStats returns aggregated data",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
       "priority": 10,
       "passes": true,
-      "notes": "Removed instrumentType prop from ExecutionTimeline (interface, destructure, sizeLabel hardcoded to 'cts'). Removed instrumentType prop from TimeSalesPanel (interface, destructure, sizeLabel hardcoded to 'cts'). Removed instrumentType from ChartProps in tradingview-chart.tsx. Removed instrumentType={trade.instrumentType} from StatsPanel's ExecutionTimeline call. running-pnl-tab.tsx and trade-replay.tsx were already clean from US-007."
+      "notes": ""
     },
     {
       "id": "US-011",
-      "title": "Remove instrumentType from tRPC Routers",
-      "description": "As a developer, I want to remove instrumentType from all tRPC router inputs and queries so the API is futures-only.",
+      "title": "Admin Platform Analytics Backend",
+      "description": "As a developer, I want tRPC endpoints for platform-wide analytics.",
       "acceptanceCriteria": [
-        "src/server/api/routers/trades.ts — Remove instrumentType from create/update inputs, remove from queries/filters",
-        "src/server/api/routers/analytics.ts — Remove instrumentType casting and filtering",
-        "src/server/api/routers/marketData.ts — Simplify to Databento-only, remove instrument type routing comments",
-        "Remove instrumentType from any other routers that reference it",
+        "Create admin.analytics.growth query — returns daily new users and cumulative total for last 30 days",
+        "Create admin.analytics.tradingActivity query — returns daily trade count, total P&L, avg trade size for last 30 days",
+        "Create admin.analytics.topTraders query — returns top 10 users by total P&L with name, email, trade count, total P&L",
+        "Create admin.analytics.accountBreakdown query — returns count of accounts by type (demo, live, prop_challenge, prop_funded)",
+        "All use adminProcedure",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 11,
       "passes": true,
-      "notes": "analytics.ts and marketData.ts were already clean from US-007. Updated marketData.ts comment to remove Twelve Data/forex reference. trades.ts still has instrumentType: 'futures' as const in 2 insert statements (required while DB column exists — US-013 will remove). Removed instrumentType from TradeForStatsPanel, TradeForContentPanel, TradeForTable Pick types in src/types/index.ts. Removed InstrumentType type alias. Fixed type error by adding 'as const' to batch import instrumentType literal."
+      "notes": ""
     },
     {
       "id": "US-012",
-      "title": "Remove instrumentType from Shared Types and Schemas",
-      "description": "As a developer, I want to remove the instrument type from all shared Zod schemas and TypeScript types.",
+      "title": "Integration Tests for Admin Analytics Endpoints",
+      "description": "As a developer, I want integration tests for admin platform analytics endpoints.",
       "acceptanceCriteria": [
-        "src/lib/shared/schemas.ts — Remove instrumentTypeEnum Zod schema",
-        "src/lib/trades/csv-parsers/types.ts — Remove instrumentType from ParsedTrade type",
-        "Search for and remove any remaining 'futures' | 'forex' union types across the codebase",
-        "Remove any remaining imports of instrumentTypeEnum from shared schemas",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Test file created: tests/integration/admin-analytics.test.ts",
+        "Test: growth returns daily user counts",
+        "Test: tradingActivity returns daily trade data",
+        "Test: topTraders returns ranked users",
+        "Test: accountBreakdown returns correct counts per type",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 12,
       "passes": true,
-      "notes": "Removed instrumentTypeEnum Zod schema and InstrumentType type from shared/schemas.ts. Removed instrumentType from tradeBaseFields. Removed instrumentType from ParsedTrade interface in csv-parsers/types.ts. Removed instrumentType: 'futures' from utils.ts and projectx-parser.ts parser outputs. Removed instrumentType assertion from csv-parsers.test.ts. No remaining imports of instrumentTypeEnum found. No remaining 'futures' | 'forex' union types in src/."
+      "notes": ""
     },
     {
       "id": "US-013",
-      "title": "Drop instrumentType Column and Enum from Database Schema",
-      "description": "As a developer, I want to remove the instrument_type column and enum from the database so the schema reflects the futures-only product.",
+      "title": "Admin System Health Backend",
+      "description": "As a developer, I want a tRPC endpoint for system health metrics.",
       "acceptanceCriteria": [
-        "src/server/db/schema.ts — Remove instrumentTypeEnum pgEnum definition",
-        "Remove instrumentType column from trades table",
-        "Remove defaultInstrumentType column from userSettings table",
-        "Remove source column from candleCache if it only distinguished Twelve Data vs Databento (or simplify)",
-        "Run bun run db:push to apply schema changes",
+        "Create admin.system.health query using adminProcedure",
+        "Returns: database row counts (users, trades, accounts, aiConversations, aiMessages, bugReports), database connection status (simple query), app version (from package.json), last user signup date, last trade date, last AI conversation date",
         "Typecheck passes (bun run check)",
         "Build passes (bun run build)"
       ],
       "priority": 13,
       "passes": true,
-      "notes": "Removed instrumentTypeEnum pgEnum definition. Removed instrumentType column from trades table. Removed defaultInstrumentType column from userSettings table. Updated candleCache source comment to 'databento'. Updated symbol comments to remove EUR/USD. Removed instrumentType: 'futures' from trades.ts create and batchImport inserts. Removed instrumentType from test fixtures (trades.ts, scenarios.ts), batch-import test, rule-relevance test, rule-compliance test, strategy-evaluation test. Removed forex test cases and 5th arg from running-pnl.test.ts. Updated README.md."
+      "notes": ""
     },
     {
       "id": "US-014",
-      "title": "Clean Up Environment Variables and Documentation",
-      "description": "As a developer, I want to remove Twelve Data env var references and update project documentation to reflect futures-only product.",
+      "title": "Integration Tests for Admin System Health Endpoint",
+      "description": "As a developer, I want integration tests for the admin system health endpoint.",
       "acceptanceCriteria": [
-        "Remove TWELVE_DATA_API_KEY from .env.example if it exists",
-        "Remove Twelve Data references from CLAUDE.md environment variables section",
-        "Update CLAUDE.md description to 'futures traders' not 'futures and forex traders'",
-        "Remove 'forex' from any remaining documentation files in plans/ or docs/",
-        "Update ROADMAP.md if it references forex features",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Test file created: tests/integration/admin-system.test.ts",
+        "Test: health endpoint returns all expected fields",
+        "Test: database counts are accurate",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
       ],
       "priority": 14,
       "passes": true,
-      "notes": "Updated CLAUDE.md (description + removed TWELVE_DATA_API_KEY env var). Updated README.md (description + removed MT4/MT5 from CSV import). Updated ROADMAP.md (Phase 7 historical data, replay, brokers — removed forex/MT4/MT5/Twelve Data refs). Updated .claude/skills/ (architecture SKILL.md, MARKET_DATA_REFERENCE.md, testing TESTING_REFERENCE.md, consistency-audit SKILL.md, backend TRPC_REFERENCE.md). Updated plans/ (prd-running-pnl.md, prd-command-center-dashboard.md, prd-broker-live-integration.md with futures-only pivot note). No .env.example exists."
+      "notes": ""
     },
     {
       "id": "US-015",
-      "title": "Integration Tests — Verify Forex Removal Complete",
-      "description": "As a developer, I want to verify that the forex removal is complete, existing futures flows still work, and no forex references remain.",
+      "title": "Admin Route Group & Layout",
+      "description": "As an admin, I want a dedicated admin layout with sidebar navigation so that I can access all admin panels.",
       "acceptanceCriteria": [
-        "Verify existing trade tests pass with futures-only schema",
-        "Verify existing analytics tests pass without instrumentType filtering",
-        "Verify CSV import tests pass without MT4/MT5 parsers",
-        "Run grep for 'forex|FOREX|Forex' in src/ — zero results (excluding comments)",
-        "Run grep for 'twelve.data|TWELVE_DATA' in src/ — zero results",
-        "Run grep for 'pipSize|pipValue|calculatePips|getForexPipSize' in src/ — zero results",
-        "All tests pass (bun run test)",
+        "Create (admin) route group with layout.tsx",
+        "Admin sidebar with navigation items imported from ADMIN_NAV_ITEMS constant",
+        "Terminal design system: dark theme, chartreuse accents, monospace labels",
+        "Back to App link to return to normal dashboard",
+        "Layout rejects non-admin users (redirect to /dashboard or show unauthorized)",
+        "Loading state while checking role",
         "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
+        "Build passes (bun run build)",
+        "Verify in browser"
       ],
       "priority": 15,
       "passes": true,
-      "notes": "All greps confirmed zero forex/Twelve Data/pip/instrumentType references in src/. Fixed 8 test files with stale EURUSD references from US-013 (EURUSD→MES, updated P&L values, position sizes). Fixed pre-existing prop-compliance test mismatch. All 1027 tests pass across 32 test files. Build passes."
+      "notes": ""
     },
     {
       "id": "US-016",
-      "title": "Final Build Verification and Smoke Test",
-      "description": "As a developer, I want a clean build and runtime verification to confirm the futures-only product works end-to-end.",
+      "title": "Admin Middleware Guard on Routes",
+      "description": "As a developer, I want Next.js middleware or client-side guard to protect admin routes so non-admins can't access admin pages.",
       "acceptanceCriteria": [
-        "bun run check passes with zero errors",
-        "bun run build passes with zero errors",
-        "bun run test passes — all integration tests green",
-        "Verify no dead imports or unused variables from removal",
-        "Verify no remaining instrumentType references in src/",
-        "Dev server starts without errors (bun run dev)"
+        "Update existing middleware or add client-side guard in admin layout",
+        "Non-admin users accessing /admin/* are redirected to /dashboard",
+        "Admin layout fetches user role and gates rendering",
+        "Loading state while checking role",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: non-admin user redirected, admin user sees panel"
       ],
       "priority": 16,
       "passes": true,
-      "notes": "All checks pass: Biome (only pre-existing archived PRD JSON error), build (zero errors), 1027 tests across 32 files, zero instrumentType in src/, dev server starts cleanly. Futures-only cleanup is complete."
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Admin Navigation Link in Main Sidebar",
+      "description": "As an admin, I want a link to the admin panel in the main app sidebar so that I can quickly access it.",
+      "acceptanceCriteria": [
+        "Conditionally show Admin nav item in app-sidebar.tsx when user role is admin",
+        "Use a distinct icon (e.g., Shield or Settings2)",
+        "Links to /admin",
+        "Hidden for non-admin users",
+        "Create tRPC query or use existing user data to check role on client",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Admin Overview Dashboard Page",
+      "description": "As an admin, I want a dashboard overview page showing key platform metrics at a glance.",
+      "acceptanceCriteria": [
+        "Create /admin page with summary cards",
+        "Cards: Total Users, Active Users (last 7 days), Total Trades, Open Bug Reports, AI Conversations (last 7 days), Total AI Tokens Used",
+        "Each card links to its detailed panel",
+        "Terminal design: monospace numbers, chartreuse highlights for key metrics",
+        "Uses admin.analytics.platformStats endpoint",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Bug Reports Admin Page — List View",
+      "description": "As an admin, I want a bug reports page to triage and manage reported issues.",
+      "acceptanceCriteria": [
+        "Create /admin/bug-reports page",
+        "Table view: title, category, severity, status, reporter (name/email), date",
+        "Filters: status dropdown, category dropdown, severity dropdown",
+        "Severity badges with colors (critical=red, high=orange, medium=yellow, low=gray)",
+        "Status badges with colors (open=red, in_progress=yellow, resolved=green, closed=gray)",
+        "Click row to expand/view full details (description, screenshot, page URL, user agent, metadata)",
+        "Status update dropdown per row",
+        "Terminal design: monospace table, data-dense layout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Users Admin Page — List View",
+      "description": "As an admin, I want a users page to view and manage all platform users.",
+      "acceptanceCriteria": [
+        "Create /admin/users page",
+        "Table: name, email, role, accounts count, trades count, joined date, last active",
+        "Search bar for name/email filtering",
+        "Role badge (admin=chartreuse, user=gray)",
+        "Click row to navigate to user detail page",
+        "Pagination controls",
+        "Terminal design: monospace table, data-dense",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "User Detail Admin Page",
+      "description": "As an admin, I want a user detail page to see a specific user's full activity.",
+      "acceptanceCriteria": [
+        "Create /admin/users/[userId] page",
+        "Header: user name, email, avatar, role, joined date",
+        "Role toggle button (promote to admin / demote to user) with confirmation dialog",
+        "Sections: Accounts list, Recent Trades (last 10 with P&L), AI Conversations summary, Bug Reports by this user",
+        "Each section shows count and brief data",
+        "Terminal design: data-dense, monospace values",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "AI Usage Admin Page",
+      "description": "As an admin, I want an AI usage page to monitor conversations, reports, and token consumption.",
+      "acceptanceCriteria": [
+        "Create /admin/ai page",
+        "Top stats: total conversations, total reports, total tokens, avg tokens per conversation",
+        "Token usage chart (daily for last 30 days) — simple bar/line chart",
+        "Conversations table: user, title, mode (chat/report), status, messages count, tokens, date",
+        "Filter by mode (chat/report) and status",
+        "Click conversation to expand and view messages inline",
+        "Terminal design: ice blue (#00d4ff) accent for AI section",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Platform Analytics Admin Page",
+      "description": "As an admin, I want a platform analytics page with growth and trading activity charts.",
+      "acceptanceCriteria": [
+        "Create /admin/analytics page",
+        "User growth chart (daily new + cumulative line)",
+        "Trading activity chart (daily trades + P&L)",
+        "Top 10 traders leaderboard table",
+        "Account type breakdown (pie/donut or bar chart)",
+        "Use recharts or simple SVG charts consistent with existing analytics page",
+        "Terminal design: chartreuse for positive metrics, red for losses",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "System Health Admin Page",
+      "description": "As an admin, I want a system health page showing database stats and system status.",
+      "acceptanceCriteria": [
+        "Create /admin/system page",
+        "Status indicator: database connection (green/red dot)",
+        "Table counts: rows per table displayed as stat cards",
+        "Last activity timestamps: last signup, last trade, last AI conversation",
+        "App version from package.json",
+        "Terminal design: green for healthy, red for issues",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": ""
     }
   ]
 }
