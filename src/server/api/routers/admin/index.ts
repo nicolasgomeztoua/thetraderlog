@@ -22,6 +22,7 @@ import {
 } from "@/lib/constants/errors";
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
 import {
+	accounts,
 	aiConversations,
 	aiMessages,
 	bugReports,
@@ -432,6 +433,113 @@ export const adminRouter = createTRPCRouter({
 				openBugReports: openBugCount?.count ?? 0,
 				aiConversationsLast7d: aiConvoCount?.count ?? 0,
 				totalTokensUsed: Number(tokenSum?.total ?? 0),
+			};
+		}),
+
+		growth: adminProcedure.query(async ({ ctx }) => {
+			const thirtyDaysAgo = new Date();
+			thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+			const dailyNewUsers = await ctx.db
+				.select({
+					date: sql<string>`date_trunc('day', ${users.createdAt})::date::text`,
+					count: count(),
+				})
+				.from(users)
+				.where(gte(users.createdAt, thirtyDaysAgo))
+				.groupBy(sql`date_trunc('day', ${users.createdAt})`)
+				.orderBy(sql`date_trunc('day', ${users.createdAt})`);
+
+			// Build cumulative totals
+			// First get the total users before the 30-day window
+			const [baseCountRow] = await ctx.db
+				.select({ count: count() })
+				.from(users)
+				.where(sql`${users.createdAt} < ${thirtyDaysAgo}`);
+
+			let cumulative = baseCountRow?.count ?? 0;
+
+			return {
+				daily: dailyNewUsers.map((r) => {
+					cumulative += r.count;
+					return {
+						date: r.date,
+						newUsers: r.count,
+						cumulativeTotal: cumulative,
+					};
+				}),
+			};
+		}),
+
+		tradingActivity: adminProcedure.query(async ({ ctx }) => {
+			const thirtyDaysAgo = new Date();
+			thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+			const dailyActivity = await ctx.db
+				.select({
+					date: sql<string>`date_trunc('day', ${trades.entryTime})::date::text`,
+					tradeCount: count(),
+					totalPnl: sql<string>`coalesce(sum(${trades.netPnl}), 0)`,
+					avgTradeSize: sql<string>`coalesce(avg(abs(${trades.netPnl})), 0)`,
+				})
+				.from(trades)
+				.where(
+					and(gte(trades.entryTime, thirtyDaysAgo), isNull(trades.deletedAt)),
+				)
+				.groupBy(sql`date_trunc('day', ${trades.entryTime})`)
+				.orderBy(sql`date_trunc('day', ${trades.entryTime})`);
+
+			return {
+				daily: dailyActivity.map((r) => ({
+					date: r.date,
+					tradeCount: r.tradeCount,
+					totalPnl: Number(r.totalPnl),
+					avgTradeSize: Number(r.avgTradeSize),
+				})),
+			};
+		}),
+
+		topTraders: adminProcedure.query(async ({ ctx }) => {
+			const rows = await ctx.db
+				.select({
+					userId: trades.userId,
+					name: users.name,
+					email: users.email,
+					tradeCount: count(),
+					totalPnl: sql<string>`coalesce(sum(${trades.netPnl}), 0)`,
+				})
+				.from(trades)
+				.innerJoin(users, eq(trades.userId, users.id))
+				.where(isNull(trades.deletedAt))
+				.groupBy(trades.userId, users.name, users.email)
+				.orderBy(sql`sum(${trades.netPnl}) desc`)
+				.limit(10);
+
+			return {
+				traders: rows.map((r) => ({
+					userId: r.userId,
+					name: r.name,
+					email: r.email,
+					tradeCount: r.tradeCount,
+					totalPnl: Number(r.totalPnl),
+				})),
+			};
+		}),
+
+		accountBreakdown: adminProcedure.query(async ({ ctx }) => {
+			const breakdown = await ctx.db
+				.select({
+					accountType: accounts.accountType,
+					count: count(),
+				})
+				.from(accounts)
+				.groupBy(accounts.accountType);
+
+			return {
+				breakdown: breakdown.map((r) => ({
+					accountType: r.accountType,
+					count: r.count,
+				})),
 			};
 		}),
 	}),
