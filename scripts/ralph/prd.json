@@ -105,8 +105,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed ForexSpec interface, FOREX_SPECS (27 pairs), FOREX_SYMBOLS (27 symbols), getForexSpec(), getForexPipSize(), calculateForexPnL(), calculatePnL(), getSymbolsByType(). Simplified getPointValue() and getTickSize() to futures-only (removed instrumentType param). Removed forex pairs from TRADINGVIEW_SYMBOL_MAP. Updated callers: calculations.ts (removed calculatePips, simplified ROI), running-pnl.ts (removed forex branch), stats.ts, evaluation.ts, stats-panel.tsx (removed pips display), journal detail page, trade/new page."
     },
     {
       "id": "US-007",

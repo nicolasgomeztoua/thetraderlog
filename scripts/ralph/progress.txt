@@ -287,3 +287,24 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - DATABENTO_SYMBOL_MAP still had null entries for forex pairs — those were removed since forex is no longer supported
   - The FetchResult provider type was simplified from `"twelve_data" | "databento"` to just `"databento"`
 ---
+
+## 2026-02-28 - US-006: Remove Forex Specs, Symbols, and Helper Functions from symbols.ts
+- Removed ForexSpec interface, FOREX_SPECS (27 forex pair specs), FOREX_SYMBOLS array (27 symbols)
+- Removed getForexSpec(), getForexPipSize(), calculateForexPnL(), calculatePnL() (wrapper), getSymbolsByType()
+- Simplified getPointValue(symbol) and getTickSize(symbol) — removed instrumentType parameter, futures-only
+- Removed 27 forex pairs from TRADINGVIEW_SYMBOL_MAP
+- ALL_SYMBOLS now equals FUTURES_SYMBOLS (not a spread concat)
+- Updated callers for build to pass:
+  - calculations.ts: removed calculatePips() (forex-specific), removed pips from TradeStats, simplified calculateROI() to futures-only
+  - running-pnl.ts: removed calculateForexPnL import and forex branch
+  - stats.ts, evaluation.ts: updated getPointValue() calls (dropped instrumentType arg)
+  - stats-panel.tsx: removed forex pips display, hardcoded "Contracts" label
+  - journal/[id]/page.tsx: removed pips from TradeStats fallback objects
+  - trade/new/page.tsx: removed FOREX_SYMBOLS import, hardcoded FUTURES_SYMBOLS
+- Files changed: symbols.ts, calculations.ts, running-pnl.ts, stats.ts, evaluation.ts, stats-panel.tsx, journal/[id]/page.tsx, trade/new/page.tsx
+- **Learnings for future iterations:**
+  - Removing an export from symbols.ts cascades to callers — getPointValue/getTickSize signature changes required updating 4+ files
+  - TradeStats.pips was referenced in journal/[id]/page.tsx fallback objects (2 places) — easy to miss
+  - Biome auto-fix (`bunx biome check --write --unsafe`) renames unused params to `_` prefix — useful for staged removal
+  - instrumentType params still exist on many functions (prefixed with _) — US-007 should fully remove them
+---
