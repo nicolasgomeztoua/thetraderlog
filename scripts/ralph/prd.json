@@ -123,8 +123,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed _instrumentType parameter from calculateActualRMultiple(), calculateROI(), calculateMAEMFE() in calculations.ts. Removed instrumentType from calculateAllStats() input type. Removed instrumentType from RunningPnlOptions, calculateRunningPnlAtTime() in running-pnl.ts. Removed instrumentType from TradeForStats, calculateRMultipleFromTrade() in stats.ts. Removed instrumentType from TradeForEvaluation, TradeWithAccount in evaluation.ts. Updated all callers in trades.ts, analytics.ts, strategies.ts, marketData.ts, maemfe.ts, journal pages, and trade-detail components."
     },
     {
       "id": "US-008",

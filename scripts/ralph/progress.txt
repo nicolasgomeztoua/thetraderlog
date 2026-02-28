@@ -308,3 +308,29 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - Biome auto-fix (`bunx biome check --write --unsafe`) renames unused params to `_` prefix — useful for staged removal
   - instrumentType params still exist on many functions (prefixed with _) — US-007 should fully remove them
 ---
+
+## 2026-02-28 - US-007: Remove Forex P&L Calculations and Pip Functions
+- Removed `_instrumentType` parameter from `calculateActualRMultiple()`, `calculateROI()`, `calculateMAEMFE()` in calculations.ts
+- Removed `instrumentType` from `calculateAllStats()` input type in calculations.ts
+- Removed `instrumentType` from `RunningPnlOptions`, `calculateRunningPnlAtTime()` in running-pnl.ts
+- Removed `instrumentType` from `TradeForStats`, `calculateRMultipleFromTrade()`, type guard in stats.ts
+- Removed `instrumentType` from `TradeForEvaluation`, `TradeWithAccount` in evaluation.ts
+- Updated all callers:
+  - trades.ts: 3 sites (calculateActualRMultiple, buildEvaluationContext, evaluateAutoCondition)
+  - analytics.ts: 4 sites (all calculateActualRMultiple calls)
+  - strategies.ts: 3 sites (calculateMfeInR, buildEvaluationContext, evaluateAutoCondition)
+  - marketData.ts: 1 site (calculateMAEMFE)
+  - maemfe.ts: 1 site (calculateMAEMFE)
+  - journal/page.tsx: 2 sites (calculateActualRMultiple)
+  - journal/[id]/page.tsx: 1 site (calculateAllStats)
+  - content-panel.tsx: 2 sites (RunningPnlTab, TradeReplay props)
+  - running-pnl-tab.tsx: prop + generateRunningPnlSeries call
+  - trade-replay.tsx: prop + useReplayEngine call
+  - use-replay-engine.ts: interface + calculateRunningPnlAtTime call
+- Files changed: calculations.ts, running-pnl.ts, stats.ts, evaluation.ts, trades.ts, analytics.ts, strategies.ts, marketData.ts, maemfe.ts, journal/page.tsx, journal/[id]/page.tsx, content-panel.tsx, running-pnl-tab.tsx, trade-replay.tsx, use-replay-engine.ts
+- **Learnings for future iterations:**
+  - `TradeWithAccount` and `TradeForEvaluation` in evaluation.ts are used to construct objects in trades.ts and strategies.ts — removing a field from these interfaces requires updating all object literals that populate them
+  - `calculateActualRMultiple` is called in 4 places in analytics.ts — some cast `trade.instrumentType as "futures" | "forex"` which are now unnecessary
+  - The DB schema still has `instrumentType` column on trades — that's a separate story (US-013). This story only removed it from calculation function signatures
+  - instrumentType still exists as a DB column, tRPC input/output schemas, and UI state — those are handled by US-008 through US-013
+---
