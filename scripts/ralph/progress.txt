@@ -363,3 +363,18 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - settings-content.tsx uses a local `settings` state object with different field names than the DB (e.g., `defaultInstrument` maps to `defaultInstrumentType`)
   - The DB column still exists (US-013 will drop it) — removing from tRPC input/Zustand is safe since the column has a default value
 ---
+
+## 2026-02-28 - US-010: Remove instrumentType from Trade Detail Components
+- Removed `instrumentType` prop from `ExecutionTimeline` interface/destructure, hardcoded `sizeLabel = "cts"`
+- Removed `instrumentType` prop from `TimeSalesPanel` interface/destructure, hardcoded `sizeLabel = "cts"`
+- Removed `instrumentType?: "futures" | "forex"` from `ChartProps` in tradingview-chart.tsx
+- Removed `instrumentType={trade.instrumentType}` from StatsPanel's ExecutionTimeline call
+- running-pnl-tab.tsx and trade-replay.tsx had no instrumentType references (already cleaned in US-007)
+- use-replay-engine.ts had no instrumentType references (already cleaned in US-007)
+- content-panel.tsx doesn't pass instrumentType to child components (TradingViewChart, TradeReplay, RunningPnlTab)
+- Files changed: execution-timeline.tsx, time-sales-panel.tsx, tradingview-chart.tsx, stats-panel.tsx
+- **Learnings for future iterations:**
+  - Several trade-detail components were already cleaned of instrumentType in US-007 (when calculation signatures changed) — always check before editing
+  - The journal/[id]/page.tsx still passes instrumentType in trade objects to StatsPanel and ContentPanel, but that's from the DB-inferred type (TradeForStatsPanel) — will be removed in US-012/US-013
+  - TimeSalesPanel had a formatting issue after removing a prop — Biome auto-fix collapses short destructure to single line
+---

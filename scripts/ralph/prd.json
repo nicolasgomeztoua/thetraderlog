@@ -173,8 +173,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed instrumentType prop from ExecutionTimeline (interface, destructure, sizeLabel hardcoded to 'cts'). Removed instrumentType prop from TimeSalesPanel (interface, destructure, sizeLabel hardcoded to 'cts'). Removed instrumentType from ChartProps in tradingview-chart.tsx. Removed instrumentType={trade.instrumentType} from StatsPanel's ExecutionTimeline call. running-pnl-tab.tsx and trade-replay.tsx were already clean from US-007."
     },
     {
       "id": "US-011",
