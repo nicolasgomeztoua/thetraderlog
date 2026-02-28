@@ -1,3 +1,4 @@
+export * from "./admin";
 export {
 	AI_MODES,
 	DEFAULT_CHAT_MODEL,

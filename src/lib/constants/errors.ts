@@ -191,6 +191,17 @@ export const ERR_SHARE_RESOURCE_NOT_FOUND = "Shared resource not found";
 export const ERR_SHARE_RESOURCE_NOT_COMPLETE =
 	"Resource must be complete before sharing";
 
+// =============================================================================
+// ADMIN PANEL
+// =============================================================================
+
+export const ERR_ADMIN_FORBIDDEN = "Access denied. Admin privileges required.";
+export const ERR_ADMIN_USER_NOT_FOUND = "User not found";
+export const ERR_ADMIN_INVALID_STATUS_TRANSITION =
+	"Invalid bug report status transition";
+export const ERR_ADMIN_BUG_REPORT_NOT_FOUND = "Bug report not found";
+export const ERR_ADMIN_ROLE_UPDATE_FAILED = "Failed to update user role";
+
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
