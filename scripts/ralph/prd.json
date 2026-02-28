@@ -49,8 +49,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed forex pairs and Twelve Data from tool descriptions, schema context, trading analyst persona, report planner, and context builder. Updated to futures-only references."
     },
     {
       "id": "US-004",

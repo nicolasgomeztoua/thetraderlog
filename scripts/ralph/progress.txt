@@ -240,3 +240,17 @@ Started: Sat Feb 28 11:47:18 WET 2026
 - **Learnings for future iterations:**
   - Marketing components are pure JSX — no imports from lib/market-data, changes are safe
 ---
+
+## 2026-02-28 - US-003: Remove Forex References from AI Prompts and Tool Definitions
+- Updated get_market_data tool description: removed forex pairs, Twelve Data reference; now futures-only with Databento
+- Updated symbol input description: removed forex slash format examples
+- Updated schema-context.ts: removed instrument_type enum, mt4/mt5 from trading_platform, instrument_type columns from trade and user_settings tables, changed twelve_data to databento
+- Updated trading-analyst.ts PERSONA: removed "and forex" from description, removed forex pairs knowledge line
+- Updated planner.ts: removed EUR/USD from get_market_data description
+- Updated context-builder.ts: removed defaultInstrumentType from settings query and formatting
+- Files changed: definitions.ts, schema-context.ts, trading-analyst.ts, planner.ts, context-builder.ts
+- **Learnings for future iterations:**
+  - AI prompt files are static strings — no runtime dependencies, safe to edit
+  - context-builder.ts loads settings from DB — when removing DB columns later (US-013), remember the column reference here is already removed
+  - schema-context.ts is a manual documentation of the DB schema for AI — must be kept in sync with actual schema changes
+---
