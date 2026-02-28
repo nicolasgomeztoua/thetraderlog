@@ -74,6 +74,7 @@ export const aiRouter = createTRPCRouter({
 			z.object({
 				conversationId: z.string(),
 				content: z.string().min(1).max(10_000),
+				accountId: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -141,6 +142,7 @@ export const aiRouter = createTRPCRouter({
 			const tools = getChatTools({
 				userId: ctx.user.id,
 				db: ctx.db,
+				accountId: input.accountId,
 			});
 
 			const result = await aiGenerateText({

@@ -1,477 +1,477 @@
 {
-  "project": "EdgeJournal",
-  "branchName": "ralph/prop-compliance",
-  "description": "Prop firm compliance dashboard — backend engine, dashboard widget, dedicated /prop page, Monte Carlo simulator, and AI integration",
-  "userStories": [
-    {
-      "id": "US-000",
-      "title": "Audit Existing Utilities for Prop Compliance",
-      "description": "As a developer, I want to audit existing code before implementing prop compliance so that we reuse utilities and avoid duplication.",
-      "acceptanceCriteria": [
-        "Search src/lib/analytics/ for existing equity curve, drawdown, and risk functions",
-        "Search src/lib/trades/calculations.ts for P&L utilities",
-        "Search src/components/dashboard/widgets/ for existing prop-aware code (e.g., DailyLossProgress)",
-        "Search src/components/analytics/ for RiskGauge, MonteCarloChart patterns",
-        "Search src/server/api/routers/accounts.ts for getStats and existing prop queries",
-        "Search src/server/api/routers/analytics.ts for getRiskMetrics and ruinThreshold handling",
-        "Document findings in scripts/ralph/progress.txt: existing utilities to reuse (with file:line), local helpers to extract (with file:line), new utilities needed",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 1,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-001",
-      "title": "Create Prop Compliance Constants",
-      "description": "As a developer, I want shared constants for prop compliance thresholds and labels so that they're reusable across backend and frontend.",
-      "acceptanceCriteria": [
-        "Create src/lib/constants/prop.ts with: COMPLIANCE_STATUS enum/object (safe | caution | danger), COMPLIANCE_THRESHOLDS (safe >30% buffer, caution 10-30%, danger <10%), COMPLIANCE_STATUS_COLORS mapping to Terminal design colors (text-profit, text-primary, text-loss), CHALLENGE_STATUS_LABELS, DRAWDOWN_TYPE_LABELS, PROP_ACCOUNT_TYPES",
-        "Export from src/lib/constants/index.ts",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-002",
-      "title": "Create Prop Compliance Calculation Utilities",
-      "description": "As a developer, I want shared utility functions for computing prop compliance metrics so that backend and frontend can use them consistently.",
-      "acceptanceCriteria": [
-        "Create src/lib/analytics/prop-compliance.ts with pure calculation functions",
-        "calculateDrawdownStatus(currentDrawdownPercent, maxDrawdownPercent) returns { percent, limit, used, remaining, status } respecting COMPLIANCE_THRESHOLDS",
-        "calculateDailyPnl(trades, date?) sums netPnl for trades on a given date",
-        "calculateDailyLossStatus(dailyPnl, dailyLossLimit, initialBalance) returns { current, limit, used, remaining, status }",
-        "calculateProfitTargetProgress(totalPnl, profitTarget, initialBalance) returns { current, target, progress, status }",
-        "calculateConsistencyMetric(dailyPnls, consistencyRule) returns { maxDayPercent, limit, isCompliant }",
-        "calculateTradingDays(trades) returns { daysTraded, minRequired, remaining }",
-        "calculateTrailingDrawdown(equityCurve, initialBalance) computes high-water-mark drawdown from equity curve",
-        "calculateStaticDrawdown(initialBalance, currentBalance) straightforward formula",
-        "getOverallComplianceStatus(metrics[]) returns worst status across all metrics",
-        "Export from src/lib/analytics/index.ts",
-        "Uses COMPLIANCE_THRESHOLDS from constants (US-001)",
-        "All functions are pure, no DB calls",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-003",
-      "title": "Unit Tests for Prop Compliance Calculations",
-      "description": "As a developer, I want unit tests for the prop compliance utility functions so that we verify correctness of all compliance math.",
-      "acceptanceCriteria": [
-        "Test file created: tests/unit/prop-compliance.test.ts",
-        "Tests calculateDrawdownStatus with static, trailing, and EOD scenarios",
-        "Tests calculateDailyPnl with multiple trades on same day, no trades",
-        "Tests calculateDailyLossStatus safe/caution/danger thresholds",
-        "Tests calculateProfitTargetProgress at 0%, 50%, 100%+",
-        "Tests calculateConsistencyMetric compliant and non-compliant cases",
-        "Tests calculateTradingDays distinct date counting",
-        "Tests calculateTrailingDrawdown high-water mark logic with peak tracking",
-        "Tests getOverallComplianceStatus returns worst status",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-004",
-      "title": "Create getPropCompliance tRPC Endpoint",
-      "description": "As a backend developer, I want a single tRPC endpoint that computes all prop compliance metrics for an account so that the frontend can fetch everything in one call.",
-      "acceptanceCriteria": [
-        "Add getPropCompliance query to src/server/api/routers/accounts.ts",
-        "Input: { accountId: string }",
-        "Validates account ownership and that account is prop_challenge or prop_funded",
-        "Fetches all closed trades for the account, sorted by exitTime",
-        "Computes and returns: drawdown { current, limit, type, status, equityCurve }, dailyLoss { todayPnl, limit, status }, profitTarget { current, target, progress, status }, consistency { maxDayPercent, limit, isCompliant }, tradingDays { daysTraded, minRequired, remaining, dates }, timeline { startDate, endDate, daysRemaining, daysElapsed }, overallStatus (safe | caution | danger), account basic info",
-        "Uses utility functions from US-002",
-        "Uses buildEquityCurve() from src/lib/analytics/risk.ts for equity curve",
-        "Error constants in src/lib/constants/errors.ts",
-        "Uses protectedProcedure for auth",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-005",
-      "title": "Integration Tests for getPropCompliance Endpoint",
-      "description": "As a developer, I want integration tests for the prop compliance endpoint so that we verify correct behavior with real database.",
-      "acceptanceCriteria": [
-        "Test file created: tests/integration/prop-compliance.test.ts",
-        "Uses setupTrader() fixture to create user + prop_challenge account with all prop fields set",
-        "Tests happy path: returns all compliance metrics for account with trades",
-        "Tests empty trades: returns safe status, 0% progress",
-        "Tests danger state: creates trades that bring account near max drawdown",
-        "Tests daily loss limit: creates today's trades exceeding daily limit",
-        "Tests profit target progress: creates trades that reach target",
-        "Tests auth validation: rejects request for account not owned by user",
-        "Tests non-prop account: rejects request for live/demo accounts",
-        "Tests trailing drawdown calculation vs static",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-006",
-      "title": "Dashboard Prop Status Widget",
-      "description": "As a prop trader, I want to see my challenge compliance at a glance on the dashboard so I don't have to manually calculate drawdown limits.",
-      "acceptanceCriteria": [
-        "Create src/components/dashboard/widgets/prop-status-widget.tsx",
-        "Only renders when selected account is prop_challenge or prop_funded",
-        "Calls accounts.getPropCompliance for selected account",
-        "Shows compact card with: drawdown gauge (current % vs max %, color-coded), daily P&L vs daily loss limit progress bar, profit target progress bar with percentage, trading days X/Y count, days remaining countdown",
-        "Overall status indicator (safe/caution/danger) with colored dot",
-        "Uses Terminal design system: font-mono, text-[10px] labels, border-white/5 cards, rounded borders",
-        "Loading skeleton state via DashboardWidget wrapper",
-        "Empty state when no prop data available",
-        "All data-testid attributes on interactive/key elements",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-007",
-      "title": "Add Prop Status Widget to Dashboard Grid",
-      "description": "As a prop trader, I want the prop status widget to appear on my dashboard when I have an active prop account.",
-      "acceptanceCriteria": [
-        "Edit src/app/(protected)/dashboard/page.tsx",
-        "Import PropStatusWidget component",
-        "Conditionally render a GridItem with PropStatusWidget when selectedAccount?.accountType starts with prop_",
-        "Position as first widget in the grid (before Today's Performance)",
-        "Uses GridItem size md for appropriate width",
-        "Dashboard renders correctly with and without prop account selected",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: widget appears for prop accounts, hidden for live/demo"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-008",
-      "title": "Add Conditional Prop Nav Item to Sidebar",
-      "description": "As a prop trader, I want a Prop navigation item in the sidebar when I have prop accounts, so I can access the dedicated compliance page.",
-      "acceptanceCriteria": [
-        "Edit src/app/(protected)/_components/app-sidebar.tsx",
-        "Import Shield icon from lucide-react for the prop nav item",
-        "Add conditional nav item: { title: Prop, href: /prop, icon: Shield } — only shown when user has at least one prop_challenge or prop_funded account",
-        "Position between Analytics and AI Insights in the nav",
-        "Follows existing nav item pattern (SidebarMenuItem + SidebarMenuButton)",
-        "Active state works correctly when on /prop route",
-        "Terminal styling: font-mono text-xs uppercase tracking-wider",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: nav item appears/disappears based on account types"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-009",
-      "title": "Create /prop Page Layout and Account Selector",
-      "description": "As a prop trader, I want a dedicated prop compliance page with an account selector filtered to prop accounts only.",
-      "acceptanceCriteria": [
-        "Create src/app/(protected)/prop/page.tsx",
-        "Header section with: page title Prop Compliance with font-mono section label, account selector dropdown filtered to prop_challenge and prop_funded only, challenge status badge (Active/Passed/Failed) with appropriate colors, phase indicator if linkedAccountId exists (shows Challenge → Funded journey)",
-        "Auto-selects first prop account if current selection is not a prop account",
-        "Uses accounts.getPropCompliance to fetch data for selected account",
-        "Loading state while data fetches",
-        "Empty state if user has no prop accounts (redirect suggestion to create one)",
-        "Terminal design system: dark background, font-mono labels, minimal border-radius",
-        "All data-testid attributes on key elements",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-010",
-      "title": "Prop Compliance Grid — 4 Metric Cards",
-      "description": "As a prop trader, I want to see all my compliance metrics as visual cards on the prop page.",
-      "acceptanceCriteria": [
-        "Create src/components/prop/compliance-grid.tsx",
-        "4-card responsive grid (2x2 on desktop, 1-column on mobile)",
-        "Max Drawdown Card: circular gauge (reuse RiskGauge pattern) showing current vs limit, drawdown type label, danger zone coloring",
-        "Daily Loss Card: progress bar with today's P&L vs limit, shows actual dollar amounts and percentages",
-        "Profit Target Card: progress bar with current P&L vs target, shows percentage complete",
-        "Consistency Rule Card: shows largest single-day P&L as % of target vs consistency limit, compliant/non-compliant indicator",
-        "Each card shows safe/caution/danger colored indicator dot",
-        "Terminal design: border-white/5 cards, font-mono labels, text-[10px] subtitles",
-        "Responsive: stacks on mobile, 2x2 on tablet+",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-011",
-      "title": "Prop Drawdown Chart with Threshold Lines",
-      "description": "As a prop trader, I want to see my equity curve overlaid with my max drawdown threshold so I can visualize how close I am to failing.",
-      "acceptanceCriteria": [
-        "Create src/components/prop/drawdown-chart.tsx",
-        "Reuses equity curve data from getPropCompliance (which uses buildEquityCurve)",
-        "Recharts AreaChart showing cumulative P&L over time",
-        "Horizontal reference line at max drawdown threshold (red dashed)",
-        "Horizontal reference line at daily loss limit (orange dashed)",
-        "Shaded danger zone below drawdown threshold",
-        "Color gradient: profit green above $0, loss red below",
-        "Tooltip showing date, P&L, drawdown %, distance to threshold",
-        "Legend explaining threshold lines",
-        "Terminal design: dark chart background, monospace axis labels, border-white/5 container",
-        "Responsive: works on mobile and desktop",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-012",
-      "title": "Trading Days Timeline Component",
-      "description": "As a prop trader, I want to see a visual timeline of my trading days vs the minimum required and challenge deadline.",
-      "acceptanceCriteria": [
-        "Create src/components/prop/trading-days-timeline.tsx",
-        "Shows visual bar/progress of days traded vs minTradingDays requirement",
-        "Days remaining countdown to challengeEndDate",
-        "Calendar-style grid (optional) highlighting active trading days",
-        "Shows X of Y days traded with progress bar",
-        "Shows Z days remaining in challenge window",
-        "Warning color if not on pace to hit minimum days",
-        "Terminal design: monospace, data-dense layout",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-013",
-      "title": "Challenge History Component",
-      "description": "As a trader who has attempted multiple challenges, I want to see a timeline of previous challenge attempts with pass/fail outcomes.",
-      "acceptanceCriteria": [
-        "Create src/components/prop/challenge-history.tsx",
-        "Fetches all user's prop accounts via accounts.getAll and filters to prop types",
-        "Displays vertical timeline of challenge accounts sorted by challengeStartDate",
-        "Each entry shows: account name, status badge (active/passed/failed), date range, final P&L",
-        "If linkedAccountId exists, shows → Funded connection with link to funded account",
-        "Challenge → Funded journeys visually connected",
-        "Empty state: No challenge history yet",
-        "Terminal design: monospace, timeline dots/lines, color-coded status",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-014",
-      "title": "Assemble Full /prop Page",
-      "description": "As a prop trader, I want the dedicated prop page to combine all compliance components into a cohesive layout.",
-      "acceptanceCriteria": [
-        "Edit src/app/(protected)/prop/page.tsx to assemble components: Header (US-009 account selector + status badge), Compliance Grid (US-010), Drawdown Chart (US-011), Trading Days Timeline (US-012), Challenge History (US-013)",
-        "Sections properly spaced with Terminal design space-y-6",
-        "All components receive data from single getPropCompliance query where possible",
-        "Challenge History section uses separate query (needs all accounts)",
-        "Page works when switching between different prop accounts",
-        "Responsive layout: single column on mobile, 2-column sections on desktop",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: full page flow works end-to-end"
-      ],
-      "priority": 15,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-016",
-      "title": "Prop-Aware Risk of Ruin Framing in Analytics",
-      "description": "As a prop trader, I want the Risk of Ruin display to say 'Probability of failing this challenge' when viewing a prop account.",
-      "acceptanceCriteria": [
-        "Edit src/components/analytics/risk-gauge.tsx: add optional accountType prop",
-        "When accountType starts with prop_ AND ruinThresholdSource === account: subtitle changes from Risk of Ruin to Challenge Failure Risk, tooltip says Based on X% max drawdown rule",
-        "Existing behavior unchanged for non-prop accounts",
-        "Edit src/app/(protected)/analytics/page.tsx: pass accountType from selected account to RiskGauge",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: RoR label changes when prop account selected"
-      ],
-      "priority": 16,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-017",
-      "title": "Monte Carlo Challenge Simulator Utility",
-      "description": "As a developer, I want a Monte Carlo simulation that models prop challenge outcomes so that we can show X% of simulations pass the challenge.",
-      "acceptanceCriteria": [
-        "Create simulatePropChallenge function in src/lib/analytics/prop-compliance.ts",
-        "Inputs: { winRate, avgWin, avgLoss, profitTarget, maxDrawdown, initialBalance, maxTrades, iterations? }",
-        "For each simulation: run random trades using win rate and avg win/loss, track equity and high-water-mark drawdown, stop if profit target reached (pass), max drawdown breached (fail), or max trades exceeded (fail)",
-        "Returns: { passRate, failRate, avgTradesToPass, medianOutcome, percentiles, simulations }",
-        "Default 10000 iterations",
-        "Pure function, no DB calls",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 17,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-018",
-      "title": "Unit Tests for Monte Carlo Challenge Simulator",
-      "description": "As a developer, I want unit tests for the Monte Carlo challenge simulator to verify statistical correctness.",
-      "acceptanceCriteria": [
-        "Add tests to tests/unit/prop-compliance.test.ts (or separate file)",
-        "Tests high win rate (80%) produces high pass rate",
-        "Tests low win rate (30%) produces low pass rate",
-        "Tests edge case: profitTarget = 0 (100% pass)",
-        "Tests edge case: maxDrawdown = 0 (100% fail)",
-        "Tests return shape: all expected fields present",
-        "Tests percentiles are in correct order",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 18,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-019",
-      "title": "Monte Carlo Challenge Outcome Card on Prop Page",
-      "description": "As a prop trader, I want to see a Monte Carlo simulation showing X% chance of passing this challenge on the prop page.",
-      "acceptanceCriteria": [
-        "Create src/components/prop/challenge-simulator.tsx",
-        "Calls simulatePropChallenge with current account stats (win rate, avg win/loss from accounts.getStats)",
-        "Shows prominent pass/fail percentage with large number display",
-        "Mini histogram or distribution chart of simulated outcomes (reuse MonteCarloChart pattern)",
-        "Shows: Based on X trades, Y% win rate, Z avg win/loss",
-        "Disclaimer: Simulation assumes future performance matches historical stats",
-        "Terminal design: dark card, monospace numbers, profit/loss coloring",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 19,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-020",
-      "title": "Add Prop Compliance to AI Context",
-      "description": "As a developer, I want the AI system to have access to prop compliance data so it can answer questions about challenge progress.",
-      "acceptanceCriteria": [
-        "Add getPropCompliance to the AI tools available endpoints list in src/lib/ai/report-pipeline/planner.ts",
-        "Update src/lib/ai/schema-context.ts to include prop compliance data context",
-        "Update src/lib/ai/tools/definitions.ts to include prop compliance as a callable tool",
-        "Implement the tool handler in src/lib/ai/tools/call-analytics.ts (or new call-prop.ts)",
-        "The AI can now query prop compliance metrics for the user's selected account",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 20,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-021",
-      "title": "Add Prop-Related Suggested Prompts to AI Chat",
-      "description": "As a prop trader, I want suggested prompts related to my prop challenge when using AI chat so I can quickly ask relevant questions.",
-      "acceptanceCriteria": [
-        "Edit src/lib/constants/ai.ts",
-        "Add to SUGGESTED_CHAT_QUERIES: How am I doing on my prop challenge?, Will I pass this challenge at my current pace?, What's my risk of failing the challenge?",
-        "Add to SUGGESTED_REPORT_PROMPTS: Generate a prop challenge compliance report with drawdown analysis, daily loss tracking, and probability of passing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 21,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-022",
-      "title": "Trade Detail Prop Context Banner",
-      "description": "As a prop trader, when I view a trade on a prop account, I want to see a contextual banner showing how that trade affected my challenge compliance.",
-      "acceptanceCriteria": [
-        "Find the trade detail view component (likely in src/app/(protected)/journal/ or trade detail page)",
-        "Add a small banner below trade info for prop accounts showing: if trade was a loss 'After this trade: X% of Y% max drawdown used', if trade was a win 'Profit target: Z% reached'",
-        "Banner uses font-mono text-[10px] styling, subtle border-white/5 container",
-        "Only shows for trades on prop_challenge or prop_funded accounts",
-        "Uses existing trade data + account data (no new API call needed)",
-        "All data-testid attributes",
-        "Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 22,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-015",
-      "title": "E2E Tests for Prop Dashboard Widget and /prop Page",
-      "description": "As a developer, I want E2E tests for the prop compliance UI so that we can verify user flows work correctly.",
-      "acceptanceCriteria": [
-        "Test file created: tests/e2e/prop-compliance.spec.ts",
-        "Tests dashboard widget visibility: shows for prop accounts, hidden for live/demo",
-        "Tests prop nav item: appears when prop accounts exist",
-        "Tests /prop page loads with compliance grid",
-        "Tests account selector on prop page switches between prop accounts",
-        "Tests compliance cards show data (drawdown, daily loss, profit target, consistency)",
-        "Tests drawdown chart renders",
-        "All new UI elements have data-testid attributes",
-        "All tests pass (bun run test:e2e)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 23,
-      "passes": true,
-      "notes": ""
-    }
-  ]
+	"project": "EdgeJournal",
+	"branchName": "ralph/prop-compliance",
+	"description": "Prop firm compliance dashboard — backend engine, dashboard widget, dedicated /prop page, Monte Carlo simulator, and AI integration",
+	"userStories": [
+		{
+			"id": "US-000",
+			"title": "Audit Existing Utilities for Prop Compliance",
+			"description": "As a developer, I want to audit existing code before implementing prop compliance so that we reuse utilities and avoid duplication.",
+			"acceptanceCriteria": [
+				"Search src/lib/analytics/ for existing equity curve, drawdown, and risk functions",
+				"Search src/lib/trades/calculations.ts for P&L utilities",
+				"Search src/components/dashboard/widgets/ for existing prop-aware code (e.g., DailyLossProgress)",
+				"Search src/components/analytics/ for RiskGauge, MonteCarloChart patterns",
+				"Search src/server/api/routers/accounts.ts for getStats and existing prop queries",
+				"Search src/server/api/routers/analytics.ts for getRiskMetrics and ruinThreshold handling",
+				"Document findings in scripts/ralph/progress.txt: existing utilities to reuse (with file:line), local helpers to extract (with file:line), new utilities needed",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 1,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-001",
+			"title": "Create Prop Compliance Constants",
+			"description": "As a developer, I want shared constants for prop compliance thresholds and labels so that they're reusable across backend and frontend.",
+			"acceptanceCriteria": [
+				"Create src/lib/constants/prop.ts with: COMPLIANCE_STATUS enum/object (safe | caution | danger), COMPLIANCE_THRESHOLDS (safe >30% buffer, caution 10-30%, danger <10%), COMPLIANCE_STATUS_COLORS mapping to Terminal design colors (text-profit, text-primary, text-loss), CHALLENGE_STATUS_LABELS, DRAWDOWN_TYPE_LABELS, PROP_ACCOUNT_TYPES",
+				"Export from src/lib/constants/index.ts",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 2,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-002",
+			"title": "Create Prop Compliance Calculation Utilities",
+			"description": "As a developer, I want shared utility functions for computing prop compliance metrics so that backend and frontend can use them consistently.",
+			"acceptanceCriteria": [
+				"Create src/lib/analytics/prop-compliance.ts with pure calculation functions",
+				"calculateDrawdownStatus(currentDrawdownPercent, maxDrawdownPercent) returns { percent, limit, used, remaining, status } respecting COMPLIANCE_THRESHOLDS",
+				"calculateDailyPnl(trades, date?) sums netPnl for trades on a given date",
+				"calculateDailyLossStatus(dailyPnl, dailyLossLimit, initialBalance) returns { current, limit, used, remaining, status }",
+				"calculateProfitTargetProgress(totalPnl, profitTarget, initialBalance) returns { current, target, progress, status }",
+				"calculateConsistencyMetric(dailyPnls, consistencyRule) returns { maxDayPercent, limit, isCompliant }",
+				"calculateTradingDays(trades) returns { daysTraded, minRequired, remaining }",
+				"calculateTrailingDrawdown(equityCurve, initialBalance) computes high-water-mark drawdown from equity curve",
+				"calculateStaticDrawdown(initialBalance, currentBalance) straightforward formula",
+				"getOverallComplianceStatus(metrics[]) returns worst status across all metrics",
+				"Export from src/lib/analytics/index.ts",
+				"Uses COMPLIANCE_THRESHOLDS from constants (US-001)",
+				"All functions are pure, no DB calls",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 3,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-003",
+			"title": "Unit Tests for Prop Compliance Calculations",
+			"description": "As a developer, I want unit tests for the prop compliance utility functions so that we verify correctness of all compliance math.",
+			"acceptanceCriteria": [
+				"Test file created: tests/unit/prop-compliance.test.ts",
+				"Tests calculateDrawdownStatus with static, trailing, and EOD scenarios",
+				"Tests calculateDailyPnl with multiple trades on same day, no trades",
+				"Tests calculateDailyLossStatus safe/caution/danger thresholds",
+				"Tests calculateProfitTargetProgress at 0%, 50%, 100%+",
+				"Tests calculateConsistencyMetric compliant and non-compliant cases",
+				"Tests calculateTradingDays distinct date counting",
+				"Tests calculateTrailingDrawdown high-water mark logic with peak tracking",
+				"Tests getOverallComplianceStatus returns worst status",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 4,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-004",
+			"title": "Create getPropCompliance tRPC Endpoint",
+			"description": "As a backend developer, I want a single tRPC endpoint that computes all prop compliance metrics for an account so that the frontend can fetch everything in one call.",
+			"acceptanceCriteria": [
+				"Add getPropCompliance query to src/server/api/routers/accounts.ts",
+				"Input: { accountId: string }",
+				"Validates account ownership and that account is prop_challenge or prop_funded",
+				"Fetches all closed trades for the account, sorted by exitTime",
+				"Computes and returns: drawdown { current, limit, type, status, equityCurve }, dailyLoss { todayPnl, limit, status }, profitTarget { current, target, progress, status }, consistency { maxDayPercent, limit, isCompliant }, tradingDays { daysTraded, minRequired, remaining, dates }, timeline { startDate, endDate, daysRemaining, daysElapsed }, overallStatus (safe | caution | danger), account basic info",
+				"Uses utility functions from US-002",
+				"Uses buildEquityCurve() from src/lib/analytics/risk.ts for equity curve",
+				"Error constants in src/lib/constants/errors.ts",
+				"Uses protectedProcedure for auth",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 5,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-005",
+			"title": "Integration Tests for getPropCompliance Endpoint",
+			"description": "As a developer, I want integration tests for the prop compliance endpoint so that we verify correct behavior with real database.",
+			"acceptanceCriteria": [
+				"Test file created: tests/integration/prop-compliance.test.ts",
+				"Uses setupTrader() fixture to create user + prop_challenge account with all prop fields set",
+				"Tests happy path: returns all compliance metrics for account with trades",
+				"Tests empty trades: returns safe status, 0% progress",
+				"Tests danger state: creates trades that bring account near max drawdown",
+				"Tests daily loss limit: creates today's trades exceeding daily limit",
+				"Tests profit target progress: creates trades that reach target",
+				"Tests auth validation: rejects request for account not owned by user",
+				"Tests non-prop account: rejects request for live/demo accounts",
+				"Tests trailing drawdown calculation vs static",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 6,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-006",
+			"title": "Dashboard Prop Status Widget",
+			"description": "As a prop trader, I want to see my challenge compliance at a glance on the dashboard so I don't have to manually calculate drawdown limits.",
+			"acceptanceCriteria": [
+				"Create src/components/dashboard/widgets/prop-status-widget.tsx",
+				"Only renders when selected account is prop_challenge or prop_funded",
+				"Calls accounts.getPropCompliance for selected account",
+				"Shows compact card with: drawdown gauge (current % vs max %, color-coded), daily P&L vs daily loss limit progress bar, profit target progress bar with percentage, trading days X/Y count, days remaining countdown",
+				"Overall status indicator (safe/caution/danger) with colored dot",
+				"Uses Terminal design system: font-mono, text-[10px] labels, border-white/5 cards, rounded borders",
+				"Loading skeleton state via DashboardWidget wrapper",
+				"Empty state when no prop data available",
+				"All data-testid attributes on interactive/key elements",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 7,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-007",
+			"title": "Add Prop Status Widget to Dashboard Grid",
+			"description": "As a prop trader, I want the prop status widget to appear on my dashboard when I have an active prop account.",
+			"acceptanceCriteria": [
+				"Edit src/app/(protected)/dashboard/page.tsx",
+				"Import PropStatusWidget component",
+				"Conditionally render a GridItem with PropStatusWidget when selectedAccount?.accountType starts with prop_",
+				"Position as first widget in the grid (before Today's Performance)",
+				"Uses GridItem size md for appropriate width",
+				"Dashboard renders correctly with and without prop account selected",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser: widget appears for prop accounts, hidden for live/demo"
+			],
+			"priority": 8,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-008",
+			"title": "Add Conditional Prop Nav Item to Sidebar",
+			"description": "As a prop trader, I want a Prop navigation item in the sidebar when I have prop accounts, so I can access the dedicated compliance page.",
+			"acceptanceCriteria": [
+				"Edit src/app/(protected)/_components/app-sidebar.tsx",
+				"Import Shield icon from lucide-react for the prop nav item",
+				"Add conditional nav item: { title: Prop, href: /prop, icon: Shield } — only shown when user has at least one prop_challenge or prop_funded account",
+				"Position between Analytics and AI Insights in the nav",
+				"Follows existing nav item pattern (SidebarMenuItem + SidebarMenuButton)",
+				"Active state works correctly when on /prop route",
+				"Terminal styling: font-mono text-xs uppercase tracking-wider",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser: nav item appears/disappears based on account types"
+			],
+			"priority": 9,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-009",
+			"title": "Create /prop Page Layout and Account Selector",
+			"description": "As a prop trader, I want a dedicated prop compliance page with an account selector filtered to prop accounts only.",
+			"acceptanceCriteria": [
+				"Create src/app/(protected)/prop/page.tsx",
+				"Header section with: page title Prop Compliance with font-mono section label, account selector dropdown filtered to prop_challenge and prop_funded only, challenge status badge (Active/Passed/Failed) with appropriate colors, phase indicator if linkedAccountId exists (shows Challenge → Funded journey)",
+				"Auto-selects first prop account if current selection is not a prop account",
+				"Uses accounts.getPropCompliance to fetch data for selected account",
+				"Loading state while data fetches",
+				"Empty state if user has no prop accounts (redirect suggestion to create one)",
+				"Terminal design system: dark background, font-mono labels, minimal border-radius",
+				"All data-testid attributes on key elements",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 10,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-010",
+			"title": "Prop Compliance Grid — 4 Metric Cards",
+			"description": "As a prop trader, I want to see all my compliance metrics as visual cards on the prop page.",
+			"acceptanceCriteria": [
+				"Create src/components/prop/compliance-grid.tsx",
+				"4-card responsive grid (2x2 on desktop, 1-column on mobile)",
+				"Max Drawdown Card: circular gauge (reuse RiskGauge pattern) showing current vs limit, drawdown type label, danger zone coloring",
+				"Daily Loss Card: progress bar with today's P&L vs limit, shows actual dollar amounts and percentages",
+				"Profit Target Card: progress bar with current P&L vs target, shows percentage complete",
+				"Consistency Rule Card: shows largest single-day P&L as % of target vs consistency limit, compliant/non-compliant indicator",
+				"Each card shows safe/caution/danger colored indicator dot",
+				"Terminal design: border-white/5 cards, font-mono labels, text-[10px] subtitles",
+				"Responsive: stacks on mobile, 2x2 on tablet+",
+				"All data-testid attributes",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 11,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-011",
+			"title": "Prop Drawdown Chart with Threshold Lines",
+			"description": "As a prop trader, I want to see my equity curve overlaid with my max drawdown threshold so I can visualize how close I am to failing.",
+			"acceptanceCriteria": [
+				"Create src/components/prop/drawdown-chart.tsx",
+				"Reuses equity curve data from getPropCompliance (which uses buildEquityCurve)",
+				"Recharts AreaChart showing cumulative P&L over time",
+				"Horizontal reference line at max drawdown threshold (red dashed)",
+				"Horizontal reference line at daily loss limit (orange dashed)",
+				"Shaded danger zone below drawdown threshold",
+				"Color gradient: profit green above $0, loss red below",
+				"Tooltip showing date, P&L, drawdown %, distance to threshold",
+				"Legend explaining threshold lines",
+				"Terminal design: dark chart background, monospace axis labels, border-white/5 container",
+				"Responsive: works on mobile and desktop",
+				"All data-testid attributes",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 12,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-012",
+			"title": "Trading Days Timeline Component",
+			"description": "As a prop trader, I want to see a visual timeline of my trading days vs the minimum required and challenge deadline.",
+			"acceptanceCriteria": [
+				"Create src/components/prop/trading-days-timeline.tsx",
+				"Shows visual bar/progress of days traded vs minTradingDays requirement",
+				"Days remaining countdown to challengeEndDate",
+				"Calendar-style grid (optional) highlighting active trading days",
+				"Shows X of Y days traded with progress bar",
+				"Shows Z days remaining in challenge window",
+				"Warning color if not on pace to hit minimum days",
+				"Terminal design: monospace, data-dense layout",
+				"All data-testid attributes",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 13,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-013",
+			"title": "Challenge History Component",
+			"description": "As a trader who has attempted multiple challenges, I want to see a timeline of previous challenge attempts with pass/fail outcomes.",
+			"acceptanceCriteria": [
+				"Create src/components/prop/challenge-history.tsx",
+				"Fetches all user's prop accounts via accounts.getAll and filters to prop types",
+				"Displays vertical timeline of challenge accounts sorted by challengeStartDate",
+				"Each entry shows: account name, status badge (active/passed/failed), date range, final P&L",
+				"If linkedAccountId exists, shows → Funded connection with link to funded account",
+				"Challenge → Funded journeys visually connected",
+				"Empty state: No challenge history yet",
+				"Terminal design: monospace, timeline dots/lines, color-coded status",
+				"All data-testid attributes",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 14,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-014",
+			"title": "Assemble Full /prop Page",
+			"description": "As a prop trader, I want the dedicated prop page to combine all compliance components into a cohesive layout.",
+			"acceptanceCriteria": [
+				"Edit src/app/(protected)/prop/page.tsx to assemble components: Header (US-009 account selector + status badge), Compliance Grid (US-010), Drawdown Chart (US-011), Trading Days Timeline (US-012), Challenge History (US-013)",
+				"Sections properly spaced with Terminal design space-y-6",
+				"All components receive data from single getPropCompliance query where possible",
+				"Challenge History section uses separate query (needs all accounts)",
+				"Page works when switching between different prop accounts",
+				"Responsive layout: single column on mobile, 2-column sections on desktop",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser: full page flow works end-to-end"
+			],
+			"priority": 15,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-016",
+			"title": "Prop-Aware Risk of Ruin Framing in Analytics",
+			"description": "As a prop trader, I want the Risk of Ruin display to say 'Probability of failing this challenge' when viewing a prop account.",
+			"acceptanceCriteria": [
+				"Edit src/components/analytics/risk-gauge.tsx: add optional accountType prop",
+				"When accountType starts with prop_ AND ruinThresholdSource === account: subtitle changes from Risk of Ruin to Challenge Failure Risk, tooltip says Based on X% max drawdown rule",
+				"Existing behavior unchanged for non-prop accounts",
+				"Edit src/app/(protected)/analytics/page.tsx: pass accountType from selected account to RiskGauge",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser: RoR label changes when prop account selected"
+			],
+			"priority": 16,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-017",
+			"title": "Monte Carlo Challenge Simulator Utility",
+			"description": "As a developer, I want a Monte Carlo simulation that models prop challenge outcomes so that we can show X% of simulations pass the challenge.",
+			"acceptanceCriteria": [
+				"Create simulatePropChallenge function in src/lib/analytics/prop-compliance.ts",
+				"Inputs: { winRate, avgWin, avgLoss, profitTarget, maxDrawdown, initialBalance, maxTrades, iterations? }",
+				"For each simulation: run random trades using win rate and avg win/loss, track equity and high-water-mark drawdown, stop if profit target reached (pass), max drawdown breached (fail), or max trades exceeded (fail)",
+				"Returns: { passRate, failRate, avgTradesToPass, medianOutcome, percentiles, simulations }",
+				"Default 10000 iterations",
+				"Pure function, no DB calls",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 17,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-018",
+			"title": "Unit Tests for Monte Carlo Challenge Simulator",
+			"description": "As a developer, I want unit tests for the Monte Carlo challenge simulator to verify statistical correctness.",
+			"acceptanceCriteria": [
+				"Add tests to tests/unit/prop-compliance.test.ts (or separate file)",
+				"Tests high win rate (80%) produces high pass rate",
+				"Tests low win rate (30%) produces low pass rate",
+				"Tests edge case: profitTarget = 0 (100% pass)",
+				"Tests edge case: maxDrawdown = 0 (100% fail)",
+				"Tests return shape: all expected fields present",
+				"Tests percentiles are in correct order",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 18,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-019",
+			"title": "Monte Carlo Challenge Outcome Card on Prop Page",
+			"description": "As a prop trader, I want to see a Monte Carlo simulation showing X% chance of passing this challenge on the prop page.",
+			"acceptanceCriteria": [
+				"Create src/components/prop/challenge-simulator.tsx",
+				"Calls simulatePropChallenge with current account stats (win rate, avg win/loss from accounts.getStats)",
+				"Shows prominent pass/fail percentage with large number display",
+				"Mini histogram or distribution chart of simulated outcomes (reuse MonteCarloChart pattern)",
+				"Shows: Based on X trades, Y% win rate, Z avg win/loss",
+				"Disclaimer: Simulation assumes future performance matches historical stats",
+				"Terminal design: dark card, monospace numbers, profit/loss coloring",
+				"All data-testid attributes",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 19,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-020",
+			"title": "Add Prop Compliance to AI Context",
+			"description": "As a developer, I want the AI system to have access to prop compliance data so it can answer questions about challenge progress.",
+			"acceptanceCriteria": [
+				"Add getPropCompliance to the AI tools available endpoints list in src/lib/ai/report-pipeline/planner.ts",
+				"Update src/lib/ai/schema-context.ts to include prop compliance data context",
+				"Update src/lib/ai/tools/definitions.ts to include prop compliance as a callable tool",
+				"Implement the tool handler in src/lib/ai/tools/call-analytics.ts (or new call-prop.ts)",
+				"The AI can now query prop compliance metrics for the user's selected account",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 20,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-021",
+			"title": "Add Prop-Related Suggested Prompts to AI Chat",
+			"description": "As a prop trader, I want suggested prompts related to my prop challenge when using AI chat so I can quickly ask relevant questions.",
+			"acceptanceCriteria": [
+				"Edit src/lib/constants/ai.ts",
+				"Add to SUGGESTED_CHAT_QUERIES: How am I doing on my prop challenge?, Will I pass this challenge at my current pace?, What's my risk of failing the challenge?",
+				"Add to SUGGESTED_REPORT_PROMPTS: Generate a prop challenge compliance report with drawdown analysis, daily loss tracking, and probability of passing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 21,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-022",
+			"title": "Trade Detail Prop Context Banner",
+			"description": "As a prop trader, when I view a trade on a prop account, I want to see a contextual banner showing how that trade affected my challenge compliance.",
+			"acceptanceCriteria": [
+				"Find the trade detail view component (likely in src/app/(protected)/journal/ or trade detail page)",
+				"Add a small banner below trade info for prop accounts showing: if trade was a loss 'After this trade: X% of Y% max drawdown used', if trade was a win 'Profit target: Z% reached'",
+				"Banner uses font-mono text-[10px] styling, subtle border-white/5 container",
+				"Only shows for trades on prop_challenge or prop_funded accounts",
+				"Uses existing trade data + account data (no new API call needed)",
+				"All data-testid attributes",
+				"Read .claude/skills/frontend/SKILL.md AND .agents/skills/frontend-design/SKILL.md before implementing",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 22,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-015",
+			"title": "E2E Tests for Prop Dashboard Widget and /prop Page",
+			"description": "As a developer, I want E2E tests for the prop compliance UI so that we can verify user flows work correctly.",
+			"acceptanceCriteria": [
+				"Test file created: tests/e2e/prop-compliance.spec.ts",
+				"Tests dashboard widget visibility: shows for prop accounts, hidden for live/demo",
+				"Tests prop nav item: appears when prop accounts exist",
+				"Tests /prop page loads with compliance grid",
+				"Tests account selector on prop page switches between prop accounts",
+				"Tests compliance cards show data (drawdown, daily loss, profit target, consistency)",
+				"Tests drawdown chart renders",
+				"All new UI elements have data-testid attributes",
+				"All tests pass (bun run test:e2e)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 23,
+			"passes": true,
+			"notes": ""
+		}
+	]
 }
