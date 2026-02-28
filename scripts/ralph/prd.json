@@ -258,8 +258,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All greps confirmed zero forex/Twelve Data/pip/instrumentType references in src/. Fixed 8 test files with stale EURUSD references from US-013 (EURUSD→MES, updated P&L values, position sizes). Fixed pre-existing prop-compliance test mismatch. All 1027 tests pass across 32 test files. Build passes."
     },
     {
       "id": "US-016",

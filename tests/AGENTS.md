@@ -133,6 +133,15 @@ await expect(hero).toBeVisible({ timeout: 10000 });
 **When:** Testing compliance status (safe/caution/danger)
 **How:** Buffer = 1 - (used / limit). SAFE > 30% buffer, CAUTION 10-30%, DANGER < 10%. For 6% max drawdown: need > 5.4% current to get danger. For 3% daily loss limit ($3000): need > $2700 loss to get danger.
 
+### Fixture Data Changes Cascade to All Test Files
+**When:** Modifying trade data in shared fixtures (e.g., `scenarios.ts`)
+**Problem:** Changing a trade's symbol, quantity, or P&L in the fixture breaks all test files that assert on aggregate values (totalPnl, grossLoss, profitFactor, position size counts, etc.)
+**Solution:** When changing fixture trade data:
+1. Update the fixture's `expectedMetrics` with new aggregate values
+2. Grep all test files that use the fixture for the old symbol name, P&L values, and aggregate totals
+3. Update variable names too (e.g., `eurusdTrades` → `mesTrades`) — `replace_all` only catches string literals, not variable names
+4. Recalculate cascading values: totalPnl, grossLoss, grossProfit, profitFactor, avgLoss, position size ranges
+
 ## Decisions
 
 <!-- Architectural decisions and rationale -->
