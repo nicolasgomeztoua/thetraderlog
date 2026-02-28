@@ -205,8 +205,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed instrumentTypeEnum Zod schema and InstrumentType type from shared/schemas.ts. Removed instrumentType from tradeBaseFields. Removed instrumentType from ParsedTrade interface in csv-parsers/types.ts. Removed instrumentType: 'futures' from utils.ts and projectx-parser.ts parser outputs. Removed instrumentType assertion from csv-parsers.test.ts. No remaining imports of instrumentTypeEnum found. No remaining 'futures' | 'forex' union types in src/."
     },
     {
       "id": "US-013",

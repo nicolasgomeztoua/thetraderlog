@@ -394,3 +394,18 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - The `InstrumentType` type export from `@/types` was unused anywhere — safe to remove
   - There's a SEPARATE `InstrumentType` in `src/lib/shared/schemas.ts` (from Zod) — that's for US-012
 ---
+
+## 2026-02-28 - US-012: Remove instrumentType from Shared Types and Schemas
+- Removed `instrumentTypeEnum` Zod schema and `InstrumentType` type export from src/lib/shared/schemas.ts
+- Removed `instrumentType: instrumentTypeEnum` from `tradeBaseFields` in schemas.ts
+- Removed `instrumentType: "futures" | "forex"` from `ParsedTrade` interface in csv-parsers/types.ts
+- Removed `instrumentType: "futures"` from trade objects in csv-parsers/utils.ts and projectx-parser.ts
+- Removed `instrumentType` assertion from tests/unit/csv-parsers.test.ts
+- Verified no remaining imports of `instrumentTypeEnum` or `InstrumentType` from shared schemas
+- Verified no remaining `'futures' | 'forex'` union types in src/
+- Files changed: schemas.ts, types.ts, utils.ts, projectx-parser.ts, csv-parsers.test.ts
+- **Learnings for future iterations:**
+  - `tradeBaseFields` was defined in schemas.ts but never imported anywhere — it was dead code used only as a schema reference. Safe to remove fields without cascading.
+  - ParsedTrade.instrumentType was set by parsers but no longer read by the import page (removed in US-008) — the field was already unused at the consumer side
+  - The DB column still exists (US-013), so trades.ts router still hardcodes `instrumentType: "futures" as const` in inserts
+---
