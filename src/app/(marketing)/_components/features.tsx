@@ -39,7 +39,7 @@ const features = [
 				</div>
 				<div className="flex items-center gap-4 rounded border border-border/50 bg-muted/50 p-3">
 					<span className="font-mono text-muted-foreground text-xs">
-						EUR/USD
+						CL 04/15
 					</span>
 					<span className="font-medium font-mono text-sm">LONG</span>
 					<span className="ml-auto font-mono text-profit text-sm">
@@ -143,14 +143,14 @@ const features = [
 	},
 	{
 		icon: Zap,
-		title: "Futures & Forex",
+		title: "Built for Futures",
 		description:
-			"Built for ES, NQ, CL, EUR/USD, GBP/USD with proper lot sizing.",
+			"Native support for ES, NQ, MES, MNQ, CL, GC with proper tick and point values.",
 		highlight: false,
 		className: "md:col-span-1",
 		visual: (
 			<div className="mt-6 grid grid-cols-3 gap-2">
-				{["ES", "NQ", "CL", "EUR", "GBP", "JPY"].map((symbol) => (
+				{["ES", "NQ", "CL", "GC", "MES", "MNQ"].map((symbol) => (
 					<div
 						className="rounded border border-border/50 bg-muted/50 p-2 text-center font-mono text-xs"
 						key={symbol}
