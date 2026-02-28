@@ -476,3 +476,13 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - The $3 breakeven threshold in analytics affects win/loss classification — overview.test.ts uses a different threshold than scenarios.ts expectedMetrics (which uses no threshold)
   - prop-compliance.test.ts had a pre-existing bug: code at accounts.ts:653-654 excludes profit target from overallStatus calculation, so empty account is "safe" not "danger"
 ---
+
+## 2026-02-28 - US-016: Final Build Verification and Smoke Test
+- bun run check: passes (only pre-existing error in scripts/ralph/prd.prop-compliance.archived.json)
+- bun run build: passes with zero errors, all 16 static + dynamic routes built
+- bun run test: all 1027 tests pass across 32 test files
+- Zero instrumentType references in src/
+- Dev server starts without errors on port 3000
+- No dead imports or unused variables detected
+- **All 16 user stories complete. Futures-only cleanup PRD is finished.**
+---
