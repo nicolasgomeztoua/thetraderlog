@@ -334,3 +334,18 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - The DB schema still has `instrumentType` column on trades — that's a separate story (US-013). This story only removed it from calculation function signatures
   - instrumentType still exists as a DB column, tRPC input/output schemas, and UI state — those are handled by US-008 through US-013
 ---
+
+## 2026-02-28 - US-008: Remove Instrument Type UI from Trade Entry and Import Pages
+- Removed `instrumentType` state and Futures/Forex `Tabs` toggle from trade/new/page.tsx
+- Removed `instrumentType` state and Instrument Type `Tabs` toggle from import/page.tsx
+- Hardcoded `instrumentType: "futures"` in createTrade.mutate() call
+- Hardcoded `instrumentType: "futures" as const` in both platform-parsed and manual mapping branches of handleImport
+- Simplified quantity label from conditional "Contracts"/"Lot Size" to just "Contracts"
+- Simplified quantity placeholder from conditional "1"/"0.01" to just "1"
+- Removed unused Tabs/TabsList/TabsTrigger imports from import page
+- Files changed: trade/new/page.tsx, import/page.tsx
+- **Learnings for future iterations:**
+  - The tRPC mutations still expect `instrumentType` in their input schemas — hardcode "futures" until US-011 removes it from the server
+  - ParsedTrade type still has `instrumentType` — that's handled by US-012
+  - Direction tabs in trade/new/page.tsx still use Tabs components, so those imports must stay
+---

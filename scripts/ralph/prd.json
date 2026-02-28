@@ -139,8 +139,8 @@
         "Verify in browser — new trade and import pages work without instrument type toggle"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Removed instrumentType state and Futures/Forex tabs from trade/new/page.tsx. Removed instrumentType state and Tabs UI from import/page.tsx. Hardcoded instrumentType: 'futures' in mutation calls. Simplified quantity label to 'Contracts'. Removed unused Tabs imports from import page."
     },
     {
       "id": "US-009",
