@@ -189,8 +189,8 @@
         "Build passes (bun run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "analytics.ts and marketData.ts were already clean from US-007. Updated marketData.ts comment to remove Twelve Data/forex reference. trades.ts still has instrumentType: 'futures' as const in 2 insert statements (required while DB column exists — US-013 will remove). Removed instrumentType from TradeForStatsPanel, TradeForContentPanel, TradeForTable Pick types in src/types/index.ts. Removed InstrumentType type alias. Fixed type error by adding 'as const' to batch import instrumentType literal."
     },
     {
       "id": "US-012",

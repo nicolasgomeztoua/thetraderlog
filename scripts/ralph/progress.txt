@@ -378,3 +378,19 @@ Started: Sat Feb 28 11:47:18 WET 2026
   - The journal/[id]/page.tsx still passes instrumentType in trade objects to StatsPanel and ContentPanel, but that's from the DB-inferred type (TradeForStatsPanel) — will be removed in US-012/US-013
   - TimeSalesPanel had a formatting issue after removing a prop — Biome auto-fix collapses short destructure to single line
 ---
+
+## 2026-02-28 - US-011: Remove instrumentType from tRPC Routers
+- analytics.ts and marketData.ts were already clean from US-007 (no instrumentType references left)
+- Updated marketData.ts comment: removed "Supports both Databento (futures) and Twelve Data (forex)" → "Uses Databento for futures market data"
+- trades.ts still has `instrumentType: "futures" as const` in 2 insert statements (create + batchImport) — required while DB column is NOT NULL with no default
+- Removed `instrumentType` from `TradeForStatsPanel`, `TradeForContentPanel`, `TradeForTable` Pick types in src/types/index.ts
+- Removed `export type InstrumentType = Trade["instrumentType"]` from types/index.ts
+- Fixed pre-existing build error: journal/[id]/page.tsx was constructing ContentPanel trade objects without instrumentType, which was required by the old Pick type
+- Added `as const` to batch import `instrumentType: "futures"` to satisfy Drizzle's enum literal type
+- Files changed: marketData.ts, trades.ts, src/types/index.ts
+- **Learnings for future iterations:**
+  - When removing a field from Pick types, check that NO callers still construct objects with that field — the types file error manifested in journal/[id]/page.tsx, not in types/index.ts itself
+  - Drizzle enum columns require literal string types (not `string`), so hardcoded values need `as const` assertions
+  - The `InstrumentType` type export from `@/types` was unused anywhere — safe to remove
+  - There's a SEPARATE `InstrumentType` in `src/lib/shared/schemas.ts` (from Zod) — that's for US-012
+---
