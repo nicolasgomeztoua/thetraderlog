@@ -197,7 +197,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				...(selectedAccountId && { accountId: selectedAccountId }),
 			});
 		},
-		[input, activeConversationId, createConversation, sendMessage, selectedAccountId],
+		[
+			input,
+			activeConversationId,
+			createConversation,
+			sendMessage,
+			selectedAccountId,
+		],
 	);
 
 	const handleNewConversation = () => {
