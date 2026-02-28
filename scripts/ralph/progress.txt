@@ -190,3 +190,16 @@ Feature: Admin Panel
   - For database health checks, `ctx.db.execute(sql\`select 1\`)` is a lightweight connectivity test
   - `readFileSync` from `node:fs` with `resolve(process.cwd(), "package.json")` works reliably for reading app version in tRPC server context
 ---
+
+## 2026-02-28 - US-014
+- Created tests/integration/admin-system.test.ts with 14 tests covering:
+  - Auth: non-admin rejected with FORBIDDEN, unauthenticated rejected with UNAUTHORIZED
+  - Response fields: all top-level fields present, databaseStatus is "connected", appVersion is a non-"unknown" string, all tableCounts fields, all lastActivity fields
+  - Database counts: correct user count (2 from beforeAll), zero for empty tables, accurate counts after inserting accounts/trades/bugReports/aiConversations/aiMessages
+  - Last activity: lastSignup present, lastTrade present after data insertion, lastAiConversation present after data insertion, null for trade/AI when no data exists
+- Files changed: tests/integration/admin-system.test.ts (new)
+- **Learnings for future iterations:**
+  - System health tests build on each other within describes — data inserted in "accurate counts" test is visible in subsequent "last activity" tests since Vitest runs tests in order within a describe
+  - The health endpoint returns `databaseStatus` as a union type "connected" | "error" — test the happy path (connected) since we can't easily break the DB connection in tests
+  - `appVersion` comes from package.json at process.cwd() — always a valid string in the test environment
+---
