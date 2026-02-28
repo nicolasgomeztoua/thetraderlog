@@ -1,3 +1,4 @@
+import { BugReportButton } from "@/components/bug-report/bug-report-button";
 import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
@@ -36,6 +37,9 @@ export default async function ProtectedLayout({
 									className="relative mr-2 h-4 bg-border"
 									orientation="vertical"
 								/>
+								<div className="relative ml-auto">
+									<BugReportButton />
+								</div>
 							</header>
 							<main className="relative flex-1 overflow-auto p-4 sm:p-6">
 								{/* Background grid for content area */}

@@ -136,6 +136,9 @@ export const ERR_IMPORT_FAILED = "Failed to import trades. Please try again.";
 export const ERR_PRESET_LOAD_FAILED = "Failed to load preset";
 export const ERR_RULE_UPDATE_FAILED = "Failed to update rule";
 export const ERR_UPLOAD_FAILED = "Upload failed";
+export const ERR_BUG_REPORT_CREATE_FAILED = "Failed to create bug report";
+export const ERR_BUG_REPORT_SUBMIT_FAILED =
+	"Failed to submit bug report. Please try again.";
 
 // =============================================================================
 // CONFIGURATION / INFRASTRUCTURE

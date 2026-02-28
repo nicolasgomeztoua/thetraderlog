@@ -33,4 +33,5 @@ export const ids = {
 	tradeAttachment: () => createId("ta"),
 	aiReport: () => createId("ar"),
 	shareLink: () => createId("sl"),
+	bugReport: () => createId("br"),
 };

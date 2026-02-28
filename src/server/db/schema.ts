@@ -111,6 +111,25 @@ export const aiReportStatusEnum = pgEnum("ai_report_status", [
 	"failed",
 ]);
 export const shareResourceTypeEnum = pgEnum("share_resource_type", ["report"]);
+export const bugSeverityEnum = pgEnum("bug_severity", [
+	"low",
+	"medium",
+	"high",
+	"critical",
+]);
+export const bugCategoryEnum = pgEnum("bug_category", [
+	"ui",
+	"data",
+	"performance",
+	"crash",
+	"other",
+]);
+export const bugReportStatusEnum = pgEnum("bug_report_status", [
+	"open",
+	"in_progress",
+	"resolved",
+	"closed",
+]);
 
 // ============================================================================
 // USERS TABLE
@@ -926,6 +945,38 @@ export const shareLinks = createTable(
 );
 
 // ============================================================================
+// BUG REPORTS TABLE
+// ============================================================================
+
+export const bugReports = createTable(
+	"bug_report",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.bugReport()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		title: text("title").notNull(),
+		description: text("description").notNull(),
+		severity: bugSeverityEnum("severity").notNull().default("medium"),
+		category: bugCategoryEnum("category").notNull().default("other"),
+		screenshotKey: text("screenshot_key"), // S3 object key
+		pageUrl: text("page_url"),
+		userAgent: text("user_agent"),
+		metadata: jsonb("metadata").$type<Record<string, unknown>>(), // Auto-collected: email, clerkId, signedUpAt, etc.
+		status: bugReportStatusEnum("status").notNull().default("open"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [
+		index("bug_report_user_id_idx").on(t.userId),
+		index("bug_report_status_idx").on(t.status),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -942,6 +993,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	dailyJournals: many(dailyJournals),
 	dailyChecklistTemplates: many(dailyChecklistTemplates),
 	shareLinks: many(shareLinks),
+	bugReports: many(bugReports),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -1165,6 +1217,13 @@ export const shareLinksRelations = relations(shareLinks, ({ one }) => ({
 	}),
 }));
 
+export const bugReportsRelations = relations(bugReports, ({ one }) => ({
+	user: one(users, {
+		fields: [bugReports.userId],
+		references: [users.id],
+	}),
+}));
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1210,3 +1269,5 @@ export type TradeAttachment = typeof tradeAttachments.$inferSelect;
 export type NewTradeAttachment = typeof tradeAttachments.$inferInsert;
 export type ShareLink = typeof shareLinks.$inferSelect;
 export type NewShareLink = typeof shareLinks.$inferInsert;
+export type BugReport = typeof bugReports.$inferSelect;
+export type NewBugReport = typeof bugReports.$inferInsert;

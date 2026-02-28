@@ -17,6 +17,7 @@ export {
 	REVIEW_OPTIONS,
 	TRADING_SESSIONS,
 } from "./analytics";
+export * from "./bug-report";
 export * from "./errors";
 export * from "./prop";
 export * from "./sharing";
