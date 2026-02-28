@@ -267,7 +267,7 @@
         "Verify in browser: non-admin user redirected, admin user sees panel"
       ],
       "priority": 16,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

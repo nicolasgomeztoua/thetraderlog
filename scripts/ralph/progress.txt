@@ -221,3 +221,15 @@ Feature: Admin Panel
   - Icon map pattern: ADMIN_NAV_ITEMS stores icon names as strings, sidebar maps them to Lucide components via `ICON_MAP` record
   - Active nav detection: exact match for `/admin` (overview), `startsWith` for sub-pages like `/admin/bug-reports`
 ---
+
+## 2026-02-28 - US-016
+- Created `AdminGuard` client component for belt-and-suspenders admin route protection
+- Guard takes `initialRole` from server to avoid loading flash, then validates client-side via `settings.me` query
+- Redirects non-admins to `/dashboard` via `useRouter().replace()` if role changes mid-session
+- Updated admin layout to wrap children in `AdminGuard` alongside existing server-side redirect
+- Files changed: src/app/(admin)/_components/admin-guard.tsx (new), src/app/(admin)/layout.tsx
+- **Learnings for future iterations:**
+  - Server-side layout `redirect()` is the primary guard; client-side `AdminGuard` is secondary for mid-session role changes
+  - Pass `initialRole` from server component to client guard to avoid double-fetch and loading flash
+  - Use `staleTime: 30_000` on the `settings.me` query to avoid excessive refetching during admin navigation
+---
