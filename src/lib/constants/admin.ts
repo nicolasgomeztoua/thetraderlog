@@ -65,6 +65,11 @@ export const ROLE_LABELS: Record<string, string> = {
 	user: "User",
 };
 
+export const ROLE_COLORS: Record<string, string> = {
+	admin: "text-primary bg-primary/10",
+	user: "text-neutral-400 bg-neutral-400/10",
+};
+
 // =============================================================================
 // TABLE / PAGINATION
 // =============================================================================
