@@ -13,9 +13,6 @@ import { z } from "zod";
 export const directionEnum = z.enum(["long", "short"]);
 export type Direction = z.infer<typeof directionEnum>;
 
-export const instrumentTypeEnum = z.enum(["futures", "forex"]);
-export type InstrumentType = z.infer<typeof instrumentTypeEnum>;
-
 export const tradeStatusEnum = z.enum(["open", "closed"]);
 export type TradeStatus = z.infer<typeof tradeStatusEnum>;
 
@@ -105,7 +102,6 @@ export type StrategyRuleCategory = z.infer<typeof strategyRuleCategoryEnum>;
  */
 export const tradeBaseFields = {
 	symbol: z.string().min(1),
-	instrumentType: instrumentTypeEnum,
 	direction: directionEnum,
 	entryPrice: z.string(),
 	quantity: z.string(),

@@ -14,7 +14,6 @@ export type TradingPlatform =
 export interface ParsedTrade {
 	// Required fields
 	symbol: string;
-	instrumentType: "futures" | "forex";
 	direction: "long" | "short";
 	entryPrice: string;
 	entryTime: Date;

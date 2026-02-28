@@ -297,7 +297,6 @@ export function buildTradesFromFills(fills: NormalizedFill[]): {
 
 			trades.push({
 				symbol: normalizedSymbol,
-				instrumentType: "futures",
 				direction: openLot.direction,
 				entryPrice: openLot.entryPrice,
 				entryTime: openLot.entryTime,

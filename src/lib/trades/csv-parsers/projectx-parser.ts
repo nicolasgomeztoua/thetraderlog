@@ -249,7 +249,6 @@ function parseProjectXTrades(tradesCSV: string): ParseResult {
 
 			const trade: ParsedTrade = {
 				symbol: symbol.toUpperCase(),
-				instrumentType: "futures",
 				direction,
 				entryPrice: entryPrice,
 				entryTime,
