@@ -18,6 +18,7 @@ import {
 	ROLE_COLORS,
 	ROLE_LABELS,
 } from "@/lib/constants/admin";
+import { ERR_ADMIN_LOAD_USERS_FAILED } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 
 export default function AdminUsersPage() {
@@ -107,7 +108,7 @@ export default function AdminUsersPage() {
 			{error && (
 				<div className="mt-6 flex items-center gap-2 rounded border border-red-400/20 bg-red-400/5 px-4 py-3 font-mono text-red-400 text-sm">
 					<AlertCircle className="size-4 shrink-0" />
-					<span>Failed to load users</span>
+					<span>{ERR_ADMIN_LOAD_USERS_FAILED}</span>
 				</div>
 			)}
 

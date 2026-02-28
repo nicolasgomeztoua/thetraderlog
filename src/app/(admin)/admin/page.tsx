@@ -9,6 +9,7 @@ import {
 	Users,
 } from "lucide-react";
 import Link from "next/link";
+import { ERR_ADMIN_LOAD_STATS_FAILED } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 
 const OVERVIEW_CARDS = [
@@ -85,7 +86,7 @@ export default function AdminOverviewPage() {
 			{error && (
 				<div className="mt-6 flex items-center gap-2 rounded border border-red-400/20 bg-red-400/5 px-4 py-3 font-mono text-red-400 text-sm">
 					<AlertCircle className="size-4 shrink-0" />
-					<span>Failed to load platform stats</span>
+					<span>{ERR_ADMIN_LOAD_STATS_FAILED}</span>
 				</div>
 			)}
 

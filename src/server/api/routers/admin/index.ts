@@ -27,36 +27,26 @@ import {
 import { adminProcedure, createTRPCRouter } from "@/server/api/trpc";
 import {
 	accounts,
+	aiConversationModeEnum,
+	aiConversationStatusEnum,
 	aiConversations,
 	aiMessages,
+	bugCategoryEnum,
+	bugReportStatusEnum,
 	bugReports,
+	bugSeverityEnum,
 	trades,
 	users,
 } from "@/server/db/schema";
-
-const bugReportStatusValues = [
-	"open",
-	"in_progress",
-	"resolved",
-	"closed",
-] as const;
-const bugReportSeverityValues = ["low", "medium", "high", "critical"] as const;
-const bugReportCategoryValues = [
-	"ui",
-	"data",
-	"performance",
-	"crash",
-	"other",
-] as const;
 
 export const adminRouter = createTRPCRouter({
 	bugReports: createTRPCRouter({
 		list: adminProcedure
 			.input(
 				z.object({
-					status: z.enum(bugReportStatusValues).optional(),
-					category: z.enum(bugReportCategoryValues).optional(),
-					severity: z.enum(bugReportSeverityValues).optional(),
+					status: z.enum(bugReportStatusEnum.enumValues).optional(),
+					category: z.enum(bugCategoryEnum.enumValues).optional(),
+					severity: z.enum(bugSeverityEnum.enumValues).optional(),
 					page: z.number().int().min(1).default(1),
 					pageSize: z
 						.number()
@@ -162,7 +152,7 @@ export const adminRouter = createTRPCRouter({
 			.input(
 				z.object({
 					id: z.string(),
-					status: z.enum(bugReportStatusValues),
+					status: z.enum(bugReportStatusEnum.enumValues),
 				}),
 			)
 			.mutation(async ({ ctx, input }) => {
@@ -552,10 +542,8 @@ export const adminRouter = createTRPCRouter({
 		listConversations: adminProcedure
 			.input(
 				z.object({
-					mode: z.enum(["chat", "report"]).optional(),
-					status: z
-						.enum(["active", "generating", "complete", "failed"])
-						.optional(),
+					mode: z.enum(aiConversationModeEnum.enumValues).optional(),
+					status: z.enum(aiConversationStatusEnum.enumValues).optional(),
 					page: z.number().int().min(1).default(1),
 					pageSize: z
 						.number()

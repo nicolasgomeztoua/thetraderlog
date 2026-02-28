@@ -30,35 +30,18 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { ADMIN_TABLE_PAGE_SIZE } from "@/lib/constants/admin";
+import {
+	ADMIN_TABLE_PAGE_SIZE,
+	AI_CONVERSATION_MODE_COLORS,
+	AI_CONVERSATION_MODE_LABELS,
+	AI_CONVERSATION_STATUS_COLORS,
+	AI_CONVERSATION_STATUS_LABELS,
+} from "@/lib/constants/admin";
+import { ERR_ADMIN_LOAD_CONVERSATIONS_FAILED } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 
 type ConversationMode = "chat" | "report";
 type ConversationStatus = "active" | "generating" | "complete" | "failed";
-
-const MODE_LABELS: Record<string, string> = {
-	chat: "Chat",
-	report: "Report",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-	active: "Active",
-	generating: "Generating",
-	complete: "Complete",
-	failed: "Failed",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-	active: "text-[#00d4ff] bg-[#00d4ff]/10",
-	generating: "text-yellow-400 bg-yellow-400/10",
-	complete: "text-green-400 bg-green-400/10",
-	failed: "text-red-400 bg-red-400/10",
-};
-
-const MODE_COLORS: Record<string, string> = {
-	chat: "text-[#00d4ff] bg-[#00d4ff]/10",
-	report: "text-primary bg-primary/10",
-};
 
 interface DailyUsageData {
 	date: string;
@@ -279,11 +262,13 @@ export default function AdminAIPage() {
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="all">All Modes</SelectItem>
-							{Object.entries(MODE_LABELS).map(([value, label]) => (
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
-							))}
+							{Object.entries(AI_CONVERSATION_MODE_LABELS).map(
+								([value, label]) => (
+									<SelectItem key={value} value={value}>
+										{label}
+									</SelectItem>
+								),
+							)}
 						</SelectContent>
 					</Select>
 
@@ -299,11 +284,13 @@ export default function AdminAIPage() {
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="all">All Statuses</SelectItem>
-							{Object.entries(STATUS_LABELS).map(([value, label]) => (
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
-							))}
+							{Object.entries(AI_CONVERSATION_STATUS_LABELS).map(
+								([value, label]) => (
+									<SelectItem key={value} value={value}>
+										{label}
+									</SelectItem>
+								),
+							)}
 						</SelectContent>
 					</Select>
 
@@ -319,7 +306,7 @@ export default function AdminAIPage() {
 				{conversationsError && (
 					<div className="mt-4 flex items-center gap-2 rounded border border-red-400/20 bg-red-400/5 px-4 py-3 font-mono text-red-400 text-sm">
 						<AlertCircle className="size-4 shrink-0" />
-						<span>Failed to load conversations</span>
+						<span>{ERR_ADMIN_LOAD_CONVERSATIONS_FAILED}</span>
 					</div>
 				)}
 
@@ -395,16 +382,19 @@ export default function AdminAIPage() {
 											</TableCell>
 											<TableCell>
 												<span
-													className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-xs ${MODE_COLORS[convo.mode ?? ""] ?? ""}`}
+													className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-xs ${AI_CONVERSATION_MODE_COLORS[convo.mode ?? ""] ?? ""}`}
 												>
-													{MODE_LABELS[convo.mode ?? ""] ?? convo.mode ?? "—"}
+													{AI_CONVERSATION_MODE_LABELS[convo.mode ?? ""] ??
+														convo.mode ??
+														"—"}
 												</span>
 											</TableCell>
 											<TableCell>
 												<span
-													className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-xs ${STATUS_COLORS[convo.status] ?? ""}`}
+													className={`inline-flex items-center rounded px-2 py-0.5 font-mono text-xs ${AI_CONVERSATION_STATUS_COLORS[convo.status] ?? ""}`}
 												>
-													{STATUS_LABELS[convo.status] ?? convo.status}
+													{AI_CONVERSATION_STATUS_LABELS[convo.status] ??
+														convo.status}
 												</span>
 											</TableCell>
 											<TableCell className="text-right font-mono text-muted-foreground text-xs">

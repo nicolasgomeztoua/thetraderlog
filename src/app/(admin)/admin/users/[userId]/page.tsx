@@ -37,22 +37,13 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { ROLE_COLORS, ROLE_LABELS } from "@/lib/constants/admin";
+import {
+	ACCOUNT_TYPE_COLORS,
+	ACCOUNT_TYPE_LABELS,
+	ROLE_COLORS,
+	ROLE_LABELS,
+} from "@/lib/constants/admin";
 import { api } from "@/trpc/react";
-
-const ACCOUNT_TYPE_LABELS: Record<string, string> = {
-	prop_challenge: "Challenge",
-	prop_funded: "Funded",
-	live: "Live",
-	demo: "Demo",
-};
-
-const ACCOUNT_TYPE_COLORS: Record<string, string> = {
-	prop_challenge: "text-orange-400 bg-orange-400/10",
-	prop_funded: "text-primary bg-primary/10",
-	live: "text-green-400 bg-green-400/10",
-	demo: "text-neutral-400 bg-neutral-400/10",
-};
 
 function formatDate(date: Date | string | null) {
 	if (!date) return "—";

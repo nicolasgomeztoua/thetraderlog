@@ -16,6 +16,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { ERR_ADMIN_LOAD_ANALYTICS_FAILED } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 
 interface GrowthDayData {
@@ -361,7 +362,7 @@ export default function AdminAnalyticsPage() {
 			{hasError && (
 				<div className="mt-4 flex items-center gap-2 rounded border border-red-400/20 bg-red-400/5 px-4 py-3 font-mono text-red-400 text-sm">
 					<AlertCircle className="size-4 shrink-0" />
-					<span>Failed to load some analytics data</span>
+					<span>{ERR_ADMIN_LOAD_ANALYTICS_FAILED}</span>
 				</div>
 			)}
 

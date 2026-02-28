@@ -76,3 +76,49 @@ export const ROLE_COLORS: Record<string, string> = {
 
 export const ADMIN_TABLE_PAGE_SIZE = 25;
 export const ADMIN_TABLE_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+// =============================================================================
+// ACCOUNT TYPE LABELS & COLORS
+// =============================================================================
+
+export const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+	prop_challenge: "Challenge",
+	prop_funded: "Funded",
+	live: "Live",
+	demo: "Demo",
+};
+
+export const ACCOUNT_TYPE_COLORS: Record<string, string> = {
+	prop_challenge: "text-orange-400 bg-orange-400/10",
+	prop_funded: "text-primary bg-primary/10",
+	live: "text-green-400 bg-green-400/10",
+	demo: "text-neutral-400 bg-neutral-400/10",
+};
+
+// =============================================================================
+// AI CONVERSATION LABELS & COLORS
+// =============================================================================
+
+export const AI_CONVERSATION_MODE_LABELS: Record<string, string> = {
+	chat: "Chat",
+	report: "Report",
+};
+
+export const AI_CONVERSATION_STATUS_LABELS: Record<string, string> = {
+	active: "Active",
+	generating: "Generating",
+	complete: "Complete",
+	failed: "Failed",
+};
+
+export const AI_CONVERSATION_STATUS_COLORS: Record<string, string> = {
+	active: "text-[#00d4ff] bg-[#00d4ff]/10",
+	generating: "text-yellow-400 bg-yellow-400/10",
+	complete: "text-green-400 bg-green-400/10",
+	failed: "text-red-400 bg-red-400/10",
+};
+
+export const AI_CONVERSATION_MODE_COLORS: Record<string, string> = {
+	chat: "text-[#00d4ff] bg-[#00d4ff]/10",
+	report: "text-primary bg-primary/10",
+};

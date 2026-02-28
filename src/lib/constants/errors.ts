@@ -203,6 +203,17 @@ export const ERR_ADMIN_BUG_REPORT_NOT_FOUND = "Bug report not found";
 export const ERR_ADMIN_ROLE_UPDATE_FAILED = "Failed to update user role";
 export const ERR_ADMIN_CONVERSATION_NOT_FOUND = "Conversation not found";
 
+// Admin frontend error messages
+export const ERR_ADMIN_LOAD_STATS_FAILED = "Failed to load platform stats";
+export const ERR_ADMIN_LOAD_BUG_REPORTS_FAILED = "Failed to load bug reports";
+export const ERR_ADMIN_LOAD_USERS_FAILED = "Failed to load users";
+export const ERR_ADMIN_LOAD_CONVERSATIONS_FAILED =
+	"Failed to load conversations";
+export const ERR_ADMIN_LOAD_ANALYTICS_FAILED =
+	"Failed to load some analytics data";
+export const ERR_ADMIN_LOAD_SYSTEM_HEALTH_FAILED =
+	"Failed to load system health data";
+
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
