@@ -2,6 +2,10 @@
 
 import { ArrowRight, FileText, Loader2, RefreshCw, Send } from "lucide-react";
 import { useState } from "react";
+import {
+	UsageLimitBanner,
+	useReportLimitReached,
+} from "@/components/billing/usage-limit-banner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
@@ -121,6 +125,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const [dateError, setDateError] = useState("");
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const { selectedAccountId } = useAccount();
+	const reportLimitReached = useReportLimitReached();
 
 	const utils = api.useUtils();
 
@@ -298,11 +303,16 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 								)}
 							</div>
 
+							{/* Usage Limit Banner */}
+							{reportLimitReached && <UsageLimitBanner type="reports" />}
+
 							{/* Generate Button */}
 							<button
 								className="flex w-full items-center justify-center gap-2 rounded bg-accent/10 py-2.5 font-mono text-accent text-xs uppercase tracking-wider transition-colors hover:bg-accent/20 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
 								data-testid="report-generate-button"
-								disabled={startReport.isPending || !prompt.trim()}
+								disabled={
+									startReport.isPending || !prompt.trim() || reportLimitReached
+								}
 								onClick={handleGenerateReport}
 								type="button"
 							>

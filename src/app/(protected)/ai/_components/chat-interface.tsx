@@ -11,6 +11,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+	UsageLimitBanner,
+	useChatLimitReached,
+} from "@/components/billing/usage-limit-banner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
@@ -91,6 +95,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const [lastSentAt, setLastSentAt] = useState<number>(0);
 	const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const chatLimitReached = useChatLimitReached();
 
 	const greeting = useMemo(() => {
 		const timeGreeting = getTimeGreeting();
@@ -411,7 +416,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				{/* Input */}
 				<div className="border-border border-t px-4 py-3">
 					<div className="mx-auto max-w-3xl">
+						{chatLimitReached && (
+							<div className="mb-2">
+								<UsageLimitBanner type="chat" />
+							</div>
+						)}
 						<ChatInput
+							disabled={chatLimitReached}
 							isLoading={isLoading}
 							onChange={setInput}
 							onSubmit={() => void handleSend()}
