@@ -122,3 +122,48 @@ Started: Sat Mar  7 18:39:16 WET 2026
   - Platform enum values are: projectx, topstepx, ninjatrader, tradovate, rithmic, apex, other (NOT mt4/mt5)
   - requireFeature middleware doesn't pass user to hasFeatureAccess, so beta bypass via publicMetadata only works in billing/AI routers, not through middleware — tests simulate beta by passing FULL_ACCESS_AUTH
 ---
+
+## 2026-03-07 - US-010
+- Updated pricing page to wire Clerk checkout with plan-aware CTAs
+- Updated PLAN_METADATA prices to match PRD ($10/mo Starter, $24/mo Pro)
+- CTA logic: unauthenticated → SignUpButton with forceRedirectUrl, authenticated without plan → link to settings billing tab, authenticated with plan → "Current Plan" badge
+- Used useAuth().has() for client-side plan detection
+- Added "30-day free trial" badge on Pro plan
+- Features list sourced from PLAN_METADATA constants
+- Files changed: src/app/(marketing)/_components/pricing.tsx, src/lib/constants/billing.ts
+- **Learnings for future iterations:**
+  - PLAN_METADATA is typed as Record<string, PlanMetadata> — indexing returns `PlanMetadata | undefined`. Cast with `as PlanMetadata` when key is guaranteed
+  - Clerk's `useAuth().has()` returns `HasFunction | undefined` — use optional chaining: `has?.({ plan: PLAN_PRO })`
+  - Plan hierarchy pattern: define `const PLAN_HIERARCHY = [PLAN_FREE, PLAN_STARTER, PLAN_PRO] as const` and use indexOf for comparison
+  - For checkout wiring without known Clerk checkout URLs, redirect to `/settings?tab=billing` as interim
+---
+
+## 2026-03-07 - US-011
+- Created new BillingTab component at src/app/(protected)/settings/_components/billing-tab.tsx
+- Added "Billing" tab to settings page (5th tab) with URL param support (?tab=billing)
+- Current Plan card: shows plan name, price, beta badge, manage/upgrade CTA
+- Usage meters: AI Chat (daily) and AI Reports (monthly) with color-coded progress bars (green < 50%, amber 50-80%, red > 80%)
+- Plan comparison card: side-by-side view of Free/Starter/Pro with "Current" badge and upgrade CTAs
+- Uses api.billing.getCurrentPlan and api.billing.getUsage queries
+- Files changed: src/app/(protected)/settings/_components/billing-tab.tsx (new), src/app/(protected)/settings/_components/settings-content.tsx
+- **Learnings for future iterations:**
+  - Extracted billing tab as separate component to avoid bloating the 2170+ line settings-content.tsx
+  - TabsList already had `sm:grid-cols-5` despite only having 4 tabs — adding 5th tab made it correct
+  - useAuth().has() from Clerk returns `HasFunction | undefined` — use optional chaining `has?.({ plan: PLAN_PRO })`
+  - Biome auto-reorders data-testid attributes alphabetically within JSX elements
+  - UsageMeter component handles null limit (beta/unlimited) as a separate render path
+---
+
+## 2026-03-07 - US-012
+- Created src/components/billing/upgrade-prompt.tsx with UpgradePrompt (wrapper) and UpgradeCardInline components
+- Applied upgrade gates to: AI page (chat + reports), trade creation form, CSV import page, PDF export button
+- UpgradePrompt wraps children and conditionally renders an upgrade card when access denied
+- PDF export button uses inline access check (after all hooks) since hooks must not be conditional
+- Files changed: src/components/billing/upgrade-prompt.tsx (new), src/app/(protected)/ai/page.tsx, src/app/(protected)/trade/new/page.tsx, src/app/(protected)/import/page.tsx, src/app/(protected)/ai/reports/[reportId]/_components/download-pdf-button.tsx
+- **Learnings for future iterations:**
+  - UpgradePrompt uses useAuth().has() + useUser().publicMetadata.beta for client-side gating
+  - Cannot use early returns before hooks in React — place access checks after all hooks are called
+  - FEATURE_CONFIG map centralizes feature metadata (title, description, icon, planRequired, isAiFeature)
+  - Ice blue (#00d4ff) for AI features, chartreuse (#d4ff00) for core features in upgrade cards
+  - Biome auto-fixes needed after adding imports (import ordering + formatting)
+---
