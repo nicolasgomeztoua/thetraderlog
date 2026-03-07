@@ -720,6 +720,7 @@ export function SettingsContent() {
 						</TabsTrigger>
 						<TabsTrigger
 							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
+							data-testid="settings-tab-billing"
 							value="billing"
 						>
 							Billing

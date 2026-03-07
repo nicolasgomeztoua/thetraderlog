@@ -94,6 +94,7 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 			>
 				<Button
 					className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+					data-testid={`pricing-cta-${plan.slug}`}
 					variant={plan.highlighted ? "default" : "outline"}
 				>
 					{plan.slug === PLAN_FREE ? "Start Free Trial" : `Get ${plan.name}`}
@@ -108,6 +109,7 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 			<Button
 				asChild
 				className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				data-testid={`pricing-cta-${plan.slug}`}
 				variant="outline"
 			>
 				<Link href="/settings?tab=billing">
@@ -123,6 +125,7 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 			<Button
 				asChild
 				className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				data-testid={`pricing-cta-${plan.slug}`}
 				variant="outline"
 			>
 				<Link href="/dashboard">Go to Dashboard</Link>
@@ -134,6 +137,7 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 		<Button
 			asChild
 			className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+			data-testid={`pricing-cta-${plan.slug}`}
 			variant={plan.highlighted ? "default" : "outline"}
 		>
 			<Link href="/settings?tab=billing">
@@ -148,7 +152,11 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 
 export function Pricing() {
 	return (
-		<section className="relative py-16 sm:py-24 lg:py-32" id="pricing">
+		<section
+			className="relative py-16 sm:py-24 lg:py-32"
+			data-testid="pricing-section"
+			id="pricing"
+		>
 			{/* Background */}
 			<div className="grid-bg absolute inset-0 opacity-30" />
 
@@ -177,6 +185,7 @@ export function Pricing() {
 									? "order-first border-primary/30 bg-primary/2 shadow-lg shadow-primary/5 lg:order-none"
 									: "border-border bg-muted/30 hover:border-border"
 							}`}
+							data-testid={`pricing-card-${plan.slug}`}
 							key={plan.slug}
 						>
 							{/* Popular badge */}

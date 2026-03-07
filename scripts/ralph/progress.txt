@@ -167,3 +167,29 @@ Started: Sat Mar  7 18:39:16 WET 2026
   - Ice blue (#00d4ff) for AI features, chartreuse (#d4ff00) for core features in upgrade cards
   - Biome auto-fixes needed after adding imports (import ordering + formatting)
 ---
+
+## 2026-03-07 - US-013
+- Created src/components/billing/usage-limit-banner.tsx with UsageLimitBanner component and useChatLimitReached/useReportLimitReached hooks
+- Integrated into chat-interface.tsx: banner above input + disabled send when daily limit reached
+- Integrated into report-interface.tsx: banner above generate button + disabled button when monthly limit reached
+- Files changed: src/components/billing/usage-limit-banner.tsx (new), src/app/(protected)/ai/_components/chat-interface.tsx, src/app/(protected)/ai/_components/report-interface.tsx
+- **Learnings for future iterations:**
+  - Custom hooks (useChatLimitReached, useReportLimitReached) wrap the billing.getUsage query for reuse across components
+  - Amber-500 color for usage limit warnings (non-blocking, informational tone)
+  - ChatInput accepts `disabled` prop — use it to prevent sending when limit reached
+  - Biome auto-formats JSX short-circuit expressions: `{condition && (<Component />)}` becomes `{condition && <Component />}`
+---
+
+## 2026-03-07 - US-014
+- Created tests/e2e/billing.spec.ts with 15 E2E tests covering billing UI flows
+- Added data-testid attributes to pricing.tsx (pricing-section, pricing-card-{slug}, pricing-cta-{slug})
+- Added data-testid="settings-tab-billing" to settings-content.tsx TabsTrigger
+- Test coverage: settings billing tab (5 tests), pricing page (4 tests + 1 unauth), upgrade prompts (1 test), usage limit banners (2 tests)
+- Files changed: tests/e2e/billing.spec.ts (new), src/app/(marketing)/_components/pricing.tsx, src/app/(protected)/settings/_components/settings-content.tsx
+- **Learnings for future iterations:**
+  - E2E tests dependent on tRPC data must wait for a data-dependent element before asserting on derived UI
+  - beforeEach should wait for a content indicator (e.g., plan name text) not just container visibility
+  - Pricing page CTAs vary by user state — test for any valid state rather than a specific one
+  - Global setup can fail intermittently with ERR_ABORTED — this is a dev server startup flakiness, not a test issue
+  - Playwright strict mode: use data-testid attributes, not CSS classes
+---
