@@ -1,5 +1,4 @@
 export * from "./admin";
-export * from "./billing";
 export {
 	AI_MODES,
 	DEFAULT_CHAT_MODEL,
@@ -19,6 +18,7 @@ export {
 	REVIEW_OPTIONS,
 	TRADING_SESSIONS,
 } from "./analytics";
+export * from "./billing";
 export * from "./bug-report";
 export * from "./errors";
 export * from "./prop";
