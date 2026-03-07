@@ -161,44 +161,34 @@ export const billingRouter = createTRPCRouter({
 		const today = getTodayDateString();
 		const { month, year } = getCurrentMonthYear();
 
-		// Upsert daily chat usage row
 		const [chatRow] = await ctx.db
-			.insert(aiUsage)
-			.values({
-				userId: ctx.user.id,
-				chatMessagesUsed: 0,
-				chatMessagesDate: today,
-				reportsUsed: 0,
-			})
-			.onConflictDoUpdate({
-				target: [aiUsage.userId, aiUsage.chatMessagesDate],
-				set: { updatedAt: new Date() },
-			})
-			.returning();
+			.select({ used: aiUsage.chatMessagesUsed })
+			.from(aiUsage)
+			.where(
+				and(
+					eq(aiUsage.userId, ctx.user.id),
+					eq(aiUsage.chatMessagesDate, today),
+				),
+			);
 
-		// Upsert monthly report usage row
 		const [reportRow] = await ctx.db
-			.insert(aiUsage)
-			.values({
-				userId: ctx.user.id,
-				chatMessagesUsed: 0,
-				reportsUsed: 0,
-				reportsMonth: month,
-				reportsYear: year,
-			})
-			.onConflictDoUpdate({
-				target: [aiUsage.userId, aiUsage.reportsMonth, aiUsage.reportsYear],
-				set: { updatedAt: new Date() },
-			})
-			.returning();
+			.select({ used: aiUsage.reportsUsed })
+			.from(aiUsage)
+			.where(
+				and(
+					eq(aiUsage.userId, ctx.user.id),
+					eq(aiUsage.reportsMonth, month),
+					eq(aiUsage.reportsYear, year),
+				),
+			);
 
 		return {
 			chat: {
-				used: chatRow?.chatMessagesUsed ?? 0,
+				used: chatRow?.used ?? 0,
 				limit: beta ? null : AI_CHAT_DAILY_LIMIT,
 			},
 			reports: {
-				used: reportRow?.reportsUsed ?? 0,
+				used: reportRow?.used ?? 0,
 				limit: beta ? null : AI_REPORTS_MONTHLY_LIMIT,
 			},
 		};
