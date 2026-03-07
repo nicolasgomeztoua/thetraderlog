@@ -1,7 +1,6 @@
 import { runs } from "@trigger.dev/sdk/v3";
-import { TRPCError } from "@trpc/server";
 import type { ModelMessage } from "ai";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { aiGenerateText } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
@@ -19,15 +18,11 @@ import {
 	MAX_TOOL_ROUNDS_CHAT,
 } from "@/lib/constants/ai";
 import {
-	AI_CHAT_DAILY_LIMIT,
-	AI_REPORTS_MONTHLY_LIMIT,
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
 	FEATURE_PDF_EXPORT,
 } from "@/lib/constants/billing";
 import {
-	ERR_AI_CHAT_LIMIT_REACHED,
-	ERR_AI_REPORT_LIMIT_REACHED,
 	ERR_CONVERSATION_CREATE_FAILED,
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_MESSAGE_LIMIT_REACHED,
@@ -43,14 +38,13 @@ import {
 	protectedProcedure,
 	requireFeature,
 } from "@/server/api/trpc";
-import {
-	aiConversations,
-	aiMessages,
-	aiReports,
-	aiUsage,
-} from "@/server/db/schema";
+import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
 import { generateAiReport } from "@/trigger/generate-ai-report";
 import { generateReportPdf } from "@/trigger/generate-report-pdf";
+import {
+	incrementAndCheckChatUsage,
+	incrementAndCheckReportUsage,
+} from "./billing";
 
 // =============================================================================
 // AI ROUTER (Chat + Report Endpoints)
@@ -104,45 +98,7 @@ export const aiRouter = createTRPCRouter({
 				publicMetadata?: Record<string, unknown>;
 			};
 			const beta = isBetaUser(userMeta);
-			const today = new Date().toISOString().split("T")[0] as string;
-
-			const [usageRow] = await ctx.db
-				.insert(aiUsage)
-				.values({
-					userId: ctx.user.id,
-					chatMessagesUsed: 1,
-					chatMessagesDate: today,
-					reportsUsed: 0,
-				})
-				.onConflictDoUpdate({
-					target: [aiUsage.userId, aiUsage.chatMessagesDate],
-					set: {
-						chatMessagesUsed: sql`${aiUsage.chatMessagesUsed} + 1`,
-					},
-				})
-				.returning();
-
-			const chatUsed = usageRow?.chatMessagesUsed ?? 1;
-
-			if (!beta && chatUsed > AI_CHAT_DAILY_LIMIT) {
-				// Roll back the increment
-				await ctx.db
-					.update(aiUsage)
-					.set({
-						chatMessagesUsed: sql`${aiUsage.chatMessagesUsed} - 1`,
-					})
-					.where(
-						and(
-							eq(aiUsage.userId, ctx.user.id),
-							eq(aiUsage.chatMessagesDate, today),
-						),
-					);
-
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: ERR_AI_CHAT_LIMIT_REACHED,
-				});
-			}
+			await incrementAndCheckChatUsage(ctx.db, ctx.user.id, beta);
 
 			// Verify conversation ownership
 			const conversation = await ctx.db.query.aiConversations.findFirst({
@@ -374,49 +330,7 @@ export const aiRouter = createTRPCRouter({
 				publicMetadata?: Record<string, unknown>;
 			};
 			const beta = isBetaUser(userMeta);
-			const now = new Date();
-			const month = now.getUTCMonth() + 1;
-			const year = now.getUTCFullYear();
-
-			const [usageRow] = await ctx.db
-				.insert(aiUsage)
-				.values({
-					userId: ctx.user.id,
-					chatMessagesUsed: 0,
-					reportsUsed: 1,
-					reportsMonth: month,
-					reportsYear: year,
-				})
-				.onConflictDoUpdate({
-					target: [aiUsage.userId, aiUsage.reportsMonth, aiUsage.reportsYear],
-					set: {
-						reportsUsed: sql`${aiUsage.reportsUsed} + 1`,
-					},
-				})
-				.returning();
-
-			const reportsUsed = usageRow?.reportsUsed ?? 1;
-
-			if (!beta && reportsUsed > AI_REPORTS_MONTHLY_LIMIT) {
-				// Roll back the increment
-				await ctx.db
-					.update(aiUsage)
-					.set({
-						reportsUsed: sql`${aiUsage.reportsUsed} - 1`,
-					})
-					.where(
-						and(
-							eq(aiUsage.userId, ctx.user.id),
-							eq(aiUsage.reportsMonth, month),
-							eq(aiUsage.reportsYear, year),
-						),
-					);
-
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: ERR_AI_REPORT_LIMIT_REACHED,
-				});
-			}
+			await incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
 
 			const model = DEFAULT_REPORT_MODEL;
 			const title =

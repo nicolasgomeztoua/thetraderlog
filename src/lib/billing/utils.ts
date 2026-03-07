@@ -1,4 +1,4 @@
-import { PLAN_PRO } from "@/lib/constants/billing";
+import { PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
 
 /**
  * Minimal interface for checking beta status from Clerk user metadata.
@@ -75,8 +75,8 @@ export function getEffectivePlan(
 		return PLAN_PRO;
 	}
 
-	if (auth.has({ plan: "starter" })) {
-		return "starter";
+	if (auth.has({ plan: PLAN_STARTER })) {
+		return PLAN_STARTER;
 	}
 
 	return "free";

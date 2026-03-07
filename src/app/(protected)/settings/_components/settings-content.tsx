@@ -3,7 +3,6 @@
 import { useClerk, useUser } from "@clerk/nextjs";
 import {
 	Award,
-	Check,
 	Clock,
 	Edit,
 	FolderOpen,
