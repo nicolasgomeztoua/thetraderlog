@@ -55,7 +55,7 @@ export const PLAN_METADATA: Record<string, PlanMetadata> = {
 	[PLAN_STARTER]: {
 		slug: PLAN_STARTER,
 		name: "Starter",
-		price: "$19/mo",
+		price: "$10/mo",
 		description: "Essential tools for active traders",
 		features: [
 			"Trade management & logging",
@@ -68,7 +68,7 @@ export const PLAN_METADATA: Record<string, PlanMetadata> = {
 	[PLAN_PRO]: {
 		slug: PLAN_PRO,
 		name: "Pro",
-		price: "$39/mo",
+		price: "$24/mo",
 		description: "AI-powered insights for serious traders",
 		features: [
 			"Everything in Starter",
