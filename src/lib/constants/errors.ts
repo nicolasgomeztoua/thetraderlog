@@ -210,6 +210,23 @@ export const ERR_ADMIN_LOAD_USERS_FAILED = "Failed to load users";
 export const ERR_ADMIN_LOAD_CONVERSATIONS_FAILED =
 	"Failed to load conversations";
 
+// =============================================================================
+// BILLING / ENTITLEMENTS
+// =============================================================================
+
+export const ERR_PLAN_REQUIRED =
+	"A paid plan is required to access this feature";
+export const ERR_FEATURE_NOT_AVAILABLE =
+	"This feature is not available on your current plan";
+export const ERR_AI_CHAT_LIMIT_REACHED =
+	"Daily AI chat limit reached. Your limit resets at midnight UTC.";
+export const ERR_AI_REPORT_LIMIT_REACHED =
+	"Monthly AI report limit reached. Your limit resets at the start of next month.";
+
+/** Dynamic: upgrade required for a specific feature */
+export const errUpgradeRequired = (feature: string) =>
+	`Upgrade your plan to access ${feature}`;
+
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
