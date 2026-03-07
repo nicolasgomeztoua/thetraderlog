@@ -5,7 +5,7 @@
 /**
  * Default AI model used for chat mode
  */
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2";
+export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2-thinking";
 
 /**
  * Default AI model used for report generation
@@ -55,6 +55,16 @@ export const MAX_TOOL_ROUNDS_CHAT = 10;
  * Maximum tool-calling rounds per report generation (more than chat)
  */
 export const MAX_TOOL_ROUNDS_REPORT = 100;
+
+/**
+ * Reasoning token budget for report phases (billed as output tokens)
+ */
+export const REPORT_REASONING_TOKENS = 16_000;
+
+/**
+ * Reasoning token budget for chat (lighter than reports for speed)
+ */
+export const CHAT_REASONING_TOKENS = 8_000;
 
 /**
  * Maximum rows returned from AI SQL queries

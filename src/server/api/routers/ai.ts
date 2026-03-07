@@ -13,6 +13,7 @@ import {
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
+	CHAT_REASONING_TOKENS,
 	MAX_TOOL_ROUNDS_CHAT,
 } from "@/lib/constants/ai";
 import {
@@ -151,6 +152,7 @@ export const aiRouter = createTRPCRouter({
 				messages,
 				tools,
 				maxSteps: MAX_TOOL_ROUNDS_CHAT,
+				reasoning: { maxTokens: CHAT_REASONING_TOKENS },
 			});
 
 			// Collect tool calls from all steps for logging

@@ -1,7 +1,10 @@
 import type { LanguageModel } from "ai";
 import { aiGenerateText } from "@/lib/ai/client";
 import { getReportTools } from "@/lib/ai/tools/definitions";
-import { MAX_TOOL_ROUNDS_REPORT } from "@/lib/constants/ai";
+import {
+	MAX_TOOL_ROUNDS_REPORT,
+	REPORT_REASONING_TOKENS,
+} from "@/lib/constants/ai";
 import type { db as DbInstance } from "@/server/db";
 
 type Db = typeof DbInstance;
@@ -120,6 +123,7 @@ export async function runGathererPhase(
 		messages: [{ role: "user", content: options.prompt }],
 		tools,
 		maxSteps: MAX_TOOL_ROUNDS_REPORT,
+		reasoning: { maxTokens: REPORT_REASONING_TOKENS },
 		onStepFinish: (step) => {
 			if (step.toolCalls?.length) {
 				for (const call of step.toolCalls) {

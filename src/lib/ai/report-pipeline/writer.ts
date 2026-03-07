@@ -1,5 +1,6 @@
 import type { LanguageModel } from "ai";
 import { aiGenerateText } from "@/lib/ai/client";
+import { REPORT_REASONING_TOKENS } from "@/lib/constants/ai";
 import { WRITER_FEW_SHOT_EXAMPLES } from "./few-shot-examples";
 
 // =============================================================================
@@ -117,6 +118,7 @@ export async function runWriterPhase(
 		model: options.model,
 		system: systemPrompt,
 		messages: [{ role: "user", content: options.prompt }],
+		reasoning: { maxTokens: REPORT_REASONING_TOKENS },
 	});
 
 	return {

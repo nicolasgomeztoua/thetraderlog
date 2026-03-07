@@ -163,9 +163,9 @@ const features = [
 	},
 	{
 		icon: Lock,
-		title: "Your Data, Your Keys",
+		title: "Your Data, Protected",
 		description:
-			"Bring your own AI API keys. Your trading data stays private. Always.",
+			"Your trading data stays private and encrypted at rest. Always.",
 		highlight: true,
 		className: "md:col-span-1",
 		visual: (

@@ -6,17 +6,13 @@ import {
 	Check,
 	Clock,
 	Edit,
-	Eye,
-	EyeOff,
 	FolderOpen,
 	Globe,
-	Key,
 	Link2,
 	Loader2,
 	Plus,
 	Save,
 	Shield,
-	Sparkles,
 	Star,
 	Trash2,
 	Trophy,
@@ -113,27 +109,6 @@ function sessionsToUtc(
 		endHour: localHourToUtcHour(s.endHour, timezone),
 	}));
 }
-
-const AI_PROVIDERS = [
-	{
-		id: "openai",
-		name: "OpenAI",
-		description: "GPT-4, GPT-3.5 Turbo",
-		placeholder: "sk-...",
-	},
-	{
-		id: "anthropic",
-		name: "Anthropic",
-		description: "Claude 3, Claude 2",
-		placeholder: "sk-ant-...",
-	},
-	{
-		id: "google",
-		name: "Google AI",
-		description: "Gemini Pro, Gemini Ultra",
-		placeholder: "AI...",
-	},
-];
 
 // Default trading sessions (UTC hours)
 interface TradingSession {
@@ -239,7 +214,6 @@ export function SettingsContent() {
 	const { user } = useUser();
 	const { openUserProfile } = useClerk();
 	const searchParams = useSearchParams();
-	const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
 	const [activeTab, setActiveTab] = useState("general");
 
 	// Account management state
@@ -407,10 +381,6 @@ export function SettingsContent() {
 	}, [searchParams]);
 
 	const [settings, setSettings] = useState({
-		preferredProvider: "openai",
-		openaiKey: "",
-		anthropicKey: "",
-		googleKey: "",
 		timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 		currency: "USD",
 		breakevenThreshold: "3.00",
@@ -462,10 +432,6 @@ export function SettingsContent() {
 			const localSessions = sessionsToLocal(parsedSessions, tz);
 
 			const newSettings = {
-				preferredProvider: userSettings.preferredAiProvider ?? "openai",
-				openaiKey: userSettings.openaiApiKey ?? "",
-				anthropicKey: userSettings.anthropicApiKey ?? "",
-				googleKey: userSettings.googleApiKey ?? "",
 				timezone: tz,
 				currency: userSettings.currency ?? "USD",
 				breakevenThreshold: userSettings.breakevenThreshold ?? "3.00",
@@ -630,10 +596,6 @@ export function SettingsContent() {
 		setIsGroupDialogOpen(true);
 	};
 
-	const toggleShowKey = (provider: string) => {
-		setShowKeys((prev) => ({ ...prev, [provider]: !prev[provider] }));
-	};
-
 	const updateSettingsStore = useSettingsStore((state) => state.updateSettings);
 
 	const handleSave = () => {
@@ -645,10 +607,6 @@ export function SettingsContent() {
 
 		updateSettings.mutate(
 			{
-				preferredAiProvider: settings.preferredProvider,
-				openaiApiKey: settings.openaiKey || undefined,
-				anthropicApiKey: settings.anthropicKey || undefined,
-				googleApiKey: settings.googleKey || undefined,
 				timezone: settings.timezone,
 				currency: settings.currency,
 				breakevenThreshold: settings.breakevenThreshold,
@@ -757,13 +715,7 @@ export function SettingsContent() {
 						>
 							Tags
 						</TabsTrigger>
-						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
-							value="ai"
-						>
-							AI
-						</TabsTrigger>
-					</TabsList>
+						</TabsList>
 				</div>
 
 				{/* General Tab */}
@@ -2189,113 +2141,7 @@ export function SettingsContent() {
 					</Card>
 				</TabsContent>
 
-				{/* AI Providers Tab */}
-				<TabsContent className="space-y-4 sm:space-y-6" value="ai">
-					<Card>
-						<CardHeader className="p-4 sm:p-6">
-							<CardTitle className="flex items-center gap-2">
-								<Key className="h-5 w-5" />
-								AI Provider Keys
-							</CardTitle>
-							<CardDescription className="hidden sm:block">
-								Configure your AI provider API keys for advanced insights
-							</CardDescription>
-						</CardHeader>
-						<CardContent className="space-y-4 p-4 pt-0 sm:space-y-6 sm:p-6 sm:pt-0">
-							{/* Security Notice */}
-							<div className="flex items-start gap-3 rounded-lg border border-primary/50 bg-primary/5 p-3 sm:p-4">
-								<Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-								<div>
-									<p className="font-medium text-sm sm:text-base">
-										Bring Your Own Key (BYOK)
-									</p>
-									<p className="text-muted-foreground text-xs sm:text-sm">
-										Your API keys are encrypted and stored securely. We never
-										share your keys or use them for any purpose other than
-										generating insights for you.
-									</p>
-								</div>
-							</div>
-
-							{/* Preferred Provider */}
-							<div className="space-y-2">
-								<Label>Preferred AI Provider</Label>
-								<Select
-									onValueChange={(value) =>
-										setSettings({ ...settings, preferredProvider: value })
-									}
-									value={settings.preferredProvider}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Select provider" />
-									</SelectTrigger>
-									<SelectContent>
-										{AI_PROVIDERS.map((provider) => (
-											<SelectItem key={provider.id} value={provider.id}>
-												{provider.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							<Separator />
-
-							{/* API Keys */}
-							{AI_PROVIDERS.map((provider) => (
-								<div className="space-y-2" key={provider.id}>
-									<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-										<Label className="text-sm" htmlFor={provider.id}>
-											{provider.name} API Key
-											<span className="ml-2 hidden text-muted-foreground text-xs sm:inline">
-												{provider.description}
-											</span>
-										</Label>
-										{settings[`${provider.id}Key` as keyof typeof settings] && (
-											<Badge className="w-fit gap-1" variant="secondary">
-												<Check className="h-3 w-3" />
-												Configured
-											</Badge>
-										)}
-									</div>
-									<div className="relative">
-										<Input
-											className="min-h-[44px] pr-12 font-mono text-sm"
-											id={provider.id}
-											onChange={(e) =>
-												setSettings({
-													...settings,
-													[`${provider.id}Key`]: e.target.value,
-												})
-											}
-											placeholder={provider.placeholder}
-											type={showKeys[provider.id] ? "text" : "password"}
-											value={
-												settings[
-													`${provider.id}Key` as keyof typeof settings
-												] as string
-											}
-										/>
-										<Button
-											className="-translate-y-1/2 absolute top-1/2 right-1 min-h-[36px] min-w-[36px]"
-											onClick={() => toggleShowKey(provider.id)}
-											size="icon"
-											type="button"
-											variant="ghost"
-										>
-											{showKeys[provider.id] ? (
-												<EyeOff className="h-4 w-4" />
-											) : (
-												<Eye className="h-4 w-4" />
-											)}
-										</Button>
-									</div>
-								</div>
-							))}
-						</CardContent>
-					</Card>
-				</TabsContent>
-			</Tabs>
+				</Tabs>
 
 			{/* Save Button - Fixed at bottom */}
 			<div className="flex flex-col gap-3 rounded border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">

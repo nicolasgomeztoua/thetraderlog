@@ -36,6 +36,7 @@ interface AiGenerateTextOptions {
 	maxRetries?: number;
 	temperature?: number;
 	maxOutputTokens?: number;
+	reasoning?: { maxTokens: number };
 	onStepFinish?: (step: StepResult<ToolSet>) => void | Promise<void>;
 }
 
@@ -55,6 +56,7 @@ interface AiStreamTextOptions {
 	maxRetries?: number;
 	temperature?: number;
 	maxOutputTokens?: number;
+	reasoning?: { maxTokens: number };
 	onStepFinish?: (step: StepResult<ToolSet>) => void | Promise<void>;
 }
 
@@ -80,6 +82,13 @@ export async function aiGenerateText(
 			temperature: options.temperature,
 			maxOutputTokens: options.maxOutputTokens,
 			onStepFinish: options.onStepFinish,
+			...(options.reasoning && {
+				providerOptions: {
+					openrouter: {
+						reasoning: { max_tokens: options.reasoning.maxTokens },
+					},
+				},
+			}),
 		});
 
 		return {
@@ -115,6 +124,13 @@ export function aiStreamText(options: AiStreamTextOptions) {
 			temperature: options.temperature,
 			maxOutputTokens: options.maxOutputTokens,
 			onStepFinish: options.onStepFinish,
+			...(options.reasoning && {
+				providerOptions: {
+					openrouter: {
+						reasoning: { max_tokens: options.reasoning.maxTokens },
+					},
+				},
+			}),
 		});
 	} catch (error) {
 		throw mapToOpenRouterError(error);

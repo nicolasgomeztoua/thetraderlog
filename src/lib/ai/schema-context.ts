@@ -165,10 +165,6 @@ const SCHEMA_CONTEXT = `
 |--------|------|----------|-------|
 | id | text (PK) | no | Generated ID |
 | user_id | text (FK → user.id, unique) | no | One settings per user |
-| openai_api_key | text | yes | Encrypted |
-| anthropic_api_key | text | yes | Encrypted |
-| google_api_key | text | yes | Encrypted |
-| preferred_ai_provider | text | yes | Default: 'openai' |
 | timezone | text | yes | Default: 'UTC' |
 | breakeven_threshold | decimal(10,2) | yes | Default: '3.00' — P&L within ±$X is breakeven |
 | currency | text | yes | Default: 'USD' |
@@ -256,7 +252,7 @@ const SCHEMA_CONTEXT = `
 | is_active | boolean | no | Default: true |
 | created_at | timestamp with tz | no | |
 
-#### daily_checklist_check
+#### checklist_check
 | Column | Type | Nullable | Notes |
 |--------|------|----------|-------|
 | id | text (PK) | no | Generated ID |
@@ -357,8 +353,8 @@ const SCHEMA_CONTEXT = `
 - **strategy** → belongs to: user; has many: strategy_rules, trades
 - **ai_conversation** → belongs to: user; has many: ai_messages, ai_reports
 - **ai_report** → belongs to: user, ai_conversation
-- **daily_journal** → belongs to: user; has many: daily_checklist_checks, journal_attachments
-- **daily_checklist_template** → belongs to: user; has many: daily_checklist_checks
+- **daily_journal** → belongs to: user; has many: checklist_checks, journal_attachments
+- **daily_checklist_template** → belongs to: user; has many: checklist_checks
 
 ### Important Data Notes
 

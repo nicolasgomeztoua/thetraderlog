@@ -458,14 +458,6 @@ export const userSettings = createTable("user_settings", {
 		.unique()
 		.references(() => users.id, { onDelete: "cascade" }),
 
-	// AI Provider API Keys (encrypted in application layer)
-	openaiApiKey: text("openai_api_key"),
-	anthropicApiKey: text("anthropic_api_key"),
-	googleApiKey: text("google_api_key"),
-
-	// Preferred AI provider
-	preferredAiProvider: text("preferred_ai_provider").default("openai"),
-
 	// Trading preferences
 	timezone: text("timezone").default("UTC"),
 	breakevenThreshold: decimal("breakeven_threshold", {
@@ -797,7 +789,7 @@ export const dailyChecklistTemplates = createTable(
 // ============================================================================
 
 export const dailyChecklistChecks = createTable(
-	"daily_checklist_check",
+	"checklist_check",
 	{
 		id: text("id")
 			.primaryKey()
@@ -819,15 +811,15 @@ export const dailyChecklistChecks = createTable(
 	},
 	(t) => [
 		// Unique constraint: one check per journal+template OR journal+forcedItem
-		uniqueIndex("daily_checklist_check_journal_template_idx").on(
+		uniqueIndex("checklist_check_journal_template_idx").on(
 			t.journalId,
 			t.templateId,
 		),
-		uniqueIndex("daily_checklist_check_journal_forced_idx").on(
+		uniqueIndex("checklist_check_journal_forced_idx").on(
 			t.journalId,
 			t.forcedItemId,
 		),
-		index("daily_checklist_check_journal_id_idx").on(t.journalId),
+		index("checklist_check_journal_id_idx").on(t.journalId),
 	],
 );
 

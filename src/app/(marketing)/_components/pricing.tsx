@@ -1,62 +1,59 @@
 "use client";
 
 import { SignedIn, SignedOut, SignUpButton } from "@clerk/nextjs";
-import { ArrowRight, Check, Key, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const plans = [
 	{
-		name: "Free",
-		tagline: "Start journaling today",
+		name: "Free Trial",
+		tagline: "30 days, full access",
 		price: "$0",
-		period: "forever",
+		period: "for 30 days",
 		features: [
-			"Up to 100 trades",
-			"Basic analytics",
-			"Manual trade entry",
+			"Unlimited trades",
+			"Full analytics",
+			"AI chat & reports",
 			"CSV import",
-			"7-day data retention",
+			"Data kept forever",
 		],
-		cta: "Get Started",
+		cta: "Start Free Trial",
 		ctaLoggedIn: "Go to Dashboard",
 		highlighted: false,
 	},
 	{
-		name: "Pro",
-		tagline: "For serious traders",
-		price: "$19",
+		name: "Starter",
+		tagline: "Everything you need",
+		price: "$10",
 		period: "/month",
 		features: [
 			"Unlimited trades",
-			"Advanced analytics",
-			"AI insights (BYOK)",
+			"Full analytics",
+			"CSV import & export",
+			"Prop compliance tracking",
+			"Custom tags & strategies",
+			"Data kept forever",
+		],
+		cta: "Get Started",
+		ctaLoggedIn: "Upgrade to Starter",
+		highlighted: false,
+	},
+	{
+		name: "Pro",
+		tagline: "AI-powered edge",
+		price: "$24",
+		period: "/month",
+		features: [
+			"Everything in Starter",
+			"AI chat (50 msgs/day)",
+			"AI reports (5/month)",
+			"Export to PDF",
 			"Priority support",
-			"Unlimited retention",
-			"Export to CSV/PDF",
-			"Custom tags & setups",
 		],
 		cta: "Start Free Trial",
 		ctaLoggedIn: "Upgrade to Pro",
 		highlighted: true,
-	},
-	{
-		name: "Team",
-		tagline: "Prop firms & groups",
-		price: "$49",
-		period: "/user/mo",
-		features: [
-			"Everything in Pro",
-			"Team dashboard",
-			"Managed AI (no keys)",
-			"Admin controls",
-			"SSO integration",
-			"API access",
-			"Dedicated support",
-		],
-		cta: "Contact Sales",
-		ctaLoggedIn: "Contact Sales",
-		highlighted: false,
 	},
 ];
 
@@ -78,22 +75,7 @@ export function Pricing() {
 						<span className="text-primary">pricing</span>
 					</h2>
 					<p className="mx-auto mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
-						Start free. Upgrade when you need more. Bring your own AI keys for
-						full control.
-					</p>
-				</div>
-
-				{/* BYOK banner */}
-				<div className="mb-8 flex flex-col items-center justify-center gap-3 rounded border border-primary/20 bg-primary/2 p-4 sm:mb-12 sm:flex-row sm:gap-4 sm:px-6 sm:py-4">
-					<Key className="h-5 w-5 shrink-0 text-primary" />
-					<p className="text-center font-mono text-xs sm:text-left sm:text-sm">
-						<span className="font-medium text-foreground">
-							Bring Your Own Key:
-						</span>{" "}
-						<span className="text-muted-foreground">
-							Use your OpenAI, Anthropic, or Google AI key. Your data, your
-							costs, your control.
-						</span>
+						Start free. Upgrade when you need more.
 					</p>
 				</div>
 
@@ -153,51 +135,41 @@ export function Pricing() {
 							</ul>
 
 							{/* CTA */}
-							{plan.name === "Team" ? (
+							<SignedOut>
+								<SignUpButton mode="modal">
+									<Button
+										className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+										variant={plan.highlighted ? "default" : "outline"}
+									>
+										{plan.cta}
+										<ArrowRight className="h-4 w-4" />
+									</Button>
+								</SignUpButton>
+							</SignedOut>
+							<SignedIn>
 								<Button
+									asChild
 									className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
-									variant="outline"
+									variant={plan.highlighted ? "default" : "outline"}
 								>
-									{plan.cta}
-									<ArrowRight className="h-4 w-4" />
+									<Link
+										href={plan.highlighted ? "/settings" : "/dashboard"}
+									>
+										{plan.ctaLoggedIn}
+										<ArrowRight className="h-4 w-4" />
+									</Link>
 								</Button>
-							) : (
-								<>
-									<SignedOut>
-										<SignUpButton mode="modal">
-											<Button
-												className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
-												variant={plan.highlighted ? "default" : "outline"}
-											>
-												{plan.cta}
-												<ArrowRight className="h-4 w-4" />
-											</Button>
-										</SignUpButton>
-									</SignedOut>
-									<SignedIn>
-										<Button
-											asChild
-											className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
-											variant={plan.highlighted ? "default" : "outline"}
-										>
-											<Link
-												href={plan.highlighted ? "/settings" : "/dashboard"}
-											>
-												{plan.ctaLoggedIn}
-												<ArrowRight className="h-4 w-4" />
-											</Link>
-										</Button>
-									</SignedIn>
-								</>
-							)}
+							</SignedIn>
 						</div>
 					))}
 				</div>
 
 				{/* Trial note */}
 				<p className="mt-8 text-center font-mono text-muted-foreground text-xs sm:mt-12 sm:text-sm">
-					All plans include a 14-day free trial of Pro features.{" "}
-					<span className="text-foreground">No credit card required.</span>
+					Your data stays even after your trial ends.{" "}
+					<span className="text-foreground">
+						No credit card required to start.
+					</span>
 				</p>
 			</div>
 		</section>

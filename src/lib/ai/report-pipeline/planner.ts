@@ -1,5 +1,6 @@
 import type { LanguageModel } from "ai";
 import { aiGenerateText } from "@/lib/ai/client";
+import { REPORT_REASONING_TOKENS } from "@/lib/constants/ai";
 
 // =============================================================================
 // TYPES
@@ -163,6 +164,7 @@ export async function runPlannerPhase(
 		model: options.model,
 		system: systemPrompt,
 		messages: [{ role: "user", content: options.prompt }],
+		reasoning: { maxTokens: REPORT_REASONING_TOKENS },
 	});
 
 	return {
