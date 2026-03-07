@@ -223,7 +223,12 @@ export const aiRouter = createTRPCRouter({
 
 				return savedMessage;
 			} catch (error) {
-				await decrementChatUsage(ctx.db, ctx.user.id);
+				try {
+					await decrementChatUsage(ctx.db, ctx.user.id);
+				} catch {
+					// Rollback failed — log but don't swallow the original error
+					console.error("Failed to rollback chat usage after error");
+				}
 				throw error;
 			}
 		}),
@@ -415,7 +420,12 @@ export const aiRouter = createTRPCRouter({
 
 				return { ...report, triggerTaskId: handle.id };
 			} catch (error) {
-				await decrementReportUsage(ctx.db, ctx.user.id);
+				try {
+					await decrementReportUsage(ctx.db, ctx.user.id);
+				} catch {
+					// Rollback failed — log but don't swallow the original error
+					console.error("Failed to rollback report usage after error");
+				}
 				throw error;
 			}
 		}),
