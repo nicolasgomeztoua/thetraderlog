@@ -12,7 +12,12 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import superjson from "superjson";
 import { ZodError } from "zod";
-import { ERR_ADMIN_FORBIDDEN } from "@/lib/constants/errors";
+import { hasFeatureAccess, hasPlanAccess } from "@/lib/billing/utils";
+import {
+	ERR_ADMIN_FORBIDDEN,
+	ERR_FEATURE_NOT_AVAILABLE,
+	ERR_PLAN_REQUIRED,
+} from "@/lib/constants/errors";
 import { db } from "@/server/db";
 import type { Database } from "@/server/db/create-db";
 import type { User } from "@/server/db/schema";
@@ -22,6 +27,15 @@ import { users } from "@/server/db/schema";
  * Context overrides for testing.
  * Allows injecting a test database and bypassing Clerk authentication.
  */
+export interface ClerkAuthLike {
+	has: (params: {
+		feature?: string;
+		plan?: string;
+		permission?: string;
+		role?: string;
+	}) => boolean;
+}
+
 export interface TRPCContextOverrides {
 	/** Test database connection (from Testcontainers) */
 	db?: Database;
@@ -29,6 +43,8 @@ export interface TRPCContextOverrides {
 	userId?: string | null;
 	/** Pre-created user object (skips database lookup in authMiddleware) */
 	user?: User;
+	/** Mock Clerk auth object for entitlement checks in tests */
+	clerkAuth?: ClerkAuthLike;
 }
 
 /**
@@ -49,12 +65,21 @@ export const createTRPCContext = async (
 ) => {
 	// Use overrides for testing, or fetch from Clerk for production
 	const resolvedDb = overrides?.db ?? db;
+
+	// In test environment with userId override, skip Clerk auth() call entirely
+	const clerkAuthSession =
+		overrides?.clerkAuth ??
+		(overrides?.userId !== undefined ? null : await auth());
 	const resolvedUserId =
-		overrides?.userId !== undefined ? overrides.userId : (await auth()).userId;
+		overrides?.userId !== undefined
+			? overrides.userId
+			: ((clerkAuthSession as Awaited<ReturnType<typeof auth>> | null)
+					?.userId ?? null);
 
 	return {
 		db: resolvedDb,
 		userId: resolvedUserId,
+		clerkAuth: clerkAuthSession ? (clerkAuthSession as ClerkAuthLike) : null,
 		// Pass along the pre-created user for tests (if provided)
 		_testUser: overrides?.user,
 		...opts,
@@ -238,3 +263,57 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 	}
 	return next({ ctx });
 });
+
+/**
+ * Middleware factory: requires a specific feature entitlement.
+ * Uses Clerk's has() with beta user bypass.
+ * If no clerkAuth is available (e.g., tests without mock), access is denied.
+ */
+export const requireFeature = (feature: string) =>
+	protectedProcedure.use(async ({ ctx, next }) => {
+		if (!ctx.clerkAuth) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: ERR_FEATURE_NOT_AVAILABLE,
+			});
+		}
+		if (!hasFeatureAccess(ctx.clerkAuth, feature)) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: ERR_FEATURE_NOT_AVAILABLE,
+			});
+		}
+		return next({ ctx });
+	});
+
+/**
+ * Middleware factory: requires a specific plan entitlement.
+ * Uses Clerk's has() with beta user bypass.
+ * If no clerkAuth is available (e.g., tests without mock), access is denied.
+ */
+export const requirePlan = (plan: string) =>
+	protectedProcedure.use(async ({ ctx, next }) => {
+		if (!ctx.clerkAuth) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: ERR_PLAN_REQUIRED,
+			});
+		}
+		if (!hasPlanAccess(ctx.clerkAuth, plan)) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: ERR_PLAN_REQUIRED,
+			});
+		}
+		return next({ ctx });
+	});
+
+/**
+ * Starter procedure — requires Starter plan or higher.
+ */
+export const starterProcedure = requirePlan("starter");
+
+/**
+ * Pro procedure — requires Pro plan.
+ */
+export const proProcedure = requirePlan("pro");
