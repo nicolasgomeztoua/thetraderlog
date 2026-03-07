@@ -81,6 +81,7 @@ import {
 import { getErrorMessage } from "@/lib/shared/utils";
 import { useSettingsStore } from "@/stores/settings-store";
 import { api } from "@/trpc/react";
+import { BillingTab } from "./billing-tab";
 
 /**
  * Convert trading sessions from UTC to local timezone hours.
@@ -377,6 +378,8 @@ export function SettingsContent() {
 		const tab = searchParams.get("tab");
 		if (tab === "accounts" || tab === "groups") {
 			setActiveTab("accounts");
+		} else if (tab === "billing") {
+			setActiveTab("billing");
 		}
 	}, [searchParams]);
 
@@ -715,7 +718,13 @@ export function SettingsContent() {
 						>
 							Tags
 						</TabsTrigger>
-						</TabsList>
+						<TabsTrigger
+							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
+							value="billing"
+						>
+							Billing
+						</TabsTrigger>
+					</TabsList>
 				</div>
 
 				{/* General Tab */}
@@ -2141,7 +2150,11 @@ export function SettingsContent() {
 					</Card>
 				</TabsContent>
 
-				</Tabs>
+				{/* Billing Tab */}
+				<TabsContent className="space-y-4 sm:space-y-6" value="billing">
+					<BillingTab />
+				</TabsContent>
+			</Tabs>
 
 			{/* Save Button - Fixed at bottom */}
 			<div className="flex flex-col gap-3 rounded border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
