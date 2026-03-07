@@ -1,6 +1,7 @@
 import { runs } from "@trigger.dev/sdk/v3";
+import { TRPCError } from "@trpc/server";
 import type { ModelMessage } from "ai";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { aiGenerateText } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
@@ -9,14 +10,24 @@ import { getModel } from "@/lib/ai/provider";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
+import { isBetaUser } from "@/lib/billing/utils";
 import {
+	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
-	CHAT_REASONING_TOKENS,
 	MAX_TOOL_ROUNDS_CHAT,
 } from "@/lib/constants/ai";
 import {
+	AI_CHAT_DAILY_LIMIT,
+	AI_REPORTS_MONTHLY_LIMIT,
+	FEATURE_AI_CHAT,
+	FEATURE_AI_REPORTS,
+	FEATURE_PDF_EXPORT,
+} from "@/lib/constants/billing";
+import {
+	ERR_AI_CHAT_LIMIT_REACHED,
+	ERR_AI_REPORT_LIMIT_REACHED,
 	ERR_CONVERSATION_CREATE_FAILED,
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_MESSAGE_LIMIT_REACHED,
@@ -27,8 +38,17 @@ import {
 	ERR_REPORT_NOT_FOUND,
 	ERR_REPORT_ONLY_FAILED_RETRY,
 } from "@/lib/constants/errors";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	requireFeature,
+} from "@/server/api/trpc";
+import {
+	aiConversations,
+	aiMessages,
+	aiReports,
+	aiUsage,
+} from "@/server/db/schema";
 import { generateAiReport } from "@/trigger/generate-ai-report";
 import { generateReportPdf } from "@/trigger/generate-report-pdf";
 
@@ -70,7 +90,7 @@ export const aiRouter = createTRPCRouter({
 	 * Send a message to a conversation and get an AI response.
 	 * Implements the full tool-calling loop: model → tool_calls → results → repeat until text response.
 	 */
-	sendMessage: protectedProcedure
+	sendMessage: requireFeature(FEATURE_AI_CHAT)
 		.input(
 			z.object({
 				conversationId: z.string(),
@@ -79,6 +99,51 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			// Enforce daily chat usage limit
+			const userMeta = ctx.user as unknown as {
+				publicMetadata?: Record<string, unknown>;
+			};
+			const beta = isBetaUser(userMeta);
+			const today = new Date().toISOString().split("T")[0] as string;
+
+			const [usageRow] = await ctx.db
+				.insert(aiUsage)
+				.values({
+					userId: ctx.user.id,
+					chatMessagesUsed: 1,
+					chatMessagesDate: today,
+					reportsUsed: 0,
+				})
+				.onConflictDoUpdate({
+					target: [aiUsage.userId, aiUsage.chatMessagesDate],
+					set: {
+						chatMessagesUsed: sql`${aiUsage.chatMessagesUsed} + 1`,
+					},
+				})
+				.returning();
+
+			const chatUsed = usageRow?.chatMessagesUsed ?? 1;
+
+			if (!beta && chatUsed > AI_CHAT_DAILY_LIMIT) {
+				// Roll back the increment
+				await ctx.db
+					.update(aiUsage)
+					.set({
+						chatMessagesUsed: sql`${aiUsage.chatMessagesUsed} - 1`,
+					})
+					.where(
+						and(
+							eq(aiUsage.userId, ctx.user.id),
+							eq(aiUsage.chatMessagesDate, today),
+						),
+					);
+
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: ERR_AI_CHAT_LIMIT_REACHED,
+				});
+			}
+
 			// Verify conversation ownership
 			const conversation = await ctx.db.query.aiConversations.findFirst({
 				where: and(
@@ -292,7 +357,7 @@ export const aiRouter = createTRPCRouter({
 	 * Creates a report record + conversation in report mode, saves the initial prompt
 	 * as the first message, and triggers the Trigger.dev background task.
 	 */
-	startReport: protectedProcedure
+	startReport: requireFeature(FEATURE_AI_REPORTS)
 		.input(
 			z.object({
 				prompt: z.string().min(1).max(10_000),
@@ -304,6 +369,55 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			// Enforce monthly report usage limit
+			const userMeta = ctx.user as unknown as {
+				publicMetadata?: Record<string, unknown>;
+			};
+			const beta = isBetaUser(userMeta);
+			const now = new Date();
+			const month = now.getUTCMonth() + 1;
+			const year = now.getUTCFullYear();
+
+			const [usageRow] = await ctx.db
+				.insert(aiUsage)
+				.values({
+					userId: ctx.user.id,
+					chatMessagesUsed: 0,
+					reportsUsed: 1,
+					reportsMonth: month,
+					reportsYear: year,
+				})
+				.onConflictDoUpdate({
+					target: [aiUsage.userId, aiUsage.reportsMonth, aiUsage.reportsYear],
+					set: {
+						reportsUsed: sql`${aiUsage.reportsUsed} + 1`,
+					},
+				})
+				.returning();
+
+			const reportsUsed = usageRow?.reportsUsed ?? 1;
+
+			if (!beta && reportsUsed > AI_REPORTS_MONTHLY_LIMIT) {
+				// Roll back the increment
+				await ctx.db
+					.update(aiUsage)
+					.set({
+						reportsUsed: sql`${aiUsage.reportsUsed} - 1`,
+					})
+					.where(
+						and(
+							eq(aiUsage.userId, ctx.user.id),
+							eq(aiUsage.reportsMonth, month),
+							eq(aiUsage.reportsYear, year),
+						),
+					);
+
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: ERR_AI_REPORT_LIMIT_REACHED,
+				});
+			}
+
 			const model = DEFAULT_REPORT_MODEL;
 			const title =
 				input.title ??
@@ -582,7 +696,7 @@ export const aiRouter = createTRPCRouter({
 	 * Start PDF generation for a completed report.
 	 * Creates a signed auth token and triggers the Puppeteer-based PDF task.
 	 */
-	generatePdf: protectedProcedure
+	generatePdf: requireFeature(FEATURE_PDF_EXPORT)
 		.input(z.object({ reportId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const report = await ctx.db.query.aiReports.findFirst({
