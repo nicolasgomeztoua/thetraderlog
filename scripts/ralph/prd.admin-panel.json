@@ -1,0 +1,429 @@
+{
+  "project": "EdgeJournal",
+  "branchName": "ralph/admin-panel",
+  "description": "Full admin panel with bug report triage, user management, AI usage monitoring, platform analytics, and system health",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Admin Constants & Error Messages",
+      "description": "As a developer, I want shared constants for the admin panel so nothing is hardcoded in UI components or routers.",
+      "acceptanceCriteria": [
+        "Create src/lib/constants/admin.ts with: admin nav items array, bug report status/severity/category label maps, role labels, table page sizes",
+        "Add admin error messages to src/lib/constants/errors.ts: ERR_ADMIN_FORBIDDEN, ERR_ADMIN_USER_NOT_FOUND, ERR_ADMIN_INVALID_STATUS_TRANSITION",
+        "Export all constants with clear naming (ADMIN_NAV_ITEMS, BUG_REPORT_STATUS_LABELS, etc.)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Admin Procedure Middleware",
+      "description": "As a developer, I want an adminProcedure tRPC middleware so that all admin endpoints enforce role-based access.",
+      "acceptanceCriteria": [
+        "Create adminProcedure in src/server/api/trpc.ts that extends protectedProcedure",
+        "Middleware checks ctx.user.role === 'admin', throws FORBIDDEN TRPCError with ERR_ADMIN_FORBIDDEN message if not",
+        "Export adminProcedure alongside existing procedures",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Admin Platform Stats Endpoint",
+      "description": "As a developer, I want a tRPC endpoint returning platform summary stats for the admin overview dashboard.",
+      "acceptanceCriteria": [
+        "Create admin router directory: src/server/api/routers/admin/index.ts",
+        "Create admin.analytics.platformStats query using adminProcedure",
+        "Returns: totalUsers, activeUsersLast7d, totalTrades, openBugReports, aiConversationsLast7d, totalTokensUsed",
+        "Active users = users with trades or AI conversations in last 7 days",
+        "Register admin router in src/server/api/root.ts",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Integration Tests for Admin Middleware & Platform Stats",
+      "description": "As a developer, I want integration tests for the admin middleware and platform stats endpoint.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/admin.test.ts",
+        "Test: non-admin user gets FORBIDDEN on admin endpoints",
+        "Test: admin user can access platform stats",
+        "Test: platform stats returns correct counts",
+        "Uses setupTrader() fixtures, manually set role to admin for admin user",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Admin Bug Reports Backend — List & Update Endpoints",
+      "description": "As a developer, I want tRPC endpoints to list and update bug reports for admin triage.",
+      "acceptanceCriteria": [
+        "Create admin.bugReports.list query — returns all bug reports with user info, supports filtering by status/category/severity, pagination (cursor-based or offset), sorted by newest first",
+        "Create admin.bugReports.updateStatus mutation — updates bug report status (open → in_progress → resolved → closed)",
+        "Create admin.bugReports.getById query — returns single bug report with full details",
+        "All use adminProcedure",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Integration Tests for Admin Bug Reports Endpoints",
+      "description": "As a developer, I want integration tests for admin bug report management endpoints.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/admin-bug-reports.test.ts",
+        "Test: list returns bug reports with user info",
+        "Test: filter by status works",
+        "Test: updateStatus transitions correctly",
+        "Test: getById returns full details",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Admin Users Backend — List & Management Endpoints",
+      "description": "As a developer, I want tRPC endpoints to list users and update their roles.",
+      "acceptanceCriteria": [
+        "Create admin.users.list query — returns all users with account count, trade count, last active date, role; supports search by name/email, pagination",
+        "Create admin.users.getById query — returns single user with full details: accounts, recent trades (last 10), AI conversation count, bug report count",
+        "Create admin.users.updateRole mutation — updates user role (user ↔ admin)",
+        "All use adminProcedure",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Integration Tests for Admin Users Endpoints",
+      "description": "As a developer, I want integration tests for admin user management endpoints.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/admin-users.test.ts",
+        "Test: list returns users with counts",
+        "Test: search by email works",
+        "Test: getById returns full user details",
+        "Test: updateRole toggles role correctly",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Admin AI Usage Backend — Chat & Report Endpoints",
+      "description": "As a developer, I want tRPC endpoints to view AI usage across all users.",
+      "acceptanceCriteria": [
+        "Create admin.ai.listConversations query — returns all AI conversations with user info, token count, message count, mode (chat/report), status; supports filtering by mode/status, pagination, sorted newest first",
+        "Create admin.ai.getConversation query — returns single conversation with all messages",
+        "Create admin.ai.usageStats query — returns total tokens used, tokens by model, conversations by mode, daily usage for last 30 days",
+        "All use adminProcedure",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Integration Tests for Admin AI Endpoints",
+      "description": "As a developer, I want integration tests for admin AI usage endpoints.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/admin-ai.test.ts",
+        "Test: listConversations returns conversations with user info",
+        "Test: filter by mode (chat vs report) works",
+        "Test: getConversation returns messages",
+        "Test: usageStats returns aggregated data",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Admin Platform Analytics Backend",
+      "description": "As a developer, I want tRPC endpoints for platform-wide analytics.",
+      "acceptanceCriteria": [
+        "Create admin.analytics.growth query — returns daily new users and cumulative total for last 30 days",
+        "Create admin.analytics.tradingActivity query — returns daily trade count, total P&L, avg trade size for last 30 days",
+        "Create admin.analytics.topTraders query — returns top 10 users by total P&L with name, email, trade count, total P&L",
+        "Create admin.analytics.accountBreakdown query — returns count of accounts by type (demo, live, prop_challenge, prop_funded)",
+        "All use adminProcedure",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Integration Tests for Admin Analytics Endpoints",
+      "description": "As a developer, I want integration tests for admin platform analytics endpoints.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/admin-analytics.test.ts",
+        "Test: growth returns daily user counts",
+        "Test: tradingActivity returns daily trade data",
+        "Test: topTraders returns ranked users",
+        "Test: accountBreakdown returns correct counts per type",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Admin System Health Backend",
+      "description": "As a developer, I want a tRPC endpoint for system health metrics.",
+      "acceptanceCriteria": [
+        "Create admin.system.health query using adminProcedure",
+        "Returns: database row counts (users, trades, accounts, aiConversations, aiMessages, bugReports), database connection status (simple query), app version (from package.json), last user signup date, last trade date, last AI conversation date",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Integration Tests for Admin System Health Endpoint",
+      "description": "As a developer, I want integration tests for the admin system health endpoint.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/admin-system.test.ts",
+        "Test: health endpoint returns all expected fields",
+        "Test: database counts are accurate",
+        "Test: non-admin rejected",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Admin Route Group & Layout",
+      "description": "As an admin, I want a dedicated admin layout with sidebar navigation so that I can access all admin panels.",
+      "acceptanceCriteria": [
+        "Create (admin) route group with layout.tsx",
+        "Admin sidebar with navigation items imported from ADMIN_NAV_ITEMS constant",
+        "Terminal design system: dark theme, chartreuse accents, monospace labels",
+        "Back to App link to return to normal dashboard",
+        "Layout rejects non-admin users (redirect to /dashboard or show unauthorized)",
+        "Loading state while checking role",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Admin Middleware Guard on Routes",
+      "description": "As a developer, I want Next.js middleware or client-side guard to protect admin routes so non-admins can't access admin pages.",
+      "acceptanceCriteria": [
+        "Update existing middleware or add client-side guard in admin layout",
+        "Non-admin users accessing /admin/* are redirected to /dashboard",
+        "Admin layout fetches user role and gates rendering",
+        "Loading state while checking role",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser: non-admin user redirected, admin user sees panel"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Admin Navigation Link in Main Sidebar",
+      "description": "As an admin, I want a link to the admin panel in the main app sidebar so that I can quickly access it.",
+      "acceptanceCriteria": [
+        "Conditionally show Admin nav item in app-sidebar.tsx when user role is admin",
+        "Use a distinct icon (e.g., Shield or Settings2)",
+        "Links to /admin",
+        "Hidden for non-admin users",
+        "Create tRPC query or use existing user data to check role on client",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Admin Overview Dashboard Page",
+      "description": "As an admin, I want a dashboard overview page showing key platform metrics at a glance.",
+      "acceptanceCriteria": [
+        "Create /admin page with summary cards",
+        "Cards: Total Users, Active Users (last 7 days), Total Trades, Open Bug Reports, AI Conversations (last 7 days), Total AI Tokens Used",
+        "Each card links to its detailed panel",
+        "Terminal design: monospace numbers, chartreuse highlights for key metrics",
+        "Uses admin.analytics.platformStats endpoint",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Bug Reports Admin Page — List View",
+      "description": "As an admin, I want a bug reports page to triage and manage reported issues.",
+      "acceptanceCriteria": [
+        "Create /admin/bug-reports page",
+        "Table view: title, category, severity, status, reporter (name/email), date",
+        "Filters: status dropdown, category dropdown, severity dropdown",
+        "Severity badges with colors (critical=red, high=orange, medium=yellow, low=gray)",
+        "Status badges with colors (open=red, in_progress=yellow, resolved=green, closed=gray)",
+        "Click row to expand/view full details (description, screenshot, page URL, user agent, metadata)",
+        "Status update dropdown per row",
+        "Terminal design: monospace table, data-dense layout",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Users Admin Page — List View",
+      "description": "As an admin, I want a users page to view and manage all platform users.",
+      "acceptanceCriteria": [
+        "Create /admin/users page",
+        "Table: name, email, role, accounts count, trades count, joined date, last active",
+        "Search bar for name/email filtering",
+        "Role badge (admin=chartreuse, user=gray)",
+        "Click row to navigate to user detail page",
+        "Pagination controls",
+        "Terminal design: monospace table, data-dense",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "User Detail Admin Page",
+      "description": "As an admin, I want a user detail page to see a specific user's full activity.",
+      "acceptanceCriteria": [
+        "Create /admin/users/[userId] page",
+        "Header: user name, email, avatar, role, joined date",
+        "Role toggle button (promote to admin / demote to user) with confirmation dialog",
+        "Sections: Accounts list, Recent Trades (last 10 with P&L), AI Conversations summary, Bug Reports by this user",
+        "Each section shows count and brief data",
+        "Terminal design: data-dense, monospace values",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "AI Usage Admin Page",
+      "description": "As an admin, I want an AI usage page to monitor conversations, reports, and token consumption.",
+      "acceptanceCriteria": [
+        "Create /admin/ai page",
+        "Top stats: total conversations, total reports, total tokens, avg tokens per conversation",
+        "Token usage chart (daily for last 30 days) — simple bar/line chart",
+        "Conversations table: user, title, mode (chat/report), status, messages count, tokens, date",
+        "Filter by mode (chat/report) and status",
+        "Click conversation to expand and view messages inline",
+        "Terminal design: ice blue (#00d4ff) accent for AI section",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Platform Analytics Admin Page",
+      "description": "As an admin, I want a platform analytics page with growth and trading activity charts.",
+      "acceptanceCriteria": [
+        "Create /admin/analytics page",
+        "User growth chart (daily new + cumulative line)",
+        "Trading activity chart (daily trades + P&L)",
+        "Top 10 traders leaderboard table",
+        "Account type breakdown (pie/donut or bar chart)",
+        "Use recharts or simple SVG charts consistent with existing analytics page",
+        "Terminal design: chartreuse for positive metrics, red for losses",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "System Health Admin Page",
+      "description": "As an admin, I want a system health page showing database stats and system status.",
+      "acceptanceCriteria": [
+        "Create /admin/system page",
+        "Status indicator: database connection (green/red dot)",
+        "Table counts: rows per table displayed as stat cards",
+        "Last activity timestamps: last signup, last trade, last AI conversation",
+        "App version from package.json",
+        "Terminal design: green for healthy, red for issues",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)",
+        "Verify in browser"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
