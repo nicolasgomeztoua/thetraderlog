@@ -8,10 +8,15 @@ import {
 	ERR_AI_CHAT_LIMIT_REACHED,
 	ERR_AI_REPORT_LIMIT_REACHED,
 } from "@/lib/constants/errors";
+import {
+	incrementAndCheckChatUsage,
+	incrementAndCheckReportUsage,
+} from "@/server/api/routers/billing";
 import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
 	createTestUser,
+	getTestDb,
 	type TestCaller,
 	truncateAllTables,
 } from "../utils";
@@ -92,47 +97,61 @@ describe("billing router", () => {
 		});
 	});
 
-	describe("incrementChatUsage", () => {
+	describe("incrementAndCheckChatUsage", () => {
 		let chatUser: User;
-		let chatCaller: TestCaller;
 
 		beforeAll(async () => {
 			chatUser = await createTestUser();
-			chatCaller = await createTestCaller(chatUser.clerkId, chatUser);
 		});
 
 		it("should increment chat counter from zero", async () => {
-			const result = await chatCaller.billing.incrementChatUsage();
+			const db = getTestDb();
+			const result = await incrementAndCheckChatUsage(
+				db,
+				chatUser.id,
+				false,
+			);
 
 			expect(result.used).toBe(1);
 			expect(result.limit).toBe(AI_CHAT_DAILY_LIMIT);
 		});
 
 		it("should increment chat counter on subsequent calls", async () => {
-			const result = await chatCaller.billing.incrementChatUsage();
+			const db = getTestDb();
+			const result = await incrementAndCheckChatUsage(
+				db,
+				chatUser.id,
+				false,
+			);
 
 			expect(result.used).toBe(2);
 		});
 
 		it("should enforce daily limit", async () => {
+			const db = getTestDb();
 			// Increment to the limit
 			for (let i = 3; i <= AI_CHAT_DAILY_LIMIT; i++) {
-				await chatCaller.billing.incrementChatUsage();
+				await incrementAndCheckChatUsage(db, chatUser.id, false);
 			}
 
 			// Next call should throw
-			await expect(chatCaller.billing.incrementChatUsage()).rejects.toThrow(
-				ERR_AI_CHAT_LIMIT_REACHED,
-			);
+			await expect(
+				incrementAndCheckChatUsage(db, chatUser.id, false),
+			).rejects.toThrow(ERR_AI_CHAT_LIMIT_REACHED);
 		});
 
 		it("should reset counter on a different day", async () => {
+			const db = getTestDb();
 			// Create a fresh user so we start clean
 			const dayUser = await createTestUser();
 			const dayCaller = await createTestCaller(dayUser.clerkId, dayUser);
 
 			// Increment once for today
-			const today = await dayCaller.billing.incrementChatUsage();
+			const today = await incrementAndCheckChatUsage(
+				db,
+				dayUser.id,
+				false,
+			);
 			expect(today.used).toBe(1);
 
 			// Verify getUsage shows 1 for today
@@ -141,80 +160,91 @@ describe("billing router", () => {
 		});
 
 		it("should allow beta user to exceed limit", async () => {
+			const db = getTestDb();
 			const betaUser = await createTestUser();
-			const betaUserWithMeta = {
-				...betaUser,
-				publicMetadata: { beta: true },
-			} as unknown as User;
-			const betaCaller = await createTestCaller(
-				betaUser.clerkId,
-				betaUserWithMeta,
-			);
 
 			// Increment many times — should never throw
 			for (let i = 0; i < AI_CHAT_DAILY_LIMIT + 5; i++) {
-				const result = await betaCaller.billing.incrementChatUsage();
+				const result = await incrementAndCheckChatUsage(
+					db,
+					betaUser.id,
+					true,
+				);
 				expect(result.limit).toBeNull();
 			}
 
-			const finalResult = await betaCaller.billing.incrementChatUsage();
+			const finalResult = await incrementAndCheckChatUsage(
+				db,
+				betaUser.id,
+				true,
+			);
 			expect(finalResult.used).toBe(AI_CHAT_DAILY_LIMIT + 6);
 			expect(finalResult.limit).toBeNull();
 		});
 	});
 
-	describe("incrementReportUsage", () => {
+	describe("incrementAndCheckReportUsage", () => {
 		let reportUser: User;
-		let reportCaller: TestCaller;
 
 		beforeAll(async () => {
 			reportUser = await createTestUser();
-			reportCaller = await createTestCaller(reportUser.clerkId, reportUser);
 		});
 
 		it("should increment report counter from zero", async () => {
-			const result = await reportCaller.billing.incrementReportUsage();
+			const db = getTestDb();
+			const result = await incrementAndCheckReportUsage(
+				db,
+				reportUser.id,
+				false,
+			);
 
 			expect(result.used).toBe(1);
 			expect(result.limit).toBe(AI_REPORTS_MONTHLY_LIMIT);
 		});
 
 		it("should increment report counter on subsequent calls", async () => {
-			const result = await reportCaller.billing.incrementReportUsage();
+			const db = getTestDb();
+			const result = await incrementAndCheckReportUsage(
+				db,
+				reportUser.id,
+				false,
+			);
 
 			expect(result.used).toBe(2);
 		});
 
 		it("should enforce monthly limit", async () => {
+			const db = getTestDb();
 			// Increment to the limit
 			for (let i = 3; i <= AI_REPORTS_MONTHLY_LIMIT; i++) {
-				await reportCaller.billing.incrementReportUsage();
+				await incrementAndCheckReportUsage(db, reportUser.id, false);
 			}
 
 			// Next call should throw
-			await expect(reportCaller.billing.incrementReportUsage()).rejects.toThrow(
-				ERR_AI_REPORT_LIMIT_REACHED,
-			);
+			await expect(
+				incrementAndCheckReportUsage(db, reportUser.id, false),
+			).rejects.toThrow(ERR_AI_REPORT_LIMIT_REACHED);
 		});
 
 		it("should allow beta user to exceed limit", async () => {
+			const db = getTestDb();
 			const betaUser = await createTestUser();
-			const betaUserWithMeta = {
-				...betaUser,
-				publicMetadata: { beta: true },
-			} as unknown as User;
-			const betaCaller = await createTestCaller(
-				betaUser.clerkId,
-				betaUserWithMeta,
-			);
 
 			// Increment beyond limit — should never throw
 			for (let i = 0; i < AI_REPORTS_MONTHLY_LIMIT + 3; i++) {
-				const result = await betaCaller.billing.incrementReportUsage();
+				const result = await incrementAndCheckReportUsage(
+					db,
+					betaUser.id,
+					true,
+				);
 				expect(result.limit).toBeNull();
 			}
 
-			const finalResult = await betaCaller.billing.incrementReportUsage();
+			const finalResult = await incrementAndCheckReportUsage(
+				db,
+				betaUser.id,
+				true,
+			);
 			expect(finalResult.used).toBe(AI_REPORTS_MONTHLY_LIMIT + 4);
 			expect(finalResult.limit).toBeNull();
 		});

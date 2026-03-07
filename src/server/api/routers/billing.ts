@@ -193,16 +193,4 @@ export const billingRouter = createTRPCRouter({
 			},
 		};
 	}),
-
-	incrementChatUsage: protectedProcedure.mutation(async ({ ctx }) => {
-		const userMeta = ctx.user as unknown as UserWithMetadata;
-		const beta = isBetaUser(userMeta);
-		return incrementAndCheckChatUsage(ctx.db, ctx.user.id, beta);
-	}),
-
-	incrementReportUsage: protectedProcedure.mutation(async ({ ctx }) => {
-		const userMeta = ctx.user as unknown as UserWithMetadata;
-		const beta = isBetaUser(userMeta);
-		return incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
-	}),
 });

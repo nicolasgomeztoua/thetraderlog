@@ -169,7 +169,7 @@ export function BillingTab() {
 									size="sm"
 									variant="outline"
 								>
-									<Link href="/settings/billing">
+									<Link href="/settings?tab=billing">
 										Manage Subscription
 										<ExternalLink className="ml-1.5 h-3 w-3" />
 									</Link>
