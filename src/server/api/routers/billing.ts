@@ -139,6 +139,46 @@ export async function incrementAndCheckReportUsage(
 	return { used, limit: beta ? null : AI_REPORTS_MONTHLY_LIMIT };
 }
 
+/**
+ * Decrement daily chat usage (rollback on AI call failure).
+ */
+export async function decrementChatUsage(
+	db: Database,
+	userId: string,
+): Promise<void> {
+	const today = getTodayDateString();
+	await db
+		.update(aiUsage)
+		.set({
+			chatMessagesUsed: sql`GREATEST(${aiUsage.chatMessagesUsed} - 1, 0)`,
+		})
+		.where(
+			and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
+		);
+}
+
+/**
+ * Decrement monthly report usage (rollback on task trigger failure).
+ */
+export async function decrementReportUsage(
+	db: Database,
+	userId: string,
+): Promise<void> {
+	const { month, year } = getCurrentMonthYear();
+	await db
+		.update(aiUsage)
+		.set({
+			reportsUsed: sql`GREATEST(${aiUsage.reportsUsed} - 1, 0)`,
+		})
+		.where(
+			and(
+				eq(aiUsage.userId, userId),
+				eq(aiUsage.reportsMonth, month),
+				eq(aiUsage.reportsYear, year),
+			),
+		);
+}
+
 export const billingRouter = createTRPCRouter({
 	getCurrentPlan: protectedProcedure.query(({ ctx }) => {
 		const userMeta = ctx.user as unknown as UserWithMetadata;

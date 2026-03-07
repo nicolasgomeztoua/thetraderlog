@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { CreditCard, ExternalLink, Zap } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +104,7 @@ function getResetDateLabel(): string {
 
 export function BillingTab() {
 	const { has } = useAuth();
+	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
 	const usageQuery = api.billing.getUsage.useQuery();
 
@@ -163,16 +164,14 @@ export function BillingTab() {
 						<div>
 							{hasPaidPlan ? (
 								<Button
-									asChild
 									className="font-mono text-[10px] uppercase tracking-wider"
 									data-testid="billing-button-manage"
+									onClick={() => openUserProfile()}
 									size="sm"
 									variant="outline"
 								>
-									<Link href="/settings?tab=billing">
-										Manage Subscription
-										<ExternalLink className="ml-1.5 h-3 w-3" />
-									</Link>
+									Manage Subscription
+									<ExternalLink className="ml-1.5 h-3 w-3" />
 								</Button>
 							) : (
 								<Button

@@ -42,6 +42,8 @@ import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
 import { generateAiReport } from "@/trigger/generate-ai-report";
 import { generateReportPdf } from "@/trigger/generate-report-pdf";
 import {
+	decrementChatUsage,
+	decrementReportUsage,
 	incrementAndCheckChatUsage,
 	incrementAndCheckReportUsage,
 } from "./billing";
@@ -100,125 +102,130 @@ export const aiRouter = createTRPCRouter({
 			const beta = isBetaUser(userMeta);
 			await incrementAndCheckChatUsage(ctx.db, ctx.user.id, beta);
 
-			// Verify conversation ownership
-			const conversation = await ctx.db.query.aiConversations.findFirst({
-				where: and(
-					eq(aiConversations.id, input.conversationId),
-					eq(aiConversations.userId, ctx.user.id),
-				),
-			});
+			try {
+				// Verify conversation ownership
+				const conversation = await ctx.db.query.aiConversations.findFirst({
+					where: and(
+						eq(aiConversations.id, input.conversationId),
+						eq(aiConversations.userId, ctx.user.id),
+					),
+				});
 
-			if (!conversation) {
-				throw new Error(ERR_CONVERSATION_NOT_FOUND);
+				if (!conversation) {
+					throw new Error(ERR_CONVERSATION_NOT_FOUND);
+				}
+
+				// Check message limit
+				const existingMessages = await ctx.db.query.aiMessages.findMany({
+					where: eq(aiMessages.conversationId, input.conversationId),
+				});
+
+				if (existingMessages.length >= MAX_CHAT_MESSAGES_PER_CONVERSATION) {
+					throw new Error(ERR_MESSAGE_LIMIT_REACHED);
+				}
+
+				// Save user message
+				const [userMessage] = await ctx.db
+					.insert(aiMessages)
+					.values({
+						conversationId: input.conversationId,
+						role: "user",
+						content: input.content,
+					})
+					.returning();
+
+				if (!userMessage) {
+					throw new Error(ERR_MESSAGE_SAVE_FAILED);
+				}
+
+				// Build system prompt with schema + user context
+				const [schemaContext, userContext] = await Promise.all([
+					Promise.resolve(generateSchemaContext()),
+					buildUserContext(ctx.user.id, ctx.db),
+				]);
+
+				const systemPrompt = buildSystemPrompt({
+					schemaContext,
+					userContext,
+					mode: (conversation.mode as "chat" | "report") ?? "chat",
+				});
+
+				// Build message history for the model
+				const allMessages = await ctx.db.query.aiMessages.findMany({
+					where: eq(aiMessages.conversationId, input.conversationId),
+					orderBy: [aiMessages.createdAt],
+				});
+
+				const messages: ModelMessage[] = allMessages.map((msg) => ({
+					role: msg.role as "user" | "assistant",
+					content: msg.content ?? "",
+				}));
+
+				const modelId = conversation.model ?? DEFAULT_CHAT_MODEL;
+
+				// Vercel AI SDK handles the tool-calling loop via maxSteps
+				const tools = getChatTools({
+					userId: ctx.user.id,
+					db: ctx.db,
+					accountId: input.accountId,
+				});
+
+				const result = await aiGenerateText({
+					model: getModel(modelId),
+					system: systemPrompt,
+					messages,
+					tools,
+					maxSteps: MAX_TOOL_ROUNDS_CHAT,
+					reasoning: { maxTokens: CHAT_REASONING_TOKENS },
+				});
+
+				// Collect tool calls from all steps for logging
+				const allToolCalls = result.steps.flatMap((step) =>
+					(step.toolCalls ?? []).map((tc) => ({
+						id: tc.toolCallId,
+						type: "function" as const,
+						function: {
+							name: tc.toolName,
+							arguments: JSON.stringify(tc.input),
+						},
+					})),
+				);
+
+				const finalContent =
+					result.text ||
+					"I apologize, but I was unable to complete the analysis within the allowed number of tool calls. Please try rephrasing your question or breaking it into smaller parts.";
+
+				// Save assistant message
+				const [savedMessage] = await ctx.db
+					.insert(aiMessages)
+					.values({
+						conversationId: input.conversationId,
+						role: "assistant",
+						content: finalContent,
+						model: modelId,
+						tokensUsed: result.totalTokens,
+						toolCalls:
+							allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
+					})
+					.returning();
+
+				// Update conversation title from first user message if not set
+				if (!conversation.title && input.content.length > 0) {
+					const title =
+						input.content.length > 100
+							? `${input.content.slice(0, 97)}...`
+							: input.content;
+					await ctx.db
+						.update(aiConversations)
+						.set({ title })
+						.where(eq(aiConversations.id, input.conversationId));
+				}
+
+				return savedMessage;
+			} catch (error) {
+				await decrementChatUsage(ctx.db, ctx.user.id);
+				throw error;
 			}
-
-			// Check message limit
-			const existingMessages = await ctx.db.query.aiMessages.findMany({
-				where: eq(aiMessages.conversationId, input.conversationId),
-			});
-
-			if (existingMessages.length >= MAX_CHAT_MESSAGES_PER_CONVERSATION) {
-				throw new Error(ERR_MESSAGE_LIMIT_REACHED);
-			}
-
-			// Save user message
-			const [userMessage] = await ctx.db
-				.insert(aiMessages)
-				.values({
-					conversationId: input.conversationId,
-					role: "user",
-					content: input.content,
-				})
-				.returning();
-
-			if (!userMessage) {
-				throw new Error(ERR_MESSAGE_SAVE_FAILED);
-			}
-
-			// Build system prompt with schema + user context
-			const [schemaContext, userContext] = await Promise.all([
-				Promise.resolve(generateSchemaContext()),
-				buildUserContext(ctx.user.id, ctx.db),
-			]);
-
-			const systemPrompt = buildSystemPrompt({
-				schemaContext,
-				userContext,
-				mode: (conversation.mode as "chat" | "report") ?? "chat",
-			});
-
-			// Build message history for the model
-			const allMessages = await ctx.db.query.aiMessages.findMany({
-				where: eq(aiMessages.conversationId, input.conversationId),
-				orderBy: [aiMessages.createdAt],
-			});
-
-			const messages: ModelMessage[] = allMessages.map((msg) => ({
-				role: msg.role as "user" | "assistant",
-				content: msg.content ?? "",
-			}));
-
-			const modelId = conversation.model ?? DEFAULT_CHAT_MODEL;
-
-			// Vercel AI SDK handles the tool-calling loop via maxSteps
-			const tools = getChatTools({
-				userId: ctx.user.id,
-				db: ctx.db,
-				accountId: input.accountId,
-			});
-
-			const result = await aiGenerateText({
-				model: getModel(modelId),
-				system: systemPrompt,
-				messages,
-				tools,
-				maxSteps: MAX_TOOL_ROUNDS_CHAT,
-				reasoning: { maxTokens: CHAT_REASONING_TOKENS },
-			});
-
-			// Collect tool calls from all steps for logging
-			const allToolCalls = result.steps.flatMap((step) =>
-				(step.toolCalls ?? []).map((tc) => ({
-					id: tc.toolCallId,
-					type: "function" as const,
-					function: {
-						name: tc.toolName,
-						arguments: JSON.stringify(tc.input),
-					},
-				})),
-			);
-
-			const finalContent =
-				result.text ||
-				"I apologize, but I was unable to complete the analysis within the allowed number of tool calls. Please try rephrasing your question or breaking it into smaller parts.";
-
-			// Save assistant message
-			const [savedMessage] = await ctx.db
-				.insert(aiMessages)
-				.values({
-					conversationId: input.conversationId,
-					role: "assistant",
-					content: finalContent,
-					model: modelId,
-					tokensUsed: result.totalTokens,
-					toolCalls:
-						allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
-				})
-				.returning();
-
-			// Update conversation title from first user message if not set
-			if (!conversation.title && input.content.length > 0) {
-				const title =
-					input.content.length > 100
-						? `${input.content.slice(0, 97)}...`
-						: input.content;
-				await ctx.db
-					.update(aiConversations)
-					.set({ title })
-					.where(eq(aiConversations.id, input.conversationId));
-			}
-
-			return savedMessage;
 		}),
 
 	/**
@@ -332,80 +339,85 @@ export const aiRouter = createTRPCRouter({
 			const beta = isBetaUser(userMeta);
 			await incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
 
-			const model = DEFAULT_REPORT_MODEL;
-			const title =
-				input.title ??
-				(input.prompt.length > 100
-					? `${input.prompt.slice(0, 97)}...`
-					: input.prompt);
+			try {
+				const model = DEFAULT_REPORT_MODEL;
+				const title =
+					input.title ??
+					(input.prompt.length > 100
+						? `${input.prompt.slice(0, 97)}...`
+						: input.prompt);
 
-			// Create conversation in report mode
-			const [conversation] = await ctx.db
-				.insert(aiConversations)
-				.values({
-					userId: ctx.user.id,
-					mode: "report",
-					model,
-					title,
-					initialPrompt: input.prompt,
-					status: "generating",
-					dateRangeStart: input.dateRangeStart
-						? new Date(input.dateRangeStart)
-						: null,
-					dateRangeEnd: input.dateRangeEnd
-						? new Date(input.dateRangeEnd)
-						: null,
-				})
-				.returning();
+				// Create conversation in report mode
+				const [conversation] = await ctx.db
+					.insert(aiConversations)
+					.values({
+						userId: ctx.user.id,
+						mode: "report",
+						model,
+						title,
+						initialPrompt: input.prompt,
+						status: "generating",
+						dateRangeStart: input.dateRangeStart
+							? new Date(input.dateRangeStart)
+							: null,
+						dateRangeEnd: input.dateRangeEnd
+							? new Date(input.dateRangeEnd)
+							: null,
+					})
+					.returning();
 
-			if (!conversation) {
-				throw new Error(ERR_REPORT_CONVERSATION_CREATE_FAILED);
-			}
+				if (!conversation) {
+					throw new Error(ERR_REPORT_CONVERSATION_CREATE_FAILED);
+				}
 
-			// Save initial prompt as first user message
-			await ctx.db.insert(aiMessages).values({
-				conversationId: conversation.id,
-				role: "user",
-				content: input.prompt,
-			});
+				// Save initial prompt as first user message
+				await ctx.db.insert(aiMessages).values({
+					conversationId: conversation.id,
+					role: "user",
+					content: input.prompt,
+				});
 
-			// Create report record
-			const [report] = await ctx.db
-				.insert(aiReports)
-				.values({
+				// Create report record
+				const [report] = await ctx.db
+					.insert(aiReports)
+					.values({
+						userId: ctx.user.id,
+						conversationId: conversation.id,
+						title,
+						prompt: input.prompt,
+						model,
+						status: "queued",
+					})
+					.returning();
+
+				if (!report) {
+					throw new Error(ERR_REPORT_CREATE_FAILED);
+				}
+
+				// Trigger Trigger.dev background task
+				const handle = await generateAiReport.trigger({
+					reportId: report.id,
 					userId: ctx.user.id,
 					conversationId: conversation.id,
-					title,
 					prompt: input.prompt,
 					model,
-					status: "queued",
-				})
-				.returning();
+					dateRangeStart: input.dateRangeStart,
+					dateRangeEnd: input.dateRangeEnd,
+					templateId: input.templateId,
+					accountId: input.accountId,
+				});
 
-			if (!report) {
-				throw new Error(ERR_REPORT_CREATE_FAILED);
+				// Store the Trigger.dev task ID for tracking
+				await ctx.db
+					.update(aiReports)
+					.set({ triggerTaskId: handle.id })
+					.where(eq(aiReports.id, report.id));
+
+				return { ...report, triggerTaskId: handle.id };
+			} catch (error) {
+				await decrementReportUsage(ctx.db, ctx.user.id);
+				throw error;
 			}
-
-			// Trigger Trigger.dev background task
-			const handle = await generateAiReport.trigger({
-				reportId: report.id,
-				userId: ctx.user.id,
-				conversationId: conversation.id,
-				prompt: input.prompt,
-				model,
-				dateRangeStart: input.dateRangeStart,
-				dateRangeEnd: input.dateRangeEnd,
-				templateId: input.templateId,
-				accountId: input.accountId,
-			});
-
-			// Store the Trigger.dev task ID for tracking
-			await ctx.db
-				.update(aiReports)
-				.set({ triggerTaskId: handle.id })
-				.where(eq(aiReports.id, report.id));
-
-			return { ...report, triggerTaskId: handle.id };
 		}),
 
 	/**
