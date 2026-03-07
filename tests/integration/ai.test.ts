@@ -11,9 +11,11 @@ import {
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_REPORT_NOT_FOUND,
 } from "@/lib/constants/errors";
+import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
 	createTestUser,
+	FULL_ACCESS_AUTH,
 	type TestCaller,
 	truncateAllTables,
 } from "../utils";
@@ -75,11 +77,28 @@ describe("ai router", () => {
 		await truncateAllTables();
 
 		// Create two users to test ownership isolation
+		// Beta metadata bypasses usage limits (these tests test AI CRUD, not billing)
 		const user = await createTestUser({ name: "AI Test User" });
+		const userWithBeta = {
+			...user,
+			publicMetadata: { beta: true },
+		} as unknown as User;
 		const otherUser = await createTestUser({ name: "Other User" });
+		const otherWithBeta = {
+			...otherUser,
+			publicMetadata: { beta: true },
+		} as unknown as User;
 
-		caller = await createTestCaller(user.clerkId, user);
-		otherCaller = await createTestCaller(otherUser.clerkId, otherUser);
+		caller = await createTestCaller(
+			user.clerkId,
+			userWithBeta,
+			FULL_ACCESS_AUTH,
+		);
+		otherCaller = await createTestCaller(
+			otherUser.clerkId,
+			otherWithBeta,
+			FULL_ACCESS_AUTH,
+		);
 	});
 
 	afterAll(async () => {
@@ -119,7 +138,7 @@ describe("ai router", () => {
 				mode: "chat",
 			});
 
-			expect(conversation.model).toBe("moonshotai/kimi-k2");
+			expect(conversation.model).toBe(DEFAULT_CHAT_MODEL);
 		});
 	});
 
@@ -143,7 +162,7 @@ describe("ai router", () => {
 			expect(response?.content).toBe(
 				"This is a mock AI response about your trading data.",
 			);
-			expect(response?.model).toBe("moonshotai/kimi-k2");
+			expect(response?.model).toBe(DEFAULT_CHAT_MODEL);
 			expect(response?.tokensUsed).toBe(150);
 		});
 

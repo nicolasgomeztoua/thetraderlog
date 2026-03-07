@@ -4,6 +4,18 @@ import type { User } from "@/server/db/schema";
 import { createTestContext, createUnauthenticatedTestContext } from "./context";
 
 /**
+ * Mock ClerkAuth that grants access to all features and plans.
+ * Use this for tests that aren't specifically testing entitlement gates.
+ */
+export const FULL_ACCESS_AUTH: ClerkAuthLike = { has: () => true };
+
+/**
+ * Mock ClerkAuth that denies access to all features and plans.
+ * Use this for entitlement gate rejection tests.
+ */
+export const NO_ACCESS_AUTH: ClerkAuthLike = { has: () => false };
+
+/**
  * Creates a typed tRPC caller for integration tests.
  * The caller is authenticated as the specified user.
  */

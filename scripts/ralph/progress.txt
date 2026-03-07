@@ -67,3 +67,58 @@ Started: Sat Mar  7 18:39:16 WET 2026
   - `sql` template literal for atomic increment: `sql\`${table.column} + 1\``
   - Biome import ordering: `@/lib/billing/*` before `@/lib/constants/*` before `@/server/*`
 ---
+
+## 2026-03-07 - US-006
+- Gated AI router endpoints with entitlement checks and usage tracking
+- sendMessage: requireFeature(FEATURE_AI_CHAT) + inline daily chat usage increment with rollback on limit exceeded
+- startReport: requireFeature(FEATURE_AI_REPORTS) + inline monthly report usage increment with rollback on limit exceeded
+- generatePdf: requireFeature(FEATURE_PDF_EXPORT) — no usage tracking needed
+- Files changed: src/server/api/routers/ai.ts
+- **Learnings for future iterations:**
+  - `requireFeature(FEATURE_SLUG)` replaces `protectedProcedure` directly — it's a full procedure, not just middleware
+  - Inline usage tracking pattern: same upsert+increment+rollback as billing router, avoids cross-router calls
+  - Biome requires multi-line type casts when the inline type is long: `as unknown as {\n  publicMetadata?: ...\n}`
+  - Use `bunx biome check --fix <file>` to auto-fix import ordering issues
+---
+
+## 2026-03-07 - US-007
+- Gated trade, tag, and strategy router mutations with entitlement middleware
+- Trade mutations (create, update, close, delete, deleteMany, restore, permanentDelete, emptyTrash, addExecution, deleteExecution, updateTrailingStop, updateRating, bulkUpdateRating, markReviewed, updateStrategy, bulkMarkReviewed, calculateMAEMFE, bulkCalculateMAEMFE, getUploadUrl, confirmUpload, deleteAttachment) → requireFeature(FEATURE_TRADE_MANAGEMENT)
+- CSV import (batchImport) → requireFeature(FEATURE_CSV_IMPORT_EXPORT)
+- Tag mutations (create, update, delete, addToTrade, removeFromTrade, bulkAddToTrades, bulkRemoveFromTrades) → requireFeature(FEATURE_CUSTOM_TAGS)
+- Strategy mutations (create, update, delete, duplicate, checkRule, bulkCheckRules, syncGeneratedRules, updateRiskParameters, updateScalingRules, updateTrailingRules, evaluateTradeRules) → requireFeature(FEATURE_CUSTOM_STRATEGIES)
+- All read-only queries remain as protectedProcedure (accessible to all authenticated users)
+- Files changed: src/server/api/routers/trades.ts, src/server/api/routers/tags.ts, src/server/api/routers/strategies.ts
+- **Learnings for future iterations:**
+  - `requireFeature(FEATURE_SLUG)` is a drop-in replacement for `protectedProcedure` — same chaining API
+  - Biome auto-fix needed after adding imports from `@/lib/constants/billing` (import ordering)
+  - Keep queries ungated so free users retain read access to their data
+---
+
+## 2026-03-07 - US-008
+- Created integration tests for billing router: tests/integration/billing.test.ts (15 tests)
+- Extended test utils to support clerkAuth overrides: tests/utils/context.ts, tests/utils/caller.ts
+- Tests cover: getCurrentPlan (free/pro/starter), getUsage (zero counts, beta null limits), incrementChatUsage (increment, daily limit, beta bypass), incrementReportUsage (increment, monthly limit, beta bypass), unauthenticated access rejection
+- Files changed: tests/integration/billing.test.ts (new), tests/utils/context.ts, tests/utils/caller.ts
+- **Learnings for future iterations:**
+  - TRPCError thrown with `code: "FORBIDDEN"` — but `rejects.toThrow()` matches the *message*, not the code. Use the error constant (e.g., ERR_AI_CHAT_LIMIT_REACHED) instead of "FORBIDDEN"
+  - Test utils now accept optional `clerkAuth` param: `createTestCaller(clerkId, user, { has: () => true })` — use this for entitlement testing
+  - Beta user simulation: spread user object with `publicMetadata: { beta: true }` and cast `as unknown as User`
+  - Pre-existing test failures: AI and trade tests fail because US-006/US-007 added entitlement gates but existing tests don't pass clerkAuth — US-009 should fix these
+---
+
+## 2026-03-07 - US-009
+- Created tests/integration/entitlements.test.ts with 14 tests covering AI, trade, and strategy entitlement gates
+- Added FULL_ACCESS_AUTH and NO_ACCESS_AUTH constants to tests/utils/caller.ts for convenience
+- Fixed 7 existing test files broken by US-006/US-007 entitlement gates by adding FULL_ACCESS_AUTH:
+  - ai.test.ts, report-viewer.test.ts, trades/batch-import.test.ts
+  - strategy-rules-sync.test.ts, strategy-evaluation.test.ts, rule-relevance.test.ts, rule-compliance.test.ts
+- Fixed ai.test.ts and report-viewer.test.ts: added beta metadata to bypass usage limits (these tests create 6+ reports exceeding the monthly limit)
+- Fixed ai.test.ts hardcoded model string: replaced `"moonshotai/kimi-k2"` with `DEFAULT_CHAT_MODEL` constant
+- Files changed: tests/integration/entitlements.test.ts (new), tests/utils/caller.ts, tests/utils/index.ts, plus 7 existing test files
+- **Learnings for future iterations:**
+  - Tests calling gated mutations MUST pass FULL_ACCESS_AUTH as 3rd arg to createTestCaller
+  - Tests creating 6+ AI reports need beta metadata on user to bypass monthly usage limit
+  - Platform enum values are: projectx, topstepx, ninjatrader, tradovate, rithmic, apex, other (NOT mt4/mt5)
+  - requireFeature middleware doesn't pass user to hasFeatureAccess, so beta bypass via publicMetadata only works in billing/AI routers, not through middleware — tests simulate beta by passing FULL_ACCESS_AUTH
+---

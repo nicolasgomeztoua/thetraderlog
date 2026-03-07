@@ -5,6 +5,7 @@ import {
 	createTestAccount,
 	createTestCaller,
 	createTestUser,
+	FULL_ACCESS_AUTH,
 	type TestCaller,
 	truncateAllTables,
 } from "../../utils";
@@ -60,7 +61,7 @@ describe("trades router - batchImport", () => {
 	beforeAll(async () => {
 		await truncateAllTables();
 		user = await createTestUser();
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 		account = await createTestAccount(user.id, {
 			name: "Test Trading Account",
 			accountType: "demo",
