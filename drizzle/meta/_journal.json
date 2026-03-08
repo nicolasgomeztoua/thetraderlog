@@ -99,6 +99,13 @@
 			"when": 1771470000000,
 			"tag": "0013_futures_platform_expansion",
 			"breakpoints": true
+		},
+		{
+			"idx": 14,
+			"version": "7",
+			"when": 1772966975213,
+			"tag": "0014_ai_usage_table",
+			"breakpoints": true
 		}
 	]
 }

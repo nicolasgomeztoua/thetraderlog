@@ -240,6 +240,24 @@ export function BillingTab() {
 			</Card>
 
 			{/* Usage Meters Card - shown for Pro users and beta */}
+			{isProUser && usageQuery.isLoading && (
+				<Card data-testid="billing-usage-card-loading">
+					<CardHeader className="p-4 sm:p-6">
+						<Skeleton className="h-5 w-24" />
+						<Skeleton className="hidden h-4 w-56 sm:block" />
+					</CardHeader>
+					<CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
+						<div className="space-y-1.5">
+							<Skeleton className="h-3 w-48" />
+							<Skeleton className="h-2 w-full" />
+						</div>
+						<div className="space-y-1.5">
+							<Skeleton className="h-3 w-48" />
+							<Skeleton className="h-2 w-full" />
+						</div>
+					</CardContent>
+				</Card>
+			)}
 			{isProUser && usage && (
 				<Card data-testid="billing-usage-card">
 					<CardHeader className="p-4 sm:p-6">
