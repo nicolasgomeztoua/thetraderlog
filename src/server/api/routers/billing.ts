@@ -210,7 +210,6 @@ export const billingRouter = createTRPCRouter({
 		return {
 			plan: effectivePlan,
 			metadata: metadata ?? PLAN_METADATA[PLAN_FREE],
-			beta: isBetaUser(userMeta),
 		};
 	}),
 
@@ -250,11 +249,11 @@ export const billingRouter = createTRPCRouter({
 		return {
 			chat: {
 				used: chatRow?.used ?? 0,
-				limit: isBeta || hasAiAccess ? AI_CHAT_DAILY_LIMIT : 0,
+				limit: isBeta || hasAiAccess ? AI_CHAT_DAILY_LIMIT : null,
 			},
 			reports: {
 				used: reportRow?.used ?? 0,
-				limit: isBeta || hasAiAccess ? AI_REPORTS_MONTHLY_LIMIT : 0,
+				limit: isBeta || hasAiAccess ? AI_REPORTS_MONTHLY_LIMIT : null,
 			},
 		};
 	}),

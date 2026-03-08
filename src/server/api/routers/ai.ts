@@ -585,12 +585,9 @@ export const aiRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Retry a failed report — resets state and re-triggers generation.
-	 * Note: This intentionally does NOT call incrementAndCheckReportUsage because
-	 * the quota slot was already consumed by the original startReport call.
-	 * Only reports with status "failed" can be retried, so concurrent abuse is
-	 * limited — each retry resets status to "queued", preventing re-entry until
-	 * the job completes or fails again.
+	 * Retry a failed report — re-consumes a quota slot and re-triggers generation.
+	 * startReport refunds the quota on failure, so retryReport must re-increment
+	 * to prevent free retries after a transient trigger failure.
 	 */
 	retryReport: requireFeature(FEATURE_AI_REPORTS)
 		.input(z.object({ reportId: z.string() }))
@@ -609,6 +606,12 @@ export const aiRouter = createTRPCRouter({
 			if (report.status !== "failed") {
 				throw new Error(ERR_REPORT_ONLY_FAILED_RETRY);
 			}
+
+			// Re-consume quota — startReport refunds on failure, so we must re-increment.
+			const userMeta = ctx.user as unknown as UserWithMetadata;
+			const isUnlimited = isBetaUser(userMeta);
+			const { month: usageMonth, year: usageYear } =
+				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
 			// Fetch conversation for date range fields
 			const conversation = await ctx.db.query.aiConversations.findFirst({
@@ -660,7 +663,17 @@ export const aiRouter = createTRPCRouter({
 					triggerTaskId: handle.id,
 				};
 			} catch (error) {
-				// Reset report back to "failed" so it can be retried again
+				// Refund quota and reset report back to "failed" so it can be retried again
+				try {
+					await decrementReportUsage(
+						ctx.db,
+						ctx.user.id,
+						usageMonth,
+						usageYear,
+					);
+				} catch {
+					console.error("Failed to rollback report usage after retry failure");
+				}
 				try {
 					await ctx.db
 						.update(aiReports)
