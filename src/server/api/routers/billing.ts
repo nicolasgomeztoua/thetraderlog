@@ -201,26 +201,29 @@ export const billingRouter = createTRPCRouter({
 		const today = getTodayDateString();
 		const { month, year } = getCurrentMonthYear();
 
-		const [chatRow] = await ctx.db
-			.select({ used: aiUsage.chatMessagesUsed })
-			.from(aiUsage)
-			.where(
-				and(
-					eq(aiUsage.userId, ctx.user.id),
-					eq(aiUsage.chatMessagesDate, today),
-				),
-			);
-
-		const [reportRow] = await ctx.db
-			.select({ used: aiUsage.reportsUsed })
-			.from(aiUsage)
-			.where(
-				and(
-					eq(aiUsage.userId, ctx.user.id),
-					eq(aiUsage.reportsMonth, month),
-					eq(aiUsage.reportsYear, year),
-				),
-			);
+		const [chatRow, reportRow] = await Promise.all([
+			ctx.db
+				.select({ used: aiUsage.chatMessagesUsed })
+				.from(aiUsage)
+				.where(
+					and(
+						eq(aiUsage.userId, ctx.user.id),
+						eq(aiUsage.chatMessagesDate, today),
+					),
+				)
+				.then((rows) => rows[0]),
+			ctx.db
+				.select({ used: aiUsage.reportsUsed })
+				.from(aiUsage)
+				.where(
+					and(
+						eq(aiUsage.userId, ctx.user.id),
+						eq(aiUsage.reportsMonth, month),
+						eq(aiUsage.reportsYear, year),
+					),
+				)
+				.then((rows) => rows[0]),
+		]);
 
 		return {
 			chat: {

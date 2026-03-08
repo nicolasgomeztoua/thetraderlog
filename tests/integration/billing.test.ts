@@ -106,11 +106,7 @@ describe("billing router", () => {
 
 		it("should increment chat counter from zero", async () => {
 			const db = getTestDb();
-			const result = await incrementAndCheckChatUsage(
-				db,
-				chatUser.id,
-				false,
-			);
+			const result = await incrementAndCheckChatUsage(db, chatUser.id, false);
 
 			expect(result.used).toBe(1);
 			expect(result.limit).toBe(AI_CHAT_DAILY_LIMIT);
@@ -118,11 +114,7 @@ describe("billing router", () => {
 
 		it("should increment chat counter on subsequent calls", async () => {
 			const db = getTestDb();
-			const result = await incrementAndCheckChatUsage(
-				db,
-				chatUser.id,
-				false,
-			);
+			const result = await incrementAndCheckChatUsage(db, chatUser.id, false);
 
 			expect(result.used).toBe(2);
 		});
@@ -147,11 +139,7 @@ describe("billing router", () => {
 			const dayCaller = await createTestCaller(dayUser.clerkId, dayUser);
 
 			// Increment once for today
-			const today = await incrementAndCheckChatUsage(
-				db,
-				dayUser.id,
-				false,
-			);
+			const today = await incrementAndCheckChatUsage(db, dayUser.id, false);
 			expect(today.used).toBe(1);
 
 			// Verify getUsage shows 1 for today
@@ -165,11 +153,7 @@ describe("billing router", () => {
 
 			// Increment many times — should never throw
 			for (let i = 0; i < AI_CHAT_DAILY_LIMIT + 5; i++) {
-				const result = await incrementAndCheckChatUsage(
-					db,
-					betaUser.id,
-					true,
-				);
+				const result = await incrementAndCheckChatUsage(db, betaUser.id, true);
 				expect(result.limit).toBeNull();
 			}
 
