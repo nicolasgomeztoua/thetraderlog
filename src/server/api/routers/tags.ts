@@ -133,7 +133,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Delete a tag
-	delete: protectedProcedure
+	delete: requireFeature(FEATURE_CUSTOM_TAGS)
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existing = await ctx.db.query.tags.findFirst({
@@ -201,7 +201,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Remove tag from trade
-	removeFromTrade: protectedProcedure
+	removeFromTrade: requireFeature(FEATURE_CUSTOM_TAGS)
 		.input(
 			z.object({
 				tradeId: z.string(),
@@ -295,7 +295,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Bulk remove tag from multiple trades
-	bulkRemoveFromTrades: protectedProcedure
+	bulkRemoveFromTrades: requireFeature(FEATURE_CUSTOM_TAGS)
 		.input(
 			z.object({
 				tradeIds: z.array(z.string()).min(1).max(100),
