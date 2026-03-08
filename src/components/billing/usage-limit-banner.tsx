@@ -57,20 +57,21 @@ export function UsageLimitBanner({ type }: UsageLimitBannerProps) {
 	);
 }
 
-export function useChatLimitReached(): boolean {
+function useUsage() {
 	const hasPaidPlan = useHasAiPlan();
-	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
+	return api.billing.getUsage.useQuery(undefined, {
 		enabled: hasPaidPlan,
 	});
+}
+
+export function useChatLimitReached(): boolean {
+	const { data: usage } = useUsage();
 	if (!usage) return false;
 	return usage.chat.limit !== null && usage.chat.used >= usage.chat.limit;
 }
 
 export function useReportLimitReached(): boolean {
-	const hasPaidPlan = useHasAiPlan();
-	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
-		enabled: hasPaidPlan,
-	});
+	const { data: usage } = useUsage();
 	if (!usage) return false;
 	return (
 		usage.reports.limit !== null && usage.reports.used >= usage.reports.limit

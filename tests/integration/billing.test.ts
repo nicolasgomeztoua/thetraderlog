@@ -13,6 +13,7 @@ import {
 	incrementAndCheckReportUsage,
 } from "@/server/api/routers/billing";
 import type { User } from "@/server/db/schema";
+import * as schema from "@/server/db/schema";
 import {
 	createTestCaller,
 	createTestUser,
@@ -133,17 +134,22 @@ describe("billing router", () => {
 
 		it("should reset counter on a different day", async () => {
 			const db = getTestDb();
-			// Create a fresh user so we start clean
 			const dayUser = await createTestUser();
-			const dayCaller = await createTestCaller(dayUser.clerkId, dayUser);
 
-			// Increment once for today
-			const today = await incrementAndCheckChatUsage(db, dayUser.id, false);
-			expect(today.used).toBe(1);
+			const yesterday = new Date();
+			yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+			const yesterdayStr = yesterday.toISOString().split("T")[0]!;
 
-			// Verify getUsage shows 1 for today
-			const usage = await dayCaller.billing.getUsage();
-			expect(usage.chat.used).toBe(1);
+			// Seed yesterday's row at the limit
+			await db.insert(schema.aiUsage).values({
+				userId: dayUser.id,
+				chatMessagesUsed: AI_CHAT_DAILY_LIMIT,
+				chatMessagesDate: yesterdayStr,
+			});
+
+			// Today should start fresh at 1
+			const result = await incrementAndCheckChatUsage(db, dayUser.id, false);
+			expect(result.used).toBe(1);
 		});
 
 		it("should allow beta user to exceed limit", async () => {
