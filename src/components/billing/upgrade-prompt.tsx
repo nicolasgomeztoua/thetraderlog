@@ -130,6 +130,35 @@ export function UpgradeCardInline({ feature }: UpgradeCardInlineProps) {
 	return <UpgradeCard config={config} inline />;
 }
 
+interface UpgradeButtonCompactProps {
+	feature: string;
+	testId?: string;
+}
+
+export function UpgradeButtonCompact({
+	feature,
+	testId,
+}: UpgradeButtonCompactProps) {
+	const config = FEATURE_CONFIG[feature];
+	if (!config) return null;
+	const accentColor = config.isAiFeature ? "#00d4ff" : "#d4ff00";
+
+	return (
+		<Link
+			className="flex items-center gap-1.5 rounded border px-3 py-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+			data-testid={testId}
+			href="/pricing"
+			style={{
+				borderColor: `${accentColor}33`,
+				backgroundColor: `${accentColor}0d`,
+			}}
+		>
+			<Lock className="size-3" />
+			{config.title}
+		</Link>
+	);
+}
+
 function UpgradeCard({
 	config,
 	inline,

@@ -250,11 +250,11 @@ export const billingRouter = createTRPCRouter({
 		return {
 			chat: {
 				used: chatRow?.used ?? 0,
-				limit: isBeta || hasAiAccess ? AI_CHAT_DAILY_LIMIT : null,
+				limit: isBeta || hasAiAccess ? AI_CHAT_DAILY_LIMIT : 0,
 			},
 			reports: {
 				used: reportRow?.used ?? 0,
-				limit: isBeta || hasAiAccess ? AI_REPORTS_MONTHLY_LIMIT : null,
+				limit: isBeta || hasAiAccess ? AI_REPORTS_MONTHLY_LIMIT : 0,
 			},
 		};
 	}),

@@ -728,7 +728,10 @@ export const aiRouter = createTRPCRouter({
 	getPdfStatus: protectedProcedure
 		.input(z.object({ runId: z.string() }))
 		.query(async ({ ctx, input }) => {
-			// Verify the run belongs to the requesting user
+			// Verify the run belongs to the requesting user.
+			// NOTE: pdfTaskId was added in this deployment. Any PDF tasks started before
+			// this migration will have pdfTaskId=null and will fail lookup here.
+			// The deployment window is narrow; affected users can retry generation.
 			const report = await ctx.db.query.aiReports.findFirst({
 				where: and(
 					eq(aiReports.pdfTaskId, input.runId),
