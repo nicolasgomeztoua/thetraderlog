@@ -98,6 +98,27 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			// Validate inputs BEFORE incrementing usage so validation-only failures
+			// never touch the daily quota counter.
+			const conversation = await ctx.db.query.aiConversations.findFirst({
+				where: and(
+					eq(aiConversations.id, input.conversationId),
+					eq(aiConversations.userId, ctx.user.id),
+				),
+			});
+
+			if (!conversation) {
+				throw new Error(ERR_CONVERSATION_NOT_FOUND);
+			}
+
+			const existingMessages = await ctx.db.query.aiMessages.findMany({
+				where: eq(aiMessages.conversationId, input.conversationId),
+			});
+
+			if (existingMessages.length >= MAX_CHAT_MESSAGES_PER_CONVERSATION) {
+				throw new Error(ERR_MESSAGE_LIMIT_REACHED);
+			}
+
 			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
 			const userMeta = ctx.user as unknown as UserWithMetadata;
 			const isUnlimited = isBetaUser(userMeta);
@@ -108,27 +129,6 @@ export const aiRouter = createTRPCRouter({
 			);
 
 			try {
-				// Verify conversation ownership
-				const conversation = await ctx.db.query.aiConversations.findFirst({
-					where: and(
-						eq(aiConversations.id, input.conversationId),
-						eq(aiConversations.userId, ctx.user.id),
-					),
-				});
-
-				if (!conversation) {
-					throw new Error(ERR_CONVERSATION_NOT_FOUND);
-				}
-
-				// Check message limit
-				const existingMessages = await ctx.db.query.aiMessages.findMany({
-					where: eq(aiMessages.conversationId, input.conversationId),
-				});
-
-				if (existingMessages.length >= MAX_CHAT_MESSAGES_PER_CONVERSATION) {
-					throw new Error(ERR_MESSAGE_LIMIT_REACHED);
-				}
-
 				// Save user message
 				const [userMessage] = await ctx.db
 					.insert(aiMessages)
@@ -228,8 +228,8 @@ export const aiRouter = createTRPCRouter({
 
 				return savedMessage;
 			} catch (error) {
-				// incrementAndCheckChatUsage is called before this try block,
-				// so all errors here are from the AI call or DB writes — always roll back.
+				// Validation is done before increment, so errors here are from
+				// AI calls or DB writes — always roll back the daily quota.
 				try {
 					await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
 				} catch {
@@ -350,6 +350,7 @@ export const aiRouter = createTRPCRouter({
 				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
 			let createdReportId: string | null = null;
+			let triggerHandleId: string | null = null;
 
 			try {
 				const model = DEFAULT_REPORT_MODEL;
@@ -419,6 +420,7 @@ export const aiRouter = createTRPCRouter({
 					templateId: input.templateId,
 					accountId: input.accountId,
 				});
+				triggerHandleId = handle.id;
 
 				// Store the Trigger.dev task ID for tracking
 				await ctx.db
@@ -428,8 +430,18 @@ export const aiRouter = createTRPCRouter({
 
 				return { ...report, triggerTaskId: handle.id };
 			} catch (error) {
-				// incrementAndCheckReportUsage is called before this try block,
-				// so all errors here are from DB writes or Trigger.dev — always roll back.
+				// Cancel any dispatched Trigger.dev job to prevent phantom runs
+				// where the worker completes but the quota was already refunded.
+				if (triggerHandleId) {
+					try {
+						await runs.cancel(triggerHandleId);
+					} catch {
+						console.error(
+							"Failed to cancel Trigger.dev run after startReport error",
+						);
+					}
+				}
+
 				try {
 					await decrementReportUsage(
 						ctx.db,
@@ -613,6 +625,7 @@ export const aiRouter = createTRPCRouter({
 			const { month: usageMonth, year: usageYear } =
 				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
+			let retryTriggerHandleId: string | null = null;
 			// All DB reads and writes are inside try so decrementReportUsage runs on any failure
 			try {
 				// Fetch conversation for date range fields
@@ -649,6 +662,7 @@ export const aiRouter = createTRPCRouter({
 					dateRangeStart: conversation.dateRangeStart?.toISOString(),
 					dateRangeEnd: conversation.dateRangeEnd?.toISOString(),
 				});
+				retryTriggerHandleId = handle.id;
 
 				// Store new task ID
 				await ctx.db
@@ -662,6 +676,17 @@ export const aiRouter = createTRPCRouter({
 					triggerTaskId: handle.id,
 				};
 			} catch (error) {
+				// Cancel any dispatched Trigger.dev job to prevent phantom runs
+				if (retryTriggerHandleId) {
+					try {
+						await runs.cancel(retryTriggerHandleId);
+					} catch {
+						console.error(
+							"Failed to cancel Trigger.dev run after retryReport error",
+						);
+					}
+				}
+
 				// Refund quota and reset report back to "failed" so it can be retried again
 				try {
 					await decrementReportUsage(
