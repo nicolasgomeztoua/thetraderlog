@@ -566,6 +566,11 @@ export const aiRouter = createTRPCRouter({
 
 	/**
 	 * Retry a failed report — resets state and re-triggers generation.
+	 * Note: This intentionally does NOT call incrementAndCheckReportUsage because
+	 * the quota slot was already consumed by the original startReport call.
+	 * Only reports with status "failed" can be retried, so concurrent abuse is
+	 * limited — each retry resets status to "queued", preventing re-entry until
+	 * the job completes or fails again.
 	 */
 	retryReport: requireFeature(FEATURE_AI_REPORTS)
 		.input(z.object({ reportId: z.string() }))

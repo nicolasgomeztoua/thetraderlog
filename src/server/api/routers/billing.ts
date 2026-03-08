@@ -67,7 +67,7 @@ export async function incrementAndCheckChatUsage(
 		await db
 			.update(aiUsage)
 			.set({
-				chatMessagesUsed: sql`${aiUsage.chatMessagesUsed} - 1`,
+				chatMessagesUsed: sql`GREATEST(${aiUsage.chatMessagesUsed} - 1, 0)`,
 			})
 			.where(
 				and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
@@ -122,7 +122,7 @@ export async function incrementAndCheckReportUsage(
 		await db
 			.update(aiUsage)
 			.set({
-				reportsUsed: sql`${aiUsage.reportsUsed} - 1`,
+				reportsUsed: sql`GREATEST(${aiUsage.reportsUsed} - 1, 0)`,
 			})
 			.where(
 				and(

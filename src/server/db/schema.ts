@@ -1,6 +1,7 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	date,
 	decimal,
 	index,
@@ -1006,6 +1007,10 @@ export const aiUsage = createTable(
 			t.userId,
 			t.reportsMonth,
 			t.reportsYear,
+		),
+		check(
+			"ai_usage_row_type_check",
+			sql`(chat_messages_date IS NOT NULL AND reports_month IS NULL AND reports_year IS NULL) OR (chat_messages_date IS NULL AND reports_month IS NOT NULL AND reports_year IS NOT NULL)`,
 		),
 	],
 );
