@@ -596,6 +596,7 @@ export const aiReports = createTable(
 		dataArtifacts: jsonb("data_artifacts").$type<Record<string, unknown>>(),
 		tokensUsed: integer("tokens_used").notNull().default(0),
 		triggerTaskId: text("trigger_task_id"),
+		pdfTaskId: text("pdf_task_id"),
 		errorMessage: text("error_message"),
 		progressStage: text("progress_stage").default("queued"),
 		currentRound: integer("current_round").default(0),

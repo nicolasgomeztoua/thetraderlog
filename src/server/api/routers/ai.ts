@@ -714,6 +714,11 @@ export const aiRouter = createTRPCRouter({
 				token,
 			});
 
+			await ctx.db
+				.update(aiReports)
+				.set({ pdfTaskId: handle.id })
+				.where(eq(aiReports.id, input.reportId));
+
 			return { runId: handle.id };
 		}),
 
@@ -726,7 +731,7 @@ export const aiRouter = createTRPCRouter({
 			// Verify the run belongs to the requesting user
 			const report = await ctx.db.query.aiReports.findFirst({
 				where: and(
-					eq(aiReports.triggerTaskId, input.runId),
+					eq(aiReports.pdfTaskId, input.runId),
 					eq(aiReports.userId, ctx.user.id),
 				),
 				columns: { id: true },
