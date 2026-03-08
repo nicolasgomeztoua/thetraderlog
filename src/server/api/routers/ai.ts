@@ -10,7 +10,7 @@ import { getModel } from "@/lib/ai/provider";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
-import { getEffectivePlan, type UserWithMetadata } from "@/lib/billing/utils";
+import { isBetaUser, type UserWithMetadata } from "@/lib/billing/utils";
 import {
 	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
@@ -22,8 +22,6 @@ import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
 	FEATURE_PDF_EXPORT,
-	PLAN_FREE,
-	PLAN_PRO,
 } from "@/lib/constants/billing";
 import {
 	ERR_CONVERSATION_CREATE_FAILED,
@@ -99,13 +97,9 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			// Enforce daily chat usage limit — derive Pro status from Clerk auth,
-			// not DB user (which lacks publicMetadata for beta detection).
+			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
 			const userMeta = ctx.user as unknown as UserWithMetadata;
-			const effectivePlan = ctx.clerkAuth
-				? getEffectivePlan(ctx.clerkAuth, userMeta)
-				: PLAN_FREE;
-			const isUnlimited = effectivePlan === PLAN_PRO;
+			const isUnlimited = isBetaUser(userMeta);
 			const { date: usageDate } = await incrementAndCheckChatUsage(
 				ctx.db,
 				ctx.user.id,
@@ -348,13 +342,9 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			// Enforce monthly report usage limit — derive Pro status from Clerk auth,
-			// not DB user (which lacks publicMetadata for beta detection).
+			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
 			const userMeta = ctx.user as unknown as UserWithMetadata;
-			const effectivePlan = ctx.clerkAuth
-				? getEffectivePlan(ctx.clerkAuth, userMeta)
-				: PLAN_FREE;
-			const isUnlimited = effectivePlan === PLAN_PRO;
+			const isUnlimited = isBetaUser(userMeta);
 			const { month: usageMonth, year: usageYear } =
 				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
