@@ -65,7 +65,20 @@ function getPlanIndex(slug: string): number {
 }
 
 function PlanCTA({ plan }: { plan: PricingPlan }) {
-	const { isSignedIn, has } = useAuth();
+	const { isSignedIn, has, isLoaded } = useAuth();
+
+	if (!isLoaded) {
+		return (
+			<Button
+				className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				data-testid={`pricing-cta-${plan.slug}`}
+				disabled
+				variant="outline"
+			>
+				Loading...
+			</Button>
+		);
+	}
 
 	const userPlanIndex = isSignedIn
 		? has?.({ plan: PLAN_PRO })
@@ -92,7 +105,7 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 					data-testid={`pricing-cta-${plan.slug}`}
 					variant={plan.highlighted ? "default" : "outline"}
 				>
-					{plan.slug === PLAN_FREE ? "Start Free Trial" : `Get ${plan.name}`}
+					{plan.slug === PLAN_FREE ? "Get Started Free" : `Get ${plan.name}`}
 					<ArrowRight className="h-4 w-4" />
 				</Button>
 			</SignUpButton>

@@ -9,6 +9,8 @@ import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
 	FEATURE_CSV_IMPORT_EXPORT,
+	FEATURE_CUSTOM_STRATEGIES,
+	FEATURE_CUSTOM_TAGS,
 	FEATURE_PDF_EXPORT,
 	FEATURE_TRADE_MANAGEMENT,
 	PLAN_PRO,
@@ -64,6 +66,21 @@ const FEATURE_CONFIG: Record<
 		planRequired: PLAN_STARTER,
 		isAiFeature: false,
 	},
+	[FEATURE_CUSTOM_TAGS]: {
+		title: "Unlock Custom Tags",
+		description: "Create and manage custom tags to categorize your trades.",
+		icon: Zap,
+		planRequired: PLAN_STARTER,
+		isAiFeature: false,
+	},
+	[FEATURE_CUSTOM_STRATEGIES]: {
+		title: "Unlock Custom Strategies",
+		description:
+			"Define and track your own trading strategies for deeper analysis.",
+		icon: Zap,
+		planRequired: PLAN_STARTER,
+		isAiFeature: false,
+	},
 };
 
 interface UpgradePromptProps {
@@ -72,8 +89,12 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
-	const { has } = useAuth();
+	const { has, isLoaded } = useAuth();
 	const { user } = useUser();
+
+	if (!isLoaded) {
+		return <>{children}</>;
+	}
 
 	const isBeta = user?.publicMetadata?.beta === true;
 	const hasAccess = isBeta || has?.({ feature });
