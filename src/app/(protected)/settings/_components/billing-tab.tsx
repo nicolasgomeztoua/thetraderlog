@@ -114,7 +114,7 @@ export function BillingTab() {
 	const hasPaidPlan = isProUser || isStarterUser;
 
 	const usageQuery = api.billing.getUsage.useQuery(undefined, {
-		enabled: isProUser,
+		enabled: isProUser || isBeta,
 	});
 	const usage = usageQuery.data;
 

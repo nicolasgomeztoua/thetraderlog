@@ -613,18 +613,16 @@ export const aiRouter = createTRPCRouter({
 			const { month: usageMonth, year: usageYear } =
 				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
-			// Fetch conversation for date range fields
-			const conversation = await ctx.db.query.aiConversations.findFirst({
-				where: eq(aiConversations.id, report.conversationId),
-			});
-
-			if (!conversation) {
-				throw new Error(ERR_REPORT_CONVERSATION_NOT_FOUND);
-			}
-
-			// Re-trigger background task
-			// All DB writes are inside try so decrementReportUsage runs on any failure
+			// All DB reads and writes are inside try so decrementReportUsage runs on any failure
 			try {
+				// Fetch conversation for date range fields
+				const conversation = await ctx.db.query.aiConversations.findFirst({
+					where: eq(aiConversations.id, report.conversationId),
+				});
+
+				if (!conversation) {
+					throw new Error(ERR_REPORT_CONVERSATION_NOT_FOUND);
+				}
 				// Reset report state
 				await ctx.db
 					.update(aiReports)
