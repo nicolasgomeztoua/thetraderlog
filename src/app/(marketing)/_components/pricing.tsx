@@ -14,6 +14,7 @@ import {
 
 const PLAN_HIERARCHY = [PLAN_FREE, PLAN_STARTER, PLAN_PRO] as const;
 
+const freeMeta = PLAN_METADATA[PLAN_FREE] as PlanMetadata;
 const starterMeta = PLAN_METADATA[PLAN_STARTER] as PlanMetadata;
 const proMeta = PLAN_METADATA[PLAN_PRO] as PlanMetadata;
 
@@ -31,17 +32,11 @@ interface PricingPlan {
 const plans: PricingPlan[] = [
 	{
 		slug: PLAN_FREE,
-		name: "Free Trial",
-		tagline: "30 days, full access",
+		name: freeMeta.name,
+		tagline: freeMeta.description,
 		price: "$0",
-		period: "for 30 days",
-		features: [
-			"Unlimited trades",
-			"Full analytics",
-			"AI chat & reports",
-			"CSV import",
-			"Data kept forever",
-		],
+		period: "",
+		features: freeMeta.features,
 		highlighted: false,
 	},
 	{

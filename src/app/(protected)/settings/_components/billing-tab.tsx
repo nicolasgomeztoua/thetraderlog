@@ -210,7 +210,7 @@ export function BillingTab() {
 			</Card>
 
 			{/* Usage Meters Card - shown for Pro users and beta */}
-			{(isProUser || isBeta) && usage && (
+			{isProUser && usage && (
 				<Card data-testid="billing-usage-card">
 					<CardHeader className="p-4 sm:p-6">
 						<CardTitle className="flex items-center gap-2">
