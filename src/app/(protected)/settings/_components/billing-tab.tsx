@@ -111,7 +111,7 @@ export function BillingTab() {
 
 	const isProUser = effectivePlan === PLAN_PRO;
 	const isStarterUser = effectivePlan === PLAN_STARTER;
-	const hasPaidPlan = isProUser || isStarterUser;
+	const hasPaidPlan = isProUser || isStarterUser || isBeta;
 
 	const usageQuery = api.billing.getUsage.useQuery(undefined, {
 		enabled: isProUser || isBeta,
@@ -245,7 +245,7 @@ export function BillingTab() {
 			</Card>
 
 			{/* Usage Meters Card - shown for Pro users and beta */}
-			{isProUser && usageQuery.isLoading && (
+			{(isProUser || isBeta) && usageQuery.isLoading && (
 				<Card data-testid="billing-usage-card-loading">
 					<CardHeader className="p-4 sm:p-6">
 						<Skeleton className="h-5 w-24" />
@@ -263,7 +263,7 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			)}
-			{isProUser && usageQuery.isError && (
+			{(isProUser || isBeta) && usageQuery.isError && (
 				<Card data-testid="billing-usage-card-error">
 					<CardContent className="p-6 text-center font-mono text-muted-foreground text-sm">
 						Failed to load usage data.{" "}
@@ -277,7 +277,7 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			)}
-			{isProUser && usage && (
+			{(isProUser || isBeta) && usage && (
 				<Card data-testid="billing-usage-card">
 					<CardHeader className="p-4 sm:p-6">
 						<CardTitle className="flex items-center gap-2">
