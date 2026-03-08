@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { CreditCard, Settings, Zap } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,10 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+	getHoursUntilMidnightUTC,
+	getNextMonthResetDate,
+} from "@/lib/billing/utils";
 import {
 	PLAN_FREE,
 	PLAN_METADATA,
@@ -85,27 +89,16 @@ function UsageMeter({
 }
 
 function getResetTimeLabel(): string {
-	const now = new Date();
-	const midnight = new Date(now);
-	midnight.setUTCDate(midnight.getUTCDate() + 1);
-	midnight.setUTCHours(0, 0, 0, 0);
-	const hoursLeft = Math.max(
-		1,
-		Math.ceil((midnight.getTime() - now.getTime()) / (1000 * 60 * 60)),
-	);
-	return `Resets in ${hoursLeft}h`;
+	return `Resets in ${getHoursUntilMidnightUTC()}h`;
 }
 
 function getResetDateLabel(): string {
-	const now = new Date();
-	const nextMonth = new Date(
-		Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
-	);
-	return `Resets ${nextMonth.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+	return `Resets ${getNextMonthResetDate()}`;
 }
 
 export function BillingTab() {
 	const { has } = useAuth();
+	const { user: clerkUser } = useUser();
 	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
 	const usageQuery = api.billing.getUsage.useQuery();
@@ -113,7 +106,7 @@ export function BillingTab() {
 	const plan = planQuery.data;
 	const usage = usageQuery.data;
 	const isLoading = planQuery.isLoading;
-	const isBeta = plan?.beta ?? false;
+	const isBeta = clerkUser?.publicMetadata?.beta === true;
 	const effectivePlan = plan?.plan ?? PLAN_FREE;
 	const metadata = plan?.metadata ?? PLAN_METADATA[PLAN_FREE];
 

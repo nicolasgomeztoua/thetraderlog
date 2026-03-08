@@ -1,6 +1,35 @@
 import { PLAN_FREE, PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
 
 /**
+ * Returns the number of hours until midnight UTC.
+ */
+export function getHoursUntilMidnightUTC(): number {
+	const now = new Date();
+	const midnight = new Date(now);
+	midnight.setUTCDate(midnight.getUTCDate() + 1);
+	midnight.setUTCHours(0, 0, 0, 0);
+	return Math.max(
+		1,
+		Math.ceil((midnight.getTime() - now.getTime()) / (1000 * 60 * 60)),
+	);
+}
+
+/**
+ * Returns a formatted string for the next month's first day (e.g., "Jan 1").
+ */
+export function getNextMonthResetDate(): string {
+	const now = new Date();
+	const nextMonth = new Date(
+		Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+	);
+	return nextMonth.toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		timeZone: "UTC",
+	});
+}
+
+/**
  * Minimal interface for checking beta status from Clerk user metadata.
  * Works with Clerk's currentUser() or session claims.
  */

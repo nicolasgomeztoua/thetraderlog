@@ -64,14 +64,20 @@ export async function incrementAndCheckChatUsage(
 	const used = row?.chatMessagesUsed ?? 1;
 
 	if (!beta && used > AI_CHAT_DAILY_LIMIT) {
-		await db
-			.update(aiUsage)
-			.set({
-				chatMessagesUsed: sql`GREATEST(${aiUsage.chatMessagesUsed} - 1, 0)`,
-			})
-			.where(
-				and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
+		try {
+			await db
+				.update(aiUsage)
+				.set({
+					chatMessagesUsed: sql`GREATEST(${aiUsage.chatMessagesUsed} - 1, 0)`,
+				})
+				.where(
+					and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
+				);
+		} catch {
+			console.error(
+				"Failed to rollback chat usage counter after limit exceeded",
 			);
+		}
 
 		throw new TRPCError({
 			code: "FORBIDDEN",
@@ -119,18 +125,24 @@ export async function incrementAndCheckReportUsage(
 	const used = row?.reportsUsed ?? 1;
 
 	if (!beta && used > AI_REPORTS_MONTHLY_LIMIT) {
-		await db
-			.update(aiUsage)
-			.set({
-				reportsUsed: sql`GREATEST(${aiUsage.reportsUsed} - 1, 0)`,
-			})
-			.where(
-				and(
-					eq(aiUsage.userId, userId),
-					eq(aiUsage.reportsMonth, month),
-					eq(aiUsage.reportsYear, year),
-				),
+		try {
+			await db
+				.update(aiUsage)
+				.set({
+					reportsUsed: sql`GREATEST(${aiUsage.reportsUsed} - 1, 0)`,
+				})
+				.where(
+					and(
+						eq(aiUsage.userId, userId),
+						eq(aiUsage.reportsMonth, month),
+						eq(aiUsage.reportsYear, year),
+					),
+				);
+		} catch {
+			console.error(
+				"Failed to rollback report usage counter after limit exceeded",
 			);
+		}
 
 		throw new TRPCError({
 			code: "FORBIDDEN",

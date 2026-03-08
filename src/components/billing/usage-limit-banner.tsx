@@ -1,27 +1,11 @@
 "use client";
 
 import { AlertTriangle, Clock } from "lucide-react";
+import {
+	getHoursUntilMidnightUTC,
+	getNextMonthResetDate,
+} from "@/lib/billing/utils";
 import { api } from "@/trpc/react";
-
-function getHoursUntilMidnightUTC(): number {
-	const now = new Date();
-	const midnight = new Date(now);
-	midnight.setUTCDate(midnight.getUTCDate() + 1);
-	midnight.setUTCHours(0, 0, 0, 0);
-	return Math.ceil((midnight.getTime() - now.getTime()) / (1000 * 60 * 60));
-}
-
-function getNextMonthResetDate(): string {
-	const now = new Date();
-	const nextMonth = new Date(
-		Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
-	);
-	return nextMonth.toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-		timeZone: "UTC",
-	});
-}
 
 interface UsageLimitBannerProps {
 	type: "chat" | "reports";
