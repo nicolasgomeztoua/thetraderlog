@@ -6,16 +6,14 @@ import {
 	getNextMonthResetDate,
 	getTimeUntilMidnightUTC,
 } from "@/lib/billing/utils";
-import { PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
+import { PLAN_PRO } from "@/lib/constants/billing";
 import { api } from "@/trpc/react";
 
-function useHasPaidPlan(): boolean {
+function useHasAiPlan(): boolean {
 	const { has } = useAuth();
 	const { user } = useUser();
 	const isBeta = user?.publicMetadata?.beta === true;
-	return (
-		isBeta || !!has?.({ plan: PLAN_PRO }) || !!has?.({ plan: PLAN_STARTER })
-	);
+	return isBeta || !!has?.({ plan: PLAN_PRO });
 }
 
 interface UsageLimitBannerProps {
@@ -23,9 +21,9 @@ interface UsageLimitBannerProps {
 }
 
 export function UsageLimitBanner({ type }: UsageLimitBannerProps) {
-	const hasPaidPlan = useHasPaidPlan();
+	const hasAiPlan = useHasAiPlan();
 	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
-		enabled: hasPaidPlan,
+		enabled: hasAiPlan,
 	});
 
 	if (!usage) return null;
@@ -59,7 +57,7 @@ export function UsageLimitBanner({ type }: UsageLimitBannerProps) {
 }
 
 export function useChatLimitReached(): boolean {
-	const hasPaidPlan = useHasPaidPlan();
+	const hasPaidPlan = useHasAiPlan();
 	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
 		enabled: hasPaidPlan,
 	});
@@ -68,7 +66,7 @@ export function useChatLimitReached(): boolean {
 }
 
 export function useReportLimitReached(): boolean {
-	const hasPaidPlan = useHasPaidPlan();
+	const hasPaidPlan = useHasAiPlan();
 	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
 		enabled: hasPaidPlan,
 	});

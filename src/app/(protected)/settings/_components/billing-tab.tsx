@@ -361,22 +361,33 @@ export function BillingTab() {
 											</li>
 										))}
 									</ul>
-									{!isCurrent && planSlug !== PLAN_FREE && (
-										<Button
-											asChild
-											className="mt-3 w-full font-mono text-[10px] uppercase tracking-wider"
-											size="sm"
-											variant="outline"
-										>
-											<Link href="/pricing">
-												{effectivePlan === PLAN_FREE
-													? "Upgrade"
-													: planSlug === PLAN_PRO
-														? "Upgrade"
-														: "Change Plan"}
-											</Link>
-										</Button>
-									)}
+									{!isCurrent &&
+										planSlug !== PLAN_FREE &&
+										(() => {
+											const isUpgrade =
+												effectivePlan === PLAN_FREE ||
+												(effectivePlan === PLAN_STARTER &&
+													planSlug === PLAN_PRO);
+											return isUpgrade ? (
+												<Button
+													asChild
+													className="mt-3 w-full font-mono text-[10px] uppercase tracking-wider"
+													size="sm"
+													variant="outline"
+												>
+													<Link href="/pricing">Upgrade</Link>
+												</Button>
+											) : (
+												<Button
+													className="mt-3 w-full font-mono text-[10px] uppercase tracking-wider"
+													onClick={() => openUserProfile()}
+													size="sm"
+													variant="outline"
+												>
+													Manage Plan
+												</Button>
+											);
+										})()}
 								</div>
 							);
 						})}
