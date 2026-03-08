@@ -748,7 +748,8 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Check/uncheck a rule for a trade
-	checkRule: requireFeature(FEATURE_CUSTOM_STRATEGIES)
+	// Ungated: users with existing strategies must be able to use them even on free plan
+	checkRule: protectedProcedure
 		.input(
 			z.object({
 				tradeId: z.string(),
@@ -804,7 +805,8 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Bulk check rules for a trade
-	bulkCheckRules: requireFeature(FEATURE_CUSTOM_STRATEGIES)
+	// Ungated: users with existing strategies must be able to use them even on free plan
+	bulkCheckRules: protectedProcedure
 		.input(
 			z.object({
 				tradeId: z.string(),
@@ -1082,7 +1084,8 @@ export const strategiesRouter = createTRPCRouter({
 	}),
 
 	// Sync generated rules from strategy config
-	syncGeneratedRules: requireFeature(FEATURE_CUSTOM_STRATEGIES)
+	// Ungated: users with existing strategies must be able to sync rules even on free plan
+	syncGeneratedRules: protectedProcedure
 		.input(z.object({ strategyId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// Fetch strategy with ownership validation

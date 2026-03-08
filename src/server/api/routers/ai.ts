@@ -622,25 +622,26 @@ export const aiRouter = createTRPCRouter({
 				throw new Error(ERR_REPORT_CONVERSATION_NOT_FOUND);
 			}
 
-			// Reset report state
-			await ctx.db
-				.update(aiReports)
-				.set({
-					status: "queued",
-					errorMessage: null,
-					completedAt: null,
-					triggerTaskId: null,
-				})
-				.where(eq(aiReports.id, report.id));
-
-			// Reset conversation status
-			await ctx.db
-				.update(aiConversations)
-				.set({ status: "generating" })
-				.where(eq(aiConversations.id, report.conversationId));
-
 			// Re-trigger background task
+			// All DB writes are inside try so decrementReportUsage runs on any failure
 			try {
+				// Reset report state
+				await ctx.db
+					.update(aiReports)
+					.set({
+						status: "queued",
+						errorMessage: null,
+						completedAt: null,
+						triggerTaskId: null,
+					})
+					.where(eq(aiReports.id, report.id));
+
+				// Reset conversation status
+				await ctx.db
+					.update(aiConversations)
+					.set({ status: "generating" })
+					.where(eq(aiConversations.id, report.conversationId));
+
 				const handle = await generateAiReport.trigger({
 					reportId: report.id,
 					userId: ctx.user.id,

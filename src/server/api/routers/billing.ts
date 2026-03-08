@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 import {
 	getEffectivePlan,
-	hasPlanAccess,
 	isBetaUser,
 	type UserWithMetadata,
 } from "@/lib/billing/utils";
@@ -11,7 +10,6 @@ import {
 	AI_REPORTS_MONTHLY_LIMIT,
 	PLAN_FREE,
 	PLAN_METADATA,
-	PLAN_PRO,
 } from "@/lib/constants/billing";
 import {
 	ERR_AI_CHAT_LIMIT_REACHED,
@@ -216,9 +214,6 @@ export const billingRouter = createTRPCRouter({
 	getUsage: protectedProcedure.query(async ({ ctx }) => {
 		const userMeta = ctx.user as unknown as UserWithMetadata;
 		const isBeta = isBetaUser(userMeta);
-		const hasAiAccess = ctx.clerkAuth
-			? hasPlanAccess(ctx.clerkAuth, PLAN_PRO, userMeta)
-			: false;
 		const today = getTodayDateString();
 		const { month, year } = getCurrentMonthYear();
 
@@ -246,14 +241,18 @@ export const billingRouter = createTRPCRouter({
 				.then((rows) => rows[0]),
 		]);
 
+		// null limit = unlimited (beta users); numeric = plan limit.
+		// Free users never call this query (disabled on client), so the
+		// fallback to the numeric limit is safe and avoids a semantic
+		// inversion where null could be misread as "no access".
 		return {
 			chat: {
 				used: chatRow?.used ?? 0,
-				limit: isBeta || hasAiAccess ? AI_CHAT_DAILY_LIMIT : null,
+				limit: isBeta ? null : AI_CHAT_DAILY_LIMIT,
 			},
 			reports: {
 				used: reportRow?.used ?? 0,
-				limit: isBeta || hasAiAccess ? AI_REPORTS_MONTHLY_LIMIT : null,
+				limit: isBeta ? null : AI_REPORTS_MONTHLY_LIMIT,
 			},
 		};
 	}),
