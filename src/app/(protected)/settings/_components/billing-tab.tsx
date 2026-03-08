@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth, useClerk } from "@clerk/nextjs";
-import { CreditCard, ExternalLink, Zap } from "lucide-react";
+import { CreditCard, Settings, Zap } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -201,7 +201,7 @@ export function BillingTab() {
 									variant="outline"
 								>
 									Manage Subscription
-									<ExternalLink className="ml-1.5 h-3 w-3" />
+									<Settings className="ml-1.5 h-3 w-3" />
 								</Button>
 							) : (
 								<Button

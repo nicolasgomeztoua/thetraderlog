@@ -13,4 +13,5 @@ CREATE TABLE "ai_usage" (
 ALTER TABLE "ai_usage" ADD CONSTRAINT "ai_usage_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "ai_usage_user_id_idx" ON "ai_usage" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "ai_usage_user_chat_date_idx" ON "ai_usage" USING btree ("user_id", "chat_messages_date");--> statement-breakpoint
-CREATE UNIQUE INDEX "ai_usage_user_report_month_idx" ON "ai_usage" USING btree ("user_id", "reports_month", "reports_year");
+CREATE UNIQUE INDEX "ai_usage_user_report_month_idx" ON "ai_usage" USING btree ("user_id", "reports_month", "reports_year");--> statement-breakpoint
+ALTER TABLE "ai_usage" ADD CONSTRAINT "ai_usage_row_type_check" CHECK ((chat_messages_date IS NOT NULL AND reports_month IS NULL AND reports_year IS NULL) OR (chat_messages_date IS NULL AND reports_month IS NOT NULL AND reports_year IS NOT NULL));
