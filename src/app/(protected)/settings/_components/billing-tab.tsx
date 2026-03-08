@@ -23,6 +23,7 @@ import {
 	PLAN_PRO,
 	PLAN_STARTER,
 } from "@/lib/constants/billing";
+import { ERR_BILLING_LOAD_FAILED } from "@/lib/constants/errors";
 import { cn } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
@@ -101,10 +102,8 @@ export function BillingTab() {
 	const { user: clerkUser } = useUser();
 	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
-	const usageQuery = api.billing.getUsage.useQuery();
 
 	const plan = planQuery.data;
-	const usage = usageQuery.data;
 	const isLoading = planQuery.isLoading;
 	const isBeta = clerkUser?.publicMetadata?.beta === true;
 	const effectivePlan = plan?.plan ?? PLAN_FREE;
@@ -115,6 +114,11 @@ export function BillingTab() {
 	const isStarterUser =
 		has?.({ plan: PLAN_STARTER }) || effectivePlan === PLAN_STARTER;
 	const hasPaidPlan = isProUser || isStarterUser;
+
+	const usageQuery = api.billing.getUsage.useQuery(undefined, {
+		enabled: isProUser,
+	});
+	const usage = usageQuery.data;
 
 	if (isLoading) {
 		return (
@@ -140,6 +144,16 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			</div>
+		);
+	}
+
+	if (planQuery.isError) {
+		return (
+			<Card data-testid="billing-tab-error">
+				<CardContent className="p-6 text-center font-mono text-muted-foreground text-sm">
+					{ERR_BILLING_LOAD_FAILED}
+				</CardContent>
+			</Card>
 		);
 	}
 

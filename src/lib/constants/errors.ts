@@ -223,6 +223,8 @@ export const ERR_AI_CHAT_LIMIT_REACHED =
 	"Daily AI chat limit reached. Your limit resets at midnight UTC.";
 export const ERR_AI_REPORT_LIMIT_REACHED =
 	"Monthly AI report limit reached. Your limit resets at the start of next month.";
+export const ERR_BILLING_LOAD_FAILED =
+	"Failed to load billing information. Please refresh the page.";
 
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(
