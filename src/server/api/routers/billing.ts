@@ -245,11 +245,11 @@ export const billingRouter = createTRPCRouter({
 		return {
 			chat: {
 				used: chatRow?.used ?? 0,
-				limit: isPro ? null : AI_CHAT_DAILY_LIMIT,
+				limit: isPro ? null : 0,
 			},
 			reports: {
 				used: reportRow?.used ?? 0,
-				limit: isPro ? null : AI_REPORTS_MONTHLY_LIMIT,
+				limit: isPro ? null : 0,
 			},
 		};
 	}),

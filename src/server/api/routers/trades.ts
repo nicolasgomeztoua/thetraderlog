@@ -976,7 +976,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Soft delete a trade
-	delete: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingTrade = await ctx.db.query.trades.findFirst({
@@ -997,7 +997,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Bulk soft delete trades
-	deleteMany: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	deleteMany: protectedProcedure
 		.input(z.object({ ids: z.array(z.string()).min(1).max(100) }))
 		.mutation(async ({ ctx, input }) => {
 			// Verify all trades belong to user before deleting
@@ -1033,7 +1033,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Restore a soft-deleted trade
-	restore: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	restore: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingTrade = await ctx.db.query.trades.findFirst({
@@ -1057,7 +1057,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Permanently delete a trade (hard delete)
-	permanentDelete: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	permanentDelete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingTrade = await ctx.db.query.trades.findFirst({
@@ -1073,7 +1073,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Empty trash - permanently delete all trashed trades
-	emptyTrash: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	emptyTrash: protectedProcedure
 		.input(z.object({ accountId: z.string().optional() }).optional())
 		.mutation(async ({ ctx, input }) => {
 			const conditions = [

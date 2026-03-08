@@ -533,7 +533,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Delete a strategy (soft delete by setting inactive)
-	delete: requireFeature(FEATURE_CUSTOM_STRATEGIES)
+	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingStrategy = await ctx.db.query.strategies.findFirst({
