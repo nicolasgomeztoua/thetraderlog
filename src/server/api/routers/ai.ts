@@ -30,6 +30,7 @@ import {
 	ERR_REPORT_CONVERSATION_CREATE_FAILED,
 	ERR_REPORT_CONVERSATION_NOT_FOUND,
 	ERR_REPORT_CREATE_FAILED,
+	ERR_REPORT_NOT_COMPLETE,
 	ERR_REPORT_NOT_FOUND,
 	ERR_REPORT_ONLY_FAILED_RETRY,
 } from "@/lib/constants/errors";
@@ -648,7 +649,7 @@ export const aiRouter = createTRPCRouter({
 			}
 
 			if (report.status !== "complete") {
-				throw new Error("Report is not complete");
+				throw new Error(ERR_REPORT_NOT_COMPLETE);
 			}
 
 			const token = createPdfToken(input.reportId, ctx.user.id);

@@ -59,6 +59,7 @@ export const ERR_ACCOUNT_NOT_PROP = "Account is not a prop account";
 export const ERR_TRADE_NO_STRATEGY = "Trade has no strategy assigned";
 export const ERR_REPORT_ONLY_FAILED_RETRY =
 	"Only failed reports can be retried";
+export const ERR_REPORT_NOT_COMPLETE = "Report is not complete";
 export const ERR_CHECKLIST_AUTO_CALCULATED =
 	"Cannot toggle this item - it is auto-calculated";
 export const ERR_ACCESS_DENIED = "Access denied";
