@@ -9,7 +9,7 @@ import { getModel } from "@/lib/ai/provider";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
-import { isBetaUser } from "@/lib/billing/utils";
+import { isBetaUser, type UserWithMetadata } from "@/lib/billing/utils";
 import {
 	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
@@ -97,9 +97,7 @@ export const aiRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Enforce daily chat usage limit
-			const userMeta = ctx.user as unknown as {
-				publicMetadata?: Record<string, unknown>;
-			};
+			const userMeta = ctx.user as unknown as UserWithMetadata;
 			const beta = isBetaUser(userMeta);
 			await incrementAndCheckChatUsage(ctx.db, ctx.user.id, beta);
 
@@ -339,9 +337,7 @@ export const aiRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Enforce monthly report usage limit
-			const userMeta = ctx.user as unknown as {
-				publicMetadata?: Record<string, unknown>;
-			};
+			const userMeta = ctx.user as unknown as UserWithMetadata;
 			const beta = isBetaUser(userMeta);
 			await incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
 
