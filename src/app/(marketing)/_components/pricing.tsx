@@ -1,6 +1,6 @@
 "use client";
 
-import { SignUpButton, useAuth } from "@clerk/nextjs";
+import { SignUpButton, useAuth, useUser } from "@clerk/nextjs";
 import { ArrowRight, Check, Crown, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,7 @@ function getPlanIndex(slug: string): number {
 
 function PlanCTA({ plan }: { plan: PricingPlan }) {
 	const { isSignedIn, has, isLoaded } = useAuth();
+	const { user: clerkUser } = useUser();
 
 	if (!isLoaded) {
 		return (
@@ -80,8 +81,9 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 		);
 	}
 
+	const isBeta = clerkUser?.publicMetadata?.beta === true;
 	const userPlanIndex = isSignedIn
-		? has?.({ plan: PLAN_PRO })
+		? isBeta || has?.({ plan: PLAN_PRO })
 			? getPlanIndex(PLAN_PRO)
 			: has?.({ plan: PLAN_STARTER })
 				? getPlanIndex(PLAN_STARTER)

@@ -265,6 +265,20 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			)}
+			{isProUser && usageQuery.isError && (
+				<Card data-testid="billing-usage-card-error">
+					<CardContent className="p-6 text-center font-mono text-muted-foreground text-sm">
+						Failed to load usage data.{" "}
+						<button
+							className="text-primary underline underline-offset-2 hover:text-primary/80"
+							onClick={() => usageQuery.refetch()}
+							type="button"
+						>
+							Retry
+						</button>
+					</CardContent>
+				</Card>
+			)}
 			{isProUser && usage && (
 				<Card data-testid="billing-usage-card">
 					<CardHeader className="p-4 sm:p-6">
