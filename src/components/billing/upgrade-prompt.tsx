@@ -109,6 +109,11 @@ export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
 
 	const config = FEATURE_CONFIG[feature];
 	if (!config) {
+		if (process.env.NODE_ENV !== "production") {
+			console.warn(
+				`UpgradePrompt: no config found for feature "${feature}". Add it to FEATURE_CONFIG.`,
+			);
+		}
 		return <>{children}</>;
 	}
 

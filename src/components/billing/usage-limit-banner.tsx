@@ -1,18 +1,32 @@
 "use client";
 
+import { useAuth, useUser } from "@clerk/nextjs";
 import { AlertTriangle, Clock } from "lucide-react";
 import {
 	getNextMonthResetDate,
 	getTimeUntilMidnightUTC,
 } from "@/lib/billing/utils";
+import { PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
 import { api } from "@/trpc/react";
+
+function useHasPaidPlan(): boolean {
+	const { has } = useAuth();
+	const { user } = useUser();
+	const isBeta = user?.publicMetadata?.beta === true;
+	return (
+		isBeta || !!has?.({ plan: PLAN_PRO }) || !!has?.({ plan: PLAN_STARTER })
+	);
+}
 
 interface UsageLimitBannerProps {
 	type: "chat" | "reports";
 }
 
 export function UsageLimitBanner({ type }: UsageLimitBannerProps) {
-	const { data: usage } = api.billing.getUsage.useQuery();
+	const hasPaidPlan = useHasPaidPlan();
+	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
+		enabled: hasPaidPlan,
+	});
 
 	if (!usage) return null;
 
@@ -45,13 +59,19 @@ export function UsageLimitBanner({ type }: UsageLimitBannerProps) {
 }
 
 export function useChatLimitReached(): boolean {
-	const { data: usage } = api.billing.getUsage.useQuery();
+	const hasPaidPlan = useHasPaidPlan();
+	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
+		enabled: hasPaidPlan,
+	});
 	if (!usage) return false;
 	return usage.chat.limit !== null && usage.chat.used >= usage.chat.limit;
 }
 
 export function useReportLimitReached(): boolean {
-	const { data: usage } = api.billing.getUsage.useQuery();
+	const hasPaidPlan = useHasPaidPlan();
+	const { data: usage } = api.billing.getUsage.useQuery(undefined, {
+		enabled: hasPaidPlan,
+	});
 	if (!usage) return false;
 	return (
 		usage.reports.limit !== null && usage.reports.used >= usage.reports.limit

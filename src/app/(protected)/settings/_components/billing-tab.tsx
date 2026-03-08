@@ -106,7 +106,7 @@ export function BillingTab() {
 	const plan = planQuery.data;
 	const isLoading = planQuery.isLoading;
 	const isBeta = clerkUser?.publicMetadata?.beta === true;
-	const effectivePlan = plan?.plan ?? PLAN_FREE;
+	const effectivePlan = isBeta ? PLAN_PRO : (plan?.plan ?? PLAN_FREE);
 	const metadata = plan?.metadata ?? PLAN_METADATA[PLAN_FREE];
 
 	const isProUser =

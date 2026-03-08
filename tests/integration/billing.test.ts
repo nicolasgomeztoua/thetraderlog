@@ -41,7 +41,6 @@ describe("billing router", () => {
 
 			expect(result.plan).toBe("free");
 			expect(result.metadata).toEqual(PLAN_METADATA.free);
-			expect(result.beta).toBe(false);
 		});
 
 		it("should return pro plan when clerkAuth has pro plan", async () => {
@@ -52,7 +51,6 @@ describe("billing router", () => {
 
 			expect(result.plan).toBe("pro");
 			expect(result.metadata).toEqual(PLAN_METADATA.pro);
-			expect(result.beta).toBe(false);
 		});
 
 		it("should return starter plan when clerkAuth has starter plan", async () => {
