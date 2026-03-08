@@ -253,7 +253,7 @@ export function Pricing() {
 
 				{/* Trial note */}
 				<p className="mt-8 text-center font-mono text-muted-foreground text-xs sm:mt-12 sm:text-sm">
-					Your data stays even after your trial ends.{" "}
+					Your data is always yours — even if you change plans.{" "}
 					<span className="text-foreground">
 						No credit card required to start.
 					</span>

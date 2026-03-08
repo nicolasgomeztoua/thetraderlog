@@ -109,7 +109,6 @@ export async function incrementAndCheckReportUsage(
 		.insert(aiUsage)
 		.values({
 			userId,
-			chatMessagesUsed: 0,
 			reportsUsed: 1,
 			reportsMonth: month,
 			reportsYear: year,
