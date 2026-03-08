@@ -453,13 +453,20 @@ export const aiRouter = createTRPCRouter({
 					console.error("Failed to rollback report usage after error");
 				}
 
-				// Mark orphaned report as "failed" so retryReport can recover it
+				// Mark orphaned report as "failed" so retryReport can recover it,
+				// but only if the Trigger.dev worker hasn't already completed it.
 				if (createdReportId) {
 					try {
-						await ctx.db
-							.update(aiReports)
-							.set({ status: "failed" })
-							.where(eq(aiReports.id, createdReportId));
+						const current = await ctx.db.query.aiReports.findFirst({
+							where: eq(aiReports.id, createdReportId),
+							columns: { status: true },
+						});
+						if (current?.status !== "complete") {
+							await ctx.db
+								.update(aiReports)
+								.set({ status: "failed" })
+								.where(eq(aiReports.id, createdReportId));
+						}
 					} catch {
 						console.error("Failed to mark orphaned report as failed");
 					}
@@ -699,14 +706,20 @@ export const aiRouter = createTRPCRouter({
 					console.error("Failed to rollback report usage after retry failure");
 				}
 				try {
-					await ctx.db
-						.update(aiReports)
-						.set({ status: "failed" })
-						.where(eq(aiReports.id, report.id));
-					await ctx.db
-						.update(aiConversations)
-						.set({ status: "active" })
-						.where(eq(aiConversations.id, report.conversationId));
+					const current = await ctx.db.query.aiReports.findFirst({
+						where: eq(aiReports.id, report.id),
+						columns: { status: true },
+					});
+					if (current?.status !== "complete") {
+						await ctx.db
+							.update(aiReports)
+							.set({ status: "failed" })
+							.where(eq(aiReports.id, report.id));
+						await ctx.db
+							.update(aiConversations)
+							.set({ status: "active" })
+							.where(eq(aiConversations.id, report.conversationId));
+					}
 				} catch {
 					console.error(
 						"Failed to reset report status after retry trigger failure",

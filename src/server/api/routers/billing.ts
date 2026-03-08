@@ -4,9 +4,11 @@ import { getEffectivePlan, type UserWithMetadata } from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
+	FEATURE_AI_CHAT,
 	FEATURE_BETA_ACCESS,
 	PLAN_FREE,
 	PLAN_METADATA,
+	PLAN_PRO,
 } from "@/lib/constants/billing";
 import {
 	ERR_AI_CHAT_LIMIT_REACHED,
@@ -197,13 +199,18 @@ export async function decrementReportUsage(
 export const billingRouter = createTRPCRouter({
 	getCurrentPlan: protectedProcedure.query(({ ctx }) => {
 		const userMeta = ctx.user as unknown as UserWithMetadata;
+		const isBeta =
+			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 		const effectivePlan = ctx.clerkAuth
-			? getEffectivePlan(ctx.clerkAuth, userMeta)
+			? isBeta
+				? PLAN_PRO
+				: getEffectivePlan(ctx.clerkAuth, userMeta)
 			: PLAN_FREE;
 		const metadata = PLAN_METADATA[effectivePlan];
 
 		return {
 			plan: effectivePlan,
+			beta: isBeta,
 			metadata: metadata ?? PLAN_METADATA[PLAN_FREE],
 		};
 	}),
@@ -211,6 +218,8 @@ export const billingRouter = createTRPCRouter({
 	getUsage: protectedProcedure.query(async ({ ctx }) => {
 		const isBeta =
 			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+		const hasAiAccess =
+			isBeta || (ctx.clerkAuth?.has({ feature: FEATURE_AI_CHAT }) ?? false);
 		const today = getTodayDateString();
 		const { month, year } = getCurrentMonthYear();
 
@@ -238,18 +247,16 @@ export const billingRouter = createTRPCRouter({
 				.then((rows) => rows[0]),
 		]);
 
-		// null limit = unlimited (beta users); numeric = plan limit.
-		// Free users never call this query (disabled on client), so the
-		// fallback to the numeric limit is safe and avoids a semantic
-		// inversion where null could be misread as "no access".
+		// null limit = unlimited (beta) or no AI access (free/starter).
+		// Numeric limit = paid plan with AI entitlements.
 		return {
 			chat: {
 				used: chatRow?.used ?? 0,
-				limit: isBeta ? null : AI_CHAT_DAILY_LIMIT,
+				limit: isBeta ? null : hasAiAccess ? AI_CHAT_DAILY_LIMIT : null,
 			},
 			reports: {
 				used: reportRow?.used ?? 0,
-				limit: isBeta ? null : AI_REPORTS_MONTHLY_LIMIT,
+				limit: isBeta ? null : hasAiAccess ? AI_REPORTS_MONTHLY_LIMIT : null,
 			},
 		};
 	}),
