@@ -7,16 +7,19 @@
 #   --base <branch>    PR target branch (skips interactive menu)
 #   --work <branch>    Working branch (skips interactive menu)
 #   --auto             Shorthand: use prd.json branchName as work, "main" as base
+#   --greptile         Skip to Greptile review loop (Phase 4 only)
 #
 # Examples:
 #   ./ralph.sh --auto                    # Non-interactive, branches from prd.json
 #   ./ralph.sh --auto 20 5               # Non-interactive, 20 iters, 5 PR cycles
 #   ./ralph.sh --base main --work ralph/my-feature 30
+#   ./ralph.sh --greptile                # Jump straight to Greptile review on existing PR
 
 set -e
 
 # Parse named flags
 AUTO_MODE=false
+GREPTILE_ONLY=false
 CLI_BASE_BRANCH=""
 CLI_WORK_BRANCH=""
 
@@ -24,6 +27,10 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --auto)
             AUTO_MODE=true
+            shift
+            ;;
+        --greptile)
+            GREPTILE_ONLY=true
             shift
             ;;
         --base)
@@ -268,6 +275,30 @@ jq -r '.userStories[] | "  [\(if .passes then "✓" else " " end)] \(.id): \(.ti
 echo ""
 
 # =============================================================================
+# PHASE 1-3: Skip if --greptile flag is set
+# =============================================================================
+
+if [ "$GREPTILE_ONLY" = true ]; then
+    echo -e "${CYAN}--greptile mode: skipping Phases 1-3, jumping to Greptile review loop${NC}"
+
+    # Resolve PR number from file or by querying GitHub
+    if [ -f "$PR_NUMBER_FILE" ]; then
+        PR_NUMBER=$(cat "$PR_NUMBER_FILE")
+        echo -e "${GREEN}Found saved PR #$PR_NUMBER${NC}"
+    else
+        BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+        PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' 2>/dev/null || echo "")
+        if [ -z "$PR_NUMBER" ]; then
+            echo -e "${RED}Error: No PR found for branch '$BRANCH_NAME'. Create a PR first.${NC}"
+            exit 1
+        fi
+        echo -e "${GREEN}Found PR #$PR_NUMBER for branch $BRANCH_NAME${NC}"
+        echo "$PR_NUMBER" > "$PR_NUMBER_FILE"
+    fi
+else
+# --- Begin Phases 1-3 ---
+
+# =============================================================================
 # PHASE 1: Implementation Loop
 # =============================================================================
 
@@ -386,6 +417,8 @@ fi
 
 # Save PR number for future runs
 echo "$PR_NUMBER" > "$PR_NUMBER_FILE"
+
+fi # --- End Phases 1-3 (skipped in --greptile mode) ---
 
 # =============================================================================
 # PHASE 4: Score-Driven Greptile Review Loop
