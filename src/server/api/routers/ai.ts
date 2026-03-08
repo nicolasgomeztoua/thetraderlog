@@ -1,4 +1,5 @@
 import { runs } from "@trigger.dev/sdk/v3";
+import { TRPCError } from "@trpc/server";
 
 import type { ModelMessage } from "ai";
 import { and, desc, eq } from "drizzle-orm";
@@ -636,23 +637,46 @@ export const aiRouter = createTRPCRouter({
 				.where(eq(aiConversations.id, report.conversationId));
 
 			// Re-trigger background task
-			const handle = await generateAiReport.trigger({
-				reportId: report.id,
-				userId: ctx.user.id,
-				conversationId: report.conversationId,
-				prompt: report.prompt,
-				model: report.model,
-				dateRangeStart: conversation.dateRangeStart?.toISOString(),
-				dateRangeEnd: conversation.dateRangeEnd?.toISOString(),
-			});
+			try {
+				const handle = await generateAiReport.trigger({
+					reportId: report.id,
+					userId: ctx.user.id,
+					conversationId: report.conversationId,
+					prompt: report.prompt,
+					model: report.model,
+					dateRangeStart: conversation.dateRangeStart?.toISOString(),
+					dateRangeEnd: conversation.dateRangeEnd?.toISOString(),
+				});
 
-			// Store new task ID
-			await ctx.db
-				.update(aiReports)
-				.set({ triggerTaskId: handle.id })
-				.where(eq(aiReports.id, report.id));
+				// Store new task ID
+				await ctx.db
+					.update(aiReports)
+					.set({ triggerTaskId: handle.id })
+					.where(eq(aiReports.id, report.id));
 
-			return { ...report, status: "queued" as const, triggerTaskId: handle.id };
+				return {
+					...report,
+					status: "queued" as const,
+					triggerTaskId: handle.id,
+				};
+			} catch (error) {
+				// Reset report back to "failed" so it can be retried again
+				try {
+					await ctx.db
+						.update(aiReports)
+						.set({ status: "failed" })
+						.where(eq(aiReports.id, report.id));
+					await ctx.db
+						.update(aiConversations)
+						.set({ status: "active" })
+						.where(eq(aiConversations.id, report.conversationId));
+				} catch {
+					console.error(
+						"Failed to reset report status after retry trigger failure",
+					);
+				}
+				throw error;
+			}
 		}),
 
 	// =========================================================================
@@ -698,7 +722,20 @@ export const aiRouter = createTRPCRouter({
 	 */
 	getPdfStatus: protectedProcedure
 		.input(z.object({ runId: z.string() }))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
+			// Verify the run belongs to the requesting user
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.triggerTaskId, input.runId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+
+			if (!report) {
+				throw new TRPCError({ code: "NOT_FOUND" });
+			}
+
 			const run = await runs.retrieve(input.runId);
 
 			if (run.status === "COMPLETED") {

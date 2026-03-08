@@ -74,9 +74,10 @@ export async function incrementAndCheckChatUsage(
 				.where(
 					and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
 				);
-		} catch {
+		} catch (rollbackErr) {
 			console.error(
 				"Failed to rollback chat usage counter after limit exceeded",
+				{ userId, date: today, staleCount: used, rollbackErr },
 			);
 		}
 
@@ -139,9 +140,10 @@ export async function incrementAndCheckReportUsage(
 						eq(aiUsage.reportsYear, year),
 					),
 				);
-		} catch {
+		} catch (rollbackErr) {
 			console.error(
 				"Failed to rollback report usage counter after limit exceeded",
+				{ userId, month, year, staleCount: used, rollbackErr },
 			);
 		}
 
