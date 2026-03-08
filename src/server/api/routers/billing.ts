@@ -57,6 +57,7 @@ export async function incrementAndCheckChatUsage(
 			target: [aiUsage.userId, aiUsage.chatMessagesDate],
 			set: {
 				chatMessagesUsed: sql`${aiUsage.chatMessagesUsed} + 1`,
+				updatedAt: new Date(),
 			},
 		})
 		.returning();
@@ -117,6 +118,7 @@ export async function incrementAndCheckReportUsage(
 			target: [aiUsage.userId, aiUsage.reportsMonth, aiUsage.reportsYear],
 			set: {
 				reportsUsed: sql`${aiUsage.reportsUsed} + 1`,
+				updatedAt: new Date(),
 			},
 		})
 		.returning();

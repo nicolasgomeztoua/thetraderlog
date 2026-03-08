@@ -307,13 +307,3 @@ export const requirePlan = (plan: string) =>
 		}
 		return next({ ctx });
 	});
-
-/**
- * Starter procedure — requires Starter plan or higher.
- */
-export const starterProcedure = requirePlan("starter");
-
-/**
- * Pro procedure — requires Pro plan.
- */
-export const proProcedure = requirePlan("pro");

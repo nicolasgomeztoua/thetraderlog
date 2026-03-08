@@ -56,6 +56,7 @@ const plans: PricingPlan[] = [
 		period: "/month",
 		features: proMeta.features,
 		highlighted: true,
+		// Trial period is configured in the Clerk dashboard billing settings
 		trial: "30-day free trial",
 	},
 ];
