@@ -11,7 +11,6 @@ import { getModel } from "@/lib/ai/provider";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
-import { isBetaUser, type UserWithMetadata } from "@/lib/billing/utils";
 import {
 	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
@@ -22,6 +21,7 @@ import {
 import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
+	FEATURE_BETA_ACCESS,
 	FEATURE_PDF_EXPORT,
 } from "@/lib/constants/billing";
 import {
@@ -59,7 +59,7 @@ export const aiRouter = createTRPCRouter({
 	/**
 	 * Create a new AI conversation.
 	 */
-	createConversation: protectedProcedure
+	createConversation: requireFeature(FEATURE_AI_CHAT)
 		.input(
 			z.object({
 				mode: z.enum(["chat", "report"]),
@@ -120,8 +120,8 @@ export const aiRouter = createTRPCRouter({
 			}
 
 			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
-			const userMeta = ctx.user as unknown as UserWithMetadata;
-			const isUnlimited = isBetaUser(userMeta);
+			const isUnlimited =
+				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 			const { date: usageDate } = await incrementAndCheckChatUsage(
 				ctx.db,
 				ctx.user.id,
@@ -344,8 +344,8 @@ export const aiRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
-			const userMeta = ctx.user as unknown as UserWithMetadata;
-			const isUnlimited = isBetaUser(userMeta);
+			const isUnlimited =
+				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 			const { month: usageMonth, year: usageYear } =
 				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
@@ -620,8 +620,8 @@ export const aiRouter = createTRPCRouter({
 			}
 
 			// Re-consume quota — startReport refunds on failure, so we must re-increment.
-			const userMeta = ctx.user as unknown as UserWithMetadata;
-			const isUnlimited = isBetaUser(userMeta);
+			const isUnlimited =
+				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 			const { month: usageMonth, year: usageYear } =
 				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 

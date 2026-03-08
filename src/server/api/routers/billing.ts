@@ -1,13 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import {
-	getEffectivePlan,
-	isBetaUser,
-	type UserWithMetadata,
-} from "@/lib/billing/utils";
+import { getEffectivePlan, type UserWithMetadata } from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
+	FEATURE_BETA_ACCESS,
 	PLAN_FREE,
 	PLAN_METADATA,
 } from "@/lib/constants/billing";
@@ -212,8 +209,8 @@ export const billingRouter = createTRPCRouter({
 	}),
 
 	getUsage: protectedProcedure.query(async ({ ctx }) => {
-		const userMeta = ctx.user as unknown as UserWithMetadata;
-		const isBeta = isBetaUser(userMeta);
+		const isBeta =
+			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 		const today = getTodayDateString();
 		const { month, year } = getCurrentMonthYear();
 
