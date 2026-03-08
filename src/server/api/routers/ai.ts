@@ -1,5 +1,5 @@
 import { runs } from "@trigger.dev/sdk/v3";
-import { TRPCError } from "@trpc/server";
+
 import type { ModelMessage } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { getModel } from "@/lib/ai/provider";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
-import { isBetaUser, type UserWithMetadata } from "@/lib/billing/utils";
+import { getEffectivePlan, type UserWithMetadata } from "@/lib/billing/utils";
 import {
 	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
@@ -22,10 +22,10 @@ import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
 	FEATURE_PDF_EXPORT,
+	PLAN_FREE,
+	PLAN_PRO,
 } from "@/lib/constants/billing";
 import {
-	ERR_AI_CHAT_LIMIT_REACHED,
-	ERR_AI_REPORT_LIMIT_REACHED,
 	ERR_CONVERSATION_CREATE_FAILED,
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_MESSAGE_LIMIT_REACHED,
@@ -99,9 +99,13 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			// Enforce daily chat usage limit
+			// Enforce daily chat usage limit — derive Pro status from Clerk auth,
+			// not DB user (which lacks publicMetadata for beta detection).
 			const userMeta = ctx.user as unknown as UserWithMetadata;
-			const beta = isBetaUser(userMeta);
+			const effectivePlan = ctx.clerkAuth
+				? getEffectivePlan(ctx.clerkAuth, userMeta)
+				: PLAN_FREE;
+			const beta = effectivePlan === PLAN_PRO;
 			const { date: usageDate } = await incrementAndCheckChatUsage(
 				ctx.db,
 				ctx.user.id,
@@ -229,19 +233,12 @@ export const aiRouter = createTRPCRouter({
 
 				return savedMessage;
 			} catch (error) {
-				// Only roll back if the error is NOT a limit-exceeded FORBIDDEN —
-				// incrementAndCheckChatUsage already decremented in that case.
-				const isLimitError =
-					error instanceof TRPCError &&
-					error.code === "FORBIDDEN" &&
-					error.message === ERR_AI_CHAT_LIMIT_REACHED;
-
-				if (!isLimitError) {
-					try {
-						await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
-					} catch {
-						console.error("Failed to rollback chat usage after error");
-					}
+				// incrementAndCheckChatUsage is called before this try block,
+				// so all errors here are from the AI call or DB writes — always roll back.
+				try {
+					await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
+				} catch {
+					console.error("Failed to rollback chat usage after error");
 				}
 				throw error;
 			}
@@ -351,11 +348,17 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			// Enforce monthly report usage limit
+			// Enforce monthly report usage limit — derive Pro status from Clerk auth,
+			// not DB user (which lacks publicMetadata for beta detection).
 			const userMeta = ctx.user as unknown as UserWithMetadata;
-			const beta = isBetaUser(userMeta);
+			const effectivePlan = ctx.clerkAuth
+				? getEffectivePlan(ctx.clerkAuth, userMeta)
+				: PLAN_FREE;
+			const beta = effectivePlan === PLAN_PRO;
 			const { month: usageMonth, year: usageYear } =
 				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
+
+			let createdReportId: string | null = null;
 
 			try {
 				const model = DEFAULT_REPORT_MODEL;
@@ -411,6 +414,7 @@ export const aiRouter = createTRPCRouter({
 				if (!report) {
 					throw new Error(ERR_REPORT_CREATE_FAILED);
 				}
+				createdReportId = report.id;
 
 				// Trigger Trigger.dev background task
 				const handle = await generateAiReport.trigger({
@@ -433,25 +437,31 @@ export const aiRouter = createTRPCRouter({
 
 				return { ...report, triggerTaskId: handle.id };
 			} catch (error) {
-				// Only roll back if the error is NOT a limit-exceeded FORBIDDEN —
-				// incrementAndCheckReportUsage already decremented in that case.
-				const isLimitError =
-					error instanceof TRPCError &&
-					error.code === "FORBIDDEN" &&
-					error.message === ERR_AI_REPORT_LIMIT_REACHED;
+				// incrementAndCheckReportUsage is called before this try block,
+				// so all errors here are from DB writes or Trigger.dev — always roll back.
+				try {
+					await decrementReportUsage(
+						ctx.db,
+						ctx.user.id,
+						usageMonth,
+						usageYear,
+					);
+				} catch {
+					console.error("Failed to rollback report usage after error");
+				}
 
-				if (!isLimitError) {
+				// Mark orphaned report as "failed" so retryReport can recover it
+				if (createdReportId) {
 					try {
-						await decrementReportUsage(
-							ctx.db,
-							ctx.user.id,
-							usageMonth,
-							usageYear,
-						);
+						await ctx.db
+							.update(aiReports)
+							.set({ status: "failed" })
+							.where(eq(aiReports.id, createdReportId));
 					} catch {
-						console.error("Failed to rollback report usage after error");
+						console.error("Failed to mark orphaned report as failed");
 					}
 				}
+
 				throw error;
 			}
 		}),

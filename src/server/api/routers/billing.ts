@@ -1,15 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import {
-	getEffectivePlan,
-	isBetaUser,
-	type UserWithMetadata,
-} from "@/lib/billing/utils";
+import { getEffectivePlan, type UserWithMetadata } from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
 	PLAN_FREE,
 	PLAN_METADATA,
+	PLAN_PRO,
 } from "@/lib/constants/billing";
 import {
 	ERR_AI_CHAT_LIMIT_REACHED,
@@ -211,7 +208,13 @@ export const billingRouter = createTRPCRouter({
 
 	getUsage: protectedProcedure.query(async ({ ctx }) => {
 		const userMeta = ctx.user as unknown as UserWithMetadata;
-		const beta = isBetaUser(userMeta);
+		// Derive Pro status from effective plan (handles both subscribers and beta users).
+		// isBetaUser(ctx.user) won't work here because DB users lack publicMetadata —
+		// getEffectivePlan falls back to ctx.clerkAuth.has() which covers beta entitlements.
+		const effectivePlan = ctx.clerkAuth
+			? getEffectivePlan(ctx.clerkAuth, userMeta)
+			: PLAN_FREE;
+		const isPro = effectivePlan === PLAN_PRO;
 		const today = getTodayDateString();
 		const { month, year } = getCurrentMonthYear();
 
@@ -242,11 +245,11 @@ export const billingRouter = createTRPCRouter({
 		return {
 			chat: {
 				used: chatRow?.used ?? 0,
-				limit: beta ? null : AI_CHAT_DAILY_LIMIT,
+				limit: isPro ? null : AI_CHAT_DAILY_LIMIT,
 			},
 			reports: {
 				used: reportRow?.used ?? 0,
-				limit: beta ? null : AI_REPORTS_MONTHLY_LIMIT,
+				limit: isPro ? null : AI_REPORTS_MONTHLY_LIMIT,
 			},
 		};
 	}),
