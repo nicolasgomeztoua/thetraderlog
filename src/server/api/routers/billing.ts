@@ -1,6 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import { getEffectivePlan, isBetaUser } from "@/lib/billing/utils";
+import {
+	getEffectivePlan,
+	isBetaUser,
+	type UserWithMetadata,
+} from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
@@ -13,13 +17,6 @@ import {
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import type { Database } from "@/server/db/create-db";
 import { aiUsage } from "@/server/db/schema";
-
-/**
- * Minimal interface matching what isBetaUser/getEffectivePlan expect.
- * DB users don't have publicMetadata, so beta defaults to false.
- * In production, Clerk's session claims handle beta access through has().
- */
-type UserWithMetadata = { publicMetadata?: Record<string, unknown> };
 
 /**
  * Get today's date as YYYY-MM-DD string (UTC).

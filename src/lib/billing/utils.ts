@@ -4,7 +4,7 @@ import { PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
  * Minimal interface for checking beta status from Clerk user metadata.
  * Works with Clerk's currentUser() or session claims.
  */
-interface UserWithMetadata {
+export interface UserWithMetadata {
 	publicMetadata?: Record<string, unknown>;
 }
 
