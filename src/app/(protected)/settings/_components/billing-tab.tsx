@@ -98,7 +98,7 @@ function getResetDateLabel(): string {
 }
 
 export function BillingTab() {
-	const { isLoaded: clerkLoaded } = useAuth();
+	const { isLoaded: clerkLoaded, has } = useAuth();
 	const { user: clerkUser } = useUser();
 	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
@@ -113,8 +113,9 @@ export function BillingTab() {
 	const isStarterUser = effectivePlan === PLAN_STARTER;
 	const hasPaidPlan = isProUser || isStarterUser || isBeta;
 
+	const clerkIsProUser = clerkLoaded && has?.({ plan: PLAN_PRO });
 	const usageQuery = api.billing.getUsage.useQuery(undefined, {
-		enabled: isProUser || isBeta,
+		enabled: clerkIsProUser || isBeta,
 	});
 	const usage = usageQuery.data;
 
