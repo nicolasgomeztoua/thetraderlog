@@ -567,7 +567,7 @@ export const aiRouter = createTRPCRouter({
 	/**
 	 * Retry a failed report — resets state and re-triggers generation.
 	 */
-	retryReport: protectedProcedure
+	retryReport: requireFeature(FEATURE_AI_REPORTS)
 		.input(z.object({ reportId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const report = await ctx.db.query.aiReports.findFirst({
