@@ -129,13 +129,17 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const sendMessage = api.ai.sendMessage.useMutation({
 		onSuccess: () => {
 			setPendingMessage(null);
+			void utils.billing.getUsage.invalidate();
 			void utils.ai.getConversation.invalidate({
 				conversationId: activeConversationId ?? "",
 			});
 			void utils.ai.listConversations.invalidate();
 		},
-		onError: () => {
+		onError: (err) => {
 			setPendingMessage(null);
+			if (err.data?.code === "FORBIDDEN") {
+				void utils.billing.getUsage.invalidate();
+			}
 		},
 	});
 

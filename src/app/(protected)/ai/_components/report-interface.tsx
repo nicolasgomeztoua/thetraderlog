@@ -150,7 +150,13 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const startReport = api.ai.startReport.useMutation({
 		onSuccess: () => {
 			setPrompt("");
+			void utils.billing.getUsage.invalidate();
 			void utils.ai.listReports.invalidate();
+		},
+		onError: (err) => {
+			if (err.data?.code === "FORBIDDEN") {
+				void utils.billing.getUsage.invalidate();
+			}
 		},
 	});
 
