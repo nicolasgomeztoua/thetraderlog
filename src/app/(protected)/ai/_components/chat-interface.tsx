@@ -354,10 +354,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 										const Icon = card.icon;
 										return (
 											<button
-												className="group rounded border border-white/5 bg-white/2 p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/2"
+												className={`group rounded border border-white/5 bg-white/2 p-3 text-left transition-all ${chatLimitReached ? "pointer-events-none opacity-40" : "hover:border-primary/30 hover:bg-primary/2"}`}
 												data-testid="chat-suggested-query"
+												disabled={chatLimitReached}
 												key={card.title}
-												onClick={() => void handleSend(card.query)}
+												onClick={() =>
+													!chatLimitReached && void handleSend(card.query)
+												}
 												type="button"
 											>
 												<div className="flex items-start gap-2.5">

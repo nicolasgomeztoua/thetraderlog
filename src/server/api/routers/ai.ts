@@ -1,4 +1,5 @@
 import { runs } from "@trigger.dev/sdk/v3";
+import { TRPCError } from "@trpc/server";
 import type { ModelMessage } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -23,6 +24,8 @@ import {
 	FEATURE_PDF_EXPORT,
 } from "@/lib/constants/billing";
 import {
+	ERR_AI_CHAT_LIMIT_REACHED,
+	ERR_AI_REPORT_LIMIT_REACHED,
 	ERR_CONVERSATION_CREATE_FAILED,
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_MESSAGE_LIMIT_REACHED,
@@ -226,11 +229,19 @@ export const aiRouter = createTRPCRouter({
 
 				return savedMessage;
 			} catch (error) {
-				try {
-					await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
-				} catch {
-					// Rollback failed — log but don't swallow the original error
-					console.error("Failed to rollback chat usage after error");
+				// Only roll back if the error is NOT a limit-exceeded FORBIDDEN —
+				// incrementAndCheckChatUsage already decremented in that case.
+				const isLimitError =
+					error instanceof TRPCError &&
+					error.code === "FORBIDDEN" &&
+					error.message === ERR_AI_CHAT_LIMIT_REACHED;
+
+				if (!isLimitError) {
+					try {
+						await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
+					} catch {
+						console.error("Failed to rollback chat usage after error");
+					}
 				}
 				throw error;
 			}
@@ -422,16 +433,24 @@ export const aiRouter = createTRPCRouter({
 
 				return { ...report, triggerTaskId: handle.id };
 			} catch (error) {
-				try {
-					await decrementReportUsage(
-						ctx.db,
-						ctx.user.id,
-						usageMonth,
-						usageYear,
-					);
-				} catch {
-					// Rollback failed — log but don't swallow the original error
-					console.error("Failed to rollback report usage after error");
+				// Only roll back if the error is NOT a limit-exceeded FORBIDDEN —
+				// incrementAndCheckReportUsage already decremented in that case.
+				const isLimitError =
+					error instanceof TRPCError &&
+					error.code === "FORBIDDEN" &&
+					error.message === ERR_AI_REPORT_LIMIT_REACHED;
+
+				if (!isLimitError) {
+					try {
+						await decrementReportUsage(
+							ctx.db,
+							ctx.user.id,
+							usageMonth,
+							usageYear,
+						);
+					} catch {
+						console.error("Failed to rollback report usage after error");
+					}
 				}
 				throw error;
 			}
