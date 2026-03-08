@@ -1,6 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import { getEffectivePlan, type UserWithMetadata } from "@/lib/billing/utils";
+import {
+	getEffectivePlan,
+	isBetaUser,
+	type UserWithMetadata,
+} from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
@@ -203,6 +207,7 @@ export const billingRouter = createTRPCRouter({
 		return {
 			plan: effectivePlan,
 			metadata: metadata ?? PLAN_METADATA[PLAN_FREE],
+			beta: isBetaUser(userMeta),
 		};
 	}),
 
@@ -245,11 +250,11 @@ export const billingRouter = createTRPCRouter({
 		return {
 			chat: {
 				used: chatRow?.used ?? 0,
-				limit: isPro ? null : 0,
+				limit: isPro ? null : AI_CHAT_DAILY_LIMIT,
 			},
 			reports: {
 				used: reportRow?.used ?? 0,
-				limit: isPro ? null : 0,
+				limit: isPro ? null : AI_REPORTS_MONTHLY_LIMIT,
 			},
 		};
 	}),

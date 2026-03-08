@@ -105,11 +105,11 @@ export const aiRouter = createTRPCRouter({
 			const effectivePlan = ctx.clerkAuth
 				? getEffectivePlan(ctx.clerkAuth, userMeta)
 				: PLAN_FREE;
-			const beta = effectivePlan === PLAN_PRO;
+			const isUnlimited = effectivePlan === PLAN_PRO;
 			const { date: usageDate } = await incrementAndCheckChatUsage(
 				ctx.db,
 				ctx.user.id,
-				beta,
+				isUnlimited,
 			);
 
 			try {
@@ -354,9 +354,9 @@ export const aiRouter = createTRPCRouter({
 			const effectivePlan = ctx.clerkAuth
 				? getEffectivePlan(ctx.clerkAuth, userMeta)
 				: PLAN_FREE;
-			const beta = effectivePlan === PLAN_PRO;
+			const isUnlimited = effectivePlan === PLAN_PRO;
 			const { month: usageMonth, year: usageYear } =
-				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
+				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
 			let createdReportId: string | null = null;
 

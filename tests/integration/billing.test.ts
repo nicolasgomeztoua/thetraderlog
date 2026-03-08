@@ -87,6 +87,7 @@ describe("billing router", () => {
 			const betaCaller = await createTestCaller(
 				betaUser.clerkId,
 				betaUserWithMeta,
+				{ has: () => false },
 			);
 			const result = await betaCaller.billing.getUsage();
 

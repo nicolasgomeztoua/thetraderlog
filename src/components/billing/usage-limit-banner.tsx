@@ -10,8 +10,9 @@ import { PLAN_PRO } from "@/lib/constants/billing";
 import { api } from "@/trpc/react";
 
 function useHasAiPlan(): boolean {
-	const { has } = useAuth();
+	const { has, isLoaded } = useAuth();
 	const { user } = useUser();
+	if (!isLoaded) return false;
 	const isBeta = user?.publicMetadata?.beta === true;
 	return isBeta || !!has?.({ plan: PLAN_PRO });
 }

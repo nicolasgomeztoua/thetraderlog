@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, useClerk, useUser } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { CreditCard, Settings, Zap } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -98,21 +98,18 @@ function getResetDateLabel(): string {
 }
 
 export function BillingTab() {
-	const { has } = useAuth();
-	const { user: clerkUser } = useUser();
+	const { isLoaded: clerkLoaded } = useAuth();
 	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
 
 	const plan = planQuery.data;
-	const isLoading = planQuery.isLoading;
-	const isBeta = clerkUser?.publicMetadata?.beta === true;
-	const effectivePlan = isBeta ? PLAN_PRO : (plan?.plan ?? PLAN_FREE);
+	const isLoading = !clerkLoaded || planQuery.isLoading;
+	const isBeta = plan?.beta === true;
+	const effectivePlan = plan?.plan ?? PLAN_FREE;
 	const metadata = PLAN_METADATA[effectivePlan] ?? PLAN_METADATA[PLAN_FREE];
 
-	const isProUser =
-		isBeta || has?.({ plan: PLAN_PRO }) || effectivePlan === PLAN_PRO;
-	const isStarterUser =
-		has?.({ plan: PLAN_STARTER }) || effectivePlan === PLAN_STARTER;
+	const isProUser = effectivePlan === PLAN_PRO;
+	const isStarterUser = effectivePlan === PLAN_STARTER;
 	const hasPaidPlan = isProUser || isStarterUser;
 
 	const usageQuery = api.billing.getUsage.useQuery(undefined, {
