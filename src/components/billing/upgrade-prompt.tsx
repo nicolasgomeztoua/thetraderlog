@@ -93,7 +93,11 @@ export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
 	const { user } = useUser();
 
 	if (!isLoaded) {
-		return <>{children}</>;
+		return (
+			<div className="flex h-full min-h-[300px] items-center justify-center p-6">
+				<div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+			</div>
+		);
 	}
 
 	const isBeta = user?.publicMetadata?.beta === true;

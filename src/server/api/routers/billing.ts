@@ -52,7 +52,6 @@ export async function incrementAndCheckChatUsage(
 			userId,
 			chatMessagesUsed: 1,
 			chatMessagesDate: today,
-			reportsUsed: 0,
 		})
 		.onConflictDoUpdate({
 			target: [aiUsage.userId, aiUsage.chatMessagesDate],
