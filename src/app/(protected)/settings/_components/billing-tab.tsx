@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-	getHoursUntilMidnightUTC,
 	getNextMonthResetDate,
+	getTimeUntilMidnightUTC,
 } from "@/lib/billing/utils";
 import {
 	PLAN_FREE,
@@ -90,7 +90,7 @@ function UsageMeter({
 }
 
 function getResetTimeLabel(): string {
-	return `Resets in ${getHoursUntilMidnightUTC()}h`;
+	return `Resets in ${getTimeUntilMidnightUTC()}`;
 }
 
 function getResetDateLabel(): string {

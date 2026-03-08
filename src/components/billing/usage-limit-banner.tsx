@@ -2,8 +2,8 @@
 
 import { AlertTriangle, Clock } from "lucide-react";
 import {
-	getHoursUntilMidnightUTC,
 	getNextMonthResetDate,
+	getTimeUntilMidnightUTC,
 } from "@/lib/billing/utils";
 import { api } from "@/trpc/react";
 
@@ -23,7 +23,7 @@ export function UsageLimitBanner({ type }: UsageLimitBannerProps) {
 
 	const resetMessage =
 		type === "chat"
-			? `Resets in ${getHoursUntilMidnightUTC().toString()}h (midnight UTC)`
+			? `Resets in ${getTimeUntilMidnightUTC()} (midnight UTC)`
 			: `Resets ${getNextMonthResetDate()}`;
 
 	return (

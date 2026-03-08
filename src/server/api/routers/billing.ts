@@ -198,7 +198,6 @@ export async function decrementReportUsage(
 export const billingRouter = createTRPCRouter({
 	getCurrentPlan: protectedProcedure.query(({ ctx }) => {
 		const userMeta = ctx.user as unknown as UserWithMetadata;
-		const beta = isBetaUser(userMeta);
 		const effectivePlan = ctx.clerkAuth
 			? getEffectivePlan(ctx.clerkAuth, userMeta)
 			: PLAN_FREE;
@@ -207,7 +206,6 @@ export const billingRouter = createTRPCRouter({
 		return {
 			plan: effectivePlan,
 			metadata: metadata ?? PLAN_METADATA[PLAN_FREE],
-			beta,
 		};
 	}),
 
