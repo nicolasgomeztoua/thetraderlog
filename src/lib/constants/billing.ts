@@ -11,8 +11,11 @@ export const PLAN_PRO = "pro";
 // =============================================================================
 
 export const FEATURE_TRADE_MANAGEMENT = "trade_management";
+// Analytics is read-only and intentionally ungated — all plans get dashboard access.
+// Gate will be added when advanced analytics features are introduced.
 export const FEATURE_ANALYTICS = "analytics";
 export const FEATURE_CSV_IMPORT_EXPORT = "csv_import_export";
+// Prop compliance is intentionally ungated for now — gate will be added with prop-firm-specific features.
 export const FEATURE_PROP_COMPLIANCE = "prop_compliance";
 export const FEATURE_CUSTOM_TAGS = "custom_tags";
 export const FEATURE_CUSTOM_STRATEGIES = "custom_strategies";

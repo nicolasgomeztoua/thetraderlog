@@ -12,6 +12,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	PLAN_FREE,
 	PLAN_METADATA,
@@ -85,11 +86,12 @@ function UsageMeter({
 
 function getResetTimeLabel(): string {
 	const now = new Date();
-	const endOfDay = new Date(now);
-	endOfDay.setUTCHours(23, 59, 59, 999);
+	const midnight = new Date(now);
+	midnight.setUTCDate(midnight.getUTCDate() + 1);
+	midnight.setUTCHours(0, 0, 0, 0);
 	const hoursLeft = Math.max(
 		1,
-		Math.ceil((endOfDay.getTime() - now.getTime()) / (1000 * 60 * 60)),
+		Math.ceil((midnight.getTime() - now.getTime()) / (1000 * 60 * 60)),
 	);
 	return `Resets in ${hoursLeft}h`;
 }
@@ -110,6 +112,7 @@ export function BillingTab() {
 
 	const plan = planQuery.data;
 	const usage = usageQuery.data;
+	const isLoading = planQuery.isLoading;
 	const isBeta = plan?.beta ?? false;
 	const effectivePlan = plan?.plan ?? PLAN_FREE;
 	const metadata = plan?.metadata ?? PLAN_METADATA[PLAN_FREE];
@@ -119,6 +122,33 @@ export function BillingTab() {
 	const isStarterUser =
 		has?.({ plan: PLAN_STARTER }) || effectivePlan === PLAN_STARTER;
 	const hasPaidPlan = isProUser || isStarterUser;
+
+	if (isLoading) {
+		return (
+			<div className="space-y-4 sm:space-y-6" data-testid="billing-tab-loading">
+				<Card>
+					<CardHeader className="p-4 sm:p-6">
+						<Skeleton className="h-5 w-32" />
+						<Skeleton className="hidden h-4 w-64 sm:block" />
+					</CardHeader>
+					<CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
+						<div className="rounded border border-border bg-secondary/50 p-4">
+							<Skeleton className="mb-2 h-4 w-20" />
+							<Skeleton className="h-3 w-16" />
+						</div>
+						<div>
+							<Skeleton className="mb-2 h-3 w-28" />
+							<div className="space-y-1.5">
+								<Skeleton className="h-3 w-48" />
+								<Skeleton className="h-3 w-40" />
+								<Skeleton className="h-3 w-36" />
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-4 sm:space-y-6" data-testid="billing-tab">
