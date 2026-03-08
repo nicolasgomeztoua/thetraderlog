@@ -8,6 +8,7 @@ import {
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
+	PLAN_FREE,
 	PLAN_METADATA,
 } from "@/lib/constants/billing";
 import {
@@ -42,7 +43,7 @@ export async function incrementAndCheckChatUsage(
 	db: Database,
 	userId: string,
 	beta: boolean,
-): Promise<{ used: number; limit: number | null }> {
+): Promise<{ used: number; limit: number | null; date: string }> {
 	const today = getTodayDateString();
 
 	const [row] = await db
@@ -79,7 +80,7 @@ export async function incrementAndCheckChatUsage(
 		});
 	}
 
-	return { used, limit: beta ? null : AI_CHAT_DAILY_LIMIT };
+	return { used, limit: beta ? null : AI_CHAT_DAILY_LIMIT, date: today };
 }
 
 /**
@@ -91,7 +92,12 @@ export async function incrementAndCheckReportUsage(
 	db: Database,
 	userId: string,
 	beta: boolean,
-): Promise<{ used: number; limit: number | null }> {
+): Promise<{
+	used: number;
+	limit: number | null;
+	month: number;
+	year: number;
+}> {
 	const { month, year } = getCurrentMonthYear();
 
 	const [row] = await db
@@ -133,35 +139,36 @@ export async function incrementAndCheckReportUsage(
 		});
 	}
 
-	return { used, limit: beta ? null : AI_REPORTS_MONTHLY_LIMIT };
+	return { used, limit: beta ? null : AI_REPORTS_MONTHLY_LIMIT, month, year };
 }
 
 /**
  * Decrement daily chat usage (rollback on AI call failure).
+ * Accepts the date from the increment call to avoid midnight boundary issues.
  */
 export async function decrementChatUsage(
 	db: Database,
 	userId: string,
+	date: string,
 ): Promise<void> {
-	const today = getTodayDateString();
 	await db
 		.update(aiUsage)
 		.set({
 			chatMessagesUsed: sql`GREATEST(${aiUsage.chatMessagesUsed} - 1, 0)`,
 		})
-		.where(
-			and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
-		);
+		.where(and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, date)));
 }
 
 /**
  * Decrement monthly report usage (rollback on task trigger failure).
+ * Accepts month/year from the increment call to avoid month boundary issues.
  */
 export async function decrementReportUsage(
 	db: Database,
 	userId: string,
+	month: number,
+	year: number,
 ): Promise<void> {
-	const { month, year } = getCurrentMonthYear();
 	await db
 		.update(aiUsage)
 		.set({
@@ -182,12 +189,12 @@ export const billingRouter = createTRPCRouter({
 		const beta = isBetaUser(userMeta);
 		const effectivePlan = ctx.clerkAuth
 			? getEffectivePlan(ctx.clerkAuth, userMeta)
-			: "free";
+			: PLAN_FREE;
 		const metadata = PLAN_METADATA[effectivePlan];
 
 		return {
 			plan: effectivePlan,
-			metadata: metadata ?? PLAN_METADATA.free,
+			metadata: metadata ?? PLAN_METADATA[PLAN_FREE],
 			beta,
 		};
 	}),

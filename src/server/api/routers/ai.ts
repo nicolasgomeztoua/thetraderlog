@@ -99,7 +99,11 @@ export const aiRouter = createTRPCRouter({
 			// Enforce daily chat usage limit
 			const userMeta = ctx.user as unknown as UserWithMetadata;
 			const beta = isBetaUser(userMeta);
-			await incrementAndCheckChatUsage(ctx.db, ctx.user.id, beta);
+			const { date: usageDate } = await incrementAndCheckChatUsage(
+				ctx.db,
+				ctx.user.id,
+				beta,
+			);
 
 			try {
 				// Verify conversation ownership
@@ -223,7 +227,7 @@ export const aiRouter = createTRPCRouter({
 				return savedMessage;
 			} catch (error) {
 				try {
-					await decrementChatUsage(ctx.db, ctx.user.id);
+					await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
 				} catch {
 					// Rollback failed — log but don't swallow the original error
 					console.error("Failed to rollback chat usage after error");
@@ -339,7 +343,8 @@ export const aiRouter = createTRPCRouter({
 			// Enforce monthly report usage limit
 			const userMeta = ctx.user as unknown as UserWithMetadata;
 			const beta = isBetaUser(userMeta);
-			await incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
+			const { month: usageMonth, year: usageYear } =
+				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, beta);
 
 			try {
 				const model = DEFAULT_REPORT_MODEL;
@@ -418,7 +423,12 @@ export const aiRouter = createTRPCRouter({
 				return { ...report, triggerTaskId: handle.id };
 			} catch (error) {
 				try {
-					await decrementReportUsage(ctx.db, ctx.user.id);
+					await decrementReportUsage(
+						ctx.db,
+						ctx.user.id,
+						usageMonth,
+						usageYear,
+					);
 				} catch {
 					// Rollback failed — log but don't swallow the original error
 					console.error("Failed to rollback report usage after error");
