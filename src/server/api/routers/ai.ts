@@ -650,12 +650,10 @@ export const aiRouter = createTRPCRouter({
 			const alreadyConsumedQuota = !!report.triggerTaskId;
 			const isUnlimited =
 				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
-			// Capture month/year for both paths so the catch block can refund
-			// even when alreadyConsumedQuota is true and the retry fails before
-			// the trigger dispatches (preventing double-charge on next retry).
-			const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
-			let usageMonth: number | undefined = currentMonth;
-			let usageYear: number | undefined = currentYear;
+			// Only set after a successful increment so the catch block
+			// doesn't refund a slot we never consumed (mirrors sendMessage pattern).
+			let usageMonth: number | undefined;
+			let usageYear: number | undefined;
 
 			let retryTriggerHandleId: string | null = null;
 			try {
@@ -727,14 +725,10 @@ export const aiRouter = createTRPCRouter({
 					}
 				}
 
-				// Refund quota when:
-				// 1. We incremented it ourselves (!alreadyConsumedQuota), or
-				// 2. Quota was inherited (alreadyConsumedQuota) but the trigger was
-				//    never dispatched — refund so subsequent retries aren't double-charged.
-				const shouldRefund =
-					!alreadyConsumedQuota ||
-					(alreadyConsumedQuota && retryTriggerHandleId === null);
-				if (shouldRefund && usageMonth != null && usageYear != null) {
+				// Only refund when we incremented the counter ourselves in this call.
+				// When alreadyConsumedQuota=true we never touched the counter,
+				// so there's nothing to roll back.
+				if (usageMonth != null && usageYear != null) {
 					try {
 						await decrementReportUsage(
 							ctx.db,

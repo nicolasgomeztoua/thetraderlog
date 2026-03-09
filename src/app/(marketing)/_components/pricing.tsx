@@ -258,7 +258,7 @@ export function Pricing() {
 				<p className="mt-8 text-center font-mono text-muted-foreground text-xs sm:mt-12 sm:text-sm">
 					Your data is always yours — even if you change plans.{" "}
 					<span className="text-foreground">
-						No credit card required to start.
+						Get started for free — no credit card required.
 					</span>
 				</p>
 			</div>
