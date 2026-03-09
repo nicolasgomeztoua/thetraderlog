@@ -28,7 +28,7 @@ function getTodayDateString(): string {
 /**
  * Get current month and year (UTC).
  */
-function getCurrentMonthYear(): { month: number; year: number } {
+export function getCurrentMonthYear(): { month: number; year: number } {
 	const now = new Date();
 	return { month: now.getUTCMonth() + 1, year: now.getUTCFullYear() };
 }

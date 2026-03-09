@@ -47,6 +47,7 @@ import { generateReportPdf } from "@/trigger/generate-report-pdf";
 import {
 	decrementChatUsage,
 	decrementReportUsage,
+	getCurrentMonthYear,
 	incrementAndCheckChatUsage,
 	incrementAndCheckReportUsage,
 } from "./billing";
@@ -649,8 +650,12 @@ export const aiRouter = createTRPCRouter({
 			const alreadyConsumedQuota = !!report.triggerTaskId;
 			const isUnlimited =
 				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
-			let usageMonth: number | undefined;
-			let usageYear: number | undefined;
+			// Capture month/year for both paths so the catch block can refund
+			// even when alreadyConsumedQuota is true and the retry fails before
+			// the trigger dispatches (preventing double-charge on next retry).
+			const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
+			let usageMonth: number | undefined = currentMonth;
+			let usageYear: number | undefined = currentYear;
 
 			let retryTriggerHandleId: string | null = null;
 			try {
@@ -722,8 +727,14 @@ export const aiRouter = createTRPCRouter({
 					}
 				}
 
-				// Refund quota only if we incremented it in this call
-				if (!alreadyConsumedQuota && usageMonth != null && usageYear != null) {
+				// Refund quota when:
+				// 1. We incremented it ourselves (!alreadyConsumedQuota), or
+				// 2. Quota was inherited (alreadyConsumedQuota) but the trigger was
+				//    never dispatched — refund so subsequent retries aren't double-charged.
+				const shouldRefund =
+					!alreadyConsumedQuota ||
+					(alreadyConsumedQuota && retryTriggerHandleId === null);
+				if (shouldRefund && usageMonth != null && usageYear != null) {
 					try {
 						await decrementReportUsage(
 							ctx.db,
