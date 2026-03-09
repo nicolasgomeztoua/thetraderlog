@@ -44,7 +44,6 @@ export async function incrementAndCheckChatUsage(
 	beta: boolean,
 ): Promise<{ used: number; limit: number | null; date: string }> {
 	const today = getTodayDateString();
-	if (!today) throw new Error("Failed to compute today's date string");
 
 	const [row] = await db
 		.insert(aiUsage)
@@ -106,7 +105,6 @@ export async function incrementAndCheckReportUsage(
 	year: number;
 }> {
 	const { month, year } = getCurrentMonthYear();
-	if (!month || !year) throw new Error("Failed to compute current month/year");
 
 	const [row] = await db
 		.insert(aiUsage)

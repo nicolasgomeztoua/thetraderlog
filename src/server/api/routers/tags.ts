@@ -297,7 +297,8 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Bulk remove tag from multiple trades
-	bulkRemoveFromTrades: requireFeature(FEATURE_CUSTOM_TAGS)
+	// Ungated: users must be able to detach tags from owned trades even after downgrading (matches removeFromTrade policy)
+	bulkRemoveFromTrades: protectedProcedure
 		.input(
 			z.object({
 				tradeIds: z.array(z.string()).min(1).max(100),
