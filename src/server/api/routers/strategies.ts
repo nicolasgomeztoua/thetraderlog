@@ -533,7 +533,8 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Delete a strategy (soft delete by setting inactive)
-	delete: requireFeature(FEATURE_CUSTOM_STRATEGIES)
+	// Ungated: users must be able to delete their own strategies even after downgrading
+	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existingStrategy = await ctx.db.query.strategies.findFirst({

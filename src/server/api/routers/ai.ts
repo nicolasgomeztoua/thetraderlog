@@ -630,11 +630,24 @@ export const aiRouter = createTRPCRouter({
 				throw new Error(ERR_REPORT_ONLY_FAILED_RETRY);
 			}
 
-			// Re-consume quota — startReport refunds on failure, so we must re-increment.
+			// Only re-consume quota if the original trigger was never dispatched.
+			// When startReport triggers successfully (triggerTaskId is set) but the
+			// Trigger.dev job fails during execution, the quota slot was already
+			// consumed and never refunded — re-incrementing would double-charge.
+			const alreadyConsumedQuota = !!report.triggerTaskId;
 			const isUnlimited =
 				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
-			const { month: usageMonth, year: usageYear } =
-				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
+			let usageMonth: number | undefined;
+			let usageYear: number | undefined;
+			if (!alreadyConsumedQuota) {
+				const usage = await incrementAndCheckReportUsage(
+					ctx.db,
+					ctx.user.id,
+					isUnlimited,
+				);
+				usageMonth = usage.month;
+				usageYear = usage.year;
+			}
 
 			let retryTriggerHandleId: string | null = null;
 			// All DB reads and writes are inside try so decrementReportUsage runs on any failure
@@ -698,16 +711,20 @@ export const aiRouter = createTRPCRouter({
 					}
 				}
 
-				// Refund quota and reset report back to "failed" so it can be retried again
-				try {
-					await decrementReportUsage(
-						ctx.db,
-						ctx.user.id,
-						usageMonth,
-						usageYear,
-					);
-				} catch {
-					console.error("Failed to rollback report usage after retry failure");
+				// Refund quota only if we incremented it in this call
+				if (!alreadyConsumedQuota && usageMonth != null && usageYear != null) {
+					try {
+						await decrementReportUsage(
+							ctx.db,
+							ctx.user.id,
+							usageMonth,
+							usageYear,
+						);
+					} catch {
+						console.error(
+							"Failed to rollback report usage after retry failure",
+						);
+					}
 				}
 				try {
 					const current = await ctx.db.query.aiReports.findFirst({

@@ -912,7 +912,8 @@ export const tradesRouter = createTRPCRouter({
 
 	// Close a trade
 	// User provides the realized PnL directly (we don't calculate it)
-	close: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	// Ungated: users must be able to close existing open trades even after downgrading
+	close: protectedProcedure
 		.input(
 			z.object({
 				id: z.string(),
@@ -1281,7 +1282,8 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Delete an execution
-	deleteExecution: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	// Ungated: users must be able to delete executions on owned trades even after downgrading
+	deleteExecution: protectedProcedure
 		.input(z.object({ executionId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// Get the execution and verify trade ownership
@@ -1364,7 +1366,8 @@ export const tradesRouter = createTRPCRouter({
 	// ============================================================================
 
 	// Update trade rating (0-5 stars, 0 = no rating)
-	updateRating: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	// Ungated: rating is a review annotation on owned data, not a feature-creation operation
+	updateRating: protectedProcedure
 		.input(
 			z.object({
 				id: z.string(),
@@ -1390,7 +1393,8 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Bulk update ratings
-	bulkUpdateRating: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	// Ungated: rating is a review annotation on owned data
+	bulkUpdateRating: protectedProcedure
 		.input(
 			z.object({
 				ids: z.array(z.string()).min(1).max(100),
@@ -1430,7 +1434,8 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Mark trade as reviewed
-	markReviewed: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	// Ungated: review status is a cleanup annotation on owned data
+	markReviewed: protectedProcedure
 		.input(
 			z.object({
 				id: z.string(),
@@ -1482,7 +1487,8 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Bulk mark as reviewed
-	bulkMarkReviewed: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	// Ungated: review status is a cleanup annotation on owned data
+	bulkMarkReviewed: protectedProcedure
 		.input(
 			z.object({
 				ids: z.array(z.string()).min(1).max(100),
@@ -1831,7 +1837,8 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Delete an attachment (from S3 and database)
-	deleteAttachment: requireFeature(FEATURE_TRADE_MANAGEMENT)
+	// Ungated: users must be able to delete attachments on owned trades even after downgrading
+	deleteAttachment: protectedProcedure
 		.input(
 			z.object({
 				id: z.string(),

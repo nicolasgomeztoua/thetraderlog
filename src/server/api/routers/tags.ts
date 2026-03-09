@@ -133,7 +133,8 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Delete a tag
-	delete: requireFeature(FEATURE_CUSTOM_TAGS)
+	// Ungated: users must be able to delete their own tags even after downgrading
+	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const existing = await ctx.db.query.tags.findFirst({
@@ -201,7 +202,8 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Remove tag from trade
-	removeFromTrade: requireFeature(FEATURE_CUSTOM_TAGS)
+	// Ungated: users must be able to detach tags from owned trades even after downgrading
+	removeFromTrade: protectedProcedure
 		.input(
 			z.object({
 				tradeId: z.string(),
