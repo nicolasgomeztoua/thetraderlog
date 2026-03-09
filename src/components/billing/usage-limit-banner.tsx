@@ -6,7 +6,7 @@ import {
 	getNextMonthResetDate,
 	getTimeUntilMidnightUTC,
 } from "@/lib/billing/utils";
-import { PLAN_PRO } from "@/lib/constants/billing";
+import { FEATURE_AI_CHAT } from "@/lib/constants/billing";
 import { api } from "@/trpc/react";
 
 function useHasAiPlan(): boolean {
@@ -14,7 +14,7 @@ function useHasAiPlan(): boolean {
 	const { user } = useUser();
 	if (!isLoaded) return false;
 	const isBeta = user?.publicMetadata?.beta === true;
-	return isBeta || !!has?.({ plan: PLAN_PRO });
+	return isBeta || !!has?.({ feature: FEATURE_AI_CHAT });
 }
 
 interface UsageLimitBannerProps {

@@ -66,8 +66,21 @@ describe("billing router", () => {
 	});
 
 	describe("getUsage", () => {
-		it("should return zero counts for a new user", async () => {
+		it("should return null limits for user without AI access", async () => {
 			const result = await caller.billing.getUsage();
+
+			expect(result.chat.used).toBe(0);
+			expect(result.chat.limit).toBeNull();
+			expect(result.reports.used).toBe(0);
+			expect(result.reports.limit).toBeNull();
+		});
+
+		it("should return numeric limits for user with AI access", async () => {
+			const aiCaller = await createTestCaller(user.clerkId, user, {
+				has: ({ feature }: { feature?: string }) =>
+					feature === "ai_chat" || feature === "ai_reports",
+			});
+			const result = await aiCaller.billing.getUsage();
 
 			expect(result.chat.used).toBe(0);
 			expect(result.chat.limit).toBe(AI_CHAT_DAILY_LIMIT);
@@ -76,20 +89,10 @@ describe("billing router", () => {
 		});
 
 		it("should return null limits for beta user", async () => {
-			// Create a separate user with beta metadata — we need to simulate
-			// beta via the user object cast pattern used in the router
 			const betaUser = await createTestUser();
-			// The billing router casts ctx.user to UserWithMetadata to check beta
-			// We need to pass a user-like object with publicMetadata.beta = true
-			const betaUserWithMeta = {
-				...betaUser,
-				publicMetadata: { beta: true },
-			} as unknown as User;
-			const betaCaller = await createTestCaller(
-				betaUser.clerkId,
-				betaUserWithMeta,
-				{ has: () => false },
-			);
+			const betaCaller = await createTestCaller(betaUser.clerkId, betaUser, {
+				has: ({ feature }: { feature?: string }) => feature === "beta_access",
+			});
 			const result = await betaCaller.billing.getUsage();
 
 			expect(result.chat.limit).toBeNull();
