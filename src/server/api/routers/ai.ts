@@ -63,7 +63,7 @@ export const aiRouter = createTRPCRouter({
 	createConversation: requireFeature(FEATURE_AI_CHAT)
 		.input(
 			z.object({
-				mode: z.enum(["chat", "report"]),
+				mode: z.enum(["chat"]),
 				initialPrompt: z.string().optional(),
 			}),
 		)
@@ -476,13 +476,17 @@ export const aiRouter = createTRPCRouter({
 					try {
 						const current = await ctx.db.query.aiReports.findFirst({
 							where: eq(aiReports.id, createdReportId),
-							columns: { status: true },
+							columns: { status: true, conversationId: true },
 						});
-						if (current?.status !== "complete") {
+						if (current && current.status !== "complete") {
 							await ctx.db
 								.update(aiReports)
 								.set({ status: "failed" })
 								.where(eq(aiReports.id, createdReportId));
+							await ctx.db
+								.update(aiConversations)
+								.set({ status: "active" })
+								.where(eq(aiConversations.id, current.conversationId));
 						}
 					} catch {
 						console.error("Failed to mark orphaned report as failed");

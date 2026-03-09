@@ -96,6 +96,7 @@ function useResetTimeLabel(enabled: boolean): string {
 	);
 	useEffect(() => {
 		if (!enabled) return;
+		setLabel(`Resets in ${getTimeUntilMidnightUTC()}`);
 		const id = setInterval(() => {
 			setLabel(`Resets in ${getTimeUntilMidnightUTC()}`);
 		}, 60_000);

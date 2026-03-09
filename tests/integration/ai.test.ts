@@ -121,14 +121,14 @@ describe("ai router", () => {
 			expect(conversation.status).toBe("active");
 		});
 
-		it("should create a conversation in report mode", async () => {
+		it("should create a conversation with initialPrompt", async () => {
 			const conversation = await caller.ai.createConversation({
-				mode: "report",
+				mode: "chat",
 				initialPrompt: "Analyze my trading performance",
 			});
 
 			expect(conversation).toBeDefined();
-			expect(conversation.mode).toBe("report");
+			expect(conversation.mode).toBe("chat");
 			expect(conversation.model).toBe(DEFAULT_CHAT_MODEL);
 			expect(conversation.initialPrompt).toBe("Analyze my trading performance");
 		});
