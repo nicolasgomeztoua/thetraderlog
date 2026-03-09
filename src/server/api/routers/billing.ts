@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import { getEffectivePlan, type UserWithMetadata } from "@/lib/billing/utils";
+import { getEffectivePlan } from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
@@ -198,13 +198,12 @@ export async function decrementReportUsage(
 
 export const billingRouter = createTRPCRouter({
 	getCurrentPlan: protectedProcedure.query(({ ctx }) => {
-		const userMeta = ctx.user as unknown as UserWithMetadata;
 		const isBeta =
 			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 		const effectivePlan = ctx.clerkAuth
 			? isBeta
 				? PLAN_PRO
-				: getEffectivePlan(ctx.clerkAuth, userMeta)
+				: getEffectivePlan(ctx.clerkAuth)
 			: PLAN_FREE;
 		const metadata = PLAN_METADATA[effectivePlan];
 

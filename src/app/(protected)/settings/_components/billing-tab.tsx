@@ -90,16 +90,17 @@ function UsageMeter({
 	);
 }
 
-function useResetTimeLabel(): string {
+function useResetTimeLabel(enabled: boolean): string {
 	const [label, setLabel] = useState(
 		() => `Resets in ${getTimeUntilMidnightUTC()}`,
 	);
 	useEffect(() => {
+		if (!enabled) return;
 		const id = setInterval(() => {
 			setLabel(`Resets in ${getTimeUntilMidnightUTC()}`);
 		}, 60_000);
 		return () => clearInterval(id);
-	}, []);
+	}, [enabled]);
 	return label;
 }
 
@@ -110,7 +111,6 @@ function getResetDateLabel(): string {
 export function BillingTab() {
 	const { isLoaded: clerkLoaded } = useAuth();
 	const { openUserProfile } = useClerk();
-	const resetTimeLabel = useResetTimeLabel();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
 
 	const plan = planQuery.data;
@@ -121,10 +121,11 @@ export function BillingTab() {
 
 	const isProUser = effectivePlan === PLAN_PRO;
 	const isStarterUser = effectivePlan === PLAN_STARTER;
-	const hasPaidPlan = isProUser || isStarterUser || isBeta;
+	const hasPaidPlan = isProUser || isStarterUser;
 
+	const resetTimeLabel = useResetTimeLabel(isProUser);
 	const usageQuery = api.billing.getUsage.useQuery(undefined, {
-		enabled: isProUser || isBeta,
+		enabled: isProUser,
 	});
 	const usage = usageQuery.data;
 
@@ -255,7 +256,7 @@ export function BillingTab() {
 			</Card>
 
 			{/* Usage Meters Card - shown for Pro users and beta */}
-			{(isProUser || isBeta) && usageQuery.isLoading && (
+			{isProUser && usageQuery.isLoading && (
 				<Card data-testid="billing-usage-card-loading">
 					<CardHeader className="p-4 sm:p-6">
 						<Skeleton className="h-5 w-24" />
@@ -273,7 +274,7 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			)}
-			{(isProUser || isBeta) && usageQuery.isError && (
+			{isProUser && usageQuery.isError && (
 				<Card data-testid="billing-usage-card-error">
 					<CardContent className="p-6 text-center font-mono text-muted-foreground text-sm">
 						Failed to load usage data.{" "}
@@ -287,7 +288,7 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			)}
-			{(isProUser || isBeta) && usage && (
+			{isProUser && usage && (
 				<Card data-testid="billing-usage-card">
 					<CardHeader className="p-4 sm:p-6">
 						<CardTitle className="flex items-center gap-2">
