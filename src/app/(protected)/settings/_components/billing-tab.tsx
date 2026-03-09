@@ -19,6 +19,7 @@ import {
 	getTimeUntilMidnightUTC,
 } from "@/lib/billing/utils";
 import {
+	FEATURE_AI_CHAT,
 	PLAN_FREE,
 	PLAN_METADATA,
 	PLAN_PRO,
@@ -110,9 +111,14 @@ function getResetDateLabel(): string {
 }
 
 export function BillingTab() {
-	const { isLoaded: clerkLoaded } = useAuth();
+	const { isLoaded: clerkLoaded, has } = useAuth();
 	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
+
+	// Gate usageQuery on Clerk's client-side feature check so it fires in
+	// parallel with planQuery instead of waiting for planQuery to resolve.
+	const hasAiFeature =
+		clerkLoaded && (has?.({ feature: FEATURE_AI_CHAT }) ?? false);
 
 	const plan = planQuery.data;
 	const isLoading = !clerkLoaded || planQuery.isLoading;
@@ -126,7 +132,7 @@ export function BillingTab() {
 
 	const resetTimeLabel = useResetTimeLabel(isProUser);
 	const usageQuery = api.billing.getUsage.useQuery(undefined, {
-		enabled: isProUser,
+		enabled: hasAiFeature,
 	});
 	const usage = usageQuery.data;
 
