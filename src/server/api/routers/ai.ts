@@ -801,10 +801,21 @@ export const aiRouter = createTRPCRouter({
 				token,
 			});
 
-			await ctx.db
-				.update(aiReports)
-				.set({ pdfTaskId: handle.id })
-				.where(eq(aiReports.id, input.reportId));
+			try {
+				await ctx.db
+					.update(aiReports)
+					.set({ pdfTaskId: handle.id })
+					.where(eq(aiReports.id, input.reportId));
+			} catch (dbErr) {
+				try {
+					await runs.cancel(handle.id);
+				} catch {
+					console.error(
+						"Failed to cancel PDF run after DB update failure",
+					);
+				}
+				throw dbErr;
+			}
 
 			return { runId: handle.id };
 		}),
