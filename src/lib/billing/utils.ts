@@ -12,7 +12,7 @@ export function getTimeUntilMidnightUTC(): string {
 	const diffMs = midnight.getTime() - now.getTime();
 	const diffMinutes = Math.max(1, Math.ceil(diffMs / (1000 * 60)));
 	if (diffMinutes >= 60) {
-		return `${Math.ceil(diffMinutes / 60)}h`;
+		return `${Math.floor(diffMinutes / 60)}h`;
 	}
 	return `${diffMinutes}m`;
 }

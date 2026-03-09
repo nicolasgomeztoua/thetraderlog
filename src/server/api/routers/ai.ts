@@ -226,6 +226,10 @@ export const aiRouter = createTRPCRouter({
 						.where(eq(aiConversations.id, input.conversationId));
 				}
 
+				if (!savedMessage) {
+					throw new Error(ERR_MESSAGE_SAVE_FAILED);
+				}
+
 				return savedMessage;
 			} catch (error) {
 				// Validation is done before increment, so errors here are from
