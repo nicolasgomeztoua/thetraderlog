@@ -3,6 +3,7 @@
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { CreditCard, Settings, Zap } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,8 +90,17 @@ function UsageMeter({
 	);
 }
 
-function getResetTimeLabel(): string {
-	return `Resets in ${getTimeUntilMidnightUTC()}`;
+function useResetTimeLabel(): string {
+	const [label, setLabel] = useState(
+		() => `Resets in ${getTimeUntilMidnightUTC()}`,
+	);
+	useEffect(() => {
+		const id = setInterval(() => {
+			setLabel(`Resets in ${getTimeUntilMidnightUTC()}`);
+		}, 60_000);
+		return () => clearInterval(id);
+	}, []);
+	return label;
 }
 
 function getResetDateLabel(): string {
@@ -100,6 +110,7 @@ function getResetDateLabel(): string {
 export function BillingTab() {
 	const { isLoaded: clerkLoaded } = useAuth();
 	const { openUserProfile } = useClerk();
+	const resetTimeLabel = useResetTimeLabel();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
 
 	const plan = planQuery.data;
@@ -291,7 +302,7 @@ export function BillingTab() {
 						<UsageMeter
 							label="AI Chat Messages"
 							limit={usage.chat.limit}
-							resetLabel={getResetTimeLabel()}
+							resetLabel={resetTimeLabel}
 							testId="billing-usage-chat"
 							used={usage.chat.used}
 						/>

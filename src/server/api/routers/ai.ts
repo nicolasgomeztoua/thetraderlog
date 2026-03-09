@@ -122,13 +122,15 @@ export const aiRouter = createTRPCRouter({
 			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
 			const isUnlimited =
 				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
-			const { date: usageDate } = await incrementAndCheckChatUsage(
-				ctx.db,
-				ctx.user.id,
-				isUnlimited,
-			);
 
+			let usageDate: string | undefined;
 			try {
+				const usage = await incrementAndCheckChatUsage(
+					ctx.db,
+					ctx.user.id,
+					isUnlimited,
+				);
+				usageDate = usage.date;
 				// Save user message
 				const [userMessage] = await ctx.db
 					.insert(aiMessages)
@@ -232,12 +234,13 @@ export const aiRouter = createTRPCRouter({
 
 				return savedMessage;
 			} catch (error) {
-				// Validation is done before increment, so errors here are from
-				// AI calls or DB writes — always roll back the daily quota.
-				try {
-					await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
-				} catch {
-					console.error("Failed to rollback chat usage after error");
+				// Roll back the daily quota if it was successfully incremented.
+				if (usageDate) {
+					try {
+						await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
+					} catch {
+						console.error("Failed to rollback chat usage after error");
+					}
 				}
 				throw error;
 			}
@@ -350,13 +353,20 @@ export const aiRouter = createTRPCRouter({
 			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
 			const isUnlimited =
 				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
-			const { month: usageMonth, year: usageYear } =
-				await incrementAndCheckReportUsage(ctx.db, ctx.user.id, isUnlimited);
 
+			let usageMonth: number | undefined;
+			let usageYear: number | undefined;
 			let createdReportId: string | null = null;
 			let triggerHandleId: string | null = null;
 
 			try {
+				const usage = await incrementAndCheckReportUsage(
+					ctx.db,
+					ctx.user.id,
+					isUnlimited,
+				);
+				usageMonth = usage.month;
+				usageYear = usage.year;
 				const model = DEFAULT_REPORT_MODEL;
 				const title =
 					input.title ??
@@ -446,15 +456,17 @@ export const aiRouter = createTRPCRouter({
 					}
 				}
 
-				try {
-					await decrementReportUsage(
-						ctx.db,
-						ctx.user.id,
-						usageMonth,
-						usageYear,
-					);
-				} catch {
-					console.error("Failed to rollback report usage after error");
+				if (usageMonth !== undefined && usageYear !== undefined) {
+					try {
+						await decrementReportUsage(
+							ctx.db,
+							ctx.user.id,
+							usageMonth,
+							usageYear,
+						);
+					} catch {
+						console.error("Failed to rollback report usage after error");
+					}
 				}
 
 				// Mark orphaned report as "failed" so retryReport can recover it,
@@ -639,19 +651,18 @@ export const aiRouter = createTRPCRouter({
 				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 			let usageMonth: number | undefined;
 			let usageYear: number | undefined;
-			if (!alreadyConsumedQuota) {
-				const usage = await incrementAndCheckReportUsage(
-					ctx.db,
-					ctx.user.id,
-					isUnlimited,
-				);
-				usageMonth = usage.month;
-				usageYear = usage.year;
-			}
 
 			let retryTriggerHandleId: string | null = null;
-			// All DB reads and writes are inside try so decrementReportUsage runs on any failure
 			try {
+				if (!alreadyConsumedQuota) {
+					const usage = await incrementAndCheckReportUsage(
+						ctx.db,
+						ctx.user.id,
+						isUnlimited,
+					);
+					usageMonth = usage.month;
+					usageYear = usage.year;
+				}
 				// Fetch conversation for date range fields
 				const conversation = await ctx.db.query.aiConversations.findFirst({
 					where: eq(aiConversations.id, report.conversationId),

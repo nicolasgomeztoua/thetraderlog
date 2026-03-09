@@ -2,7 +2,7 @@ import { PLAN_FREE, PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
 
 /**
  * Returns the time until midnight UTC as a human-readable label.
- * Shows hours when >= 1h, otherwise shows minutes.
+ * Shows hours + minutes when >= 1h, otherwise shows minutes only.
  */
 export function getTimeUntilMidnightUTC(): string {
 	const now = new Date();
@@ -10,11 +10,13 @@ export function getTimeUntilMidnightUTC(): string {
 	midnight.setUTCDate(midnight.getUTCDate() + 1);
 	midnight.setUTCHours(0, 0, 0, 0);
 	const diffMs = midnight.getTime() - now.getTime();
-	const diffMinutes = Math.max(1, Math.ceil(diffMs / (1000 * 60)));
-	if (diffMinutes >= 60) {
-		return `${Math.floor(diffMinutes / 60)}h`;
+	const totalMinutes = Math.max(1, Math.ceil(diffMs / (1000 * 60)));
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = totalMinutes % 60;
+	if (hours >= 1) {
+		return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 	}
-	return `${diffMinutes}m`;
+	return `${totalMinutes}m`;
 }
 
 /**
