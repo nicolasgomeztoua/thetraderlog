@@ -496,10 +496,25 @@ wait_for_greptile() {
 }
 
 # --- Helper: Post @greptileai tag to trigger a fresh re-review ---
+# Includes context about what was fixed and the score target.
 trigger_greptile_review() {
-    echo -e "${YELLOW}Tagging @greptileai for re-review...${NC}"
+    local current_score="${1:-0}"
+    local fix_summary="${2:-}"
+
+    local retag_body="@greptileai Please re-review this PR. All concerns from your previous ${current_score}/5 review have been addressed."
+    if [ -n "$fix_summary" ]; then
+        retag_body="$retag_body
+
+**Fixes applied:**
+$fix_summary"
+    fi
+    retag_body="$retag_body
+
+Please focus your review on whether the outstanding issues have been resolved and update the Confidence Score accordingly. Target: 5/5."
+
+    echo -e "${YELLOW}Tagging @greptileai for re-review (current: ${current_score}/5)...${NC}"
     gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-        -f body="@greptileai" \
+        -f body="$retag_body" \
         >/dev/null 2>&1 || echo -e "${RED}Warning: failed to tag @greptileai${NC}"
 }
 
@@ -573,7 +588,15 @@ SUMMARYEOF
 
         # 2e. Invoke Claude to fix issues
         echo -e "${YELLOW}Invoking Claude to address review feedback...${NC}"
+        FIX_SUMMARY_FILE="$SCRIPT_DIR/.fix-summary.md"
         OUTPUT=$(cd "$PROJECT_ROOT" && cat "$SCRIPT_DIR/pr-review-prompt.md" | claude --dangerously-skip-permissions -p 2>&1 | tee /dev/stderr) || true
+
+        # Extract fix summary from Claude's output (last paragraph or bullet list)
+        # Claude's pr-review-prompt writes a summary to .fix-summary.md
+        FIX_SUMMARY=""
+        if [ -f "$FIX_SUMMARY_FILE" ]; then
+            FIX_SUMMARY=$(cat "$FIX_SUMMARY_FILE")
+        fi
 
         # 2f. Mark inline comments as processed
         if [ -n "$NEW_COMMENTS" ]; then
@@ -587,8 +610,8 @@ SUMMARYEOF
             break
         fi
 
-        # 2g. Tag @greptileai to trigger re-review
-        trigger_greptile_review
+        # 2g. Tag @greptileai to trigger re-review with context
+        trigger_greptile_review "$GREPTILE_SCORE" "$FIX_SUMMARY"
 
         # 2h. Wait for Greptile to update its summary
         if ! wait_for_greptile "$local_prev_hash"; then
