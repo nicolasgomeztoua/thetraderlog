@@ -518,6 +518,19 @@ Please focus your review on whether the outstanding issues have been resolved an
         >/dev/null 2>&1 || echo -e "${RED}Warning: failed to tag @greptileai${NC}"
 }
 
+# --- Helper: Fetch ALL Greptile comments (issue + inline), most recent first ---
+fetch_all_greptile_comments() {
+    local issue_comments inline_comments
+    issue_comments=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
+        --jq '[.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, created_at: .created_at, type: "issue"}]' \
+        2>/dev/null || echo "[]")
+    inline_comments=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" \
+        --jq '[.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, path: .path, line: .line, created_at: .created_at, type: "inline"}]' \
+        2>/dev/null || echo "[]")
+    # Merge and sort by created_at descending
+    echo "$issue_comments $inline_comments" | jq -s 'add | sort_by(.created_at) | reverse'
+}
+
 # --- Phase 4 Main Loop ---
 
 # Step 1: Wait for Greptile's initial summary (no fixed 8-min wait)
@@ -525,7 +538,8 @@ echo -e "${YELLOW}Waiting for Greptile's initial review...${NC}"
 if ! wait_for_greptile ""; then
     echo -e "${RED}Greptile didn't respond in time. Skipping review loop.${NC}"
 else
-    # Step 2: Score-driven review loop
+    REVIEW_APPROVED=false
+
     for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
         echo ""
         echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
@@ -535,16 +549,11 @@ else
         # 2a. Check if we've hit 5/5
         if [ "$GREPTILE_SCORE" -ge 5 ]; then
             echo -e "${GREEN}Confidence Score: 5/5! Safe to merge.${NC}"
+            REVIEW_APPROVED=true
             break
         fi
 
-        # 2b. Save summary hash for later comparison
-        local_prev_hash=""
-        if [ -n "$SUMMARY_BODY" ]; then
-            local_prev_hash=$(echo "$SUMMARY_BODY" | md5)
-        fi
-
-        # 2c. Fetch inline PR review comments from Greptile, filter to unprocessed
+        # 2b. Fetch inline PR review comments from Greptile, filter to unprocessed
         GREPTILE_COMMENTS=$(gh api \
             "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" \
             --jq '.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, path: .path, line: .line, commit_id: .commit_id}' \
@@ -560,20 +569,20 @@ else
         done <<< "$GREPTILE_COMMENTS"
         NEW_COMMENTS=$(echo "$NEW_COMMENTS" | sed '/^$/d')
 
-        # 2d. Prepare context for Claude
+        # 2c. Prepare context for Claude
         COMMENTS_FILE="$SCRIPT_DIR/.greptile-comments.json"
         SUMMARY_CONTEXT_FILE="$SCRIPT_DIR/.greptile-summary-context.md"
+        GREPTILE_RESPONSE_FILE="$SCRIPT_DIR/.greptile-latest-response.md"
 
         if [ -n "$NEW_COMMENTS" ]; then
             COMMENT_COUNT=$(echo "$NEW_COMMENTS" | grep -c '^{' || echo "0")
             echo -e "${GREEN}Found $COMMENT_COUNT new inline comment(s).${NC}"
             echo "$NEW_COMMENTS" | jq -s '.' > "$COMMENTS_FILE"
-            # Clear summary context — inline comments take priority
             echo "" > "$SUMMARY_CONTEXT_FILE"
+            echo "" > "$GREPTILE_RESPONSE_FILE"
         else
             echo -e "${YELLOW}No new inline comments, but score is ${GREPTILE_SCORE}/5.${NC}"
             echo -e "${YELLOW}Passing summary as context for proactive fixes.${NC}"
-            # No inline comments — write summary body as context for Claude
             echo "[]" > "$COMMENTS_FILE"
             cat > "$SUMMARY_CONTEXT_FILE" <<SUMMARYEOF
 # Greptile Summary Review (Score: ${GREPTILE_SCORE}/5)
@@ -584,21 +593,20 @@ The Greptile reviewer gave this PR a score of **${GREPTILE_SCORE}/5**. There are
 
 $SUMMARY_BODY
 SUMMARYEOF
+            echo "" > "$GREPTILE_RESPONSE_FILE"
         fi
 
-        # 2e. Invoke Claude to fix issues
+        # 2d. Invoke Claude to fix issues
         echo -e "${YELLOW}Invoking Claude to address review feedback...${NC}"
         FIX_SUMMARY_FILE="$SCRIPT_DIR/.fix-summary.md"
         OUTPUT=$(cd "$PROJECT_ROOT" && cat "$SCRIPT_DIR/pr-review-prompt.md" | claude --dangerously-skip-permissions -p 2>&1 | tee /dev/stderr) || true
 
-        # Extract fix summary from Claude's output (last paragraph or bullet list)
-        # Claude's pr-review-prompt writes a summary to .fix-summary.md
         FIX_SUMMARY=""
         if [ -f "$FIX_SUMMARY_FILE" ]; then
             FIX_SUMMARY=$(cat "$FIX_SUMMARY_FILE")
         fi
 
-        # 2f. Mark inline comments as processed
+        # 2e. Mark inline comments as processed
         if [ -n "$NEW_COMMENTS" ]; then
             echo "$NEW_COMMENTS" | jq -r '.id' >> "$PROCESSED_COMMENTS_FILE"
         fi
@@ -610,22 +618,93 @@ SUMMARYEOF
             break
         fi
 
-        # 2g. Tag @greptileai to trigger re-review with context
-        trigger_greptile_review "$GREPTILE_SCORE" "$FIX_SUMMARY"
+        # 2f. Post conversational follow-up (NOT a full re-scan tag)
+        echo -e "${YELLOW}Asking Greptile if concerns are resolved...${NC}"
+        FOLLOWUP_BODY="@greptileai All concerns from your ${GREPTILE_SCORE}/5 review have been addressed."
+        if [ -n "$FIX_SUMMARY" ]; then
+            FOLLOWUP_BODY="$FOLLOWUP_BODY
 
-        # 2h. Wait for Greptile to update its summary
-        if ! wait_for_greptile "$local_prev_hash"; then
-            echo -e "${RED}Greptile didn't respond after fixes. Exiting review loop.${NC}"
+**Fixes applied:**
+$FIX_SUMMARY"
+        fi
+        FOLLOWUP_BODY="$FOLLOWUP_BODY
+
+Are there any remaining concerns with this PR, or is it ready to merge?"
+
+        gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
+            -f body="$FOLLOWUP_BODY" \
+            >/dev/null 2>&1 || echo -e "${RED}Warning: failed to post follow-up${NC}"
+
+        # 2g. Wait for Greptile's conversational reply
+        local_prev_hash=""
+        if [ -n "$SUMMARY_BODY" ]; then
+            local_prev_hash=$(echo "$SUMMARY_BODY" | md5)
+        fi
+
+        echo -e "${YELLOW}Waiting for Greptile's response...${NC}"
+        GREPTILE_REPLIED=false
+        waited=0
+        LATEST_RESPONSE=""
+        while [ "$waited" -lt "$POLL_MAX_WAIT" ]; do
+            # Check for any new Greptile comment (issue or inline) since our follow-up
+            LATEST_RESPONSE=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
+                --jq '[.[] | select(.user.login | test("greptile"; "i"))] | sort_by(.created_at) | last | .body // ""' \
+                2>/dev/null || echo "")
+
+            # Check if this is a new response (not our follow-up echoed back)
+            if [ -n "$LATEST_RESPONSE" ] && ! echo "$LATEST_RESPONSE" | grep -q "Are there any remaining concerns"; then
+                # Check if it's newer than our follow-up by comparing content
+                local curr_hash=$(echo "$LATEST_RESPONSE" | md5)
+                if [ "$curr_hash" != "$local_prev_hash" ]; then
+                    echo -e "${GREEN}Greptile responded!${NC}"
+                    GREPTILE_REPLIED=true
+                    break
+                fi
+            fi
+
+            sleep "$POLL_INTERVAL"
+            waited=$((waited + POLL_INTERVAL))
+            echo -e "  ${CYAN}... waited ${waited}s${NC}"
+        done
+
+        if [ "$GREPTILE_REPLIED" = false ]; then
+            echo -e "${RED}Greptile didn't respond in time. Exiting review loop.${NC}"
             break
         fi
 
-        # Score was updated by wait_for_greptile → fetch_greptile_summary
-        # Loop continues to check the new score at the top
+        # 2h. Save Greptile's response and let Claude decide if we're done
+        echo "$LATEST_RESPONSE" > "$GREPTILE_RESPONSE_FILE"
+
+        # Also update summary/score if this was a full summary
+        if echo "$LATEST_RESPONSE" | grep -q "Confidence Score"; then
+            SUMMARY_BODY="$LATEST_RESPONSE"
+            local score_str
+            score_str=$(echo "$LATEST_RESPONSE" | grep -oE 'Confidence Score: [0-9]+/5' | head -1 || echo "")
+            if [ -n "$score_str" ]; then
+                GREPTILE_SCORE=$(echo "$score_str" | grep -oE '[0-9]+' | head -1)
+            fi
+        fi
+
+        # 2i. Let Claude evaluate Greptile's response and decide: continue or exit
+        echo -e "${YELLOW}Evaluating Greptile's response...${NC}"
+        EVAL_OUTPUT=$(cd "$PROJECT_ROOT" && cat "$SCRIPT_DIR/evaluate-review-prompt.md" | claude --dangerously-skip-permissions -p 2>&1 | tee /dev/stderr) || true
+
+        # Check for the exit signal from Claude
+        if echo "$EVAL_OUTPUT" | grep -q "<review_status>APPROVED</review_status>"; then
+            echo -e "${GREEN}Claude determined Greptile has approved the PR!${NC}"
+            REVIEW_APPROVED=true
+            break
+        else
+            echo -e "${YELLOW}Greptile has remaining concerns. Continuing...${NC}"
+            # Loop continues — next cycle will fix the new concerns
+        fi
     done
 fi
 
 # Summary
-if [ "$GREPTILE_SCORE" -ge 5 ]; then
+if [ "$REVIEW_APPROVED" = true ]; then
+    echo -e "${GREEN}PR review approved! Safe to merge.${NC}"
+elif [ "$GREPTILE_SCORE" -ge 5 ]; then
     echo -e "${GREEN}PR achieved Confidence Score 5/5!${NC}"
 else
     echo -e "${YELLOW}Review loop ended with score: ${GREPTILE_SCORE}/5${NC}"
