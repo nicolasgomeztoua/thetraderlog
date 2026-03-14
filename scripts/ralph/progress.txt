@@ -64,3 +64,17 @@ Started: Sat Mar 14 16:20:39 WET 2026
   - The router is a thin layer — it just validates input and delegates to service functions. When the service layer handles complexity internally (like base interval mapping), the router needs no changes.
   - Pre-existing Biome errors (4 errors, 2 warnings) are unrelated to market data work and exist in ai.ts, billing test, and archive JSON files
 ---
+
+## 2026-03-14 - US-006
+- Added structured console.info logging with `[market-data]` prefix to `getOHLCBars` in `src/lib/market-data/service.ts`
+- Four log types implemented:
+  - Cache hit (historical): `[market-data] cache hit: ES 1min 2024-12-15 (387 bars)`
+  - Cache miss (new fetch): `[market-data] cache miss: ES 1min 2024-12-15 → fetching from Databento`
+  - Smart refresh (same-day re-fetch): `[market-data] cache refresh: ES 1min 2024-03-14 (was 240 bars → now 387 bars)`
+  - Derived interval aggregation: `[market-data] aggregating: ES 1min → 5min (387 → 78 bars)`
+- No external dependencies — plain console.info with greppable prefix
+- Files changed: `src/lib/market-data/service.ts`
+- **Learnings for future iterations:**
+  - Use `cached.barCount` from DB instead of re-parsing `cached.bars` JSON to get bar count — avoids double parse and handles corrupted entries safely
+  - Aggregation logging fires on both cache hit and API fetch paths when interval !== baseInterval
+---

@@ -155,7 +155,16 @@ export async function getOHLCBars(
 			// For historical dates, return cached data immediately
 			// For today's date, check staleness
 			if (!isCacheStale(dateKey, lastBarAt)) {
+				const dateStr = dateKey.toISOString().split("T")[0];
+				console.info(
+					`[market-data] cache hit: ${symbol} ${baseInterval} ${dateStr} (${bars.length} bars)`,
+				);
 				const aggregatedBars = aggregateBars(bars, interval);
+				if (interval !== baseInterval) {
+					console.info(
+						`[market-data] aggregating: ${symbol} ${baseInterval} → ${interval} (${bars.length} → ${aggregatedBars.length} bars)`,
+					);
+				}
 				return { bars: aggregatedBars, source: "cache", dataQuality: "full" };
 			}
 			// Same-day stale entry — fall through to re-fetch
@@ -174,6 +183,16 @@ export async function getOHLCBars(
 	}
 
 	// 2. Cache MISS or stale — fetch base interval from API
+	const dateStr = dateKey.toISOString().split("T")[0];
+	if (cached) {
+		console.info(
+			`[market-data] cache refresh: ${symbol} ${baseInterval} ${dateStr} (stale, re-fetching)`,
+		);
+	} else {
+		console.info(
+			`[market-data] cache miss: ${symbol} ${baseInterval} ${dateStr} → fetching from Databento`,
+		);
+	}
 	const apiResult = await fetchFromProvider(symbol, baseInterval, dateKey);
 
 	if (!apiResult.success || apiResult.bars.length === 0) {
@@ -208,8 +227,20 @@ export async function getOHLCBars(
 		// Cache write failed - continue with API results
 	}
 
+	// Log refresh result with bar count comparison
+	if (cached) {
+		console.info(
+			`[market-data] cache refresh: ${symbol} ${baseInterval} ${dateStr} (was ${cached.barCount} bars → now ${apiResult.bars.length} bars)`,
+		);
+	}
+
 	// 4. Aggregate base interval bars to requested interval
 	const aggregatedBars = aggregateBars(apiResult.bars, interval);
+	if (interval !== baseInterval) {
+		console.info(
+			`[market-data] aggregating: ${symbol} ${baseInterval} → ${interval} (${apiResult.bars.length} → ${aggregatedBars.length} bars)`,
+		);
+	}
 
 	return {
 		bars: aggregatedBars,
