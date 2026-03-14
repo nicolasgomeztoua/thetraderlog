@@ -1,4 +1,4 @@
-import { PLAN_FREE, PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
+import { PLAN_NONE, PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
 
 /**
  * Returns the time until midnight UTC as a human-readable label.
@@ -111,5 +111,5 @@ export function getEffectivePlan(auth: AuthWithHas): string {
 		return PLAN_STARTER;
 	}
 
-	return PLAN_FREE;
+	return PLAN_NONE;
 }

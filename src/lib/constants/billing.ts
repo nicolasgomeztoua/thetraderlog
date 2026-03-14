@@ -2,9 +2,12 @@
 // PLAN SLUGS (must match Clerk dashboard plan identifiers)
 // =============================================================================
 
-export const PLAN_FREE = "free";
+export const PLAN_NONE = "none";
 export const PLAN_STARTER = "starter";
 export const PLAN_PRO = "pro";
+
+/** @deprecated Use PLAN_NONE instead. Will be removed in US-011. */
+export const PLAN_FREE = PLAN_NONE;
 
 // =============================================================================
 // FEATURE SLUGS (must match Clerk dashboard feature identifiers)
@@ -44,16 +47,12 @@ export interface PlanMetadata {
 }
 
 export const PLAN_METADATA: Record<string, PlanMetadata> = {
-	[PLAN_FREE]: {
-		slug: PLAN_FREE,
-		name: "Free",
+	[PLAN_NONE]: {
+		slug: PLAN_NONE,
+		name: "No Plan",
 		price: "$0",
-		description: "Get started with basic trade tracking",
-		features: [
-			"View existing trades & analytics",
-			"Basic dashboard access",
-			"Community support",
-		],
+		description: "No active subscription",
+		features: [],
 	},
 	[PLAN_STARTER]: {
 		slug: PLAN_STARTER,
