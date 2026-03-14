@@ -88,10 +88,13 @@ describe("billing router", () => {
 			expect(result.reports.limit).toBe(AI_REPORTS_MONTHLY_LIMIT);
 		});
 
-		it("should return null limits for beta user", async () => {
+		it("should return null limits for beta user (via publicMetadata)", async () => {
 			const betaUser = await createTestUser();
 			const betaCaller = await createTestCaller(betaUser.clerkId, betaUser, {
-				has: ({ feature }: { feature?: string }) => feature === "beta_access",
+				has: () => false,
+				sessionClaims: {
+					metadata: { features: { beta_access: true } },
+				},
 			});
 			const result = await betaCaller.billing.getUsage();
 

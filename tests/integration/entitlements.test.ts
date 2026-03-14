@@ -16,6 +16,7 @@ import {
 	FEATURE_TRADE_MANAGEMENT,
 } from "@/lib/constants/billing";
 import { ERR_FEATURE_NOT_AVAILABLE } from "@/lib/constants/errors";
+import type { ClerkAuthLike } from "@/server/api/trpc";
 import type { Account, User } from "@/server/db/schema";
 import {
 	createTestCaller,
@@ -114,8 +115,8 @@ describe("entitlement gates", () => {
 
 	describe("ai.sendMessage", () => {
 		it("should reject users without ai_chat feature", async () => {
-			// First create a conversation (createConversation uses protectedProcedure, not gated)
-			const conversation = await noAccessCaller.ai.createConversation({
+			// createConversation also requires ai_chat, so create with full access first
+			const conversation = await fullAccessCaller.ai.createConversation({
 				mode: "chat",
 			});
 
@@ -317,21 +318,26 @@ describe("entitlement gates", () => {
 	// BETA USER BYPASS
 	// =========================================================================
 
-	describe("beta user bypass", () => {
+	describe("beta user bypass (via publicMetadata)", () => {
 		let betaCaller: TestCaller;
+
+		/**
+		 * ClerkAuth that grants beta via sessionClaims.metadata (publicMetadata)
+		 * but denies all features/plans via has() — proving beta truly bypasses gates.
+		 */
+		const BETA_AUTH: ClerkAuthLike = {
+			has: () => false,
+			sessionClaims: {
+				metadata: { features: { beta_access: true } },
+			},
+		};
 
 		beforeAll(async () => {
 			const betaUser = await createTestUser({ name: "Beta Tester" });
-			const betaUserWithMeta = {
-				...betaUser,
-				publicMetadata: { beta: true },
-			} as unknown as User;
-			// In production, Clerk grants all features to beta users server-side.
-			// In tests, we simulate this with FULL_ACCESS_AUTH + beta metadata.
 			betaCaller = await createTestCaller(
 				betaUser.clerkId,
-				betaUserWithMeta,
-				FULL_ACCESS_AUTH,
+				betaUser,
+				BETA_AUTH,
 			);
 		});
 
