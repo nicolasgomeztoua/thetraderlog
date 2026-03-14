@@ -144,7 +144,7 @@ describe("billing router", () => {
 
 			const yesterday = new Date();
 			yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-			const yesterdayStr = yesterday.toISOString().split("T")[0]!;
+			const yesterdayStr = yesterday.toISOString().split("T")[0] ?? "";
 
 			// Seed yesterday's row at the limit
 			await db.insert(schema.aiUsage).values({

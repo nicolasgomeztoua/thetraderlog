@@ -6,7 +6,6 @@ export const PLAN_NONE = "none";
 export const PLAN_STARTER = "starter";
 export const PLAN_PRO = "pro";
 
-
 // =============================================================================
 // FEATURE SLUGS (must match Clerk dashboard feature identifiers)
 // =============================================================================
