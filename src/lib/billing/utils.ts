@@ -1,9 +1,4 @@
-import {
-	FEATURE_BETA_ACCESS,
-	PLAN_FREE,
-	PLAN_PRO,
-	PLAN_STARTER,
-} from "@/lib/constants/billing";
+import { PLAN_FREE, PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
 
 /**
  * Returns the time until midnight UTC as a human-readable label.
@@ -42,6 +37,7 @@ export function getNextMonthResetDate(): string {
 /**
  * Minimal interface for Clerk's auth object (server-side or client-side).
  * Accepts any object with a has() method matching Clerk's signature.
+ * sessionClaims.metadata carries publicMetadata for beta detection.
  */
 export interface AuthWithHas {
 	has: (params: {
@@ -50,6 +46,9 @@ export interface AuthWithHas {
 		permission?: string;
 		role?: string;
 	}) => boolean;
+	sessionClaims?: {
+		metadata?: Record<string, unknown>;
+	};
 }
 
 /**
@@ -66,12 +65,11 @@ export function isBetaFromMetadata(
 }
 
 /**
- * Checks if the auth session has beta access via the FEATURE_BETA_ACCESS flag.
+ * Checks if the auth session has beta access via publicMetadata (sessionClaims.metadata).
  * Beta users get full Pro access without a subscription.
- * @deprecated Use isBetaFromMetadata() instead. Will be removed in US-003.
  */
 export function isBetaAuth(auth: AuthWithHas): boolean {
-	return auth.has({ feature: FEATURE_BETA_ACCESS });
+	return isBetaFromMetadata(auth.sessionClaims?.metadata);
 }
 
 /**

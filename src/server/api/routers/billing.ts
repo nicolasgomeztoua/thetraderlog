@@ -1,11 +1,10 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import { getEffectivePlan } from "@/lib/billing/utils";
+import { getEffectivePlan, isBetaFromMetadata } from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
 	FEATURE_AI_CHAT,
-	FEATURE_BETA_ACCESS,
 	PLAN_FREE,
 	PLAN_METADATA,
 	PLAN_PRO,
@@ -198,8 +197,7 @@ export async function decrementReportUsage(
 
 export const billingRouter = createTRPCRouter({
 	getCurrentPlan: protectedProcedure.query(({ ctx }) => {
-		const isBeta =
-			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+		const isBeta = isBetaFromMetadata(ctx.clerkAuth?.sessionClaims?.metadata);
 		const effectivePlan = ctx.clerkAuth
 			? isBeta
 				? PLAN_PRO
@@ -215,8 +213,7 @@ export const billingRouter = createTRPCRouter({
 	}),
 
 	getUsage: protectedProcedure.query(async ({ ctx }) => {
-		const isBeta =
-			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+		const isBeta = isBetaFromMetadata(ctx.clerkAuth?.sessionClaims?.metadata);
 		const hasAiAccess =
 			isBeta || (ctx.clerkAuth?.has({ feature: FEATURE_AI_CHAT }) ?? false);
 		const today = getTodayDateString();

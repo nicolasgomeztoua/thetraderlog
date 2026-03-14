@@ -34,6 +34,9 @@ export interface ClerkAuthLike {
 		permission?: string;
 		role?: string;
 	}) => boolean;
+	sessionClaims?: {
+		metadata?: Record<string, unknown>;
+	};
 }
 
 export interface TRPCContextOverrides {
