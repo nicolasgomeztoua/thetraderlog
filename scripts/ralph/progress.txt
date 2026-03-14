@@ -105,3 +105,16 @@ Started: Sat Mar 14 16:20:39 WET 2026
   - Biome requires chained method calls to break across lines: `vi.spyOn(...).mockResolvedValue(...)` must use `.` on new lines
   - Pre-existing failure in `entitlements.test.ts` (1 test) is unrelated to market data work
 ---
+
+## 2026-03-14 - US-009
+- Created cleanup script at `scripts/cleanup-derived-cache.ts`
+- Deletes all candle_cache rows where interval is NOT `1min` or `1h` using Drizzle `notInArray`
+- Logs deletion count with `[cleanup]` prefix
+- Script creates its own DB connection from `DATABASE_URL` env var (doesn't import `@/env` or `@/server/db`)
+- Idempotent: safe to run multiple times, returns 0 deletions on subsequent runs
+- Files changed: `scripts/cleanup-derived-cache.ts`
+- **Learnings for future iterations:**
+  - Standalone scripts should create their own postgres connection rather than importing from `@/server/db` — avoids env validation and module resolution issues
+  - Use `notInArray` from drizzle-orm for clean "NOT IN" queries
+  - Drizzle's `.returning()` gives back deleted rows, useful for counting without a separate query
+---
