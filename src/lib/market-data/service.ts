@@ -82,7 +82,7 @@ function normalizeDateToUTC(date: Date): Date {
 /**
  * Check if a date is today in UTC
  */
-function isToday(date: Date): boolean {
+export function isToday(date: Date): boolean {
 	const now = new Date();
 	return (
 		date.getUTCFullYear() === now.getUTCFullYear() &&
@@ -94,14 +94,14 @@ function isToday(date: Date): boolean {
 /**
  * Staleness threshold for same-day cache entries (5 minutes)
  */
-const STALENESS_THRESHOLD_MS = 5 * 60 * 1000;
+export const STALENESS_THRESHOLD_MS = 5 * 60 * 1000;
 
 /**
  * Check if a same-day cache entry is stale and needs re-fetching.
  * Historical dates are never stale. Today's data is stale if lastBarAt
  * is more than 5 minutes old.
  */
-function isCacheStale(dateKey: Date, lastBarAt: Date | null): boolean {
+export function isCacheStale(dateKey: Date, lastBarAt: Date | null): boolean {
 	if (!isToday(dateKey)) return false;
 
 	const now = Date.now();
@@ -116,7 +116,7 @@ function isCacheStale(dateKey: Date, lastBarAt: Date | null): boolean {
  * Extract the lastBarAt timestamp from a bars array.
  * Returns the timestamp of the last bar, or null if empty.
  */
-function extractLastBarAt(bars: OHLCBar[]): Date | null {
+export function extractLastBarAt(bars: OHLCBar[]): Date | null {
 	if (bars.length === 0) return null;
 	const lastBar = bars[bars.length - 1];
 	if (!lastBar) return null;
@@ -419,7 +419,10 @@ function mapIntervalToDatabento(interval: string): string {
 /**
  * Aggregate 1-minute bars to larger intervals
  */
-function aggregateBars(bars: OHLCBar[], targetInterval: string): OHLCBar[] {
+export function aggregateBars(
+	bars: OHLCBar[],
+	targetInterval: string,
+): OHLCBar[] {
 	if (targetInterval === "1min" || targetInterval === "1h") return bars;
 
 	const intervalMinutes: Record<string, number> = {
