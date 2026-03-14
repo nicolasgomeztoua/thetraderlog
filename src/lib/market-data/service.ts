@@ -40,6 +40,18 @@ export interface CacheResult {
 
 export type CacheInterval = "1min" | "5min" | "15min" | "30min" | "1h" | "4h";
 
+/** Intervals that are actually stored in candle_cache (fetched from Databento) */
+export type BaseInterval = "1min" | "1h";
+
+/**
+ * Map a requested interval to its base interval for cache storage.
+ * 5min/15min/30min derive from 1min; 4h derives from 1h.
+ */
+function getBaseInterval(interval: CacheInterval): BaseInterval {
+	if (interval === "1h" || interval === "4h") return "1h";
+	return "1min";
+}
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -118,11 +130,14 @@ export async function getOHLCBars(
 ): Promise<CacheResult> {
 	const dateKey = normalizeDateToUTC(date);
 
-	// 1. Check cache first
+	// Map to base interval — only 1min and 1h are stored in cache
+	const baseInterval = getBaseInterval(interval);
+
+	// 1. Check cache first (always using base interval)
 	const cached = await db.query.candleCache.findFirst({
 		where: and(
 			eq(candleCache.symbol, symbol),
-			eq(candleCache.interval, interval),
+			eq(candleCache.interval, baseInterval),
 			eq(candleCache.date, dateKey),
 		),
 	});
@@ -140,7 +155,8 @@ export async function getOHLCBars(
 			// For historical dates, return cached data immediately
 			// For today's date, check staleness
 			if (!isCacheStale(dateKey, lastBarAt)) {
-				return { bars, source: "cache", dataQuality: "full" };
+				const aggregatedBars = aggregateBars(bars, interval);
+				return { bars: aggregatedBars, source: "cache", dataQuality: "full" };
 			}
 			// Same-day stale entry — fall through to re-fetch
 		} catch {
@@ -150,28 +166,28 @@ export async function getOHLCBars(
 				.where(
 					and(
 						eq(candleCache.symbol, symbol),
-						eq(candleCache.interval, interval),
+						eq(candleCache.interval, baseInterval),
 						eq(candleCache.date, dateKey),
 					),
 				);
 		}
 	}
 
-	// 2. Cache MISS or stale — fetch from appropriate API based on symbol type
-	const apiResult = await fetchFromProvider(symbol, interval, dateKey);
+	// 2. Cache MISS or stale — fetch base interval from API
+	const apiResult = await fetchFromProvider(symbol, baseInterval, dateKey);
 
 	if (!apiResult.success || apiResult.bars.length === 0) {
 		return { bars: [], source: "api", dataQuality: "unavailable" };
 	}
 
-	// 3. Store in cache (insert or update on conflict)
+	// 3. Store base interval in cache (insert or update on conflict)
 	const lastBarAt = extractLastBarAt(apiResult.bars);
 	try {
 		await db
 			.insert(candleCache)
 			.values({
 				symbol,
-				interval,
+				interval: baseInterval,
 				date: dateKey,
 				bars: JSON.stringify(apiResult.bars),
 				barCount: apiResult.bars.length,
@@ -192,8 +208,11 @@ export async function getOHLCBars(
 		// Cache write failed - continue with API results
 	}
 
+	// 4. Aggregate base interval bars to requested interval
+	const aggregatedBars = aggregateBars(apiResult.bars, interval);
+
 	return {
-		bars: apiResult.bars,
+		bars: aggregatedBars,
 		source: "api",
 		dataQuality: "full",
 	};
@@ -370,7 +389,7 @@ function mapIntervalToDatabento(interval: string): string {
  * Aggregate 1-minute bars to larger intervals
  */
 function aggregateBars(bars: OHLCBar[], targetInterval: string): OHLCBar[] {
-	if (targetInterval === "1min") return bars;
+	if (targetInterval === "1min" || targetInterval === "1h") return bars;
 
 	const intervalMinutes: Record<string, number> = {
 		"5min": 5,
