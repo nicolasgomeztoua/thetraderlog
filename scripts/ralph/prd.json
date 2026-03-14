@@ -16,7 +16,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -35,7 +35,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Server-side: auth() returns sessionClaims which includes publicMetadata. Access via auth.sessionClaims?.metadata or similar. Check Clerk's actual auth() return shape."
     },
     {
@@ -53,7 +53,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Client-side: use useUser() hook from @clerk/nextjs, access user.publicMetadata.features?.beta_access. The useUser hook is different from useAuth — useAuth has has() but useUser has publicMetadata."
     },
     {

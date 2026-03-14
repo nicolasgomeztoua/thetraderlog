@@ -1,3 +1,38 @@
 # Ralph Progress Log
 Started: Sat Mar 14 20:36:41 WET 2026
 ---
+
+## 2026-03-14 - US-001
+- Created `types/globals.d.ts` with ClerkPublicMetadata interface and Clerk type extensions (CustomJwtSessionClaims for server-side, UserPublicMetadata for client-side)
+- Added `isBetaFromMetadata(metadata)` helper in `src/lib/billing/utils.ts` — safely checks nested `metadata.features.beta_access === true`
+- Kept existing `isBetaAuth()` with @deprecated JSDoc tag for backward compat
+- Files changed: `types/globals.d.ts` (new), `src/lib/billing/utils.ts` (modified)
+- **Learnings for future iterations:**
+  - Clerk type extensions: `CustomJwtSessionClaims` for server-side session claims (includes metadata from publicMetadata), `UserPublicMetadata` from `@clerk/types` for client-side useUser() typing
+  - Pre-existing Biome formatting issues exist in billing/utils.ts — auto-format with `bunx biome format --write` before committing
+  - The `isBetaFromMetadata` function uses defensive checks since publicMetadata is `Record<string, unknown>` at runtime
+---
+
+## 2026-03-14 - US-002
+- Updated `isBetaAuth()` in `src/lib/billing/utils.ts` to use `isBetaFromMetadata(auth.sessionClaims?.metadata)` instead of `auth.has({ feature: FEATURE_BETA_ACCESS })`
+- Extended `AuthWithHas` (billing/utils.ts) and `ClerkAuthLike` (trpc.ts) interfaces with `sessionClaims?: { metadata?: Record<string, unknown> }`
+- Updated `getCurrentPlan` and `getUsage` in `src/server/api/routers/billing.ts` to use `isBetaFromMetadata(ctx.clerkAuth?.sessionClaims?.metadata)`
+- Updated 3 beta check sites in `src/server/api/routers/ai.ts` (sendMessage, startReport, retryReport) to use `isBetaFromMetadata`
+- Removed unused `FEATURE_BETA_ACCESS` import from billing/utils.ts and ai.ts, removed unused `getCurrentMonthYear` import from ai.ts
+- Files changed: `src/lib/billing/utils.ts`, `src/server/api/trpc.ts`, `src/server/api/routers/billing.ts`, `src/server/api/routers/ai.ts`
+- **Learnings for future iterations:**
+  - Server-side beta detection path: `ctx.clerkAuth?.sessionClaims?.metadata` — Clerk's `auth()` puts publicMetadata in `sessionClaims.metadata`
+  - `requireFeature` and `requirePlan` middleware work transitively through `hasFeatureAccess`/`hasPlanAccess` → `isBetaAuth` — updating `isBetaAuth` automatically fixes them
+  - When removing imports, always check Biome reports unused import errors — the `getCurrentMonthYear` import was previously used alongside `FEATURE_BETA_ACCESS` checks but became unused
+  - For test mocks: `clerkAuth` mock objects now need `sessionClaims: { metadata: { features: { beta_access: true } } }` to simulate beta users
+---
+
+## 2026-03-14 - US-003
+- Switched all 5 client-side beta detection sites from `has({ feature: FEATURE_BETA_ACCESS })` to `isBetaFromMetadata(user?.publicMetadata)` via `useUser()` hook
+- Files changed: `upgrade-prompt.tsx`, `billing-tab.tsx`, `pricing.tsx`, `usage-limit-banner.tsx`, `download-pdf-button.tsx`, `billing.ts`
+- Removed `FEATURE_BETA_ACCESS` constant from `src/lib/constants/billing.ts` and all imports across the codebase
+- **Learnings for future iterations:**
+  - Clerk's `UserPublicMetadata` type augmentation in `types/globals.d.ts` does NOT fully propagate nested types through `useUser()` — TypeScript sees `features` as `{}` not `{ beta_access?: boolean }`. Must cast: `user?.publicMetadata as Record<string, unknown> | undefined` and use `isBetaFromMetadata()` helper instead of direct property access
+  - Always use `isBetaFromMetadata()` for client-side beta checks — it handles runtime type safety and avoids TypeScript augmentation issues
+  - Biome import ordering: `@/components/*` sorts before `@/lib/*` — place new imports accordingly
+---
