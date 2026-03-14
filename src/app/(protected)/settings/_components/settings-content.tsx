@@ -19,7 +19,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TagManager } from "@/components/tags/tag-manager";
 import { Badge } from "@/components/ui/badge";
@@ -209,6 +209,84 @@ const defaultAccountForm: AccountFormState = {
 	payoutFrequency: "",
 	groupId: "",
 };
+
+const SETTINGS_TABS = [
+	{ value: "general", label: "General" },
+	{ value: "trading", label: "Trading" },
+	{ value: "accounts", label: "Accounts" },
+	{ value: "tags", label: "Tags" },
+	{ value: "billing", label: "Billing", testId: "settings-tab-billing" },
+] as const;
+
+function SettingsTabBar({ activeTab }: { activeTab: string }) {
+	const tabsRef = useRef<HTMLDivElement>(null);
+	const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+	const [hasTransition, setHasTransition] = useState(false);
+
+	const updateIndicator = useCallback(() => {
+		const container = tabsRef.current;
+		if (!container) return;
+		const activeEl = container.querySelector<HTMLButtonElement>(
+			'[data-state="active"]',
+		);
+		if (!activeEl) return;
+		const containerRect = container.getBoundingClientRect();
+		const activeRect = activeEl.getBoundingClientRect();
+		setIndicator({
+			left: activeRect.left - containerRect.left,
+			width: activeRect.width,
+		});
+	}, []);
+
+	// Measure on mount without transition
+	useLayoutEffect(() => {
+		updateIndicator();
+		// Enable transitions after first paint
+		requestAnimationFrame(() => setHasTransition(true));
+	}, [updateIndicator]);
+
+	// Update on tab change
+	useEffect(() => {
+		updateIndicator();
+	}, [activeTab, updateIndicator]);
+
+	// Update on resize
+	useEffect(() => {
+		window.addEventListener("resize", updateIndicator);
+		return () => window.removeEventListener("resize", updateIndicator);
+	}, [updateIndicator]);
+
+	return (
+		<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+			<TabsList
+				ref={tabsRef}
+				className="relative inline-flex h-auto w-auto min-w-full border border-border bg-secondary p-0 pb-[2px] sm:grid sm:w-full sm:grid-cols-5"
+			>
+				{/* Animated active indicator */}
+				<span
+					className={cn(
+						"pointer-events-none absolute bottom-0 left-0 h-[2px] bg-primary",
+						hasTransition && "transition-all duration-300 ease-out",
+					)}
+					style={{
+						transform: `translateX(${indicator.left}px)`,
+						width: indicator.width,
+					}}
+				/>
+				{SETTINGS_TABS.map((tab) => (
+					<TabsTrigger
+						key={tab.value}
+						className="h-full min-h-8 flex-1 justify-center whitespace-nowrap rounded-none border-none px-3 py-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground shadow-none transition-colors duration-200 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none sm:px-4 sm:text-xs"
+						data-testid={"testId" in tab ? tab.testId : undefined}
+						value={tab.value}
+					>
+						{tab.label}
+					</TabsTrigger>
+				))}
+			</TabsList>
+		</div>
+	);
+}
 
 export function SettingsContent() {
 	const { user } = useUser();
@@ -691,41 +769,7 @@ export function SettingsContent() {
 			</div>
 
 			<Tabs onValueChange={setActiveTab} value={activeTab}>
-				<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-					<TabsList className="inline-flex w-auto min-w-full border border-border bg-secondary sm:grid sm:w-full sm:grid-cols-5">
-						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
-							value="general"
-						>
-							General
-						</TabsTrigger>
-						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
-							value="trading"
-						>
-							Trading
-						</TabsTrigger>
-						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
-							value="accounts"
-						>
-							Accounts
-						</TabsTrigger>
-						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
-							value="tags"
-						>
-							Tags
-						</TabsTrigger>
-						<TabsTrigger
-							className="min-h-[40px] flex-1 whitespace-nowrap px-3 font-mono text-[10px] uppercase tracking-wider data-[state=active]:bg-muted/300 sm:px-4 sm:text-xs"
-							data-testid="settings-tab-billing"
-							value="billing"
-						>
-							Billing
-						</TabsTrigger>
-					</TabsList>
-				</div>
+				<SettingsTabBar activeTab={activeTab} />
 
 				{/* General Tab */}
 				<TabsContent className="space-y-4 sm:space-y-6" value="general">
