@@ -178,65 +178,54 @@ describe("market-data-cache integration", () => {
 		fetchSpy.mockRestore();
 	});
 
-	it("should update cache via onConflictDoUpdate when re-fetching", async () => {
-		const historicalDate = new Date("2024-10-10T00:00:00Z");
-		const oldBars = generateMockBars(historicalDate, 30);
+	it("should update cache via onConflictDoUpdate when re-fetching stale entry", async () => {
+		// Use today's date so isCacheStale can trigger a re-fetch
+		const today = new Date();
+		today.setUTCHours(0, 0, 0, 0);
+
+		const oldBars = generateMockBars(today, 30);
 		const oldLastBar = oldBars[oldBars.length - 1];
 
-		// Pre-populate cache with old data
+		// Pre-populate cache with stale data (fetchedAt and lastBarAt > 5min ago)
+		const staleTime = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
 		await db.insert(schema.candleCache).values({
 			symbol: "NQ",
 			interval: "1min",
-			date: new Date("2024-10-10T00:00:00Z"),
+			date: today,
 			bars: JSON.stringify(oldBars),
 			barCount: 30,
 			source: "databento",
-			fetchedAt: new Date("2024-10-10T10:00:00Z"),
-			lastBarAt: oldLastBar ? new Date(oldLastBar.timestamp) : null,
+			fetchedAt: staleTime,
+			lastBarAt: oldLastBar ? new Date(oldLastBar.timestamp) : staleTime,
 		});
 
-		// Now simulate a new fetch with more bars (e.g., via direct DB upsert)
-		const newBars = generateMockBars(historicalDate, 60);
-		const newLastBar = newBars[newBars.length - 1];
-		const newLastBarAt = newLastBar ? new Date(newLastBar.timestamp) : null;
+		// Mock fetch to return a larger bar set (simulating updated market data)
+		const newBars = generateMockBars(today, 60);
+		const ndjson = createDabentoNDJSON(newBars);
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response(ndjson, { status: 200 }));
 
-		await db
-			.insert(schema.candleCache)
-			.values({
-				symbol: "NQ",
-				interval: "1min",
-				date: new Date("2024-10-10T00:00:00Z"),
-				bars: JSON.stringify(newBars),
-				barCount: 60,
-				source: "databento",
-				fetchedAt: new Date(),
-				lastBarAt: newLastBarAt,
-			})
-			.onConflictDoUpdate({
-				target: [
-					schema.candleCache.symbol,
-					schema.candleCache.interval,
-					schema.candleCache.date,
-				],
-				set: {
-					bars: JSON.stringify(newBars),
-					barCount: 60,
-					lastBarAt: newLastBarAt,
-					fetchedAt: new Date(),
-				},
-			});
+		// Call the actual service — this exercises the onConflictDoUpdate path
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("NQ", "1min", today);
+
+		expect(result.bars).toHaveLength(60);
+		expect(result.source).toBe("api");
 
 		// Verify the row was updated, not duplicated
 		const rows = await db.query.candleCache.findMany({
 			where: and(
 				eq(schema.candleCache.symbol, "NQ"),
 				eq(schema.candleCache.interval, "1min"),
+				eq(schema.candleCache.date, today),
 			),
 		});
 
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.barCount).toBe(60);
-		expect(rows[0]?.lastBarAt?.getTime()).toBe(newLastBarAt?.getTime());
+
+		fetchSpy.mockRestore();
 	});
 
 	it("should only write 1min and 1h intervals to candle_cache", async () => {
