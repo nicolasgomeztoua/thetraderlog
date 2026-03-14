@@ -100,3 +100,15 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - When reducing from 3 to 2 pricing cards, update grid columns and max-width to keep cards well-proportioned
   - `SignUpButton`'s `forceRedirectUrl` should point to `/pricing` (Clerk checkout page) for paid plans, not `/settings?tab=billing`
 ---
+
+## 2026-03-14 - US-009
+- Removed free tier from billing settings plan comparison grid — now shows only Starter and Pro (2-column grid)
+- Replaced `PLAN_FREE` import with `PLAN_NONE` throughout billing-tab.tsx
+- Updated Current Plan card: shows "No active plan" with "Subscribe to get started" for users without a subscription
+- Updated upgrade logic: uses `PLAN_NONE` instead of `PLAN_FREE` to determine if upgrade button should show
+- Removed the `planSlug !== PLAN_FREE` guard in comparison cards since free tier card is gone
+- Files changed: `src/app/(protected)/settings/_components/billing-tab.tsx`
+- **Learnings for future iterations:**
+  - The `hasPaidPlan` boolean (isProUser || isStarterUser) is useful for conditional display — differentiates between users who have a subscription vs those with PLAN_NONE
+  - When removing a plan from comparison grid, also update `sm:grid-cols-N` to match the new count
+---
