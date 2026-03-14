@@ -20,7 +20,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -38,7 +38,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -57,7 +57,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -76,7 +76,7 @@
         "Verify in browser: 1h shows ~7 days of context, sub-hourly shows trade day(s) only"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -94,7 +94,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -113,7 +113,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -142,7 +142,7 @@
         "Verify in browser: place horizontal lines, switch styles/colors, delete via Clear All, refresh page and see lines persist"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

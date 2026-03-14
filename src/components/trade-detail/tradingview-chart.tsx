@@ -9,8 +9,15 @@ import {
 	type SeriesMarker,
 	type UTCTimestamp,
 } from "lightweight-charts";
-import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+	ExternalLink,
+	Loader2,
+	Maximize2,
+	Minus,
+	SeparatorVertical,
+	Trash2,
+} from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	Select,
@@ -66,6 +73,7 @@ function getChartColors(themeConfig: ReturnType<typeof getThemeById>) {
 
 interface ChartProps {
 	symbol: string;
+	tradeId: string;
 	entryTime?: Date | string | null;
 	exitTime?: Date | string | null;
 	stopLoss?: string | null;
@@ -86,6 +94,21 @@ interface ChartProps {
 }
 
 type CandleDataPoint = CandlestickData<UTCTimestamp>;
+
+type DrawingTool = "horizontal" | null;
+
+type LineStyleOption = "solid" | "dashed";
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const DRAWING_COLORS = ["#d4ff00", "#00d4ff", "#ff3b3b", "#00ff88", "#71717a"];
+
+const LINE_STYLE_MAP: Record<LineStyleOption, number> = {
+	solid: 0,
+	dashed: 2,
+};
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -198,6 +221,7 @@ function TimeframeSelector({
 
 function LightweightChartInner({
 	symbol,
+	tradeId,
 	exitTime,
 	entryTime,
 	stopLoss,
@@ -216,6 +240,29 @@ function LightweightChartInner({
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 	const ohlcSnapLineRef = useRef<IPriceLine | null>(null);
 	const currentSnappedPriceRef = useRef<number | null>(null);
+
+	// Drawing tool state
+	const [activeTool, setActiveTool] = useState<DrawingTool>(null);
+	const [drawingLineStyle, setDrawingLineStyle] =
+		useState<LineStyleOption>("solid");
+	const [drawingColorIndex, setDrawingColorIndex] = useState(0);
+	const activeToolRef = useRef<DrawingTool>(null);
+	const drawingLineStyleRef = useRef<LineStyleOption>("solid");
+	const drawingColorRef = useRef(DRAWING_COLORS[0]);
+
+	// Track user-drawn annotation price lines for removal
+	const annotationPriceLinesRef = useRef<IPriceLine[]>([]);
+
+	// Keep refs in sync with state
+	useEffect(() => {
+		activeToolRef.current = activeTool;
+	}, [activeTool]);
+	useEffect(() => {
+		drawingLineStyleRef.current = drawingLineStyle;
+	}, [drawingLineStyle]);
+	useEffect(() => {
+		drawingColorRef.current = DRAWING_COLORS[drawingColorIndex];
+	}, [drawingColorIndex]);
 
 	// Mobile detection
 	const isMobile = useIsMobile();
@@ -261,6 +308,85 @@ function LightweightChartInner({
 	// Determine which endpoint to use based on interval
 	const canFetchRealData = !!entryTime;
 	const isHourly = interval === "1h";
+
+	// =========================================================================
+	// ANNOTATION QUERIES & MUTATIONS
+	// =========================================================================
+
+	const utils = api.useUtils();
+
+	const { data: annotations } = api.chartAnnotations.list.useQuery(
+		{ tradeId },
+		{ staleTime: STALE_TIME_MEDIUM },
+	);
+
+	const createAnnotation = api.chartAnnotations.create.useMutation({
+		onSuccess: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+		},
+	});
+
+	const clearAllAnnotations = api.chartAnnotations.clearAll.useMutation({
+		onSuccess: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+		},
+	});
+
+	// =========================================================================
+	// DRAWING TOOL HANDLERS
+	// =========================================================================
+
+	const toggleTool = useCallback((tool: DrawingTool) => {
+		setActiveTool((prev) => (prev === tool ? null : tool));
+	}, []);
+
+	const cycleLineStyle = useCallback(() => {
+		setDrawingLineStyle((prev) => (prev === "solid" ? "dashed" : "solid"));
+	}, []);
+
+	const cycleColor = useCallback(() => {
+		setDrawingColorIndex((prev) => (prev + 1) % DRAWING_COLORS.length);
+	}, []);
+
+	const handleClearAll = useCallback(() => {
+		// Remove all annotation price lines from chart
+		if (seriesRef.current) {
+			for (const line of annotationPriceLinesRef.current) {
+				seriesRef.current.removePriceLine(line);
+			}
+		}
+		annotationPriceLinesRef.current = [];
+		clearAllAnnotations.mutate({ tradeId });
+	}, [clearAllAnnotations, tradeId]);
+
+	// =========================================================================
+	// KEYBOARD SHORTCUTS
+	// =========================================================================
+
+	useEffect(() => {
+		const container = containerRef.current?.parentElement;
+		if (!container) return;
+
+		const handleKeyDown = (e: KeyboardEvent) => {
+			// Only respond when chart container or its children are focused
+			if (
+				!container.contains(document.activeElement) &&
+				document.activeElement !== container
+			)
+				return;
+
+			if (e.key === "h" || e.key === "H") {
+				e.preventDefault();
+				toggleTool("horizontal");
+			} else if (e.key === "Escape") {
+				e.preventDefault();
+				setActiveTool(null);
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [toggleTool]);
 
 	// Sub-hourly: fetch full day(s) of 1-min data, then aggregate client-side
 	const { data: rawChartData, isLoading: isLoadingSubHourly } =
@@ -525,6 +651,24 @@ function LightweightChartInner({
 			});
 		}
 
+		// Render persisted annotations as price lines
+		annotationPriceLinesRef.current = [];
+		if (annotations) {
+			for (const ann of annotations) {
+				if (ann.type === "horizontal") {
+					const priceLine = candlestickSeries.createPriceLine({
+						price: parseFloat(ann.value),
+						color: ann.color,
+						lineWidth: 1,
+						lineStyle: LINE_STYLE_MAP[ann.lineStyle as LineStyleOption] ?? 0,
+						axisLabelVisible: true,
+						title: "",
+					});
+					annotationPriceLinesRef.current.push(priceLine);
+				}
+			}
+		}
+
 		// Apply zoom: only on initial load, use saved visibleBarsCount or auto-fit
 		const savedBarsCount = initialVisibleBarsCountRef.current;
 		const shouldApplyInitialZoom =
@@ -648,17 +792,49 @@ function LightweightChartInner({
 			}
 		});
 
-		// Subscribe to click for copy-to-clipboard
+		// Subscribe to click — drawing mode or copy-to-clipboard
 		chart.subscribeClick(() => {
-			if (currentSnappedPriceRef.current !== null) {
-				navigator.clipboard.writeText(
-					currentSnappedPriceRef.current.toString(),
-				);
-				toast("Price copied", {
-					description: currentSnappedPriceRef.current.toString(),
+			if (currentSnappedPriceRef.current === null) return;
+
+			// Drawing mode: place horizontal line
+			if (activeToolRef.current === "horizontal" && seriesRef.current) {
+				const price = currentSnappedPriceRef.current;
+				const color = drawingColorRef.current;
+				const style = drawingLineStyleRef.current;
+
+				// Create visual price line immediately
+				const priceLine = seriesRef.current.createPriceLine({
+					price,
+					color,
+					lineWidth: 1,
+					lineStyle: LINE_STYLE_MAP[style],
+					axisLabelVisible: true,
+					title: "",
+				});
+				annotationPriceLinesRef.current.push(priceLine);
+
+				// Persist to DB
+				createAnnotation.mutate({
+					tradeId,
+					type: "horizontal",
+					value: price.toString(),
+					lineStyle: style,
+					color,
+				});
+
+				toast("Line placed", {
+					description: `Horizontal @ ${price}`,
 					duration: 1500,
 				});
+				return;
 			}
+
+			// Default mode: copy price to clipboard
+			navigator.clipboard.writeText(currentSnappedPriceRef.current.toString());
+			toast("Price copied", {
+				description: currentSnappedPriceRef.current.toString(),
+				duration: 1500,
+			});
 		});
 
 		// Cleanup
@@ -675,6 +851,7 @@ function LightweightChartInner({
 				seriesRef.current.removePriceLine(ohlcSnapLineRef.current);
 				ohlcSnapLineRef.current = null;
 			}
+			annotationPriceLinesRef.current = [];
 			chart.remove();
 			chartRef.current = null;
 			seriesRef.current = null;
@@ -693,6 +870,9 @@ function LightweightChartInner({
 		interval,
 		maePrice,
 		mfePrice,
+		annotations,
+		tradeId,
+		createAnnotation.mutate,
 	]);
 
 	// Show loading state
@@ -731,8 +911,19 @@ function LightweightChartInner({
 		);
 	}
 
+	const drawingColor = DRAWING_COLORS[drawingColorIndex];
+
 	return (
-		<div className={cn("relative h-full w-full overflow-hidden", className)}>
+		<div
+			className={cn(
+				"relative h-full w-full overflow-hidden",
+				activeTool && "cursor-crosshair",
+				className,
+			)}
+			data-testid="chart-container"
+			// biome-ignore lint/a11y/noNoninteractiveTabindex: chart needs focus for keyboard shortcuts (H, Escape)
+			tabIndex={0}
+		>
 			{/* Chart container */}
 			<div className="h-full w-full" ref={containerRef} />
 
@@ -756,12 +947,83 @@ function LightweightChartInner({
 				{/* Fit to trade button */}
 				<button
 					className="flex min-h-[36px] min-w-[36px] items-center justify-center gap-1 rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-fit"
 					onClick={handleFitToTrade}
 					title="Fit to trade"
 					type="button"
 				>
 					<Maximize2 className="h-3 w-3" />
 					<span className="hidden sm:inline">Fit</span>
+				</button>
+
+				{/* Drawing toolbar separator */}
+				<div className="mx-0.5 h-5 w-px bg-border" />
+
+				{/* Horizontal line tool */}
+				<button
+					className={cn(
+						"flex min-h-[36px] min-w-[36px] items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+						activeTool === "horizontal"
+							? "bg-primary text-primary-foreground"
+							: "bg-muted text-muted-foreground hover:bg-muted/80",
+					)}
+					data-testid="chart-button-horizontal-line"
+					onClick={() => toggleTool("horizontal")}
+					title="Horizontal line (H)"
+					type="button"
+				>
+					<Minus className="h-3 w-3" />
+				</button>
+
+				{/* Vertical line tool (disabled placeholder for US-008) */}
+				<button
+					className="flex min-h-[36px] min-w-[36px] cursor-not-allowed items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground opacity-50 transition-colors sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-vertical-line"
+					disabled
+					title="Vertical line (coming soon)"
+					type="button"
+				>
+					<SeparatorVertical className="h-3 w-3" />
+				</button>
+
+				{/* Line style toggle */}
+				<button
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-line-style"
+					onClick={cycleLineStyle}
+					title={`Line style: ${drawingLineStyle}`}
+					type="button"
+				>
+					{drawingLineStyle === "solid" ? (
+						<span className="block h-0.5 w-3 bg-current" />
+					) : (
+						<span className="block h-0.5 w-3 border-current border-t-2 border-dashed" />
+					)}
+				</button>
+
+				{/* Color picker cycling button */}
+				<button
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-color"
+					onClick={cycleColor}
+					title="Drawing color"
+					type="button"
+				>
+					<span
+						className="block h-3 w-3 rounded-full"
+						style={{ backgroundColor: drawingColor }}
+					/>
+				</button>
+
+				{/* Clear all button */}
+				<button
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-destructive sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-clear-all"
+					onClick={handleClearAll}
+					title="Clear all drawings"
+					type="button"
+				>
+					<Trash2 className="h-3 w-3" />
 				</button>
 			</div>
 
