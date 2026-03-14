@@ -197,6 +197,17 @@ const caller = await createTestCaller(user.clerkId, userWithBeta, FULL_ACCESS_AU
 **Problem:** Using `"mt4"` or `"mt5"` as platform value causes validation error
 **Solution:** Valid values are: `projectx`, `topstepx`, `ninjatrader`, `tradovate`, `rithmic`, `apex`, `other`
 
+### Testing Service Functions That Import `db` Directly
+**When:** Integration-testing service-layer functions (e.g., `src/lib/market-data/service.ts`) that `import { db } from "@/server/db"` at the top level
+**Problem:** The service imports the production `db` singleton, not the test DB from `getTestDb()`
+**Solution:** Mock `@/server/db` with a lazy getter so it resolves to the test DB:
+```typescript
+vi.mock("@/server/db", () => ({
+  get db() { return getTestDb(); },
+}));
+```
+Also mock `@/env` to provide required env vars. Use `vi.spyOn(globalThis, "fetch")` to mock external HTTP calls.
+
 ## Decisions
 
 <!-- Architectural decisions and rationale -->
