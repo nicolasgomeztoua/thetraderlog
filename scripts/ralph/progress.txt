@@ -61,3 +61,16 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - PricingTable handles empty/no plans gracefully on its own — no custom fallback needed
   - The marketing layout already includes Navbar and Footer, so pricing page just needs content
 ---
+
+## 2026-03-14 - US-006
+- Added `PLAN_NONE` constant to replace `PLAN_FREE` in `src/lib/constants/billing.ts`
+- Added deprecated `PLAN_FREE` re-export pointing to `PLAN_NONE` for backward compat (downstream files still import it until US-008/009/011)
+- Removed free tier entry from `PLAN_METADATA`, added `PLAN_NONE` metadata entry (name: "No Plan", empty features)
+- Updated `getEffectivePlan()` in `src/lib/billing/utils.ts` to return `PLAN_NONE` instead of `PLAN_FREE`
+- Updated import in `billing/utils.ts` from `PLAN_FREE` to `PLAN_NONE`
+- Files changed: `src/lib/constants/billing.ts`, `src/lib/billing/utils.ts`
+- **Learnings for future iterations:**
+  - When removing a widely-imported constant, add a deprecated re-export to avoid breaking the build — downstream stories will remove the import
+  - `PLAN_METADATA` must have an entry for `PLAN_NONE` since billing-tab.tsx and pricing.tsx do lookups like `PLAN_METADATA[effectivePlan]` which would crash on undefined
+  - The marketing landing page pre-renders at build time — any undefined metadata access crashes the build, not just at runtime
+---

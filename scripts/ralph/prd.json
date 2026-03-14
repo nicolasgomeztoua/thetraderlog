@@ -107,7 +107,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "PLAN_NONE represents 'user has no subscription' — it replaces PLAN_FREE semantically. Users in this state see upgrade prompts for all gated features."
     },
     {
