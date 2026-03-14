@@ -123,3 +123,18 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - Some stories may be no-ops if prior stories already addressed all concerns — still verify and mark as passing
   - Pre-existing Biome lint issues exist (CSS class sorting in settings-content.tsx, non-null assertion in billing.test.ts) — these are unrelated to billing cleanup
 ---
+
+## 2026-03-14 - US-011
+- Removed deprecated `PLAN_FREE` re-export from `src/lib/constants/billing.ts`
+- Updated 3 comments in `src/server/api/routers/strategies.ts`: "free plan" → "regardless of plan"
+- Updated comment in `src/server/api/routers/billing.ts`: "free/starter" → "no plan/starter"
+- Updated `tests/integration/billing.test.ts`: test description and assertions from "free" to "none" plan
+- Updated `tests/e2e/billing.spec.ts`: removed free card references, updated plan comparison assertions, fixed unauthenticated CTA assertion from "Start Free Trial" to "Start Starter Trial"
+- Verified `src/lib/constants/errors.ts` has no free tier references
+- Verified `usage-limit-banner.tsx`, `download-pdf-button.tsx`, AI router have no free tier references (only legitimate "free" usage like "free trial", "risk-free rate")
+- AGENTS.md files only reference "port 3000 is free" (not plan-related) — no changes needed
+- Files changed: `src/lib/constants/billing.ts`, `src/server/api/routers/strategies.ts`, `src/server/api/routers/billing.ts`, `tests/integration/billing.test.ts`, `tests/e2e/billing.spec.ts`
+- **Learnings for future iterations:**
+  - "Free" in cta.tsx/hero.tsx refers to the 30-day free trial, NOT the free tier plan — don't change these
+  - Pre-existing Biome issues (CSS class sorting, non-null assertion, archive JSON formatting) are unrelated to billing cleanup and should not block commits
+---
