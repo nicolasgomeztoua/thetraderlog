@@ -1,4 +1,6 @@
 import { runs } from "@trigger.dev/sdk/v3";
+import { TRPCError } from "@trpc/server";
+
 import type { ModelMessage } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -10,12 +12,18 @@ import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
 import {
+	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
-	CHAT_REASONING_TOKENS,
 	MAX_TOOL_ROUNDS_CHAT,
 } from "@/lib/constants/ai";
+import {
+	FEATURE_AI_CHAT,
+	FEATURE_AI_REPORTS,
+	FEATURE_BETA_ACCESS,
+	FEATURE_PDF_EXPORT,
+} from "@/lib/constants/billing";
 import {
 	ERR_CONVERSATION_CREATE_FAILED,
 	ERR_CONVERSATION_NOT_FOUND,
@@ -24,13 +32,25 @@ import {
 	ERR_REPORT_CONVERSATION_CREATE_FAILED,
 	ERR_REPORT_CONVERSATION_NOT_FOUND,
 	ERR_REPORT_CREATE_FAILED,
+	ERR_REPORT_NOT_COMPLETE,
 	ERR_REPORT_NOT_FOUND,
 	ERR_REPORT_ONLY_FAILED_RETRY,
 } from "@/lib/constants/errors";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	requireFeature,
+} from "@/server/api/trpc";
 import { aiConversations, aiMessages, aiReports } from "@/server/db/schema";
 import { generateAiReport } from "@/trigger/generate-ai-report";
 import { generateReportPdf } from "@/trigger/generate-report-pdf";
+import {
+	decrementChatUsage,
+	decrementReportUsage,
+	getCurrentMonthYear,
+	incrementAndCheckChatUsage,
+	incrementAndCheckReportUsage,
+} from "./billing";
 
 // =============================================================================
 // AI ROUTER (Chat + Report Endpoints)
@@ -40,10 +60,10 @@ export const aiRouter = createTRPCRouter({
 	/**
 	 * Create a new AI conversation.
 	 */
-	createConversation: protectedProcedure
+	createConversation: requireFeature(FEATURE_AI_CHAT)
 		.input(
 			z.object({
-				mode: z.enum(["chat", "report"]),
+				mode: z.enum(["chat"]),
 				initialPrompt: z.string().optional(),
 			}),
 		)
@@ -70,7 +90,7 @@ export const aiRouter = createTRPCRouter({
 	 * Send a message to a conversation and get an AI response.
 	 * Implements the full tool-calling loop: model → tool_calls → results → repeat until text response.
 	 */
-	sendMessage: protectedProcedure
+	sendMessage: requireFeature(FEATURE_AI_CHAT)
 		.input(
 			z.object({
 				conversationId: z.string(),
@@ -79,7 +99,8 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			// Verify conversation ownership
+			// Validate inputs BEFORE incrementing usage so validation-only failures
+			// never touch the daily quota counter.
 			const conversation = await ctx.db.query.aiConversations.findFirst({
 				where: and(
 					eq(aiConversations.id, input.conversationId),
@@ -91,7 +112,6 @@ export const aiRouter = createTRPCRouter({
 				throw new Error(ERR_CONVERSATION_NOT_FOUND);
 			}
 
-			// Check message limit
 			const existingMessages = await ctx.db.query.aiMessages.findMany({
 				where: eq(aiMessages.conversationId, input.conversationId),
 			});
@@ -100,104 +120,131 @@ export const aiRouter = createTRPCRouter({
 				throw new Error(ERR_MESSAGE_LIMIT_REACHED);
 			}
 
-			// Save user message
-			const [userMessage] = await ctx.db
-				.insert(aiMessages)
-				.values({
-					conversationId: input.conversationId,
-					role: "user",
-					content: input.content,
-				})
-				.returning();
+			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
+			const isUnlimited =
+				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 
-			if (!userMessage) {
-				throw new Error(ERR_MESSAGE_SAVE_FAILED);
+			let usageDate: string | undefined;
+			try {
+				const usage = await incrementAndCheckChatUsage(
+					ctx.db,
+					ctx.user.id,
+					isUnlimited,
+				);
+				usageDate = usage.date;
+				// Save user message
+				const [userMessage] = await ctx.db
+					.insert(aiMessages)
+					.values({
+						conversationId: input.conversationId,
+						role: "user",
+						content: input.content,
+					})
+					.returning();
+
+				if (!userMessage) {
+					throw new Error(ERR_MESSAGE_SAVE_FAILED);
+				}
+
+				// Build system prompt with schema + user context
+				const [schemaContext, userContext] = await Promise.all([
+					Promise.resolve(generateSchemaContext()),
+					buildUserContext(ctx.user.id, ctx.db),
+				]);
+
+				const systemPrompt = buildSystemPrompt({
+					schemaContext,
+					userContext,
+					mode: (conversation.mode as "chat" | "report") ?? "chat",
+				});
+
+				// Build message history for the model
+				const allMessages = await ctx.db.query.aiMessages.findMany({
+					where: eq(aiMessages.conversationId, input.conversationId),
+					orderBy: [aiMessages.createdAt],
+				});
+
+				const messages: ModelMessage[] = allMessages.map((msg) => ({
+					role: msg.role as "user" | "assistant",
+					content: msg.content ?? "",
+				}));
+
+				const modelId = conversation.model ?? DEFAULT_CHAT_MODEL;
+
+				// Vercel AI SDK handles the tool-calling loop via maxSteps
+				const tools = getChatTools({
+					userId: ctx.user.id,
+					db: ctx.db,
+					accountId: input.accountId,
+				});
+
+				const result = await aiGenerateText({
+					model: getModel(modelId),
+					system: systemPrompt,
+					messages,
+					tools,
+					maxSteps: MAX_TOOL_ROUNDS_CHAT,
+					reasoning: { maxTokens: CHAT_REASONING_TOKENS },
+				});
+
+				// Collect tool calls from all steps for logging
+				const allToolCalls = result.steps.flatMap((step) =>
+					(step.toolCalls ?? []).map((tc) => ({
+						id: tc.toolCallId,
+						type: "function" as const,
+						function: {
+							name: tc.toolName,
+							arguments: JSON.stringify(tc.input),
+						},
+					})),
+				);
+
+				const finalContent =
+					result.text ||
+					"I apologize, but I was unable to complete the analysis within the allowed number of tool calls. Please try rephrasing your question or breaking it into smaller parts.";
+
+				// Save assistant message
+				const [savedMessage] = await ctx.db
+					.insert(aiMessages)
+					.values({
+						conversationId: input.conversationId,
+						role: "assistant",
+						content: finalContent,
+						model: modelId,
+						tokensUsed: result.totalTokens,
+						toolCalls:
+							allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
+					})
+					.returning();
+
+				// Update conversation title from first user message if not set
+				if (!conversation.title && input.content.length > 0) {
+					const title =
+						input.content.length > 100
+							? `${input.content.slice(0, 97)}...`
+							: input.content;
+					await ctx.db
+						.update(aiConversations)
+						.set({ title })
+						.where(eq(aiConversations.id, input.conversationId));
+				}
+
+				if (!savedMessage) {
+					throw new Error(ERR_MESSAGE_SAVE_FAILED);
+				}
+
+				return savedMessage;
+			} catch (error) {
+				// Roll back the daily quota if it was successfully incremented.
+				if (usageDate) {
+					try {
+						await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
+					} catch {
+						console.error("Failed to rollback chat usage after error");
+					}
+				}
+				throw error;
 			}
-
-			// Build system prompt with schema + user context
-			const [schemaContext, userContext] = await Promise.all([
-				Promise.resolve(generateSchemaContext()),
-				buildUserContext(ctx.user.id, ctx.db),
-			]);
-
-			const systemPrompt = buildSystemPrompt({
-				schemaContext,
-				userContext,
-				mode: (conversation.mode as "chat" | "report") ?? "chat",
-			});
-
-			// Build message history for the model
-			const allMessages = await ctx.db.query.aiMessages.findMany({
-				where: eq(aiMessages.conversationId, input.conversationId),
-				orderBy: [aiMessages.createdAt],
-			});
-
-			const messages: ModelMessage[] = allMessages.map((msg) => ({
-				role: msg.role as "user" | "assistant",
-				content: msg.content ?? "",
-			}));
-
-			const modelId = conversation.model ?? DEFAULT_CHAT_MODEL;
-
-			// Vercel AI SDK handles the tool-calling loop via maxSteps
-			const tools = getChatTools({
-				userId: ctx.user.id,
-				db: ctx.db,
-				accountId: input.accountId,
-			});
-
-			const result = await aiGenerateText({
-				model: getModel(modelId),
-				system: systemPrompt,
-				messages,
-				tools,
-				maxSteps: MAX_TOOL_ROUNDS_CHAT,
-				reasoning: { maxTokens: CHAT_REASONING_TOKENS },
-			});
-
-			// Collect tool calls from all steps for logging
-			const allToolCalls = result.steps.flatMap((step) =>
-				(step.toolCalls ?? []).map((tc) => ({
-					id: tc.toolCallId,
-					type: "function" as const,
-					function: {
-						name: tc.toolName,
-						arguments: JSON.stringify(tc.input),
-					},
-				})),
-			);
-
-			const finalContent =
-				result.text ||
-				"I apologize, but I was unable to complete the analysis within the allowed number of tool calls. Please try rephrasing your question or breaking it into smaller parts.";
-
-			// Save assistant message
-			const [savedMessage] = await ctx.db
-				.insert(aiMessages)
-				.values({
-					conversationId: input.conversationId,
-					role: "assistant",
-					content: finalContent,
-					model: modelId,
-					tokensUsed: result.totalTokens,
-					toolCalls:
-						allToolCalls.length > 0 ? JSON.stringify(allToolCalls) : null,
-				})
-				.returning();
-
-			// Update conversation title from first user message if not set
-			if (!conversation.title && input.content.length > 0) {
-				const title =
-					input.content.length > 100
-						? `${input.content.slice(0, 97)}...`
-						: input.content;
-				await ctx.db
-					.update(aiConversations)
-					.set({ title })
-					.where(eq(aiConversations.id, input.conversationId));
-			}
-
-			return savedMessage;
 		}),
 
 	/**
@@ -292,7 +339,7 @@ export const aiRouter = createTRPCRouter({
 	 * Creates a report record + conversation in report mode, saves the initial prompt
 	 * as the first message, and triggers the Trigger.dev background task.
 	 */
-	startReport: protectedProcedure
+	startReport: requireFeature(FEATURE_AI_REPORTS)
 		.input(
 			z.object({
 				prompt: z.string().min(1).max(10_000),
@@ -304,80 +351,150 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const model = DEFAULT_REPORT_MODEL;
-			const title =
-				input.title ??
-				(input.prompt.length > 100
-					? `${input.prompt.slice(0, 97)}...`
-					: input.prompt);
+			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
+			const isUnlimited =
+				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
 
-			// Create conversation in report mode
-			const [conversation] = await ctx.db
-				.insert(aiConversations)
-				.values({
-					userId: ctx.user.id,
-					mode: "report",
-					model,
-					title,
-					initialPrompt: input.prompt,
-					status: "generating",
-					dateRangeStart: input.dateRangeStart
-						? new Date(input.dateRangeStart)
-						: null,
-					dateRangeEnd: input.dateRangeEnd
-						? new Date(input.dateRangeEnd)
-						: null,
-				})
-				.returning();
+			let usageMonth: number | undefined;
+			let usageYear: number | undefined;
+			let createdReportId: string | null = null;
+			let triggerHandleId: string | null = null;
 
-			if (!conversation) {
-				throw new Error(ERR_REPORT_CONVERSATION_CREATE_FAILED);
-			}
+			try {
+				const usage = await incrementAndCheckReportUsage(
+					ctx.db,
+					ctx.user.id,
+					isUnlimited,
+				);
+				usageMonth = usage.month;
+				usageYear = usage.year;
+				const model = DEFAULT_REPORT_MODEL;
+				const title =
+					input.title ??
+					(input.prompt.length > 100
+						? `${input.prompt.slice(0, 97)}...`
+						: input.prompt);
 
-			// Save initial prompt as first user message
-			await ctx.db.insert(aiMessages).values({
-				conversationId: conversation.id,
-				role: "user",
-				content: input.prompt,
-			});
+				// Create conversation in report mode
+				const [conversation] = await ctx.db
+					.insert(aiConversations)
+					.values({
+						userId: ctx.user.id,
+						mode: "report",
+						model,
+						title,
+						initialPrompt: input.prompt,
+						status: "generating",
+						dateRangeStart: input.dateRangeStart
+							? new Date(input.dateRangeStart)
+							: null,
+						dateRangeEnd: input.dateRangeEnd
+							? new Date(input.dateRangeEnd)
+							: null,
+					})
+					.returning();
 
-			// Create report record
-			const [report] = await ctx.db
-				.insert(aiReports)
-				.values({
+				if (!conversation) {
+					throw new Error(ERR_REPORT_CONVERSATION_CREATE_FAILED);
+				}
+
+				// Save initial prompt as first user message
+				await ctx.db.insert(aiMessages).values({
+					conversationId: conversation.id,
+					role: "user",
+					content: input.prompt,
+				});
+
+				// Create report record
+				const [report] = await ctx.db
+					.insert(aiReports)
+					.values({
+						userId: ctx.user.id,
+						conversationId: conversation.id,
+						title,
+						prompt: input.prompt,
+						model,
+						status: "queued",
+					})
+					.returning();
+
+				if (!report) {
+					throw new Error(ERR_REPORT_CREATE_FAILED);
+				}
+				createdReportId = report.id;
+
+				// Trigger Trigger.dev background task
+				const handle = await generateAiReport.trigger({
+					reportId: report.id,
 					userId: ctx.user.id,
 					conversationId: conversation.id,
-					title,
 					prompt: input.prompt,
 					model,
-					status: "queued",
-				})
-				.returning();
+					dateRangeStart: input.dateRangeStart,
+					dateRangeEnd: input.dateRangeEnd,
+					templateId: input.templateId,
+					accountId: input.accountId,
+				});
+				triggerHandleId = handle.id;
 
-			if (!report) {
-				throw new Error(ERR_REPORT_CREATE_FAILED);
+				// Store the Trigger.dev task ID for tracking
+				await ctx.db
+					.update(aiReports)
+					.set({ triggerTaskId: handle.id })
+					.where(eq(aiReports.id, report.id));
+
+				return { ...report, triggerTaskId: handle.id };
+			} catch (error) {
+				// Cancel any dispatched Trigger.dev job to prevent phantom runs
+				// where the worker completes but the quota was already refunded.
+				if (triggerHandleId) {
+					try {
+						await runs.cancel(triggerHandleId);
+					} catch {
+						console.error(
+							"Failed to cancel Trigger.dev run after startReport error",
+						);
+					}
+				}
+
+				if (usageMonth !== undefined && usageYear !== undefined) {
+					try {
+						await decrementReportUsage(
+							ctx.db,
+							ctx.user.id,
+							usageMonth,
+							usageYear,
+						);
+					} catch {
+						console.error("Failed to rollback report usage after error");
+					}
+				}
+
+				// Mark orphaned report as "failed" so retryReport can recover it,
+				// but only if the Trigger.dev worker hasn't already completed it.
+				if (createdReportId) {
+					try {
+						const current = await ctx.db.query.aiReports.findFirst({
+							where: eq(aiReports.id, createdReportId),
+							columns: { status: true, conversationId: true },
+						});
+						if (current && current.status !== "complete") {
+							await ctx.db
+								.update(aiReports)
+								.set({ status: "failed" })
+								.where(eq(aiReports.id, createdReportId));
+							await ctx.db
+								.update(aiConversations)
+								.set({ status: "active" })
+								.where(eq(aiConversations.id, current.conversationId));
+						}
+					} catch {
+						console.error("Failed to mark orphaned report as failed");
+					}
+				}
+
+				throw error;
 			}
-
-			// Trigger Trigger.dev background task
-			const handle = await generateAiReport.trigger({
-				reportId: report.id,
-				userId: ctx.user.id,
-				conversationId: conversation.id,
-				prompt: input.prompt,
-				model,
-				dateRangeStart: input.dateRangeStart,
-				dateRangeEnd: input.dateRangeEnd,
-				templateId: input.templateId,
-				accountId: input.accountId,
-			});
-
-			// Store the Trigger.dev task ID for tracking
-			await ctx.db
-				.update(aiReports)
-				.set({ triggerTaskId: handle.id })
-				.where(eq(aiReports.id, report.id));
-
-			return { ...report, triggerTaskId: handle.id };
 		}),
 
 	/**
@@ -508,9 +625,11 @@ export const aiRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Retry a failed report — resets state and re-triggers generation.
+	 * Retry a failed report — re-consumes a quota slot and re-triggers generation.
+	 * startReport refunds the quota on failure, so retryReport must re-increment
+	 * to prevent free retries after a transient trigger failure.
 	 */
-	retryReport: protectedProcedure
+	retryReport: requireFeature(FEATURE_AI_REPORTS)
 		.input(z.object({ reportId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const report = await ctx.db.query.aiReports.findFirst({
@@ -528,50 +647,127 @@ export const aiRouter = createTRPCRouter({
 				throw new Error(ERR_REPORT_ONLY_FAILED_RETRY);
 			}
 
-			// Fetch conversation for date range fields
-			const conversation = await ctx.db.query.aiConversations.findFirst({
-				where: eq(aiConversations.id, report.conversationId),
-			});
+			// Only re-consume quota if the original trigger was never dispatched.
+			// When startReport triggers successfully (triggerTaskId is set) but the
+			// Trigger.dev job fails during execution, the quota slot was already
+			// consumed and never refunded — re-incrementing would double-charge.
+			const alreadyConsumedQuota = !!report.triggerTaskId;
+			const isUnlimited =
+				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+			// Only set after a successful increment so the catch block
+			// doesn't refund a slot we never consumed (mirrors sendMessage pattern).
+			let usageMonth: number | undefined;
+			let usageYear: number | undefined;
 
-			if (!conversation) {
-				throw new Error(ERR_REPORT_CONVERSATION_NOT_FOUND);
+			let retryTriggerHandleId: string | null = null;
+			try {
+				if (!alreadyConsumedQuota) {
+					const usage = await incrementAndCheckReportUsage(
+						ctx.db,
+						ctx.user.id,
+						isUnlimited,
+					);
+					usageMonth = usage.month;
+					usageYear = usage.year;
+				}
+				// Fetch conversation for date range fields
+				const conversation = await ctx.db.query.aiConversations.findFirst({
+					where: eq(aiConversations.id, report.conversationId),
+				});
+
+				if (!conversation) {
+					throw new Error(ERR_REPORT_CONVERSATION_NOT_FOUND);
+				}
+				// Reset report state
+				await ctx.db
+					.update(aiReports)
+					.set({
+						status: "queued",
+						errorMessage: null,
+						completedAt: null,
+						triggerTaskId: null,
+					})
+					.where(eq(aiReports.id, report.id));
+
+				// Reset conversation status
+				await ctx.db
+					.update(aiConversations)
+					.set({ status: "generating" })
+					.where(eq(aiConversations.id, report.conversationId));
+
+				const handle = await generateAiReport.trigger({
+					reportId: report.id,
+					userId: ctx.user.id,
+					conversationId: report.conversationId,
+					prompt: report.prompt,
+					model: report.model,
+					dateRangeStart: conversation.dateRangeStart?.toISOString(),
+					dateRangeEnd: conversation.dateRangeEnd?.toISOString(),
+				});
+				retryTriggerHandleId = handle.id;
+
+				// Store new task ID
+				await ctx.db
+					.update(aiReports)
+					.set({ triggerTaskId: handle.id })
+					.where(eq(aiReports.id, report.id));
+
+				return {
+					...report,
+					status: "queued" as const,
+					triggerTaskId: handle.id,
+				};
+			} catch (error) {
+				// Cancel any dispatched Trigger.dev job to prevent phantom runs
+				if (retryTriggerHandleId) {
+					try {
+						await runs.cancel(retryTriggerHandleId);
+					} catch {
+						console.error(
+							"Failed to cancel Trigger.dev run after retryReport error",
+						);
+					}
+				}
+
+				// Only refund when we incremented the counter ourselves in this call.
+				// When alreadyConsumedQuota=true we never touched the counter,
+				// so there's nothing to roll back.
+				if (usageMonth != null && usageYear != null) {
+					try {
+						await decrementReportUsage(
+							ctx.db,
+							ctx.user.id,
+							usageMonth,
+							usageYear,
+						);
+					} catch {
+						console.error(
+							"Failed to rollback report usage after retry failure",
+						);
+					}
+				}
+				try {
+					const current = await ctx.db.query.aiReports.findFirst({
+						where: eq(aiReports.id, report.id),
+						columns: { status: true },
+					});
+					if (current?.status !== "complete") {
+						await ctx.db
+							.update(aiReports)
+							.set({ status: "failed" })
+							.where(eq(aiReports.id, report.id));
+						await ctx.db
+							.update(aiConversations)
+							.set({ status: "active" })
+							.where(eq(aiConversations.id, report.conversationId));
+					}
+				} catch {
+					console.error(
+						"Failed to reset report status after retry trigger failure",
+					);
+				}
+				throw error;
 			}
-
-			// Reset report state
-			await ctx.db
-				.update(aiReports)
-				.set({
-					status: "queued",
-					errorMessage: null,
-					completedAt: null,
-					triggerTaskId: null,
-				})
-				.where(eq(aiReports.id, report.id));
-
-			// Reset conversation status
-			await ctx.db
-				.update(aiConversations)
-				.set({ status: "generating" })
-				.where(eq(aiConversations.id, report.conversationId));
-
-			// Re-trigger background task
-			const handle = await generateAiReport.trigger({
-				reportId: report.id,
-				userId: ctx.user.id,
-				conversationId: report.conversationId,
-				prompt: report.prompt,
-				model: report.model,
-				dateRangeStart: conversation.dateRangeStart?.toISOString(),
-				dateRangeEnd: conversation.dateRangeEnd?.toISOString(),
-			});
-
-			// Store new task ID
-			await ctx.db
-				.update(aiReports)
-				.set({ triggerTaskId: handle.id })
-				.where(eq(aiReports.id, report.id));
-
-			return { ...report, status: "queued" as const, triggerTaskId: handle.id };
 		}),
 
 	// =========================================================================
@@ -582,7 +778,7 @@ export const aiRouter = createTRPCRouter({
 	 * Start PDF generation for a completed report.
 	 * Creates a signed auth token and triggers the Puppeteer-based PDF task.
 	 */
-	generatePdf: protectedProcedure
+	generatePdf: requireFeature(FEATURE_PDF_EXPORT)
 		.input(z.object({ reportId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const report = await ctx.db.query.aiReports.findFirst({
@@ -598,7 +794,7 @@ export const aiRouter = createTRPCRouter({
 			}
 
 			if (report.status !== "complete") {
-				throw new Error("Report is not complete");
+				throw new Error(ERR_REPORT_NOT_COMPLETE);
 			}
 
 			const token = createPdfToken(input.reportId, ctx.user.id);
@@ -609,6 +805,22 @@ export const aiRouter = createTRPCRouter({
 				token,
 			});
 
+			try {
+				await ctx.db
+					.update(aiReports)
+					.set({ pdfTaskId: handle.id })
+					.where(eq(aiReports.id, input.reportId));
+			} catch (dbErr) {
+				try {
+					await runs.cancel(handle.id);
+				} catch {
+					console.error(
+						"Failed to cancel PDF run after DB update failure",
+					);
+				}
+				throw dbErr;
+			}
+
 			return { runId: handle.id };
 		}),
 
@@ -617,7 +829,23 @@ export const aiRouter = createTRPCRouter({
 	 */
 	getPdfStatus: protectedProcedure
 		.input(z.object({ runId: z.string() }))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
+			// Verify the run belongs to the requesting user.
+			// NOTE: pdfTaskId was added in this deployment. Any PDF tasks started before
+			// this migration will have pdfTaskId=null and will fail lookup here.
+			// The deployment window is narrow; affected users can retry generation.
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.pdfTaskId, input.runId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+
+			if (!report) {
+				throw new TRPCError({ code: "NOT_FOUND" });
+			}
+
 			const run = await runs.retrieve(input.runId);
 
 			if (run.status === "COMPLETED") {

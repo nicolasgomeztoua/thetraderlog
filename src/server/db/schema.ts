@@ -1,6 +1,8 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
+	date,
 	decimal,
 	index,
 	integer,
@@ -594,6 +596,7 @@ export const aiReports = createTable(
 		dataArtifacts: jsonb("data_artifacts").$type<Record<string, unknown>>(),
 		tokensUsed: integer("tokens_used").notNull().default(0),
 		triggerTaskId: text("trigger_task_id"),
+		pdfTaskId: text("pdf_task_id"),
 		errorMessage: text("error_message"),
 		progressStage: text("progress_stage").default("queued"),
 		currentRound: integer("current_round").default(0),
@@ -969,6 +972,51 @@ export const bugReports = createTable(
 );
 
 // ============================================================================
+// AI USAGE TABLE (tracks daily chat messages and monthly report generation)
+// ============================================================================
+
+export const aiUsage = createTable(
+	"ai_usage",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.aiUsage()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+
+		// Daily chat message tracking
+		chatMessagesUsed: integer("chat_messages_used").notNull().default(0),
+		chatMessagesDate: date("chat_messages_date", { mode: "string" }), // YYYY-MM-DD
+
+		// Monthly report tracking
+		reportsUsed: integer("reports_used").notNull().default(0),
+		reportsMonth: integer("reports_month"), // 1-12
+		reportsYear: integer("reports_year"), // e.g., 2026
+
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
+	},
+	(t) => [
+		index("ai_usage_user_id_idx").on(t.userId),
+		uniqueIndex("ai_usage_user_chat_date_idx").on(t.userId, t.chatMessagesDate),
+		uniqueIndex("ai_usage_user_report_month_idx").on(
+			t.userId,
+			t.reportsMonth,
+			t.reportsYear,
+		),
+		check(
+			"ai_usage_row_type_check",
+			sql`(chat_messages_date IS NOT NULL AND reports_month IS NULL AND reports_year IS NULL) OR (chat_messages_date IS NULL AND reports_month IS NOT NULL AND reports_year IS NOT NULL)`,
+		),
+	],
+);
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
@@ -986,6 +1034,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	dailyChecklistTemplates: many(dailyChecklistTemplates),
 	shareLinks: many(shareLinks),
 	bugReports: many(bugReports),
+	aiUsage: many(aiUsage),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -1216,6 +1265,13 @@ export const bugReportsRelations = relations(bugReports, ({ one }) => ({
 	}),
 }));
 
+export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
+	user: one(users, {
+		fields: [aiUsage.userId],
+		references: [users.id],
+	}),
+}));
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1263,3 +1319,5 @@ export type ShareLink = typeof shareLinks.$inferSelect;
 export type NewShareLink = typeof shareLinks.$inferInsert;
 export type BugReport = typeof bugReports.$inferSelect;
 export type NewBugReport = typeof bugReports.$inferInsert;
+export type AiUsage = typeof aiUsage.$inferSelect;
+export type NewAiUsage = typeof aiUsage.$inferInsert;

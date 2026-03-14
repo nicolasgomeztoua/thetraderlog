@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { UpgradePrompt } from "@/components/billing/upgrade-prompt";
 import { ComplianceBadge, RuleChecklist } from "@/components/strategy";
 import { TradeTags } from "@/components/tags/tag-selector";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTimezone } from "@/hooks/use-timezone";
+import { FEATURE_CUSTOM_STRATEGIES } from "@/lib/constants/billing";
 import { isPropAccountType } from "@/lib/constants/prop";
 import { cn, formatCurrency } from "@/lib/shared";
 import type { TradeStats } from "@/lib/trades";
@@ -205,13 +207,15 @@ function StrategySection({
 			</div>
 
 			{strategyId && ruleChecksData && ruleChecksData.rules.length > 0 && (
-				<RuleChecklist
-					checks={ruleChecksData.checks}
-					onComplianceChange={setOptimisticCompliance}
-					relevantRuleIds={ruleChecksData.relevantRuleIds}
-					rules={ruleChecksData.rules}
-					tradeId={tradeId}
-				/>
+				<UpgradePrompt feature={FEATURE_CUSTOM_STRATEGIES}>
+					<RuleChecklist
+						checks={ruleChecksData.checks}
+						onComplianceChange={setOptimisticCompliance}
+						relevantRuleIds={ruleChecksData.relevantRuleIds}
+						rules={ruleChecksData.rules}
+						tradeId={tradeId}
+					/>
+				</UpgradePrompt>
 			)}
 
 			{!strategyId && (

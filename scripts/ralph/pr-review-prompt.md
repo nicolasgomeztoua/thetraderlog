@@ -100,6 +100,19 @@ Only commit if all checks pass.
 - Be professional but firm when disagreeing
 - If you make fixes, push to the branch after all fixes are done
 - Don't make unnecessary changes just to appease Greptile
+- **IMPORTANT: Minimal changes only.** Each fix should be surgical — change only what's needed to address the specific concern. Do NOT refactor surrounding code, add new features, or "improve" things Greptile didn't mention. More code = more surface area for the next review to flag.
+
+## Fix Summary
+
+After completing all fixes, write a brief bullet-point summary of what was fixed to `scripts/ralph/.fix-summary.md`. This is used to give Greptile context when requesting re-review. Example:
+
+```
+- Fixed retryReport double-charge by checking status before increment
+- Added null guard on savedMessage in chat handler
+- Replaced Math.ceil with Math.floor for countdown hours
+```
+
+Keep it concise — one line per fix, no explanations.
 
 ## Summary-Only Mode
 

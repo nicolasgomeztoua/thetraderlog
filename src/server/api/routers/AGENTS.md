@@ -123,6 +123,19 @@ const trades = await ctx.db.query.trades.findMany({
 **When:** Updating bug report status via admin panel
 **How:** Validate transitions with a `Record<string, string[]>` map: `open→[in_progress, closed]`, `in_progress→[resolved, open, closed]`, `resolved→[closed, open]`, `closed→[open]`. Throw `ERR_ADMIN_INVALID_STATUS_TRANSITION` if not in allowed list.
 
+### Entitlement Middleware Factories
+**When:** Gating a tRPC procedure by feature or plan
+**How:** Use `requireFeature(FEATURE_SLUG)` or `requirePlan(PLAN_SLUG)` from `@/server/api/trpc`. These return full procedures (auth + timing + entitlement check). Use directly: `requireFeature(FEATURE_AI_CHAT).query(...)`. For tests, pass `clerkAuth: { has: () => true/false }` in context overrides.
+
+### DB User vs Clerk UserWithMetadata
+**When:** Calling `isBetaUser()` or `getEffectivePlan()` from a tRPC router where `ctx.user` is a DB User type
+**Problem:** DB User has no `publicMetadata` property; TypeScript rejects passing it to functions expecting `UserWithMetadata`
+**Solution:** Cast with `ctx.user as unknown as UserWithMetadata`. Beta will be `false` for DB users (safe default). In production, Clerk session claims handle beta through `has()`.
+
+### Upsert Pattern for Usage Tracking
+**When:** Creating or updating usage counters (daily chat, monthly reports)
+**How:** Use Drizzle's `.insert().values().onConflictDoUpdate({ target: [uniqueColumns], set: { ... } }).returning()`. For atomic increment: `set: { column: sql\`${table.column} + 1\` }`. For read-only upsert (just ensure row exists): `set: { updatedAt: new Date() }`.
+
 ## Decisions
 
 ### AI SDK v6 Type Names

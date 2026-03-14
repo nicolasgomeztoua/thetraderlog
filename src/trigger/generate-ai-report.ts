@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { and, eq } from "drizzle-orm";
 import { buildUserContext } from "@/lib/ai/context-builder";
 import { getModel } from "@/lib/ai/provider";
@@ -165,7 +165,23 @@ export const generateAiReport = task({
 	retry: {
 		maxAttempts: 1,
 	},
-	onFailure: async ({ payload, error }) => {
+	onFailure: async ({
+		payload,
+		error,
+	}: {
+		payload: {
+			reportId: string;
+			userId: string;
+			conversationId: string;
+			prompt: string;
+			model: string;
+			dateRangeStart?: string;
+			dateRangeEnd?: string;
+			templateId?: string;
+			accountId?: string;
+		};
+		error: unknown;
+	}) => {
 		// This hook runs in a separate execution even when the task is killed
 		// by MAX_DURATION_EXCEEDED, ensuring the report never stays stuck in "generating".
 		try {
@@ -206,17 +222,20 @@ export const generateAiReport = task({
 			// Trigger.dev will still log the original error.
 		}
 	},
-	run: async (payload: {
-		reportId: string;
-		userId: string;
-		conversationId: string;
-		prompt: string;
-		model: string;
-		dateRangeStart?: string;
-		dateRangeEnd?: string;
-		templateId?: string;
-		accountId?: string;
-	}) => {
+	run: async (
+		payload: {
+			reportId: string;
+			userId: string;
+			conversationId: string;
+			prompt: string;
+			model: string;
+			dateRangeStart?: string;
+			dateRangeEnd?: string;
+			templateId?: string;
+			accountId?: string;
+		},
+		{ ctx },
+	) => {
 		try {
 			// Verify ownership: ensure the userId in the payload matches the report and conversation records.
 			// Defense-in-depth against compromised task payloads.
@@ -225,12 +244,30 @@ export const generateAiReport = task({
 					eq(aiReports.id, payload.reportId),
 					eq(aiReports.userId, payload.userId),
 				),
-				columns: { id: true },
+				columns: { id: true, status: true, triggerTaskId: true },
 			});
 			if (!report) {
 				throw new Error(
 					"Report ownership verification failed: report not found or does not belong to user",
 				);
+			}
+
+			// Guard against ghost runs: if the API error handler already marked
+			// this report as "failed" and cleared triggerTaskId (cancel failed),
+			// a retry may have dispatched a new worker. Abort so we don't race
+			// with the retry's worker.
+			const thisRunId = ctx.run.id;
+			if (
+				report.status === "failed" ||
+				(report.triggerTaskId !== null && report.triggerTaskId !== thisRunId)
+			) {
+				logger.warn("Aborting ghost run — report was already recovered", {
+					reportId: payload.reportId,
+					reportStatus: report.status,
+					currentTriggerTaskId: report.triggerTaskId,
+					thisRunId,
+				});
+				return;
 			}
 
 			const conversation = await db.query.aiConversations.findFirst({

@@ -11,6 +11,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+	UsageLimitBanner,
+	useChatLimitReached,
+} from "@/components/billing/usage-limit-banner";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
@@ -91,6 +95,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const [lastSentAt, setLastSentAt] = useState<number>(0);
 	const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const chatLimitReached = useChatLimitReached();
 
 	const greeting = useMemo(() => {
 		const timeGreeting = getTimeGreeting();
@@ -124,13 +129,17 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const sendMessage = api.ai.sendMessage.useMutation({
 		onSuccess: () => {
 			setPendingMessage(null);
+			void utils.billing.getUsage.invalidate();
 			void utils.ai.getConversation.invalidate({
 				conversationId: activeConversationId ?? "",
 			});
 			void utils.ai.listConversations.invalidate();
 		},
-		onError: () => {
+		onError: (err) => {
 			setPendingMessage(null);
+			if (err.data?.code === "FORBIDDEN") {
+				void utils.billing.getUsage.invalidate();
+			}
 		},
 	});
 
@@ -345,10 +354,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 										const Icon = card.icon;
 										return (
 											<button
-												className="group rounded border border-white/5 bg-white/2 p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/2"
+												className={`group rounded border border-white/5 bg-white/2 p-3 text-left transition-all ${chatLimitReached ? "pointer-events-none opacity-40" : "hover:border-primary/30 hover:bg-primary/2"}`}
 												data-testid="chat-suggested-query"
+												disabled={chatLimitReached}
 												key={card.title}
-												onClick={() => void handleSend(card.query)}
+												onClick={() =>
+													!chatLimitReached && void handleSend(card.query)
+												}
 												type="button"
 											>
 												<div className="flex items-start gap-2.5">
@@ -411,7 +423,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				{/* Input */}
 				<div className="border-border border-t px-4 py-3">
 					<div className="mx-auto max-w-3xl">
+						{chatLimitReached && (
+							<div className="mb-2">
+								<UsageLimitBanner type="chat" />
+							</div>
+						)}
 						<ChatInput
+							disabled={chatLimitReached}
 							isLoading={isLoading}
 							onChange={setInput}
 							onSubmit={() => void handleSend()}

@@ -59,6 +59,7 @@ export const ERR_ACCOUNT_NOT_PROP = "Account is not a prop account";
 export const ERR_TRADE_NO_STRATEGY = "Trade has no strategy assigned";
 export const ERR_REPORT_ONLY_FAILED_RETRY =
 	"Only failed reports can be retried";
+export const ERR_REPORT_NOT_COMPLETE = "Report is not complete";
 export const ERR_CHECKLIST_AUTO_CALCULATED =
 	"Cannot toggle this item - it is auto-calculated";
 export const ERR_ACCESS_DENIED = "Access denied";
@@ -209,6 +210,21 @@ export const ERR_ADMIN_LOAD_BUG_REPORTS_FAILED = "Failed to load bug reports";
 export const ERR_ADMIN_LOAD_USERS_FAILED = "Failed to load users";
 export const ERR_ADMIN_LOAD_CONVERSATIONS_FAILED =
 	"Failed to load conversations";
+
+// =============================================================================
+// BILLING / ENTITLEMENTS
+// =============================================================================
+
+export const ERR_PLAN_REQUIRED =
+	"A paid plan is required to access this feature";
+export const ERR_FEATURE_NOT_AVAILABLE =
+	"This feature is not available on your current plan";
+export const ERR_AI_CHAT_LIMIT_REACHED =
+	"Daily AI chat limit reached. Your limit resets at midnight UTC.";
+export const ERR_AI_REPORT_LIMIT_REACHED =
+	"Monthly AI report limit reached. Your limit resets at the start of next month.";
+export const ERR_BILLING_LOAD_FAILED =
+	"Failed to load billing information. Please refresh the page.";
 
 // Pre-computed message limit error
 export const ERR_MESSAGE_LIMIT_REACHED = errMessageLimitReached(

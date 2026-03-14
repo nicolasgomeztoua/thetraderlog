@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	createTestCaller,
 	createTestUser,
+	FULL_ACCESS_AUTH,
 	getTestDb,
 	schema,
 	type TestCaller,
@@ -21,7 +22,7 @@ describe("strategy-rules-sync", () => {
 	beforeAll(async () => {
 		await truncateAllTables();
 		const user = await createTestUser();
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 	});
 
 	afterAll(async () => {

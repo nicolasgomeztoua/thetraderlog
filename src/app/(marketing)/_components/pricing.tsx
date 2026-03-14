@@ -1,65 +1,173 @@
 "use client";
 
-import { SignedIn, SignedOut, SignUpButton } from "@clerk/nextjs";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { SignUpButton, useAuth, useUser } from "@clerk/nextjs";
+import { ArrowRight, Check, Crown, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import {
+	PLAN_FREE,
+	PLAN_METADATA,
+	PLAN_PRO,
+	PLAN_STARTER,
+	type PlanMetadata,
+} from "@/lib/constants/billing";
 
-const plans = [
+const PLAN_HIERARCHY = [PLAN_FREE, PLAN_STARTER, PLAN_PRO] as const;
+
+const freeMeta = PLAN_METADATA[PLAN_FREE] as PlanMetadata;
+const starterMeta = PLAN_METADATA[PLAN_STARTER] as PlanMetadata;
+const proMeta = PLAN_METADATA[PLAN_PRO] as PlanMetadata;
+
+interface PricingPlan {
+	slug: string;
+	name: string;
+	tagline: string;
+	price: string;
+	period: string;
+	features: string[];
+	highlighted: boolean;
+	trial?: string;
+}
+
+const plans: PricingPlan[] = [
 	{
-		name: "Free Trial",
-		tagline: "30 days, full access",
+		slug: PLAN_FREE,
+		name: freeMeta.name,
+		tagline: freeMeta.description,
 		price: "$0",
-		period: "for 30 days",
-		features: [
-			"Unlimited trades",
-			"Full analytics",
-			"AI chat & reports",
-			"CSV import",
-			"Data kept forever",
-		],
-		cta: "Start Free Trial",
-		ctaLoggedIn: "Go to Dashboard",
+		period: "",
+		features: freeMeta.features,
 		highlighted: false,
 	},
 	{
-		name: "Starter",
-		tagline: "Everything you need",
+		slug: PLAN_STARTER,
+		name: starterMeta.name,
+		tagline: starterMeta.description,
 		price: "$10",
 		period: "/month",
-		features: [
-			"Unlimited trades",
-			"Full analytics",
-			"CSV import & export",
-			"Prop compliance tracking",
-			"Custom tags & strategies",
-			"Data kept forever",
-		],
-		cta: "Get Started",
-		ctaLoggedIn: "Upgrade to Starter",
+		features: starterMeta.features,
 		highlighted: false,
 	},
 	{
-		name: "Pro",
-		tagline: "AI-powered edge",
+		slug: PLAN_PRO,
+		name: proMeta.name,
+		tagline: proMeta.description,
 		price: "$24",
 		period: "/month",
-		features: [
-			"Everything in Starter",
-			"AI chat (50 msgs/day)",
-			"AI reports (5/month)",
-			"Export to PDF",
-			"Priority support",
-		],
-		cta: "Start Free Trial",
-		ctaLoggedIn: "Upgrade to Pro",
+		features: proMeta.features,
 		highlighted: true,
+		// Trial period is configured in the Clerk dashboard billing settings
+		trial: "30-day free trial",
 	},
 ];
 
+function getPlanIndex(slug: string): number {
+	return PLAN_HIERARCHY.indexOf(slug as (typeof PLAN_HIERARCHY)[number]);
+}
+
+function PlanCTA({ plan }: { plan: PricingPlan }) {
+	const { isSignedIn, has, isLoaded } = useAuth();
+	const { user: clerkUser } = useUser();
+
+	if (!isLoaded) {
+		return (
+			<Button
+				className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				data-testid={`pricing-cta-${plan.slug}`}
+				disabled
+				variant="outline"
+			>
+				Loading...
+			</Button>
+		);
+	}
+
+	const isBeta = clerkUser?.publicMetadata?.beta === true;
+	const userPlanIndex = isSignedIn
+		? isBeta || has?.({ plan: PLAN_PRO })
+			? getPlanIndex(PLAN_PRO)
+			: has?.({ plan: PLAN_STARTER })
+				? getPlanIndex(PLAN_STARTER)
+				: getPlanIndex(PLAN_FREE)
+		: -1;
+
+	const planIndex = getPlanIndex(plan.slug);
+	const isCurrentPlan = isSignedIn && userPlanIndex === planIndex;
+	const hasHigherPlan = isSignedIn && userPlanIndex > planIndex;
+
+	if (!isSignedIn) {
+		return (
+			<SignUpButton
+				forceRedirectUrl={
+					plan.slug !== PLAN_FREE ? `/settings?tab=billing` : "/dashboard"
+				}
+				mode="modal"
+			>
+				<Button
+					className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+					data-testid={`pricing-cta-${plan.slug}`}
+					variant={plan.highlighted ? "default" : "outline"}
+				>
+					{plan.slug === PLAN_FREE ? "Get Started Free" : `Get ${plan.name}`}
+					<ArrowRight className="h-4 w-4" />
+				</Button>
+			</SignUpButton>
+		);
+	}
+
+	if (isCurrentPlan) {
+		return (
+			<Button
+				asChild
+				className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				data-testid={`pricing-cta-${plan.slug}`}
+				variant="outline"
+			>
+				<Link href="/settings?tab=billing">
+					<Crown className="h-4 w-4" />
+					Current Plan
+				</Link>
+			</Button>
+		);
+	}
+
+	if (hasHigherPlan) {
+		return (
+			<Button
+				asChild
+				className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				data-testid={`pricing-cta-${plan.slug}`}
+				variant="outline"
+			>
+				<Link href="/dashboard">Go to Dashboard</Link>
+			</Button>
+		);
+	}
+
+	return (
+		<Button
+			asChild
+			className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+			data-testid={`pricing-cta-${plan.slug}`}
+			variant={plan.highlighted ? "default" : "outline"}
+		>
+			<Link href="/settings?tab=billing">
+				{plan.slug === PLAN_FREE
+					? "Go to Dashboard"
+					: `Upgrade to ${plan.name}`}
+				<ArrowRight className="h-4 w-4" />
+			</Link>
+		</Button>
+	);
+}
+
 export function Pricing() {
 	return (
-		<section className="relative py-16 sm:py-24 lg:py-32" id="pricing">
+		<section
+			className="relative py-16 sm:py-24 lg:py-32"
+			data-testid="pricing-section"
+			id="pricing"
+		>
 			{/* Background */}
 			<div className="grid-bg absolute inset-0 opacity-30" />
 
@@ -88,7 +196,8 @@ export function Pricing() {
 									? "order-first border-primary/30 bg-primary/2 shadow-lg shadow-primary/5 lg:order-none"
 									: "border-border bg-muted/30 hover:border-border"
 							}`}
-							key={plan.name}
+							data-testid={`pricing-card-${plan.slug}`}
+							key={plan.slug}
 						>
 							{/* Popular badge */}
 							{plan.highlighted && (
@@ -116,6 +225,11 @@ export function Pricing() {
 								<span className="font-mono text-muted-foreground text-xs sm:text-sm">
 									{plan.period}
 								</span>
+								{plan.trial && (
+									<span className="ml-2 inline-block rounded bg-primary/10 px-2 py-0.5 font-mono text-[10px] text-primary sm:text-xs">
+										{plan.trial}
+									</span>
+								)}
 							</div>
 
 							{/* Features */}
@@ -135,40 +249,16 @@ export function Pricing() {
 							</ul>
 
 							{/* CTA */}
-							<SignedOut>
-								<SignUpButton mode="modal">
-									<Button
-										className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
-										variant={plan.highlighted ? "default" : "outline"}
-									>
-										{plan.cta}
-										<ArrowRight className="h-4 w-4" />
-									</Button>
-								</SignUpButton>
-							</SignedOut>
-							<SignedIn>
-								<Button
-									asChild
-									className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
-									variant={plan.highlighted ? "default" : "outline"}
-								>
-									<Link
-										href={plan.highlighted ? "/settings" : "/dashboard"}
-									>
-										{plan.ctaLoggedIn}
-										<ArrowRight className="h-4 w-4" />
-									</Link>
-								</Button>
-							</SignedIn>
+							<PlanCTA plan={plan} />
 						</div>
 					))}
 				</div>
 
 				{/* Trial note */}
 				<p className="mt-8 text-center font-mono text-muted-foreground text-xs sm:mt-12 sm:text-sm">
-					Your data stays even after your trial ends.{" "}
+					Your data is always yours — even if you change plans.{" "}
 					<span className="text-foreground">
-						No credit card required to start.
+						Get started for free — no credit card required.
 					</span>
 				</p>
 			</div>

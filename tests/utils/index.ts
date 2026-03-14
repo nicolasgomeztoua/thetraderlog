@@ -4,6 +4,8 @@
 export {
 	createTestCaller,
 	createUnauthenticatedCaller,
+	FULL_ACCESS_AUTH,
+	NO_ACCESS_AUTH,
 	type TestCaller,
 } from "./caller";
 

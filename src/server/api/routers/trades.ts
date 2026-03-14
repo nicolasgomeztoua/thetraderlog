@@ -15,6 +15,10 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
 import {
+	FEATURE_CSV_IMPORT_EXPORT,
+	FEATURE_TRADE_MANAGEMENT,
+} from "@/lib/constants/billing";
+import {
 	ERR_ATTACHMENT_CREATE_FAILED,
 	ERR_ATTACHMENT_NOT_FOUND,
 	ERR_DELETED_TRADE_NOT_FOUND,
@@ -57,7 +61,11 @@ import {
 	buildCursorCondition,
 	buildOrderByClause,
 } from "@/server/api/helpers/sort-builder";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	requireFeature,
+} from "@/server/api/trpc";
 import type { db as DbType } from "@/server/db";
 import {
 	strategyRules,
@@ -628,7 +636,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Create a new trade
 	// User provides PnL directly for closed trades (we don't calculate it)
-	create: protectedProcedure
+	create: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(createTradeSchema)
 		.mutation(async ({ ctx, input }) => {
 			const { tagIds, externalId, realizedPnl: inputPnl, ...tradeData } = input;
@@ -701,7 +709,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Batch import trades (much faster for CSV imports)
 	// Uses broker-reported profit instead of calculating PnL ourselves
-	batchImport: protectedProcedure
+	batchImport: requireFeature(FEATURE_CSV_IMPORT_EXPORT)
 		.input(batchImportSchema)
 		.mutation(async ({ ctx, input }) => {
 			const { accountId, trades: tradesToImport } = input;
@@ -865,7 +873,7 @@ export const tradesRouter = createTRPCRouter({
 	// Note: For imported trades, core fields (price, quantity, PnL) should be locked on the frontend.
 	// PnL is NOT recalculated - we trust the broker's reported PnL for imports,
 	// and for manual trades, users provide PnL directly.
-	update: protectedProcedure
+	update: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(updateTradeSchema)
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...updateData } = input;
@@ -904,6 +912,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Close a trade
 	// User provides the realized PnL directly (we don't calculate it)
+	// Ungated: users must be able to close existing open trades even after downgrading
 	close: protectedProcedure
 		.input(
 			z.object({
@@ -1199,7 +1208,7 @@ export const tradesRouter = createTRPCRouter({
 
 	// Add a new execution (partial exit, scale in/out)
 	// User provides PnL directly for exit/scale_out (we don't calculate it)
-	addExecution: protectedProcedure
+	addExecution: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(addExecutionSchema)
 		.mutation(async ({ ctx, input }) => {
 			// Verify trade ownership
@@ -1273,6 +1282,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Delete an execution
+	// Ungated: users must be able to delete executions on owned trades even after downgrading
 	deleteExecution: protectedProcedure
 		.input(z.object({ executionId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
@@ -1319,7 +1329,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Update trailing stop on a trade
-	updateTrailingStop: protectedProcedure
+	updateTrailingStop: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(
 			z.object({
 				tradeId: z.string(),
@@ -1356,6 +1366,7 @@ export const tradesRouter = createTRPCRouter({
 	// ============================================================================
 
 	// Update trade rating (0-5 stars, 0 = no rating)
+	// Ungated: rating is a review annotation on owned data, not a feature-creation operation
 	updateRating: protectedProcedure
 		.input(
 			z.object({
@@ -1382,6 +1393,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Bulk update ratings
+	// Ungated: rating is a review annotation on owned data
 	bulkUpdateRating: protectedProcedure
 		.input(
 			z.object({
@@ -1422,6 +1434,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Mark trade as reviewed
+	// Ungated: review status is a cleanup annotation on owned data
 	markReviewed: protectedProcedure
 		.input(
 			z.object({
@@ -1448,7 +1461,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Update trade strategy
-	updateStrategy: protectedProcedure
+	updateStrategy: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(
 			z.object({
 				id: z.string(),
@@ -1474,6 +1487,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Bulk mark as reviewed
+	// Ungated: review status is a cleanup annotation on owned data
 	bulkMarkReviewed: protectedProcedure
 		.input(
 			z.object({
@@ -1545,7 +1559,7 @@ export const tradesRouter = createTRPCRouter({
 	 * This fetches market data, calculates the metrics, and stores them permanently.
 	 * Can be called on-demand or automatically when a trade is closed.
 	 */
-	calculateMAEMFE: protectedProcedure
+	calculateMAEMFE: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(z.object({ tradeId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// First verify the user owns this trade
@@ -1591,7 +1605,7 @@ export const tradesRouter = createTRPCRouter({
 	 * Bulk calculate MAE/MFE for multiple trades
 	 * Useful for processing imported trades in batches
 	 */
-	bulkCalculateMAEMFE: protectedProcedure
+	bulkCalculateMAEMFE: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(
 			z.object({
 				tradeIds: z.array(z.string()).min(1).max(100),
@@ -1726,7 +1740,7 @@ export const tradesRouter = createTRPCRouter({
 	// ============================================================================
 
 	// Get a presigned URL for uploading a file to S3
-	getUploadUrl: protectedProcedure
+	getUploadUrl: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(
 			z.object({
 				tradeId: z.string(),
@@ -1767,7 +1781,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Confirm an upload completed and create database record
-	confirmUpload: protectedProcedure
+	confirmUpload: requireFeature(FEATURE_TRADE_MANAGEMENT)
 		.input(
 			z.object({
 				tradeId: z.string(),
@@ -1823,6 +1837,7 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	// Delete an attachment (from S3 and database)
+	// Ungated: users must be able to delete attachments on owned trades even after downgrading
 	deleteAttachment: protectedProcedure
 		.input(
 			z.object({

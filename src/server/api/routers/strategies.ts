@@ -5,6 +5,7 @@ import type { RiskParameters } from "@/components/strategy/risk-config";
 import type { ScalingRules } from "@/components/strategy/scaling-config";
 import type { TrailingRules } from "@/components/strategy/trailing-config";
 import { calculateAggregateStats } from "@/lib/analytics";
+import { FEATURE_CUSTOM_STRATEGIES } from "@/lib/constants/billing";
 import {
 	ERR_STRATEGY_CREATE_FAILED,
 	ERR_STRATEGY_DUPLICATE_FAILED,
@@ -21,7 +22,11 @@ import {
 } from "@/lib/strategy";
 import type { AutoCondition, AutoEvaluationResult } from "@/lib/strategy/types";
 import { getUserBreakevenThreshold } from "@/server/api/helpers";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	requireFeature,
+} from "@/server/api/trpc";
 import type * as schema from "@/server/db/schema";
 import {
 	strategies,
@@ -350,7 +355,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Create a new strategy
-	create: protectedProcedure
+	create: requireFeature(FEATURE_CUSTOM_STRATEGIES)
 		.input(createStrategySchema)
 		.mutation(async ({ ctx, input }) => {
 			const { rules, riskParameters, scalingRules, trailingRules, ...data } =
@@ -399,7 +404,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Update a strategy
-	update: protectedProcedure
+	update: requireFeature(FEATURE_CUSTOM_STRATEGIES)
 		.input(updateStrategySchema)
 		.mutation(async ({ ctx, input }) => {
 			const {
@@ -528,6 +533,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Delete a strategy (soft delete by setting inactive)
+	// Ungated: users must be able to delete their own strategies even after downgrading
 	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
@@ -557,7 +563,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Duplicate a strategy
-	duplicate: protectedProcedure
+	duplicate: requireFeature(FEATURE_CUSTOM_STRATEGIES)
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			const original = await ctx.db.query.strategies.findFirst({
@@ -743,6 +749,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Check/uncheck a rule for a trade
+	// Ungated: users with existing strategies must be able to use them even on free plan
 	checkRule: protectedProcedure
 		.input(
 			z.object({
@@ -799,6 +806,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Bulk check rules for a trade
+	// Ungated: users with existing strategies must be able to use them even on free plan
 	bulkCheckRules: protectedProcedure
 		.input(
 			z.object({
@@ -1077,6 +1085,7 @@ export const strategiesRouter = createTRPCRouter({
 	}),
 
 	// Sync generated rules from strategy config
+	// Ungated: users with existing strategies must be able to sync rules even on free plan
 	syncGeneratedRules: protectedProcedure
 		.input(z.object({ strategyId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
@@ -1190,7 +1199,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Update risk parameters with live saving (for edit mode)
-	updateRiskParameters: protectedProcedure
+	updateRiskParameters: requireFeature(FEATURE_CUSTOM_STRATEGIES)
 		.input(
 			z.object({
 				strategyId: z.string(),
@@ -1245,7 +1254,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Update scaling rules with live saving (for edit mode)
-	updateScalingRules: protectedProcedure
+	updateScalingRules: requireFeature(FEATURE_CUSTOM_STRATEGIES)
 		.input(
 			z.object({
 				strategyId: z.string(),
@@ -1297,7 +1306,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Update trailing rules with live saving (for edit mode)
-	updateTrailingRules: protectedProcedure
+	updateTrailingRules: requireFeature(FEATURE_CUSTOM_STRATEGIES)
 		.input(
 			z.object({
 				strategyId: z.string(),
@@ -1349,7 +1358,7 @@ export const strategiesRouter = createTRPCRouter({
 		}),
 
 	// Auto-evaluate rules for a trade
-	evaluateTradeRules: protectedProcedure
+	evaluateTradeRules: requireFeature(FEATURE_CUSTOM_STRATEGIES)
 		.input(z.object({ tradeId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// Fetch trade with strategy and rules, verify ownership

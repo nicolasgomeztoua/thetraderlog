@@ -8,9 +8,11 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ERR_REPORT_NOT_FOUND } from "@/lib/constants/errors";
+import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
 	createTestUser,
+	FULL_ACCESS_AUTH,
 	getTestDb,
 	schema,
 	type TestCaller,
@@ -66,11 +68,28 @@ describe("report viewer endpoints", () => {
 	beforeAll(async () => {
 		await truncateAllTables();
 
+		// Beta metadata bypasses usage limits (these tests test report viewing, not billing)
 		const user = await createTestUser({ name: "Report Viewer User" });
+		const userWithBeta = {
+			...user,
+			publicMetadata: { beta: true },
+		} as unknown as User;
 		const otherUser = await createTestUser({ name: "Other Report User" });
+		const otherWithBeta = {
+			...otherUser,
+			publicMetadata: { beta: true },
+		} as unknown as User;
 
-		caller = await createTestCaller(user.clerkId, user);
-		otherCaller = await createTestCaller(otherUser.clerkId, otherUser);
+		caller = await createTestCaller(
+			user.clerkId,
+			userWithBeta,
+			FULL_ACCESS_AUTH,
+		);
+		otherCaller = await createTestCaller(
+			otherUser.clerkId,
+			otherWithBeta,
+			FULL_ACCESS_AUTH,
+		);
 	});
 
 	afterAll(async () => {

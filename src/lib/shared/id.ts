@@ -34,4 +34,5 @@ export const ids = {
 	aiReport: () => createId("ar"),
 	shareLink: () => createId("sl"),
 	bugReport: () => createId("br"),
+	aiUsage: () => createId("au"),
 };

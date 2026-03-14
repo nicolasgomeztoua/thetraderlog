@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { UpgradePrompt } from "@/components/billing/upgrade-prompt";
+import { FEATURE_AI_CHAT, FEATURE_AI_REPORTS } from "@/lib/constants/billing";
 import { ChatInterface } from "./_components/chat-interface";
 import { ReportInterface } from "./_components/report-interface";
 
@@ -15,9 +17,13 @@ export default function AIPage() {
 			data-testid="ai-page"
 		>
 			{mode === "chat" ? (
-				<ChatInterface mode={mode} onModeChange={setMode} />
+				<UpgradePrompt feature={FEATURE_AI_CHAT}>
+					<ChatInterface mode={mode} onModeChange={setMode} />
+				</UpgradePrompt>
 			) : (
-				<ReportInterface mode={mode} onModeChange={setMode} />
+				<UpgradePrompt feature={FEATURE_AI_REPORTS}>
+					<ReportInterface mode={mode} onModeChange={setMode} />
+				</UpgradePrompt>
 			)}
 		</div>
 	);

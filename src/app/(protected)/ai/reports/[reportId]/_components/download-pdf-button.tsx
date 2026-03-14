@@ -1,11 +1,16 @@
 "use client";
 
+import { useAuth, useUser } from "@clerk/nextjs";
 import { FileText, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { UpgradeButtonCompact } from "@/components/billing/upgrade-prompt";
+import { FEATURE_PDF_EXPORT } from "@/lib/constants/billing";
 import { api } from "@/trpc/react";
 
 export function DownloadPdfButton({ reportId }: { reportId: string }) {
+	const { has, isLoaded } = useAuth();
+	const { user } = useUser();
 	const [runId, setRunId] = useState<string | null>(null);
 
 	const generatePdf = api.ai.generatePdf.useMutation({
@@ -42,6 +47,27 @@ export function DownloadPdfButton({ reportId }: { reportId: string }) {
 			toast.error("PDF generation failed");
 		}
 	}, [statusQuery.data, runId]);
+
+	const isBeta = user?.publicMetadata?.beta === true;
+	const hasPdfAccess = isBeta || has?.({ feature: FEATURE_PDF_EXPORT });
+
+	if (!isLoaded) {
+		return (
+			<div className="flex items-center gap-1.5 px-3 py-1.5">
+				<div className="size-3 animate-pulse rounded bg-muted" />
+				<div className="h-3 w-20 animate-pulse rounded bg-muted" />
+			</div>
+		);
+	}
+
+	if (!hasPdfAccess) {
+		return (
+			<UpgradeButtonCompact
+				feature={FEATURE_PDF_EXPORT}
+				testId="report-viewer-download-pdf-locked"
+			/>
+		);
+	}
 
 	const isGenerating = generatePdf.isPending || !!runId;
 

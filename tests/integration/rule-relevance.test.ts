@@ -8,6 +8,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	createTestCaller,
+	FULL_ACCESS_AUTH,
 	getTestDb,
 	schema,
 	setupTrader,
@@ -25,7 +26,7 @@ describe("rule-relevance", () => {
 		const { user, account } = await setupTrader({
 			account: { initialBalance: "100000" },
 		});
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 		userId = user.id;
 		accountId = account.id;
 	});

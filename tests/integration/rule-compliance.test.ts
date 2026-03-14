@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Account, User } from "@/server/db/schema";
 import {
 	createTestCaller,
+	FULL_ACCESS_AUTH,
 	getTestDb,
 	schema,
 	setupTrader,
@@ -27,7 +28,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 		const setup = await setupTrader();
 		user = setup.user;
 		account = setup.account;
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 	});
 
 	afterAll(async () => {
@@ -527,7 +528,7 @@ describe("strategies.getDashboardRuleCompliance", () => {
 			const setup = await setupTraderWithMultipleAccounts(2);
 			user2 = setup.user;
 			accounts = setup.accounts;
-			caller2 = await createTestCaller(user2.clerkId, user2);
+			caller2 = await createTestCaller(user2.clerkId, user2, FULL_ACCESS_AUTH);
 
 			const db = getTestDb();
 

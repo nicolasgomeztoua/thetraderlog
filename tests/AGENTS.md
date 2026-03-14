@@ -142,6 +142,50 @@ await expect(hero).toBeVisible({ timeout: 10000 });
 3. Update variable names too (e.g., `eurusdTrades` → `mesTrades`) — `replace_all` only catches string literals, not variable names
 4. Recalculate cascading values: totalPnl, grossLoss, grossProfit, profitFactor, avgLoss, position size ranges
 
+### TRPCError Assertion Gotcha
+**Problem:** `rejects.toThrow("FORBIDDEN")` doesn't match TRPCError code — it matches the *message* string
+**Solution:** Use the error constant (e.g., `ERR_AI_CHAT_LIMIT_REACHED`) instead of the tRPC code string
+
+### Testing Entitlement-Gated Procedures
+**When:** Testing tRPC procedures that use `requireFeature()` or `requirePlan()` middleware
+**How:** Pass `clerkAuth` as the 3rd argument to `createTestCaller`:
+```typescript
+const caller = await createTestCaller(user.clerkId, user, {
+  has: ({ feature, plan }) => feature === "ai_chat" || plan === "pro",
+});
+```
+Without `clerkAuth`, entitlement middleware denies access (safe default).
+
+### Beta User Simulation in Tests
+**When:** Testing beta bypass behavior
+**How:** Spread the DB user with `publicMetadata: { beta: true }` and cast:
+```typescript
+const betaUserWithMeta = { ...user, publicMetadata: { beta: true } } as unknown as User;
+const caller = await createTestCaller(user.clerkId, betaUserWithMeta);
+```
+
+### FULL_ACCESS_AUTH and NO_ACCESS_AUTH Helpers
+**When:** Writing tests that call entitlement-gated procedures but aren't testing entitlements
+**How:** Import from test utils and pass as 3rd arg:
+```typescript
+import { FULL_ACCESS_AUTH, NO_ACCESS_AUTH } from "../utils";
+const caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
+```
+- `FULL_ACCESS_AUTH` = `{ has: () => true }` — grants all features/plans
+- `NO_ACCESS_AUTH` = `{ has: () => false }` — denies all features/plans
+
+### Tests Creating Many AI Reports Need Beta Metadata
+**Problem:** Tests that create 6+ reports hit the monthly limit (5/month) and fail
+**Solution:** Add beta metadata to the user object to bypass usage tracking:
+```typescript
+const userWithBeta = { ...user, publicMetadata: { beta: true } } as unknown as User;
+const caller = await createTestCaller(user.clerkId, userWithBeta, FULL_ACCESS_AUTH);
+```
+
+### Platform Enum Values
+**Problem:** Using `"mt4"` or `"mt5"` as platform value causes validation error
+**Solution:** Valid values are: `projectx`, `topstepx`, `ninjatrader`, `tradovate`, `rithmic`, `apex`, `other`
+
 ## Decisions
 
 <!-- Architectural decisions and rationale -->

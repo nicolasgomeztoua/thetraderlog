@@ -1,13 +1,17 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-
+import { FEATURE_CUSTOM_TAGS } from "@/lib/constants/billing";
 import {
 	ERR_TAG_NAME_EXISTS,
 	ERR_TAG_NOT_FOUND,
 	ERR_TRADE_NOT_FOUND,
 	ERR_TRADES_BULK_NOT_FOUND,
 } from "@/lib/constants/errors";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	requireFeature,
+} from "@/server/api/trpc";
 import { tags, trades, tradeTags } from "@/server/db/schema";
 
 export const tagsRouter = createTRPCRouter({
@@ -59,7 +63,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Create a new tag
-	create: protectedProcedure
+	create: requireFeature(FEATURE_CUSTOM_TAGS)
 		.input(
 			z.object({
 				name: z.string().min(1).max(50),
@@ -89,7 +93,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Update a tag
-	update: protectedProcedure
+	update: requireFeature(FEATURE_CUSTOM_TAGS)
 		.input(
 			z.object({
 				id: z.string(),
@@ -129,6 +133,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Delete a tag
+	// Ungated: users must be able to delete their own tags even after downgrading
 	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
@@ -147,7 +152,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Add tag to trade
-	addToTrade: protectedProcedure
+	addToTrade: requireFeature(FEATURE_CUSTOM_TAGS)
 		.input(
 			z.object({
 				tradeId: z.string(),
@@ -197,6 +202,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Remove tag from trade
+	// Ungated: users must be able to detach tags from owned trades even after downgrading
 	removeFromTrade: protectedProcedure
 		.input(
 			z.object({
@@ -230,7 +236,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Bulk add tag to multiple trades
-	bulkAddToTrades: protectedProcedure
+	bulkAddToTrades: requireFeature(FEATURE_CUSTOM_TAGS)
 		.input(
 			z.object({
 				tradeIds: z.array(z.string()).min(1).max(100),
@@ -291,6 +297,7 @@ export const tagsRouter = createTRPCRouter({
 		}),
 
 	// Bulk remove tag from multiple trades
+	// Ungated: users must be able to detach tags from owned trades even after downgrading (matches removeFromTrade policy)
 	bulkRemoveFromTrades: protectedProcedure
 		.input(
 			z.object({

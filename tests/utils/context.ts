@@ -1,4 +1,5 @@
 import {
+	type ClerkAuthLike,
 	createTRPCContext,
 	type TRPCContextOverrides,
 } from "@/server/api/trpc";
@@ -12,6 +13,7 @@ import { getTestDb } from "./db";
 export async function createTestContext(
 	clerkId: string,
 	user?: User,
+	clerkAuth?: ClerkAuthLike,
 ): Promise<Awaited<ReturnType<typeof createTRPCContext>>> {
 	const db = getTestDb();
 
@@ -19,6 +21,7 @@ export async function createTestContext(
 		db,
 		userId: clerkId,
 		user,
+		clerkAuth,
 	};
 
 	// Create context with mock headers and overrides
