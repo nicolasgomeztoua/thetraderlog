@@ -89,13 +89,25 @@ export const STALENESS_THRESHOLD_MS = 5 * 60 * 1000;
 
 /**
  * Check if a same-day cache entry is stale and needs re-fetching.
- * Historical dates are never stale. Today's data is stale if lastBarAt
- * is more than 5 minutes old.
+ * Historical dates are never stale. Today's data is stale if both
+ * lastBarAt and fetchedAt are older than the staleness threshold.
+ * This prevents infinite re-fetches after market close: once trading
+ * stops, lastBarAt stays old but fetchedAt reflects the last write,
+ * so a recent fetch keeps the cache fresh.
  */
-export function isCacheStale(dateKey: Date, lastBarAt: Date | null): boolean {
+export function isCacheStale(
+	dateKey: Date,
+	lastBarAt: Date | null,
+	fetchedAt?: Date | null,
+): boolean {
 	if (!isToday(dateKey)) return false;
 
 	const now = Date.now();
+
+	// If we fetched recently, treat as fresh even after market close
+	if (fetchedAt && now - fetchedAt.getTime() < STALENESS_THRESHOLD_MS)
+		return false;
+
 	if (!lastBarAt) {
 		// Null lastBarAt on a today-entry means we can't determine freshness — re-fetch
 		return true;
@@ -145,7 +157,7 @@ export async function getOHLCBars(
 
 			// For historical dates, return cached data immediately
 			// For today's date, check staleness
-			if (!isCacheStale(dateKey, lastBarAt)) {
+			if (!isCacheStale(dateKey, lastBarAt, cached.fetchedAt)) {
 				const dateStr = dateKey.toISOString().split("T")[0];
 				console.info(
 					`[market-data] cache hit: ${symbol} ${baseInterval} ${dateStr} (${bars.length} bars)`,
@@ -175,11 +187,7 @@ export async function getOHLCBars(
 
 	// 2. Cache MISS or stale — fetch base interval from API
 	const dateStr = dateKey.toISOString().split("T")[0];
-	if (cached) {
-		console.info(
-			`[market-data] cache refresh: ${symbol} ${baseInterval} ${dateStr} (stale, re-fetching)`,
-		);
-	} else {
+	if (!cached) {
 		console.info(
 			`[market-data] cache miss: ${symbol} ${baseInterval} ${dateStr} → fetching from Databento`,
 		);

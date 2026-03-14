@@ -304,4 +304,43 @@ describe("isCacheStale", () => {
 		// now - lastBarAt === STALENESS_THRESHOLD_MS, not > so not stale
 		expect(isCacheStale(todayUTC, atThreshold)).toBe(false);
 	});
+
+	it("should return false for today with old lastBarAt but recent fetchedAt (post-market)", () => {
+		vi.useFakeTimers();
+		// Simulate 6 PM ET (22:00 UTC) — well after market close
+		const fixedNow = new Date(Date.UTC(2026, 2, 14, 22, 0, 0));
+		vi.setSystemTime(fixedNow);
+
+		const todayUTC = new Date(Date.UTC(2026, 2, 14));
+		// lastBarAt is from market close at 4 PM ET (20:00 UTC) — 2 hours ago
+		const oldLastBarAt = new Date(Date.UTC(2026, 2, 14, 20, 0, 0));
+		// But we fetched just 2 minutes ago
+		const recentFetchedAt = new Date(fixedNow.getTime() - 2 * 60 * 1000);
+
+		expect(isCacheStale(todayUTC, oldLastBarAt, recentFetchedAt)).toBe(false);
+	});
+
+	it("should return true for today with old lastBarAt and old fetchedAt", () => {
+		vi.useFakeTimers();
+		const fixedNow = new Date(Date.UTC(2026, 2, 14, 22, 0, 0));
+		vi.setSystemTime(fixedNow);
+
+		const todayUTC = new Date(Date.UTC(2026, 2, 14));
+		const oldLastBarAt = new Date(Date.UTC(2026, 2, 14, 20, 0, 0));
+		// fetchedAt is also old (> 5 min ago)
+		const oldFetchedAt = new Date(
+			fixedNow.getTime() - STALENESS_THRESHOLD_MS - 1000,
+		);
+
+		expect(isCacheStale(todayUTC, oldLastBarAt, oldFetchedAt)).toBe(true);
+	});
+
+	it("should return true for today with null lastBarAt even with no fetchedAt", () => {
+		const now = new Date();
+		const todayUTC = new Date(
+			Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+		);
+		// No fetchedAt provided, null lastBarAt — should still be stale
+		expect(isCacheStale(todayUTC, null, null)).toBe(true);
+	});
 });
