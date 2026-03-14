@@ -6,16 +6,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { isBetaFromMetadata } from "@/lib/billing/utils";
 import {
-	PLAN_FREE,
 	PLAN_METADATA,
+	PLAN_NONE,
 	PLAN_PRO,
 	PLAN_STARTER,
 	type PlanMetadata,
 } from "@/lib/constants/billing";
 
-const PLAN_HIERARCHY = [PLAN_FREE, PLAN_STARTER, PLAN_PRO] as const;
+const PLAN_HIERARCHY = [PLAN_NONE, PLAN_STARTER, PLAN_PRO] as const;
 
-const freeMeta = PLAN_METADATA[PLAN_FREE] as PlanMetadata;
 const starterMeta = PLAN_METADATA[PLAN_STARTER] as PlanMetadata;
 const proMeta = PLAN_METADATA[PLAN_PRO] as PlanMetadata;
 
@@ -32,15 +31,6 @@ interface PricingPlan {
 
 const plans: PricingPlan[] = [
 	{
-		slug: PLAN_FREE,
-		name: freeMeta.name,
-		tagline: freeMeta.description,
-		price: "$0",
-		period: "",
-		features: freeMeta.features,
-		highlighted: false,
-	},
-	{
 		slug: PLAN_STARTER,
 		name: starterMeta.name,
 		tagline: starterMeta.description,
@@ -48,6 +38,7 @@ const plans: PricingPlan[] = [
 		period: "/month",
 		features: starterMeta.features,
 		highlighted: false,
+		trial: "30-day free trial",
 	},
 	{
 		slug: PLAN_PRO,
@@ -57,7 +48,6 @@ const plans: PricingPlan[] = [
 		period: "/month",
 		features: proMeta.features,
 		highlighted: true,
-		// Trial period is configured in the Clerk dashboard billing settings
 		trial: "30-day free trial",
 	},
 ];
@@ -91,7 +81,7 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 			? getPlanIndex(PLAN_PRO)
 			: has?.({ plan: PLAN_STARTER })
 				? getPlanIndex(PLAN_STARTER)
-				: getPlanIndex(PLAN_FREE)
+				: getPlanIndex(PLAN_NONE)
 		: -1;
 
 	const planIndex = getPlanIndex(plan.slug);
@@ -100,18 +90,13 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 
 	if (!isSignedIn) {
 		return (
-			<SignUpButton
-				forceRedirectUrl={
-					plan.slug !== PLAN_FREE ? `/settings?tab=billing` : "/dashboard"
-				}
-				mode="modal"
-			>
+			<SignUpButton forceRedirectUrl="/pricing" mode="modal">
 				<Button
 					className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
 					data-testid={`pricing-cta-${plan.slug}`}
 					variant={plan.highlighted ? "default" : "outline"}
 				>
-					{plan.slug === PLAN_FREE ? "Get Started Free" : `Get ${plan.name}`}
+					{`Start ${plan.name} Trial`}
 					<ArrowRight className="h-4 w-4" />
 				</Button>
 			</SignUpButton>
@@ -154,10 +139,8 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 			data-testid={`pricing-cta-${plan.slug}`}
 			variant={plan.highlighted ? "default" : "outline"}
 		>
-			<Link href="/settings?tab=billing">
-				{plan.slug === PLAN_FREE
-					? "Go to Dashboard"
-					: `Upgrade to ${plan.name}`}
+			<Link href="/pricing">
+				{`Upgrade to ${plan.name}`}
 				<ArrowRight className="h-4 w-4" />
 			</Link>
 		</Button>
@@ -174,7 +157,7 @@ export function Pricing() {
 			{/* Background */}
 			<div className="grid-bg absolute inset-0 opacity-30" />
 
-			<div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+			<div className="relative mx-auto max-w-4xl px-4 sm:px-6">
 				{/* Header */}
 				<div className="mb-10 text-center sm:mb-16">
 					<span className="mb-3 inline-block font-mono text-[10px] text-primary uppercase tracking-wider sm:mb-4 sm:text-xs">
@@ -186,17 +169,17 @@ export function Pricing() {
 						<span className="text-primary">pricing</span>
 					</h2>
 					<p className="mx-auto mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
-						Start free. Upgrade when you need more.
+						Start with a 30-day free trial. Upgrade when you're ready.
 					</p>
 				</div>
 
-				{/* Pricing cards - Pro card first on mobile for importance */}
-				<div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+				{/* Pricing cards */}
+				<div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
 					{plans.map((plan) => (
 						<div
 							className={`relative flex flex-col rounded border p-5 transition-all sm:p-8 ${
 								plan.highlighted
-									? "order-first border-primary/30 bg-primary/2 shadow-lg shadow-primary/5 lg:order-none"
+									? "border-primary/30 bg-primary/2 shadow-lg shadow-primary/5"
 									: "border-border bg-muted/30 hover:border-border"
 							}`}
 							data-testid={`pricing-card-${plan.slug}`}
@@ -261,7 +244,7 @@ export function Pricing() {
 				<p className="mt-8 text-center font-mono text-muted-foreground text-xs sm:mt-12 sm:text-sm">
 					Your data is always yours — even if you change plans.{" "}
 					<span className="text-foreground">
-						Get started for free — no credit card required.
+						All plans include a 30-day free trial.
 					</span>
 				</p>
 			</div>
