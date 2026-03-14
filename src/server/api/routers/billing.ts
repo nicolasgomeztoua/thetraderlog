@@ -5,8 +5,8 @@ import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
 	FEATURE_AI_CHAT,
-	PLAN_FREE,
 	PLAN_METADATA,
+	PLAN_NONE,
 	PLAN_PRO,
 } from "@/lib/constants/billing";
 import {
@@ -202,13 +202,13 @@ export const billingRouter = createTRPCRouter({
 			? isBeta
 				? PLAN_PRO
 				: getEffectivePlan(ctx.clerkAuth)
-			: PLAN_FREE;
+			: PLAN_NONE;
 		const metadata = PLAN_METADATA[effectivePlan];
 
 		return {
 			plan: effectivePlan,
 			beta: isBeta,
-			metadata: metadata ?? PLAN_METADATA[PLAN_FREE],
+			metadata: metadata ?? PLAN_METADATA[PLAN_NONE],
 		};
 	}),
 
