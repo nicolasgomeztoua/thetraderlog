@@ -16,7 +16,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -33,7 +33,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Key design decision: on same-day re-fetch, replace the entire day's bars rather than merging partial ranges. Databento charges per request not per time range, so full re-fetch is simpler with no cost penalty. The getOHLCBars function currently takes (symbol, interval, date) — it does NOT know the trade's exit time. So staleness is determined by comparing lastBarAt against current time, not against any trade-specific time."
     },
     {
@@ -52,7 +52,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "The aggregateBars function already exists in service.ts (lines 306-360). 5min/15min/30min derive from 1min bars. 4h derives from 1h bars."
     },
     {

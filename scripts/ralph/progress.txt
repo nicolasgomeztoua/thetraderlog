@@ -1,3 +1,40 @@
 # Ralph Progress Log
 Started: Sat Mar 14 16:20:39 WET 2026
 ---
+
+## 2026-03-14 - US-001
+- Added `lastBarAt` column (timestamp with timezone, nullable) to `candle_cache` table in `src/server/db/schema.ts`
+- Removed outdated `// No expiresAt` comment
+- Schema pushed successfully with `bun run db:push`
+- Files changed: `src/server/db/schema.ts`
+- **Learnings for future iterations:**
+  - The `candle_cache` table uses a unique index on `(symbol, interval, date)` as the cache key — US-002 will need to use `onConflictDoUpdate` targeting this constraint
+  - `lastBarAt` is nullable for backward compat with existing rows — US-002 needs backfill logic for null values
+---
+
+## 2026-03-14 - US-002
+- Implemented smart append logic in `getOHLCBars` in `src/lib/market-data/service.ts`
+- Added helper functions: `isToday()`, `isCacheStale()`, `extractLastBarAt()`
+- On cache hit for today's date, checks if lastBarAt > 5min old → re-fetches from Databento
+- Historical dates return cached data immediately (never stale)
+- Changed `onConflictDoNothing()` to `onConflictDoUpdate()` targeting `[symbol, interval, date]` unique index
+- Populates `lastBarAt` from last bar's timestamp on all writes (inserts and updates)
+- Backfill: if existing row has null lastBarAt, extracts it from parsed bars JSON before staleness check
+- Files changed: `src/lib/market-data/service.ts`
+- **Learnings for future iterations:**
+  - `onConflictDoUpdate` needs `target` array matching the unique index columns, and `set` object for columns to update
+  - The `extractLastBarAt` and `isCacheStale` functions are exported-friendly for unit testing (US-007)
+  - Staleness threshold is 5 minutes (STALENESS_THRESHOLD_MS constant) — easily adjustable
+---
+
+## 2026-03-14 - US-003
+- Eliminated redundant derived-interval cache storage in `getOHLCBars`
+- Added `BaseInterval` type (`'1min' | '1h'`) and `getBaseInterval()` mapping function
+- `getOHLCBars` now always caches using base interval, then aggregates to requested interval before returning
+- Updated `aggregateBars` to short-circuit for both `1min` and `1h` (base intervals = no-op)
+- Files changed: `src/lib/market-data/service.ts`
+- **Learnings for future iterations:**
+  - `getOHLCBars` handles the base→derived aggregation internally now — callers like `getOHLCForTimeRange` and `getOHLCForChart` don't need changes since they pass intervals through to `getOHLCBars` which handles everything
+  - `fetchFromDatabento` still has its own `aggregateBars` call but it's harmless since it only receives base intervals now
+  - US-004 may be largely satisfied already since `getOHLCBars` handles aggregation — verify before making changes
+---
