@@ -112,3 +112,14 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - The `hasPaidPlan` boolean (isProUser || isStarterUser) is useful for conditional display — differentiates between users who have a subscription vs those with PLAN_NONE
   - When removing a plan from comparison grid, also update `sm:grid-cols-N` to match the new count
 ---
+
+## 2026-03-14 - US-010
+- Verified upgrade-prompt.tsx already has no PLAN_FREE references (was never imported)
+- Beta detection already uses `isBetaFromMetadata(user?.publicMetadata)` (done in US-003)
+- Links already point to `/pricing` (was updated prior to this story)
+- No code changes needed — all acceptance criteria already met by prior stories
+- Files changed: none (only PRD updated)
+- **Learnings for future iterations:**
+  - Some stories may be no-ops if prior stories already addressed all concerns — still verify and mark as passing
+  - Pre-existing Biome lint issues exist (CSS class sorting in settings-content.tsx, non-null assertion in billing.test.ts) — these are unrelated to billing cleanup
+---
