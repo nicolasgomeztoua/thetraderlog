@@ -21,8 +21,8 @@ import {
 } from "@/lib/billing/utils";
 import {
 	FEATURE_AI_CHAT,
-	PLAN_FREE,
 	PLAN_METADATA,
+	PLAN_NONE,
 	PLAN_PRO,
 	PLAN_STARTER,
 } from "@/lib/constants/billing";
@@ -130,8 +130,8 @@ export function BillingTab() {
 	const plan = planQuery.data;
 	const isLoading = !clerkLoaded || planQuery.isLoading;
 	const isBeta = plan?.beta ?? false;
-	const effectivePlan = plan?.plan ?? PLAN_FREE;
-	const metadata = PLAN_METADATA[effectivePlan] ?? PLAN_METADATA[PLAN_FREE];
+	const effectivePlan = plan?.plan ?? PLAN_NONE;
+	const metadata = PLAN_METADATA[effectivePlan] ?? PLAN_METADATA[PLAN_NONE];
 
 	const isProUser = effectivePlan === PLAN_PRO;
 	const isStarterUser = effectivePlan === PLAN_STARTER;
@@ -214,11 +214,14 @@ export function BillingTab() {
 								className="font-medium font-mono text-sm uppercase tracking-wider"
 								data-testid="billing-plan-name"
 							>
-								{metadata?.name ?? "Free"}
+								{hasPaidPlan ? (metadata?.name ?? "No Plan") : "No active plan"}
 							</p>
 							<p className="font-mono text-muted-foreground text-xs">
-								{metadata?.price ?? "$0"}
-								{isBeta && " — Pro features free during beta"}
+								{hasPaidPlan
+									? metadata?.price
+									: isBeta
+										? "Pro features free during beta"
+										: "Subscribe to get started"}
 							</p>
 						</div>
 						<div>
@@ -341,8 +344,8 @@ export function BillingTab() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-					<div className="grid gap-3 sm:grid-cols-3">
-						{[PLAN_FREE, PLAN_STARTER, PLAN_PRO].map((planSlug) => {
+					<div className="grid gap-3 sm:grid-cols-2">
+						{[PLAN_STARTER, PLAN_PRO].map((planSlug) => {
 							const planMeta = PLAN_METADATA[planSlug];
 							if (!planMeta) return null;
 							const isCurrent = effectivePlan === planSlug;
@@ -385,10 +388,9 @@ export function BillingTab() {
 										))}
 									</ul>
 									{!isCurrent &&
-										planSlug !== PLAN_FREE &&
 										(() => {
 											const isUpgrade =
-												effectivePlan === PLAN_FREE ||
+												effectivePlan === PLAN_NONE ||
 												(effectivePlan === PLAN_STARTER &&
 													planSlug === PLAN_PRO);
 											return isUpgrade ? (
