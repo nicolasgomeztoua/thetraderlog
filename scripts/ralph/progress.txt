@@ -36,3 +36,14 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - Always use `isBetaFromMetadata()` for client-side beta checks — it handles runtime type safety and avoids TypeScript augmentation issues
   - Biome import ordering: `@/components/*` sorts before `@/lib/*` — place new imports accordingly
 ---
+
+## 2026-03-14 - US-004
+- Updated `billing.test.ts` beta test to use `sessionClaims: { metadata: { features: { beta_access: true } } }` with `has: () => false` instead of old `has: feature === "beta_access"` pattern
+- Updated `entitlements.test.ts` beta bypass section to use `BETA_AUTH` with `sessionClaims` for beta detection and `has: () => false` to truly prove beta bypasses all gates (not just `FULL_ACCESS_AUTH`)
+- Fixed pre-existing bug: `ai.sendMessage` rejection test was creating conversation with `noAccessCaller` but `createConversation` also requires `ai_chat` feature — changed to use `fullAccessCaller` for conversation creation
+- Files changed: `tests/integration/billing.test.ts`, `tests/integration/entitlements.test.ts`
+- **Learnings for future iterations:**
+  - To mock beta in tests: pass `{ has: () => false, sessionClaims: { metadata: { features: { beta_access: true } } } }` as clerkAuth — this proves beta truly bypasses gates since `has()` denies everything
+  - `createConversation` in the AI router uses `requireFeature(FEATURE_AI_CHAT)` — it's NOT just `protectedProcedure`. When testing rejection of sendMessage, create the conversation with a caller that HAS access first
+  - Pre-existing test failures: `ai.test.ts` and `report-viewer.test.ts` have failures unrelated to beta detection (report limit issues)
+---

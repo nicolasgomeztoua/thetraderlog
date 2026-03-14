@@ -71,7 +71,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The test helpers likely mock clerkAuth with a has() function. Need to also provide sessionClaims.metadata to match the new beta detection path."
     },
     {
