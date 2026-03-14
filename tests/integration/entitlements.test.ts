@@ -12,7 +12,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
+	FEATURE_CSV_IMPORT_EXPORT,
 	FEATURE_CUSTOM_STRATEGIES,
+	FEATURE_CUSTOM_TAGS,
+	FEATURE_PDF_EXPORT,
 	FEATURE_TRADE_MANAGEMENT,
 } from "@/lib/constants/billing";
 import { ERR_FEATURE_NOT_AVAILABLE } from "@/lib/constants/errors";
@@ -81,6 +84,26 @@ function withFeatures(...features: string[]) {
 		},
 	};
 }
+
+/**
+ * Starter plan features — trade management, CSV, tags, strategies, but NO AI or PDF.
+ */
+const STARTER_FEATURES = [
+	FEATURE_TRADE_MANAGEMENT,
+	FEATURE_CSV_IMPORT_EXPORT,
+	FEATURE_CUSTOM_TAGS,
+	FEATURE_CUSTOM_STRATEGIES,
+];
+
+/**
+ * Pro plan features — everything in Starter plus AI and PDF.
+ */
+const PRO_FEATURES = [
+	...STARTER_FEATURES,
+	FEATURE_AI_CHAT,
+	FEATURE_AI_REPORTS,
+	FEATURE_PDF_EXPORT,
+];
 
 // =============================================================================
 // TEST SUITE
@@ -311,6 +334,158 @@ describe("entitlement gates", () => {
 			const result = await noAccessCaller.strategies.getAll();
 
 			expect(result).toBeDefined();
+		});
+	});
+
+	// =========================================================================
+	// PLAN-LEVEL ACCESS (TWO-TIER MODEL: NONE → STARTER → PRO)
+	// =========================================================================
+
+	describe("PLAN_NONE user (no subscription)", () => {
+		it("should deny trade creation", async () => {
+			await expect(
+				noAccessCaller.trades.create({
+					symbol: "ES",
+					instrumentType: "futures",
+					direction: "long",
+					entryPrice: "5000.00",
+					quantity: "1",
+					accountId: account.id,
+					entryTime: new Date().toISOString(),
+				}),
+			).rejects.toThrow(ERR_FEATURE_NOT_AVAILABLE);
+		});
+
+		it("should deny AI chat", async () => {
+			const conversation = await fullAccessCaller.ai.createConversation({
+				mode: "chat",
+			});
+
+			await expect(
+				noAccessCaller.ai.sendMessage({
+					conversationId: conversation.id,
+					content: "Hello",
+				}),
+			).rejects.toThrow(ERR_FEATURE_NOT_AVAILABLE);
+		});
+
+		it("should deny strategy creation", async () => {
+			await expect(
+				noAccessCaller.strategies.create({ name: "Denied Strategy" }),
+			).rejects.toThrow(ERR_FEATURE_NOT_AVAILABLE);
+		});
+
+		it("should still allow read-only queries", async () => {
+			const result = await noAccessCaller.trades.getAll({
+				accountId: account.id,
+			});
+			expect(result).toBeDefined();
+			expect(result.items).toBeDefined();
+		});
+	});
+
+	describe("Starter plan user", () => {
+		let starterCaller: TestCaller;
+
+		beforeAll(async () => {
+			starterCaller = await createTestCaller(
+				user.clerkId,
+				user,
+				withFeatures(...STARTER_FEATURES),
+			);
+		});
+
+		it("should allow trade creation", async () => {
+			const trade = await starterCaller.trades.create({
+				symbol: "NQ",
+				instrumentType: "futures",
+				direction: "short",
+				entryPrice: "18000.00",
+				quantity: "1",
+				accountId: account.id,
+				entryTime: new Date().toISOString(),
+			});
+			expect(trade).toBeDefined();
+		});
+
+		it("should allow strategy creation", async () => {
+			const strategy = await starterCaller.strategies.create({
+				name: "Starter Strategy",
+			});
+			expect(strategy).toBeDefined();
+			expect(strategy?.name).toBe("Starter Strategy");
+		});
+
+		it("should deny AI chat (pro-only feature)", async () => {
+			const conversation = await fullAccessCaller.ai.createConversation({
+				mode: "chat",
+			});
+
+			await expect(
+				starterCaller.ai.sendMessage({
+					conversationId: conversation.id,
+					content: "Hello from starter",
+				}),
+			).rejects.toThrow(ERR_FEATURE_NOT_AVAILABLE);
+		});
+
+		it("should deny AI reports (pro-only feature)", async () => {
+			await expect(
+				starterCaller.ai.startReport({ prompt: "Analyze trades" }),
+			).rejects.toThrow(ERR_FEATURE_NOT_AVAILABLE);
+		});
+	});
+
+	describe("Pro plan user", () => {
+		let proCaller: TestCaller;
+
+		beforeAll(async () => {
+			proCaller = await createTestCaller(
+				user.clerkId,
+				user,
+				withFeatures(...PRO_FEATURES),
+			);
+		});
+
+		it("should allow trade creation", async () => {
+			const trade = await proCaller.trades.create({
+				symbol: "ES",
+				instrumentType: "futures",
+				direction: "long",
+				entryPrice: "5100.00",
+				quantity: "1",
+				accountId: account.id,
+				entryTime: new Date().toISOString(),
+			});
+			expect(trade).toBeDefined();
+		});
+
+		it("should allow strategy creation", async () => {
+			const strategy = await proCaller.strategies.create({
+				name: "Pro Strategy",
+			});
+			expect(strategy).toBeDefined();
+			expect(strategy?.name).toBe("Pro Strategy");
+		});
+
+		it("should allow AI chat", async () => {
+			const conversation = await proCaller.ai.createConversation({
+				mode: "chat",
+			});
+			const result = await proCaller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "Hello from pro",
+			});
+			expect(result).toBeDefined();
+			expect(result?.role).toBe("assistant");
+		});
+
+		it("should allow AI reports", async () => {
+			const result = await proCaller.ai.startReport({
+				prompt: "Pro report",
+			});
+			expect(result).toBeDefined();
+			expect(result.status).toBe("queued");
 		});
 	});
 
