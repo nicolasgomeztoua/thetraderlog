@@ -897,7 +897,7 @@ export const candleCache = createTable(
 		fetchedAt: timestamp("fetched_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
-		// No expiresAt - data persists forever for historical lookups
+		lastBarAt: timestamp("last_bar_at", { withTimezone: true }), // Timestamp of the last bar in the cached array (nullable for backward compat)
 	},
 	(t) => [
 		// Unique constraint on symbol+interval+date = our cache key
