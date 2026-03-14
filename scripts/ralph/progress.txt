@@ -138,3 +138,18 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - "Free" in cta.tsx/hero.tsx refers to the 30-day free trial, NOT the free tier plan — don't change these
   - Pre-existing Biome issues (CSS class sorting, non-null assertion, archive JSON formatting) are unrelated to billing cleanup and should not block commits
 ---
+
+## 2026-03-14 - US-012
+- Added plan-level entitlement test sections to `tests/integration/entitlements.test.ts`: PLAN_NONE denied, Starter features, Pro features
+- Created `STARTER_FEATURES` and `PRO_FEATURES` arrays mapping plan tiers to feature sets
+- PLAN_NONE tests: verified denial of trade creation, AI chat, strategy creation; confirmed read-only queries still work
+- Starter plan tests: verified trade/strategy creation works, AI chat/reports denied (pro-only)
+- Pro plan tests: verified all features work (trades, strategies, AI chat, AI reports)
+- Confirmed billing.test.ts already fully updated (PLAN_NONE state tests from US-011)
+- Confirmed zero PLAN_FREE references remain in any test files or fixtures
+- Pre-existing failures in ai.test.ts and report-viewer.test.ts (report limit issues) are unrelated
+- Files changed: `tests/integration/entitlements.test.ts`
+- **Learnings for future iterations:**
+  - Plan-level tests should use feature arrays (STARTER_FEATURES, PRO_FEATURES) with `withFeatures(...spread)` for clarity
+  - entitlements.test.ts went from 17 to 29 tests with the plan-level additions
+---
