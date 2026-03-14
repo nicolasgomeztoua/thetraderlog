@@ -93,3 +93,15 @@ Started: Sat Mar 14 16:20:39 WET 2026
   - Unit tests run with `bunx vitest run --config vitest.config.unit.ts` (no Docker needed)
   - Biome enforces import ordering — `type` imports must be sorted alphabetically with non-type imports
 ---
+
+## 2026-03-14 - US-008
+- Created integration tests for progressive cache behavior: `tests/integration/market-data-cache.test.ts`
+- 6 tests covering: cache entry creation with lastBarAt, historical cache hit (no re-fetch), onConflictDoUpdate upsert, base-interval-only storage, 5min aggregation from 1min, 4h aggregation from 1h
+- Mocked `@/server/db` to use test DB via `getTestDb()`, mocked `@/env` for API key, mocked global `fetch` for Databento API
+- Files changed: `tests/integration/market-data-cache.test.ts`
+- **Learnings for future iterations:**
+  - To test service.ts functions that import `db` from `@/server/db`, mock the module with a lazy getter: `vi.mock("@/server/db", () => ({ get db() { return getTestDb(); } }))`
+  - `vi.spyOn(globalThis, "fetch")` is cleaner than mocking the whole module for HTTP mocking
+  - Biome requires chained method calls to break across lines: `vi.spyOn(...).mockResolvedValue(...)` must use `.` on new lines
+  - Pre-existing failure in `entitlements.test.ts` (1 test) is unrelated to market data work
+---

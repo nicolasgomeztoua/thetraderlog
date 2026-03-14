@@ -138,7 +138,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Integration tests should directly test the cache DB operations and aggregation pipeline. Mock the Databento API fetch to avoid real API calls in tests."
     },
     {
