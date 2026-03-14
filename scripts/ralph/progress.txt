@@ -84,3 +84,19 @@ Started: Sat Mar 14 20:36:41 WET 2026
 - **Learnings for future iterations:**
   - The deprecated `PLAN_FREE` re-export in billing.ts constants still exists — downstream stories (US-008/009/011) will clean up remaining references
 ---
+
+## 2026-03-14 - US-008
+- Removed free tier card from marketing pricing section, now shows only Starter ($10/mo) and Pro ($24/mo)
+- Both plans now show "30-day free trial" badge
+- Updated `PLAN_HIERARCHY` to use `PLAN_NONE` instead of `PLAN_FREE`
+- Signed-out users: CTA says "Start [Plan] Trial" and redirects to `/pricing` after sign-up
+- Signed-in users without plan: CTA links to `/pricing` for checkout (not `/settings?tab=billing`)
+- Updated trial note copy: "All plans include a 30-day free trial" (removed "no credit card required")
+- Replaced `PLAN_FREE` import with `PLAN_NONE`
+- Changed grid from 3-column to 2-column (`lg:grid-cols-2`) and reduced max-width to `max-w-4xl`
+- Removed `order-first` mobile reordering (no longer needed with 2 cards)
+- Files changed: `src/app/(marketing)/_components/pricing.tsx`
+- **Learnings for future iterations:**
+  - When reducing from 3 to 2 pricing cards, update grid columns and max-width to keep cards well-proportioned
+  - `SignUpButton`'s `forceRedirectUrl` should point to `/pricing` (Clerk checkout page) for paid plans, not `/settings?tab=billing`
+---
