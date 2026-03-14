@@ -90,7 +90,7 @@
         "Verify in browser: /pricing loads without 404"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Clerk PricingTable is a drop-in component. Use appearance prop for theming. Terminal tokens: bg #050505, primary #d4ff00, secondary #00d4ff, font-family monospace."
     },
     {

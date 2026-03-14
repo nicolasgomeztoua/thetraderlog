@@ -47,3 +47,17 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - `createConversation` in the AI router uses `requireFeature(FEATURE_AI_CHAT)` — it's NOT just `protectedProcedure`. When testing rejection of sendMessage, create the conversation with a caller that HAS access first
   - Pre-existing test failures: `ai.test.ts` and `report-viewer.test.ts` have failures unrelated to beta detection (report limit issues)
 ---
+
+## 2026-03-14 - US-005
+- Created `/pricing` page at `src/app/(marketing)/pricing/page.tsx` with metadata (title: "Pricing | EdgeJournal")
+- Created `PricingPageContent` client component at `src/app/(marketing)/pricing/_components/pricing-page-content.tsx`
+- Renders Clerk's `<PricingTable>` with Terminal design theming via `appearance` prop (dark base theme, CLERK_THEME variables, 4px border radius)
+- Page accessible to both authenticated and unauthenticated users (sits in marketing layout)
+- `newSubscriptionRedirectUrl="/dashboard"` sends users to dashboard after checkout
+- Added `data-testid` attributes for future E2E testing
+- Files changed: `src/app/(marketing)/pricing/page.tsx` (new), `src/app/(marketing)/pricing/_components/pricing-page-content.tsx` (new)
+- **Learnings for future iterations:**
+  - Clerk `PricingTable` accepts `appearance` prop same as other Clerk components — use `dark` base theme + `CLERK_THEME` variables for consistency
+  - PricingTable handles empty/no plans gracefully on its own — no custom fallback needed
+  - The marketing layout already includes Navbar and Footer, so pricing page just needs content
+---
