@@ -258,9 +258,12 @@ function LightweightChartInner({
 	const tvSymbol = getTradingViewSymbol(symbol);
 	const tradingViewUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
 
-	// Fetch full day(s) of 1-min data once - then aggregate client-side
+	// Determine which endpoint to use based on interval
 	const canFetchRealData = !!entryTime;
-	const { data: rawChartData, isLoading } =
+	const isHourly = interval === "1h";
+
+	// Sub-hourly: fetch full day(s) of 1-min data, then aggregate client-side
+	const { data: rawChartData, isLoading: isLoadingSubHourly } =
 		api.marketData.getFullDayChartData.useQuery(
 			{
 				symbol,
@@ -270,13 +273,42 @@ function LightweightChartInner({
 				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
 			},
 			{
-				enabled: canFetchRealData,
+				enabled: canFetchRealData && !isHourly,
 				staleTime: STALE_TIME_MEDIUM,
 			},
 		);
 
+	// 1h: fetch extended date range (~7 trading sessions) of 1h bars server-side
+	const { data: extendedChartData, isLoading: isLoadingHourly } =
+		api.marketData.getExtendedChartData.useQuery(
+			{
+				symbol,
+				entryTime: entryTime
+					? new Date(entryTime).toISOString()
+					: new Date().toISOString(),
+				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
+			},
+			{
+				enabled: canFetchRealData && isHourly,
+				staleTime: STALE_TIME_MEDIUM,
+			},
+		);
+
+	const isLoading = isHourly ? isLoadingHourly : isLoadingSubHourly;
+
 	// Aggregate 1-min bars to selected interval client-side (instant!)
+	// For 1h, use extended data directly (already 1h bars from server)
 	const chartData = useMemo(() => {
+		if (isHourly) {
+			if (!extendedChartData?.bars?.length) return null;
+			return {
+				bars: extendedChartData.bars,
+				source: extendedChartData.source,
+				dataQuality: extendedChartData.dataQuality,
+				barCount: extendedChartData.barCount,
+			};
+		}
+
 		if (!rawChartData?.bars?.length) return null;
 
 		const aggregatedBars =
@@ -290,7 +322,7 @@ function LightweightChartInner({
 			dataQuality: rawChartData.dataQuality,
 			barCount: aggregatedBars.length,
 		};
-	}, [rawChartData, interval]);
+	}, [rawChartData, extendedChartData, interval, isHourly]);
 
 	// Determine if we have real data
 	const hasRealData = chartData && chartData.bars.length > 0;
