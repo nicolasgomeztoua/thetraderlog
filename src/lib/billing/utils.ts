@@ -1,4 +1,9 @@
-import { PLAN_FREE, PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
+import {
+	FEATURE_BETA_ACCESS,
+	PLAN_FREE,
+	PLAN_PRO,
+	PLAN_STARTER,
+} from "@/lib/constants/billing";
 
 /**
  * Returns the time until midnight UTC as a human-readable label.
@@ -35,18 +40,10 @@ export function getNextMonthResetDate(): string {
 }
 
 /**
- * Minimal interface for checking beta status from Clerk user metadata.
- * Works with Clerk's currentUser() or session claims.
- */
-export interface UserWithMetadata {
-	publicMetadata?: Record<string, unknown>;
-}
-
-/**
- * Minimal interface for Clerk's auth object (server-side).
+ * Minimal interface for Clerk's auth object (server-side or client-side).
  * Accepts any object with a has() method matching Clerk's signature.
  */
-interface AuthWithHas {
+export interface AuthWithHas {
 	has: (params: {
 		feature?: string;
 		plan?: string;
@@ -56,11 +53,11 @@ interface AuthWithHas {
 }
 
 /**
- * Checks if a user has beta access via Clerk publicMetadata.
+ * Checks if the auth session has beta access via the FEATURE_BETA_ACCESS flag.
  * Beta users get full Pro access without a subscription.
  */
-export function isBetaUser(user: UserWithMetadata): boolean {
-	return user.publicMetadata?.beta === true;
+export function isBetaAuth(auth: AuthWithHas): boolean {
+	return auth.has({ feature: FEATURE_BETA_ACCESS });
 }
 
 /**
@@ -70,9 +67,8 @@ export function isBetaUser(user: UserWithMetadata): boolean {
 export function hasFeatureAccess(
 	auth: AuthWithHas,
 	feature: string,
-	user?: UserWithMetadata,
 ): boolean {
-	if (user && isBetaUser(user)) {
+	if (isBetaAuth(auth)) {
 		return true;
 	}
 	return auth.has({ feature });
@@ -85,9 +81,8 @@ export function hasFeatureAccess(
 export function hasPlanAccess(
 	auth: AuthWithHas,
 	plan: string,
-	user?: UserWithMetadata,
 ): boolean {
-	if (user && isBetaUser(user)) {
+	if (isBetaAuth(auth)) {
 		return true;
 	}
 	return auth.has({ plan });
@@ -97,11 +92,8 @@ export function hasPlanAccess(
  * Returns the effective plan slug for a user.
  * Beta users are treated as Pro regardless of their actual subscription.
  */
-export function getEffectivePlan(
-	auth: AuthWithHas,
-	user?: UserWithMetadata,
-): string {
-	if (user && isBetaUser(user)) {
+export function getEffectivePlan(auth: AuthWithHas): string {
+	if (isBetaAuth(auth)) {
 		return PLAN_PRO;
 	}
 

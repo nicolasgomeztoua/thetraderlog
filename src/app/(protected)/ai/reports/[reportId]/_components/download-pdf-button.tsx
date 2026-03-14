@@ -1,16 +1,15 @@
 "use client";
 
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { FileText, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { UpgradeButtonCompact } from "@/components/billing/upgrade-prompt";
-import { FEATURE_PDF_EXPORT } from "@/lib/constants/billing";
+import { FEATURE_BETA_ACCESS, FEATURE_PDF_EXPORT } from "@/lib/constants/billing";
 import { api } from "@/trpc/react";
 
 export function DownloadPdfButton({ reportId }: { reportId: string }) {
 	const { has, isLoaded } = useAuth();
-	const { user } = useUser();
 	const [runId, setRunId] = useState<string | null>(null);
 
 	const generatePdf = api.ai.generatePdf.useMutation({
@@ -48,7 +47,7 @@ export function DownloadPdfButton({ reportId }: { reportId: string }) {
 		}
 	}, [statusQuery.data, runId]);
 
-	const isBeta = user?.publicMetadata?.beta === true;
+	const isBeta = has?.({ feature: FEATURE_BETA_ACCESS }) ?? false;
 	const hasPdfAccess = isBeta || has?.({ feature: FEATURE_PDF_EXPORT });
 
 	if (!isLoaded) {

@@ -1,19 +1,18 @@
 "use client";
 
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { AlertTriangle, Clock } from "lucide-react";
 import {
 	getNextMonthResetDate,
 	getTimeUntilMidnightUTC,
 } from "@/lib/billing/utils";
-import { FEATURE_AI_CHAT } from "@/lib/constants/billing";
+import { FEATURE_AI_CHAT, FEATURE_BETA_ACCESS } from "@/lib/constants/billing";
 import { api } from "@/trpc/react";
 
 function useHasAiPlan(): boolean {
 	const { has, isLoaded } = useAuth();
-	const { user } = useUser();
 	if (!isLoaded) return false;
-	const isBeta = user?.publicMetadata?.beta === true;
+	const isBeta = has?.({ feature: FEATURE_BETA_ACCESS }) ?? false;
 	return isBeta || !!has?.({ feature: FEATURE_AI_CHAT });
 }
 

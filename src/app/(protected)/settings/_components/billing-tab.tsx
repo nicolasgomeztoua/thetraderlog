@@ -20,6 +20,7 @@ import {
 } from "@/lib/billing/utils";
 import {
 	FEATURE_AI_CHAT,
+	FEATURE_BETA_ACCESS,
 	PLAN_FREE,
 	PLAN_METADATA,
 	PLAN_PRO,
@@ -118,7 +119,9 @@ export function BillingTab() {
 	// Gate usageQuery on Clerk's client-side feature check so it fires in
 	// parallel with planQuery instead of waiting for planQuery to resolve.
 	const hasAiFeature =
-		clerkLoaded && (has?.({ feature: FEATURE_AI_CHAT }) ?? false);
+		clerkLoaded &&
+		((has?.({ feature: FEATURE_BETA_ACCESS }) ?? false) ||
+			(has?.({ feature: FEATURE_AI_CHAT }) ?? false));
 
 	const plan = planQuery.data;
 	const isLoading = !clerkLoaded || planQuery.isLoading;
@@ -263,7 +266,7 @@ export function BillingTab() {
 			</Card>
 
 			{/* Usage Meters Card - shown for Pro users and beta */}
-			{isProUser && usageQuery.isLoading && (
+			{(isProUser || isBeta) && usageQuery.isLoading && (
 				<Card data-testid="billing-usage-card-loading">
 					<CardHeader className="p-4 sm:p-6">
 						<Skeleton className="h-5 w-24" />
@@ -281,7 +284,7 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			)}
-			{isProUser && usageQuery.isError && (
+			{(isProUser || isBeta) && usageQuery.isError && (
 				<Card data-testid="billing-usage-card-error">
 					<CardContent className="p-6 text-center font-mono text-muted-foreground text-sm">
 						Failed to load usage data.{" "}
@@ -295,7 +298,7 @@ export function BillingTab() {
 					</CardContent>
 				</Card>
 			)}
-			{isProUser && usage && (
+			{(isProUser || isBeta) && usage && (
 				<Card data-testid="billing-usage-card">
 					<CardHeader className="p-4 sm:p-6">
 						<CardTitle className="flex items-center gap-2">
