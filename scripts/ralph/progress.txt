@@ -38,3 +38,14 @@ Started: Sat Mar 14 16:20:39 WET 2026
   - `fetchFromDatabento` still has its own `aggregateBars` call but it's harmless since it only receives base intervals now
   - US-004 may be largely satisfied already since `getOHLCBars` handles aggregation — verify before making changes
 ---
+
+## 2026-03-14 - US-004
+- Verified that `getOHLCForChart`, `getOHLCForTimeRange`, and `getFullDayBars` all correctly use base interval fetch + aggregation
+- `getOHLCForChart` → `getOHLCForTimeRange` → `getOHLCBars` (which maps to base interval internally) — no code changes needed
+- `getFullDayBars` already hardcodes `"1min"` at line 610 — confirmed no changes needed
+- No files changed (US-003 already satisfied all acceptance criteria)
+- Build passes, typecheck passes
+- **Learnings for future iterations:**
+  - When `getOHLCBars` handles aggregation internally, downstream callers automatically benefit — no need to duplicate logic
+  - Pre-existing Biome lint errors exist (unused import in ai.ts, non-null assertion in billing test, formatting in archive JSON) — these are unrelated to market data work
+---

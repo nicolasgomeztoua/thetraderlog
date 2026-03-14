@@ -68,7 +68,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "getFullDayBars (line 503) already hardcodes 1min. getOHLCForChart (line 234) currently passes the interval through — needs to be changed to always use 1min then aggregate."
     },
     {
