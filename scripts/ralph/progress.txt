@@ -74,3 +74,13 @@ Started: Sat Mar 14 20:36:41 WET 2026
   - `PLAN_METADATA` must have an entry for `PLAN_NONE` since billing-tab.tsx and pricing.tsx do lookups like `PLAN_METADATA[effectivePlan]` which would crash on undefined
   - The marketing landing page pre-renders at build time — any undefined metadata access crashes the build, not just at runtime
 ---
+
+## 2026-03-14 - US-007
+- Replaced `PLAN_FREE` import with `PLAN_NONE` in `src/server/api/routers/billing.ts`
+- Updated `getCurrentPlan` fallback from `PLAN_FREE` to `PLAN_NONE` for users without clerkAuth
+- Updated metadata fallback from `PLAN_METADATA[PLAN_FREE]` to `PLAN_METADATA[PLAN_NONE]`
+- `getUsage` unchanged — it doesn't reference PLAN_FREE directly
+- Files changed: `src/server/api/routers/billing.ts`
+- **Learnings for future iterations:**
+  - The deprecated `PLAN_FREE` re-export in billing.ts constants still exists — downstream stories (US-008/009/011) will clean up remaining references
+---
