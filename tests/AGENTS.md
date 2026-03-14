@@ -50,6 +50,17 @@ bunx vitest run --config vitest.config.unit.ts
 ```
 Unit tests go in `tests/unit/` directory. They don't require Docker since they don't use the global setup that starts PostgreSQL.
 
+### Mocking Env/DB for Unit Tests of Service Modules
+**When:** Unit testing functions from files that import `@/env` or `@/server/db` at the top level
+**Problem:** Importing the module triggers env validation (zod) which fails without real env vars
+**Solution:** Use `vi.mock()` before importing the module under test:
+```typescript
+vi.mock("@/env", () => ({ env: { DATABENTO_API_KEY: "test" } }));
+vi.mock("@/server/db", () => ({ db: {} }));
+vi.mock("@/server/db/schema", () => ({ candleCache: {} }));
+vi.mock("drizzle-orm", () => ({ and: vi.fn(), eq: vi.fn() }));
+```
+
 ### Unit vs Integration Tests
 **When:** Choosing test type
 **How:**
@@ -185,6 +196,17 @@ const caller = await createTestCaller(user.clerkId, userWithBeta, FULL_ACCESS_AU
 ### Platform Enum Values
 **Problem:** Using `"mt4"` or `"mt5"` as platform value causes validation error
 **Solution:** Valid values are: `projectx`, `topstepx`, `ninjatrader`, `tradovate`, `rithmic`, `apex`, `other`
+
+### Testing Service Functions That Import `db` Directly
+**When:** Integration-testing service-layer functions (e.g., `src/lib/market-data/service.ts`) that `import { db } from "@/server/db"` at the top level
+**Problem:** The service imports the production `db` singleton, not the test DB from `getTestDb()`
+**Solution:** Mock `@/server/db` with a lazy getter so it resolves to the test DB:
+```typescript
+vi.mock("@/server/db", () => ({
+  get db() { return getTestDb(); },
+}));
+```
+Also mock `@/env` to provide required env vars. Use `vi.spyOn(globalThis, "fetch")` to mock external HTTP calls.
 
 ## Decisions
 

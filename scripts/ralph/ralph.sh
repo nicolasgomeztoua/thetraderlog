@@ -654,7 +654,7 @@ Are there any remaining concerns with this PR, or is it ready to merge?"
             # Check if this is a new response (not our follow-up echoed back)
             if [ -n "$LATEST_RESPONSE" ] && ! echo "$LATEST_RESPONSE" | grep -q "Are there any remaining concerns"; then
                 # Check if it's newer than our follow-up by comparing content
-                local curr_hash=$(echo "$LATEST_RESPONSE" | md5)
+                curr_hash=$(echo "$LATEST_RESPONSE" | md5)
                 if [ "$curr_hash" != "$local_prev_hash" ]; then
                     echo -e "${GREEN}Greptile responded!${NC}"
                     GREPTILE_REPLIED=true

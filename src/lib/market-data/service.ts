@@ -40,6 +40,18 @@ export interface CacheResult {
 
 export type CacheInterval = "1min" | "5min" | "15min" | "30min" | "1h" | "4h";
 
+/** Intervals that are actually stored in candle_cache (fetched from Databento) */
+export type BaseInterval = "1min" | "1h";
+
+/**
+ * Map a requested interval to its base interval for cache storage.
+ * 5min/15min/30min derive from 1min; 4h derives from 1h.
+ */
+function getBaseInterval(interval: CacheInterval): BaseInterval {
+	if (interval === "1h" || interval === "4h") return "1h";
+	return "1min";
+}
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -59,14 +71,61 @@ function normalizeDateToUTC(date: Date): Date {
 // =============================================================================
 
 /**
- * Get OHLC bars for a specific symbol, interval, and date.
- * Uses cache-first strategy: checks DB cache, fetches from API on miss.
- *
- * @param symbol - Trading symbol (e.g., "ES", "MNQ", "CL")
- * @param interval - Bar interval (e.g., "5min", "15min", "1h")
- * @param date - The date to fetch data for (will be normalized to midnight UTC)
- * @returns CacheResult with bars and metadata
+ * Check if a date is today in UTC
  */
+export function isToday(date: Date): boolean {
+	const now = new Date();
+	return (
+		date.getUTCFullYear() === now.getUTCFullYear() &&
+		date.getUTCMonth() === now.getUTCMonth() &&
+		date.getUTCDate() === now.getUTCDate()
+	);
+}
+
+/**
+ * Staleness threshold for same-day cache entries (5 minutes)
+ */
+export const STALENESS_THRESHOLD_MS = 5 * 60 * 1000;
+
+/**
+ * Check if a same-day cache entry is stale and needs re-fetching.
+ * Historical dates are never stale. Today's data is stale if both
+ * lastBarAt and fetchedAt are older than the staleness threshold.
+ * This prevents infinite re-fetches after market close: once trading
+ * stops, lastBarAt stays old but fetchedAt reflects the last write,
+ * so a recent fetch keeps the cache fresh.
+ */
+export function isCacheStale(
+	dateKey: Date,
+	lastBarAt: Date | null,
+	fetchedAt?: Date | null,
+): boolean {
+	if (!isToday(dateKey)) return false;
+
+	const now = Date.now();
+
+	// If we fetched recently, treat as fresh even after market close
+	if (fetchedAt && now - fetchedAt.getTime() < STALENESS_THRESHOLD_MS)
+		return false;
+
+	if (!lastBarAt) {
+		// Null lastBarAt on a today-entry means we can't determine freshness — re-fetch
+		return true;
+	}
+	return now - lastBarAt.getTime() > STALENESS_THRESHOLD_MS;
+}
+
+/**
+ * Extract the lastBarAt timestamp from a bars array.
+ * Returns the timestamp of the last bar, or null if empty.
+ */
+export function extractLastBarAt(bars: OHLCBar[]): Date | null {
+	if (bars.length === 0) return null;
+	const lastBar = bars[bars.length - 1];
+	if (!lastBar) return null;
+	return new Date(lastBar.timestamp);
+}
+
 export async function getOHLCBars(
 	symbol: string,
 	interval: CacheInterval,
@@ -74,11 +133,14 @@ export async function getOHLCBars(
 ): Promise<CacheResult> {
 	const dateKey = normalizeDateToUTC(date);
 
-	// 1. Check cache first
+	// Map to base interval — only 1min and 1h are stored in cache
+	const baseInterval = getBaseInterval(interval);
+
+	// 1. Check cache first (always using base interval)
 	const cached = await db.query.candleCache.findFirst({
 		where: and(
 			eq(candleCache.symbol, symbol),
-			eq(candleCache.interval, interval),
+			eq(candleCache.interval, baseInterval),
 			eq(candleCache.date, dateKey),
 		),
 	});
@@ -86,7 +148,29 @@ export async function getOHLCBars(
 	if (cached) {
 		try {
 			const bars = JSON.parse(cached.bars) as OHLCBar[];
-			return { bars, source: "cache", dataQuality: "full" };
+
+			// Backfill lastBarAt if null (pre-migration rows)
+			let lastBarAt = cached.lastBarAt;
+			if (!lastBarAt) {
+				lastBarAt = extractLastBarAt(bars);
+			}
+
+			// For historical dates, return cached data immediately
+			// For today's date, check staleness
+			if (!isCacheStale(dateKey, lastBarAt, cached.fetchedAt)) {
+				const dateStr = dateKey.toISOString().split("T")[0];
+				console.info(
+					`[market-data] cache hit: ${symbol} ${baseInterval} ${dateStr} (${bars.length} bars)`,
+				);
+				const aggregatedBars = aggregateBars(bars, interval);
+				if (interval !== baseInterval) {
+					console.info(
+						`[market-data] aggregating: ${symbol} ${baseInterval} → ${interval} (${bars.length} → ${aggregatedBars.length} bars)`,
+					);
+				}
+				return { bars: aggregatedBars, source: "cache", dataQuality: "full" };
+			}
+			// Same-day stale entry — fall through to re-fetch
 		} catch {
 			// Corrupted cache entry - delete and re-fetch
 			await db
@@ -94,40 +178,71 @@ export async function getOHLCBars(
 				.where(
 					and(
 						eq(candleCache.symbol, symbol),
-						eq(candleCache.interval, interval),
+						eq(candleCache.interval, baseInterval),
 						eq(candleCache.date, dateKey),
 					),
 				);
 		}
 	}
 
-	// 2. Cache MISS - fetch from appropriate API based on symbol type
-	const apiResult = await fetchFromProvider(symbol, interval, dateKey);
+	// 2. Cache MISS or stale — fetch base interval from API
+	const dateStr = dateKey.toISOString().split("T")[0];
+	if (!cached) {
+		console.info(
+			`[market-data] cache miss: ${symbol} ${baseInterval} ${dateStr} → fetching from Databento`,
+		);
+	}
+	const apiResult = await fetchFromProvider(symbol, baseInterval, dateKey);
 
 	if (!apiResult.success || apiResult.bars.length === 0) {
 		return { bars: [], source: "api", dataQuality: "unavailable" };
 	}
 
-	// 3. Store in cache for future use
+	// 3. Store base interval in cache (insert or update on conflict)
+	const lastBarAt = extractLastBarAt(apiResult.bars);
 	try {
 		await db
 			.insert(candleCache)
 			.values({
 				symbol,
-				interval,
+				interval: baseInterval,
 				date: dateKey,
 				bars: JSON.stringify(apiResult.bars),
 				barCount: apiResult.bars.length,
 				source: apiResult.provider ?? "databento",
 				fetchedAt: new Date(),
+				lastBarAt,
 			})
-			.onConflictDoNothing();
+			.onConflictDoUpdate({
+				target: [candleCache.symbol, candleCache.interval, candleCache.date],
+				set: {
+					bars: JSON.stringify(apiResult.bars),
+					barCount: apiResult.bars.length,
+					lastBarAt,
+					fetchedAt: new Date(),
+				},
+			});
 	} catch {
 		// Cache write failed - continue with API results
 	}
 
+	// Log refresh result with bar count comparison
+	if (cached) {
+		console.info(
+			`[market-data] cache refresh: ${symbol} ${baseInterval} ${dateStr} (was ${cached.barCount} bars → now ${apiResult.bars.length} bars)`,
+		);
+	}
+
+	// 4. Aggregate base interval bars to requested interval
+	const aggregatedBars = aggregateBars(apiResult.bars, interval);
+	if (interval !== baseInterval) {
+		console.info(
+			`[market-data] aggregating: ${symbol} ${baseInterval} → ${interval} (${apiResult.bars.length} → ${aggregatedBars.length} bars)`,
+		);
+	}
+
 	return {
-		bars: apiResult.bars,
+		bars: aggregatedBars,
 		source: "api",
 		dataQuality: "full",
 	};
@@ -303,8 +418,11 @@ function mapIntervalToDatabento(interval: string): string {
 /**
  * Aggregate 1-minute bars to larger intervals
  */
-function aggregateBars(bars: OHLCBar[], targetInterval: string): OHLCBar[] {
-	if (targetInterval === "1min") return bars;
+export function aggregateBars(
+	bars: OHLCBar[],
+	targetInterval: string,
+): OHLCBar[] {
+	if (targetInterval === "1min" || targetInterval === "1h") return bars;
 
 	const intervalMinutes: Record<string, number> = {
 		"5min": 5,
@@ -472,10 +590,7 @@ async function fetchFromDatabento(
 		// Sort by timestamp ascending
 		bars.sort((a, b) => a.timestamp - b.timestamp);
 
-		// Aggregate to target interval if needed
-		const aggregatedBars = aggregateBars(bars, interval);
-
-		return { success: true, bars: aggregatedBars, provider: "databento" };
+		return { success: true, bars, provider: "databento" };
 	} catch (error) {
 		return {
 			success: false,
@@ -568,12 +683,13 @@ export async function hasCachedData(
 	date: Date,
 ): Promise<boolean> {
 	const dateKey = normalizeDateToUTC(date);
+	const baseInterval = getBaseInterval(interval);
 
 	const cached = await db.query.candleCache.findFirst({
 		columns: { id: true },
 		where: and(
 			eq(candleCache.symbol, symbol),
-			eq(candleCache.interval, interval),
+			eq(candleCache.interval, baseInterval),
 			eq(candleCache.date, dateKey),
 		),
 	});
