@@ -687,12 +687,13 @@ export async function hasCachedData(
 	date: Date,
 ): Promise<boolean> {
 	const dateKey = normalizeDateToUTC(date);
+	const baseInterval = getBaseInterval(interval);
 
 	const cached = await db.query.candleCache.findFirst({
 		columns: { id: true },
 		where: and(
 			eq(candleCache.symbol, symbol),
-			eq(candleCache.interval, interval),
+			eq(candleCache.interval, baseInterval),
 			eq(candleCache.date, dateKey),
 		),
 	});
