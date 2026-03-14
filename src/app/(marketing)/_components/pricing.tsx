@@ -1,11 +1,11 @@
 "use client";
 
-import { SignUpButton, useAuth } from "@clerk/nextjs";
+import { SignUpButton, useAuth, useUser } from "@clerk/nextjs";
 import { ArrowRight, Check, Crown, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { isBetaFromMetadata } from "@/lib/billing/utils";
 import {
-	FEATURE_BETA_ACCESS,
 	PLAN_FREE,
 	PLAN_METADATA,
 	PLAN_PRO,
@@ -68,6 +68,7 @@ function getPlanIndex(slug: string): number {
 
 function PlanCTA({ plan }: { plan: PricingPlan }) {
 	const { isSignedIn, has, isLoaded } = useAuth();
+	const { user } = useUser();
 
 	if (!isLoaded) {
 		return (
@@ -82,7 +83,9 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 		);
 	}
 
-	const isBeta = has?.({ feature: FEATURE_BETA_ACCESS }) ?? false;
+	const isBeta = isBetaFromMetadata(
+		user?.publicMetadata as Record<string, unknown> | undefined,
+	);
 	const userPlanIndex = isSignedIn
 		? isBeta || has?.({ plan: PLAN_PRO })
 			? getPlanIndex(PLAN_PRO)

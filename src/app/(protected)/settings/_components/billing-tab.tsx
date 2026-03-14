@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { CreditCard, Settings, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -17,10 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
 	getNextMonthResetDate,
 	getTimeUntilMidnightUTC,
+	isBetaFromMetadata,
 } from "@/lib/billing/utils";
 import {
 	FEATURE_AI_CHAT,
-	FEATURE_BETA_ACCESS,
 	PLAN_FREE,
 	PLAN_METADATA,
 	PLAN_PRO,
@@ -113,15 +113,19 @@ function getResetDateLabel(): string {
 
 export function BillingTab() {
 	const { isLoaded: clerkLoaded, has } = useAuth();
+	const { user } = useUser();
 	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
+
+	const isBetaUser = isBetaFromMetadata(
+		user?.publicMetadata as Record<string, unknown> | undefined,
+	);
 
 	// Gate usageQuery on Clerk's client-side feature check so it fires in
 	// parallel with planQuery instead of waiting for planQuery to resolve.
 	const hasAiFeature =
 		clerkLoaded &&
-		((has?.({ feature: FEATURE_BETA_ACCESS }) ?? false) ||
-			(has?.({ feature: FEATURE_AI_CHAT }) ?? false));
+		(isBetaUser || (has?.({ feature: FEATURE_AI_CHAT }) ?? false));
 
 	const plan = planQuery.data;
 	const isLoading = !clerkLoaded || planQuery.isLoading;
