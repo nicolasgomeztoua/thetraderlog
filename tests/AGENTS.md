@@ -50,6 +50,17 @@ bunx vitest run --config vitest.config.unit.ts
 ```
 Unit tests go in `tests/unit/` directory. They don't require Docker since they don't use the global setup that starts PostgreSQL.
 
+### Mocking Env/DB for Unit Tests of Service Modules
+**When:** Unit testing functions from files that import `@/env` or `@/server/db` at the top level
+**Problem:** Importing the module triggers env validation (zod) which fails without real env vars
+**Solution:** Use `vi.mock()` before importing the module under test:
+```typescript
+vi.mock("@/env", () => ({ env: { DATABENTO_API_KEY: "test" } }));
+vi.mock("@/server/db", () => ({ db: {} }));
+vi.mock("@/server/db/schema", () => ({ candleCache: {} }));
+vi.mock("drizzle-orm", () => ({ and: vi.fn(), eq: vi.fn() }));
+```
+
 ### Unit vs Integration Tests
 **When:** Choosing test type
 **How:**

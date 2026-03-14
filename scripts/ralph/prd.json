@@ -119,7 +119,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

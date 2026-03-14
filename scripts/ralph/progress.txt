@@ -78,3 +78,18 @@ Started: Sat Mar 14 16:20:39 WET 2026
   - Use `cached.barCount` from DB instead of re-parsing `cached.bars` JSON to get bar count — avoids double parse and handles corrupted entries safely
   - Aggregation logging fires on both cache hit and API fetch paths when interval !== baseInterval
 ---
+
+## 2026-03-14 - US-007
+- Created unit tests for market data aggregation and staleness detection: `tests/unit/market-data-aggregation.test.ts`
+- Exported `aggregateBars`, `extractLastBarAt`, `isCacheStale`, `isToday`, `STALENESS_THRESHOLD_MS` from `src/lib/market-data/service.ts`
+- 22 tests covering:
+  - `aggregateBars`: 1min→5min, 1min→15min, 1min→30min, 1h→4h, multiple buckets, empty/single bar, volume summing, base interval passthrough
+  - `extractLastBarAt`: normal, empty, single bar cases
+  - `isToday`: today, yesterday, historical dates
+  - `isCacheStale`: historical (never stale), today+null, today+old, today+recent, exact threshold boundary
+- Files changed: `src/lib/market-data/service.ts`, `tests/unit/market-data-aggregation.test.ts`
+- **Learnings for future iterations:**
+  - service.ts imports `@/env` and `@/server/db` which trigger env validation — unit tests must mock these modules with `vi.mock()` before importing
+  - Unit tests run with `bunx vitest run --config vitest.config.unit.ts` (no Docker needed)
+  - Biome enforces import ordering — `type` imports must be sorted alphabetically with non-type imports
+---
