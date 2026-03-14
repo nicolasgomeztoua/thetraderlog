@@ -49,3 +49,18 @@ Started: Sat Mar 14 16:20:39 WET 2026
   - When `getOHLCBars` handles aggregation internally, downstream callers automatically benefit — no need to duplicate logic
   - Pre-existing Biome lint errors exist (unused import in ai.ts, non-null assertion in billing test, formatting in archive JSON) — these are unrelated to market data work
 ---
+
+## 2026-03-14 - US-005
+- Verified that the marketData tRPC router works seamlessly with the progressive cache and base-interval-only storage
+- All 4 endpoints confirmed working correctly:
+  - `getChartData` → `getOHLCForChart` → `getOHLCForTimeRange` → `getOHLCBars` (handles base interval mapping + aggregation)
+  - `getFullDayChartData` → `getFullDayBars` → `getOHLCBars("1min")` (already base interval)
+  - `analyzePriceAction` → `getOHLCForTimeRange("1h")` → `getOHLCBars` (1h is base interval, no mapping needed)
+  - `getOHLC` (deprecated) → `getOHLCForTimeRange` → `getOHLCBars` (handles base interval mapping)
+- `CacheInterval` type still includes all user-requestable intervals (1min, 5min, 15min, 30min, 1h, 4h)
+- No code changes needed — US-003's internal base interval mapping in `getOHLCBars` handles everything
+- Build passes, typecheck passes
+- **Learnings for future iterations:**
+  - The router is a thin layer — it just validates input and delegates to service functions. When the service layer handles complexity internally (like base interval mapping), the router needs no changes.
+  - Pre-existing Biome errors (4 errors, 2 warnings) are unrelated to market data work and exist in ai.ts, billing test, and archive JSON files
+---

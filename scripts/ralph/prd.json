@@ -85,7 +85,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "The router at src/server/api/routers/marketData.ts. Three chart components consume getFullDayChartData: running-pnl-tab.tsx, tradingview-chart.tsx, trade-replay.tsx."
     },
     {
