@@ -9,6 +9,7 @@ export default defineConfig({
 	maxDuration: 300,
 	build: {
 		extensions: [puppeteer()],
+		external: ["estree-util-build-jsx"],
 	},
 	retries: {
 		enabledInDev: true,

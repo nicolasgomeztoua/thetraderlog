@@ -139,6 +139,7 @@ export default function ImportPage() {
 	const [importedCount, setImportedCount] = useState(0);
 
 	const { startTracking } = useImportProgressContext();
+	const utils = api.useUtils();
 	const batchImport = api.trades.batchImport.useMutation();
 
 	const selectedImportAccount = accounts.find(
@@ -994,7 +995,10 @@ export default function ImportPage() {
 								</Button>
 								<Button
 									className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
-									onClick={() => router.push("/journal")}
+									onClick={async () => {
+									await utils.trades.getAll.invalidate();
+									router.push("/journal");
+								}}
 								>
 									View Journal
 								</Button>
