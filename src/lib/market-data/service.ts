@@ -67,6 +67,50 @@ function normalizeDateToUTC(date: Date): Date {
  * @param date - The date to fetch data for (will be normalized to midnight UTC)
  * @returns CacheResult with bars and metadata
  */
+/**
+ * Check if a date is today in UTC
+ */
+function isToday(date: Date): boolean {
+	const now = new Date();
+	return (
+		date.getUTCFullYear() === now.getUTCFullYear() &&
+		date.getUTCMonth() === now.getUTCMonth() &&
+		date.getUTCDate() === now.getUTCDate()
+	);
+}
+
+/**
+ * Staleness threshold for same-day cache entries (5 minutes)
+ */
+const STALENESS_THRESHOLD_MS = 5 * 60 * 1000;
+
+/**
+ * Check if a same-day cache entry is stale and needs re-fetching.
+ * Historical dates are never stale. Today's data is stale if lastBarAt
+ * is more than 5 minutes old.
+ */
+function isCacheStale(dateKey: Date, lastBarAt: Date | null): boolean {
+	if (!isToday(dateKey)) return false;
+
+	const now = Date.now();
+	if (!lastBarAt) {
+		// Null lastBarAt on a today-entry means we can't determine freshness — re-fetch
+		return true;
+	}
+	return now - lastBarAt.getTime() > STALENESS_THRESHOLD_MS;
+}
+
+/**
+ * Extract the lastBarAt timestamp from a bars array.
+ * Returns the timestamp of the last bar, or null if empty.
+ */
+function extractLastBarAt(bars: OHLCBar[]): Date | null {
+	if (bars.length === 0) return null;
+	const lastBar = bars[bars.length - 1];
+	if (!lastBar) return null;
+	return new Date(lastBar.timestamp);
+}
+
 export async function getOHLCBars(
 	symbol: string,
 	interval: CacheInterval,
@@ -86,7 +130,19 @@ export async function getOHLCBars(
 	if (cached) {
 		try {
 			const bars = JSON.parse(cached.bars) as OHLCBar[];
-			return { bars, source: "cache", dataQuality: "full" };
+
+			// Backfill lastBarAt if null (pre-migration rows)
+			let lastBarAt = cached.lastBarAt;
+			if (!lastBarAt) {
+				lastBarAt = extractLastBarAt(bars);
+			}
+
+			// For historical dates, return cached data immediately
+			// For today's date, check staleness
+			if (!isCacheStale(dateKey, lastBarAt)) {
+				return { bars, source: "cache", dataQuality: "full" };
+			}
+			// Same-day stale entry — fall through to re-fetch
 		} catch {
 			// Corrupted cache entry - delete and re-fetch
 			await db
@@ -101,14 +157,15 @@ export async function getOHLCBars(
 		}
 	}
 
-	// 2. Cache MISS - fetch from appropriate API based on symbol type
+	// 2. Cache MISS or stale — fetch from appropriate API based on symbol type
 	const apiResult = await fetchFromProvider(symbol, interval, dateKey);
 
 	if (!apiResult.success || apiResult.bars.length === 0) {
 		return { bars: [], source: "api", dataQuality: "unavailable" };
 	}
 
-	// 3. Store in cache for future use
+	// 3. Store in cache (insert or update on conflict)
+	const lastBarAt = extractLastBarAt(apiResult.bars);
 	try {
 		await db
 			.insert(candleCache)
@@ -120,8 +177,17 @@ export async function getOHLCBars(
 				barCount: apiResult.bars.length,
 				source: apiResult.provider ?? "databento",
 				fetchedAt: new Date(),
+				lastBarAt,
 			})
-			.onConflictDoNothing();
+			.onConflictDoUpdate({
+				target: [candleCache.symbol, candleCache.interval, candleCache.date],
+				set: {
+					bars: JSON.stringify(apiResult.bars),
+					barCount: apiResult.bars.length,
+					lastBarAt,
+					fetchedAt: new Date(),
+				},
+			});
 	} catch {
 		// Cache write failed - continue with API results
 	}
