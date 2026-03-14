@@ -132,6 +132,11 @@ export const bugReportStatusEnum = pgEnum("bug_report_status", [
 	"resolved",
 	"closed",
 ]);
+export const annotationTypeEnum = pgEnum("annotation_type", [
+	"horizontal",
+	"vertical",
+]);
+export const lineStyleEnum = pgEnum("line_style", ["solid", "dashed"]);
 
 // ============================================================================
 // USERS TABLE
@@ -908,6 +913,33 @@ export const candleCache = createTable(
 );
 
 // ============================================================================
+// CHART ANNOTATIONS TABLE (drawing tools on trade charts)
+// ============================================================================
+
+export const chartAnnotations = createTable(
+	"chart_annotation",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.chartAnnotation()),
+		tradeId: text("trade_id")
+			.notNull()
+			.references(() => trades.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		type: annotationTypeEnum("type").notNull(),
+		value: decimal("value", { precision: 20, scale: 8 }).notNull(), // Price for horizontal, Unix timestamp seconds for vertical
+		lineStyle: lineStyleEnum("line_style").notNull().default("solid"),
+		color: text("color").notNull().default("#d4ff00"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+	},
+	(t) => [index("chart_annotation_trade_id_idx").on(t.tradeId)],
+);
+
+// ============================================================================
 // SHARE LINKS TABLE (polymorphic shareable URLs)
 // ============================================================================
 
@@ -1035,6 +1067,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 	shareLinks: many(shareLinks),
 	bugReports: many(bugReports),
 	aiUsage: many(aiUsage),
+	chartAnnotations: many(chartAnnotations),
 }));
 
 export const filterPresetsRelations = relations(filterPresets, ({ one }) => ({
@@ -1092,6 +1125,7 @@ export const tradesRelations = relations(trades, ({ one, many }) => ({
 	tradeTags: many(tradeTags),
 	ruleChecks: many(tradeRuleChecks),
 	attachments: many(tradeAttachments),
+	chartAnnotations: many(chartAnnotations),
 }));
 
 export const tradeExecutionsRelations = relations(
@@ -1272,6 +1306,20 @@ export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
 	}),
 }));
 
+export const chartAnnotationsRelations = relations(
+	chartAnnotations,
+	({ one }) => ({
+		trade: one(trades, {
+			fields: [chartAnnotations.tradeId],
+			references: [trades.id],
+		}),
+		user: one(users, {
+			fields: [chartAnnotations.userId],
+			references: [users.id],
+		}),
+	}),
+);
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -1321,3 +1369,5 @@ export type BugReport = typeof bugReports.$inferSelect;
 export type NewBugReport = typeof bugReports.$inferInsert;
 export type AiUsage = typeof aiUsage.$inferSelect;
 export type NewAiUsage = typeof aiUsage.$inferInsert;
+export type ChartAnnotation = typeof chartAnnotations.$inferSelect;
+export type NewChartAnnotation = typeof chartAnnotations.$inferInsert;

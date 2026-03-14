@@ -1,0 +1,115 @@
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import {
+	ERR_ANNOTATION_CREATE_FAILED,
+	ERR_ANNOTATION_NOT_FOUND,
+	ERR_TRADE_NOT_FOUND,
+} from "@/lib/constants/errors";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { chartAnnotations, trades } from "@/server/db/schema";
+
+export const chartAnnotationsRouter = createTRPCRouter({
+	list: protectedProcedure
+		.input(z.object({ tradeId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			// Verify user owns the trade
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+				),
+			});
+
+			if (!trade) {
+				throw new Error(ERR_TRADE_NOT_FOUND);
+			}
+
+			return ctx.db.query.chartAnnotations.findMany({
+				where: eq(chartAnnotations.tradeId, input.tradeId),
+			});
+		}),
+
+	create: protectedProcedure
+		.input(
+			z.object({
+				tradeId: z.string(),
+				type: z.enum(["horizontal", "vertical"]),
+				value: z.string(), // Decimal as string
+				lineStyle: z.enum(["solid", "dashed"]).optional(),
+				color: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns the trade
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+				),
+			});
+
+			if (!trade) {
+				throw new Error(ERR_TRADE_NOT_FOUND);
+			}
+
+			const [annotation] = await ctx.db
+				.insert(chartAnnotations)
+				.values({
+					tradeId: input.tradeId,
+					userId: ctx.user.id,
+					type: input.type,
+					value: input.value,
+					lineStyle: input.lineStyle ?? "solid",
+					color: input.color ?? "#d4ff00",
+				})
+				.returning();
+
+			if (!annotation) {
+				throw new Error(ERR_ANNOTATION_CREATE_FAILED);
+			}
+
+			return annotation;
+		}),
+
+	delete: protectedProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Verify ownership through the trade
+			const annotation = await ctx.db.query.chartAnnotations.findFirst({
+				where: eq(chartAnnotations.id, input.id),
+				with: { trade: true },
+			});
+
+			if (!annotation || annotation.trade.userId !== ctx.user.id) {
+				throw new Error(ERR_ANNOTATION_NOT_FOUND);
+			}
+
+			await ctx.db
+				.delete(chartAnnotations)
+				.where(eq(chartAnnotations.id, input.id));
+
+			return { success: true };
+		}),
+
+	clearAll: protectedProcedure
+		.input(z.object({ tradeId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Verify user owns the trade
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+				),
+			});
+
+			if (!trade) {
+				throw new Error(ERR_TRADE_NOT_FOUND);
+			}
+
+			await ctx.db
+				.delete(chartAnnotations)
+				.where(eq(chartAnnotations.tradeId, input.tradeId));
+
+			return { success: true };
+		}),
+});

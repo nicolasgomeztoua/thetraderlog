@@ -35,4 +35,5 @@ export const ids = {
 	shareLink: () => createId("sl"),
 	bugReport: () => createId("br"),
 	aiUsage: () => createId("au"),
+	chartAnnotation: () => createId("ca"),
 };
