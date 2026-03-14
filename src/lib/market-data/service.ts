@@ -71,15 +71,6 @@ function normalizeDateToUTC(date: Date): Date {
 // =============================================================================
 
 /**
- * Get OHLC bars for a specific symbol, interval, and date.
- * Uses cache-first strategy: checks DB cache, fetches from API on miss.
- *
- * @param symbol - Trading symbol (e.g., "ES", "MNQ", "CL")
- * @param interval - Bar interval (e.g., "5min", "15min", "1h")
- * @param date - The date to fetch data for (will be normalized to midnight UTC)
- * @returns CacheResult with bars and metadata
- */
-/**
  * Check if a date is today in UTC
  */
 export function isToday(date: Date): boolean {
@@ -591,10 +582,7 @@ async function fetchFromDatabento(
 		// Sort by timestamp ascending
 		bars.sort((a, b) => a.timestamp - b.timestamp);
 
-		// Aggregate to target interval if needed
-		const aggregatedBars = aggregateBars(bars, interval);
-
-		return { success: true, bars: aggregatedBars, provider: "databento" };
+		return { success: true, bars, provider: "databento" };
 	} catch (error) {
 		return {
 			success: false,
