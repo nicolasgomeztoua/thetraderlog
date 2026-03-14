@@ -53,8 +53,22 @@ export interface AuthWithHas {
 }
 
 /**
+ * Checks if the given publicMetadata object has beta access enabled.
+ * Works with both server-side sessionClaims.metadata and client-side user.publicMetadata.
+ */
+export function isBetaFromMetadata(
+	metadata: Record<string, unknown> | undefined | null,
+): boolean {
+	if (!metadata || typeof metadata !== "object") return false;
+	const features = metadata.features;
+	if (!features || typeof features !== "object") return false;
+	return (features as Record<string, unknown>).beta_access === true;
+}
+
+/**
  * Checks if the auth session has beta access via the FEATURE_BETA_ACCESS flag.
  * Beta users get full Pro access without a subscription.
+ * @deprecated Use isBetaFromMetadata() instead. Will be removed in US-003.
  */
 export function isBetaAuth(auth: AuthWithHas): boolean {
 	return auth.has({ feature: FEATURE_BETA_ACCESS });
@@ -64,10 +78,7 @@ export function isBetaAuth(auth: AuthWithHas): boolean {
  * Checks if the auth session has access to a specific feature.
  * Beta users bypass the check and always have access.
  */
-export function hasFeatureAccess(
-	auth: AuthWithHas,
-	feature: string,
-): boolean {
+export function hasFeatureAccess(auth: AuthWithHas, feature: string): boolean {
 	if (isBetaAuth(auth)) {
 		return true;
 	}
@@ -78,10 +89,7 @@ export function hasFeatureAccess(
  * Checks if the auth session has access to a specific plan.
  * Beta users bypass the check and always have access.
  */
-export function hasPlanAccess(
-	auth: AuthWithHas,
-	plan: string,
-): boolean {
+export function hasPlanAccess(auth: AuthWithHas, plan: string): boolean {
 	if (isBetaAuth(auth)) {
 		return true;
 	}
