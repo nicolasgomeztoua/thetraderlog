@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, useClerk } from "@clerk/nextjs";
+import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { CreditCard, Settings, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -17,12 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
 	getNextMonthResetDate,
 	getTimeUntilMidnightUTC,
+	isBetaFromMetadata,
 } from "@/lib/billing/utils";
 import {
 	FEATURE_AI_CHAT,
-	FEATURE_BETA_ACCESS,
-	PLAN_FREE,
 	PLAN_METADATA,
+	PLAN_NONE,
 	PLAN_PRO,
 	PLAN_STARTER,
 } from "@/lib/constants/billing";
@@ -113,21 +113,25 @@ function getResetDateLabel(): string {
 
 export function BillingTab() {
 	const { isLoaded: clerkLoaded, has } = useAuth();
+	const { user } = useUser();
 	const { openUserProfile } = useClerk();
 	const planQuery = api.billing.getCurrentPlan.useQuery();
+
+	const isBetaUser = isBetaFromMetadata(
+		user?.publicMetadata as Record<string, unknown> | undefined,
+	);
 
 	// Gate usageQuery on Clerk's client-side feature check so it fires in
 	// parallel with planQuery instead of waiting for planQuery to resolve.
 	const hasAiFeature =
 		clerkLoaded &&
-		((has?.({ feature: FEATURE_BETA_ACCESS }) ?? false) ||
-			(has?.({ feature: FEATURE_AI_CHAT }) ?? false));
+		(isBetaUser || (has?.({ feature: FEATURE_AI_CHAT }) ?? false));
 
 	const plan = planQuery.data;
 	const isLoading = !clerkLoaded || planQuery.isLoading;
 	const isBeta = plan?.beta ?? false;
-	const effectivePlan = plan?.plan ?? PLAN_FREE;
-	const metadata = PLAN_METADATA[effectivePlan] ?? PLAN_METADATA[PLAN_FREE];
+	const effectivePlan = plan?.plan ?? PLAN_NONE;
+	const metadata = PLAN_METADATA[effectivePlan] ?? PLAN_METADATA[PLAN_NONE];
 
 	const isProUser = effectivePlan === PLAN_PRO;
 	const isStarterUser = effectivePlan === PLAN_STARTER;
@@ -210,11 +214,14 @@ export function BillingTab() {
 								className="font-medium font-mono text-sm uppercase tracking-wider"
 								data-testid="billing-plan-name"
 							>
-								{metadata?.name ?? "Free"}
+								{hasPaidPlan ? (metadata?.name ?? "No Plan") : "No active plan"}
 							</p>
 							<p className="font-mono text-muted-foreground text-xs">
-								{metadata?.price ?? "$0"}
-								{isBeta && " — Pro features free during beta"}
+								{hasPaidPlan
+									? metadata?.price
+									: isBeta
+										? "Pro features free during beta"
+										: "Subscribe to get started"}
 							</p>
 						</div>
 						<div>
@@ -337,8 +344,8 @@ export function BillingTab() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
-					<div className="grid gap-3 sm:grid-cols-3">
-						{[PLAN_FREE, PLAN_STARTER, PLAN_PRO].map((planSlug) => {
+					<div className="grid gap-3 sm:grid-cols-2">
+						{[PLAN_STARTER, PLAN_PRO].map((planSlug) => {
 							const planMeta = PLAN_METADATA[planSlug];
 							if (!planMeta) return null;
 							const isCurrent = effectivePlan === planSlug;
@@ -381,10 +388,9 @@ export function BillingTab() {
 										))}
 									</ul>
 									{!isCurrent &&
-										planSlug !== PLAN_FREE &&
 										(() => {
 											const isUpgrade =
-												effectivePlan === PLAN_FREE ||
+												effectivePlan === PLAN_NONE ||
 												(effectivePlan === PLAN_STARTER &&
 													planSlug === PLAN_PRO);
 											return isUpgrade ? (

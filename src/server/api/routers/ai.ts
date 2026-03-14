@@ -11,6 +11,7 @@ import { getModel } from "@/lib/ai/provider";
 import { generateSchemaContext } from "@/lib/ai/schema-context";
 import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
+import { isBetaFromMetadata } from "@/lib/billing/utils";
 import {
 	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
@@ -21,7 +22,6 @@ import {
 import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
-	FEATURE_BETA_ACCESS,
 	FEATURE_PDF_EXPORT,
 } from "@/lib/constants/billing";
 import {
@@ -47,7 +47,6 @@ import { generateReportPdf } from "@/trigger/generate-report-pdf";
 import {
 	decrementChatUsage,
 	decrementReportUsage,
-	getCurrentMonthYear,
 	incrementAndCheckChatUsage,
 	incrementAndCheckReportUsage,
 } from "./billing";
@@ -121,8 +120,9 @@ export const aiRouter = createTRPCRouter({
 			}
 
 			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
-			const isUnlimited =
-				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+			const isUnlimited = isBetaFromMetadata(
+				ctx.clerkAuth?.sessionClaims?.metadata,
+			);
 
 			let usageDate: string | undefined;
 			try {
@@ -352,8 +352,9 @@ export const aiRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Only beta users bypass AI usage limits — Pro subscribers have advertised limits.
-			const isUnlimited =
-				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+			const isUnlimited = isBetaFromMetadata(
+				ctx.clerkAuth?.sessionClaims?.metadata,
+			);
 
 			let usageMonth: number | undefined;
 			let usageYear: number | undefined;
@@ -652,8 +653,9 @@ export const aiRouter = createTRPCRouter({
 			// Trigger.dev job fails during execution, the quota slot was already
 			// consumed and never refunded — re-incrementing would double-charge.
 			const alreadyConsumedQuota = !!report.triggerTaskId;
-			const isUnlimited =
-				ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+			const isUnlimited = isBetaFromMetadata(
+				ctx.clerkAuth?.sessionClaims?.metadata,
+			);
 			// Only set after a successful increment so the catch block
 			// doesn't refund a slot we never consumed (mirrors sendMessage pattern).
 			let usageMonth: number | undefined;
@@ -814,9 +816,7 @@ export const aiRouter = createTRPCRouter({
 				try {
 					await runs.cancel(handle.id);
 				} catch {
-					console.error(
-						"Failed to cancel PDF run after DB update failure",
-					);
+					console.error("Failed to cancel PDF run after DB update failure");
 				}
 				throw dbErr;
 			}

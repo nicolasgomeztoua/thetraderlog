@@ -1,14 +1,14 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { Lock, MessageSquare, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { isBetaFromMetadata } from "@/lib/billing/utils";
 import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
-	FEATURE_BETA_ACCESS,
 	FEATURE_CSV_IMPORT_EXPORT,
 	FEATURE_CUSTOM_STRATEGIES,
 	FEATURE_CUSTOM_TAGS,
@@ -91,6 +91,7 @@ interface UpgradePromptProps {
 
 export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
 	const { has, isLoaded } = useAuth();
+	const { user } = useUser();
 
 	if (!isLoaded) {
 		return (
@@ -100,7 +101,9 @@ export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
 		);
 	}
 
-	const isBeta = has?.({ feature: FEATURE_BETA_ACCESS }) ?? false;
+	const isBeta = isBetaFromMetadata(
+		user?.publicMetadata as Record<string, unknown> | undefined,
+	);
 	const hasAccess = isBeta || has?.({ feature });
 
 	if (hasAccess) {

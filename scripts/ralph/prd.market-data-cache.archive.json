@@ -1,0 +1,161 @@
+{
+  "project": "EdgeJournal",
+  "branchName": "ralph/progressive-market-data-cache",
+  "description": "Progressive market data cache: smart same-day append, eliminate redundant derived-interval storage, add observability logging",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add lastBarAt Column to candle_cache Schema",
+      "description": "As a developer, I want a lastBarAt timestamp column on the candle_cache table so that the cache can quickly determine whether it needs to re-fetch without parsing the JSON bars blob.",
+      "acceptanceCriteria": [
+        "Add lastBarAt column (timestamp with timezone, nullable for backward compat) to candle_cache in schema.ts",
+        "lastBarAt stores the timestamp of the last bar in the cached JSON array",
+        "Remove the '// No expiresAt' comment (no longer accurate given progressive model)",
+        "Run bun run db:push to verify schema change applies cleanly",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Implement Smart Append Logic in getOHLCBars",
+      "description": "As a developer, I want getOHLCBars to detect when a same-day cache entry is stale and re-fetch from Databento to replace the cache entry, so that progressive data filling works correctly across multiple user imports throughout the day.",
+      "acceptanceCriteria": [
+        "On cache hit, compare lastBarAt against current time: if date is today (UTC) and lastBarAt is more than 5 minutes old, re-fetch from Databento for the full day and replace the cache entry",
+        "For historical dates (before today UTC), keep current behavior — cache hit returns immediately, never re-fetches",
+        "Change onConflictDoNothing() to onConflictDoUpdate() — update bars, barCount, lastBarAt, and fetchedAt when re-fetching",
+        "Populate lastBarAt from the last bar's timestamp when writing to cache (both new inserts and updates)",
+        "Backfill logic: if an existing cache row has null lastBarAt (from before this change), parse the bars JSON to extract it, then proceed with staleness comparison",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Key design decision: on same-day re-fetch, replace the entire day's bars rather than merging partial ranges. Databento charges per request not per time range, so full re-fetch is simpler with no cost penalty. The getOHLCBars function currently takes (symbol, interval, date) — it does NOT know the trade's exit time. So staleness is determined by comparing lastBarAt against current time, not against any trade-specific time."
+    },
+    {
+      "id": "US-003",
+      "title": "Eliminate Redundant Derived-Interval Cache Storage",
+      "description": "As a developer, I want to stop caching derived intervals (5min, 15min, 30min, 4h) in candle_cache so that we only store base data from Databento (1min, 1h) and compute derived intervals on the fly.",
+      "acceptanceCriteria": [
+        "In getOHLCBars, when the requested interval is a derived interval (5min, 15min, 30min), fetch/cache the 1min base data instead, then aggregate before returning",
+        "When requested interval is 4h, fetch/cache the 1h base data, then aggregate before returning",
+        "Only 1min and 1h rows are ever written to candle_cache",
+        "The aggregateBars function in service.ts handles the conversion (already exists)",
+        "Existing derived-interval cache rows are harmlessly ignored (they just won't be read anymore)",
+        "Create a BaseInterval type ('1min' | '1h') distinct from CacheInterval to clarify storable vs requestable intervals",
+        "All three consumer endpoints (getChartData, getFullDayChartData, analyzePriceAction) continue working correctly",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "The aggregateBars function already exists in service.ts (lines 306-360). 5min/15min/30min derive from 1min bars. 4h derives from 1h bars."
+    },
+    {
+      "id": "US-004",
+      "title": "Update getOHLCForChart and getOHLCForTimeRange for Base Interval Fetch",
+      "description": "As a developer, I want getOHLCForChart and getOHLCForTimeRange to always fetch base interval data and aggregate to the requested interval, so chart data is consistent with the new cache-only-base-intervals approach.",
+      "acceptanceCriteria": [
+        "getOHLCForChart fetches 1min bars internally regardless of requested interval, then aggregates to requested interval before returning",
+        "getOHLCForTimeRange similarly fetches base interval and aggregates if called with derived intervals",
+        "getFullDayBars already fetches 1min — verify no changes needed",
+        "Charts still display correctly (no timestamp or OHLC regressions)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "getFullDayBars (line 503) already hardcodes 1min. getOHLCForChart (line 234) currently passes the interval through — needs to be changed to always use 1min then aggregate."
+    },
+    {
+      "id": "US-005",
+      "title": "Update marketData tRPC Router for New Cache Behavior",
+      "description": "As a developer, I want the marketData tRPC router to work seamlessly with the progressive cache and base-interval-only storage.",
+      "acceptanceCriteria": [
+        "getChartData endpoint: interval is still user-facing in schema, internally delegates to base interval fetch + aggregation via updated service functions",
+        "getFullDayChartData endpoint: already uses 1min, verify unchanged behavior",
+        "analyzePriceAction endpoint: uses 1min and 1h which are base intervals, verify still works",
+        "getOHLC endpoint (deprecated): update to use base-interval fetch + aggregation",
+        "CacheInterval type still includes all user-requestable intervals (1min, 5min, 15min, 30min, 1h, 4h) for API contracts",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "The router at src/server/api/routers/marketData.ts. Three chart components consume getFullDayChartData: running-pnl-tab.tsx, tradingview-chart.tsx, trade-replay.tsx."
+    },
+    {
+      "id": "US-006",
+      "title": "Add Basic Cache Observability Logging",
+      "description": "As a developer, I want basic console logging for cache hits, misses, and appends so that I can monitor cache behavior in development and production logs.",
+      "acceptanceCriteria": [
+        "Log on cache hit (historical): [market-data] cache hit: ES 1min 2024-12-15 (387 bars)",
+        "Log on cache miss (new fetch): [market-data] cache miss: ES 1min 2024-12-15 → fetching from Databento",
+        "Log on smart append (same-day re-fetch): [market-data] cache refresh: ES 1min 2024-03-14 (was 240 bars → now 387 bars)",
+        "Log on derived interval aggregation: [market-data] aggregating: ES 1min → 5min (387 → 78 bars)",
+        "Use console.info with [market-data] prefix (consistent, greppable)",
+        "No external dependencies (no OpenTelemetry — just structured console logs)",
+        "Typecheck passes (bun run check)",
+        "Build passes (bun run build)"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Unit Tests for Aggregation and Staleness Detection",
+      "description": "As a developer, I want unit tests for the bar aggregation and staleness detection logic so that we can verify correctness of derived interval computation and progressive cache behavior.",
+      "acceptanceCriteria": [
+        "Test file created: tests/unit/market-data-aggregation.test.ts",
+        "Tests for aggregateBars (service.ts version): 1min → 5min correct OHLC (first open, max high, min low, last close), 1min → 15min and 30min, 1h → 4h, empty input returns empty, single bar returns single bar",
+        "Tests for lastBarAt extraction: correctly identifies last bar timestamp from sorted bar array, handles empty bar array",
+        "Tests for staleness detection: historical date never stale, today with old lastBarAt is stale, today with recent lastBarAt is not stale",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Integration Tests for Progressive Cache Behavior",
+      "description": "As a developer, I want integration tests verifying the smart append and base-interval-only caching with real database operations.",
+      "acceptanceCriteria": [
+        "Test file created: tests/integration/market-data-cache.test.ts",
+        "Tests use Testcontainers PostgreSQL (real DB, not mocks)",
+        "Test: first insert for a date creates cache entry with correct lastBarAt",
+        "Test: second fetch for same historical date returns cached data without re-inserting",
+        "Test: onConflictDoUpdate correctly replaces rows when bars/barCount/lastBarAt/fetchedAt change",
+        "Test: only 1min and 1h interval values are written to candle_cache (no 5min/15min/30min/4h rows)",
+        "Test: requesting 5min interval returns correctly aggregated bars derived from 1min cache data",
+        "All tests pass (bun run test)",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Integration tests should directly test the cache DB operations and aggregation pipeline. Mock the Databento API fetch to avoid real API calls in tests."
+    },
+    {
+      "id": "US-009",
+      "title": "Cleanup Script to Delete Redundant Derived-Interval Cache Rows",
+      "description": "As a developer, I want a one-time cleanup script to remove existing derived-interval rows from candle_cache to reclaim storage.",
+      "acceptanceCriteria": [
+        "Create script at scripts/cleanup-derived-cache.ts",
+        "Deletes all candle_cache rows where interval is NOT 1min or 1h",
+        "Logs how many rows were deleted",
+        "Script is idempotent (safe to run multiple times)",
+        "Document in script header that this is a one-time cleanup",
+        "Typecheck passes (bun run check)"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}

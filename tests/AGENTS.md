@@ -169,11 +169,15 @@ Without `clerkAuth`, entitlement middleware denies access (safe default).
 
 ### Beta User Simulation in Tests
 **When:** Testing beta bypass behavior
-**How:** Spread the DB user with `publicMetadata: { beta: true }` and cast:
+**How:** Pass `sessionClaims.metadata` on the clerkAuth mock with `has: () => false` to prove beta truly bypasses gates:
 ```typescript
-const betaUserWithMeta = { ...user, publicMetadata: { beta: true } } as unknown as User;
-const caller = await createTestCaller(user.clerkId, betaUserWithMeta);
+const BETA_AUTH: ClerkAuthLike = {
+  has: () => false,
+  sessionClaims: { metadata: { features: { beta_access: true } } },
+};
+const caller = await createTestCaller(user.clerkId, user, BETA_AUTH);
 ```
+**Important:** Using `has: () => false` proves beta detection works via publicMetadata, not via Clerk's has() method.
 
 ### FULL_ACCESS_AUTH and NO_ACCESS_AUTH Helpers
 **When:** Writing tests that call entitlement-gated procedures but aren't testing entitlements
@@ -185,12 +189,14 @@ const caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 - `FULL_ACCESS_AUTH` = `{ has: () => true }` — grants all features/plans
 - `NO_ACCESS_AUTH` = `{ has: () => false }` — denies all features/plans
 
-### Tests Creating Many AI Reports Need Beta Metadata
+### Tests Creating Many AI Reports Need Beta Auth
 **Problem:** Tests that create 6+ reports hit the monthly limit (5/month) and fail
-**Solution:** Add beta metadata to the user object to bypass usage tracking:
+**Solution:** Use BETA_AUTH (sessionClaims with beta metadata) + FULL_ACCESS_AUTH features:
 ```typescript
-const userWithBeta = { ...user, publicMetadata: { beta: true } } as unknown as User;
-const caller = await createTestCaller(user.clerkId, userWithBeta, FULL_ACCESS_AUTH);
+const caller = await createTestCaller(user.clerkId, user, {
+  has: () => true,
+  sessionClaims: { metadata: { features: { beta_access: true } } },
+});
 ```
 
 ### Platform Enum Values

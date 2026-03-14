@@ -1,13 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import { getEffectivePlan } from "@/lib/billing/utils";
+import { getEffectivePlan, isBetaFromMetadata } from "@/lib/billing/utils";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
 	FEATURE_AI_CHAT,
-	FEATURE_BETA_ACCESS,
-	PLAN_FREE,
 	PLAN_METADATA,
+	PLAN_NONE,
 	PLAN_PRO,
 } from "@/lib/constants/billing";
 import {
@@ -198,25 +197,23 @@ export async function decrementReportUsage(
 
 export const billingRouter = createTRPCRouter({
 	getCurrentPlan: protectedProcedure.query(({ ctx }) => {
-		const isBeta =
-			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+		const isBeta = isBetaFromMetadata(ctx.clerkAuth?.sessionClaims?.metadata);
 		const effectivePlan = ctx.clerkAuth
 			? isBeta
 				? PLAN_PRO
 				: getEffectivePlan(ctx.clerkAuth)
-			: PLAN_FREE;
+			: PLAN_NONE;
 		const metadata = PLAN_METADATA[effectivePlan];
 
 		return {
 			plan: effectivePlan,
 			beta: isBeta,
-			metadata: metadata ?? PLAN_METADATA[PLAN_FREE],
+			metadata: metadata ?? PLAN_METADATA[PLAN_NONE],
 		};
 	}),
 
 	getUsage: protectedProcedure.query(async ({ ctx }) => {
-		const isBeta =
-			ctx.clerkAuth?.has({ feature: FEATURE_BETA_ACCESS }) ?? false;
+		const isBeta = isBetaFromMetadata(ctx.clerkAuth?.sessionClaims?.metadata);
 		const hasAiAccess =
 			isBeta || (ctx.clerkAuth?.has({ feature: FEATURE_AI_CHAT }) ?? false);
 		const today = getTodayDateString();
@@ -246,7 +243,7 @@ export const billingRouter = createTRPCRouter({
 				.then((rows) => rows[0]),
 		]);
 
-		// null limit = unlimited (beta) or no AI access (free/starter).
+		// null limit = unlimited (beta) or no AI access (no plan/starter).
 		// Numeric limit = paid plan with AI entitlements.
 		return {
 			chat: {

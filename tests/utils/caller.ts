@@ -7,7 +7,12 @@ import { createTestContext, createUnauthenticatedTestContext } from "./context";
  * Mock ClerkAuth that grants access to all features and plans.
  * Use this for tests that aren't specifically testing entitlement gates.
  */
-export const FULL_ACCESS_AUTH: ClerkAuthLike = { has: () => true };
+export const FULL_ACCESS_AUTH: ClerkAuthLike = {
+	has: () => true,
+	sessionClaims: {
+		metadata: { features: { beta_access: true } },
+	},
+};
 
 /**
  * Mock ClerkAuth that denies access to all features and plans.

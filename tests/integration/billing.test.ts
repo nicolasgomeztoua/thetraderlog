@@ -37,11 +37,11 @@ describe("billing router", () => {
 	});
 
 	describe("getCurrentPlan", () => {
-		it("should return free plan for user without clerkAuth", async () => {
+		it("should return no plan for user without clerkAuth", async () => {
 			const result = await caller.billing.getCurrentPlan();
 
-			expect(result.plan).toBe("free");
-			expect(result.metadata).toEqual(PLAN_METADATA.free);
+			expect(result.plan).toBe("none");
+			expect(result.metadata).toEqual(PLAN_METADATA.none);
 		});
 
 		it("should return pro plan when clerkAuth has pro plan", async () => {
@@ -88,10 +88,13 @@ describe("billing router", () => {
 			expect(result.reports.limit).toBe(AI_REPORTS_MONTHLY_LIMIT);
 		});
 
-		it("should return null limits for beta user", async () => {
+		it("should return null limits for beta user (via publicMetadata)", async () => {
 			const betaUser = await createTestUser();
 			const betaCaller = await createTestCaller(betaUser.clerkId, betaUser, {
-				has: ({ feature }: { feature?: string }) => feature === "beta_access",
+				has: () => false,
+				sessionClaims: {
+					metadata: { features: { beta_access: true } },
+				},
 			});
 			const result = await betaCaller.billing.getUsage();
 
@@ -141,7 +144,7 @@ describe("billing router", () => {
 
 			const yesterday = new Date();
 			yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-			const yesterdayStr = yesterday.toISOString().split("T")[0]!;
+			const yesterdayStr = yesterday.toISOString().split("T")[0] ?? "";
 
 			// Seed yesterday's row at the limit
 			await db.insert(schema.aiUsage).values({

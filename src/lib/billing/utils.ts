@@ -1,9 +1,4 @@
-import {
-	FEATURE_BETA_ACCESS,
-	PLAN_FREE,
-	PLAN_PRO,
-	PLAN_STARTER,
-} from "@/lib/constants/billing";
+import { PLAN_NONE, PLAN_PRO, PLAN_STARTER } from "@/lib/constants/billing";
 
 /**
  * Returns the time until midnight UTC as a human-readable label.
@@ -42,6 +37,7 @@ export function getNextMonthResetDate(): string {
 /**
  * Minimal interface for Clerk's auth object (server-side or client-side).
  * Accepts any object with a has() method matching Clerk's signature.
+ * sessionClaims.metadata carries publicMetadata for beta detection.
  */
 export interface AuthWithHas {
 	has: (params: {
@@ -50,24 +46,37 @@ export interface AuthWithHas {
 		permission?: string;
 		role?: string;
 	}) => boolean;
+	sessionClaims?: {
+		metadata?: Record<string, unknown>;
+	};
 }
 
 /**
- * Checks if the auth session has beta access via the FEATURE_BETA_ACCESS flag.
+ * Checks if the given publicMetadata object has beta access enabled.
+ * Works with both server-side sessionClaims.metadata and client-side user.publicMetadata.
+ */
+export function isBetaFromMetadata(
+	metadata: Record<string, unknown> | undefined | null,
+): boolean {
+	if (!metadata || typeof metadata !== "object") return false;
+	const features = metadata.features;
+	if (!features || typeof features !== "object") return false;
+	return (features as Record<string, unknown>).beta_access === true;
+}
+
+/**
+ * Checks if the auth session has beta access via publicMetadata (sessionClaims.metadata).
  * Beta users get full Pro access without a subscription.
  */
 export function isBetaAuth(auth: AuthWithHas): boolean {
-	return auth.has({ feature: FEATURE_BETA_ACCESS });
+	return isBetaFromMetadata(auth.sessionClaims?.metadata);
 }
 
 /**
  * Checks if the auth session has access to a specific feature.
  * Beta users bypass the check and always have access.
  */
-export function hasFeatureAccess(
-	auth: AuthWithHas,
-	feature: string,
-): boolean {
+export function hasFeatureAccess(auth: AuthWithHas, feature: string): boolean {
 	if (isBetaAuth(auth)) {
 		return true;
 	}
@@ -78,10 +87,7 @@ export function hasFeatureAccess(
  * Checks if the auth session has access to a specific plan.
  * Beta users bypass the check and always have access.
  */
-export function hasPlanAccess(
-	auth: AuthWithHas,
-	plan: string,
-): boolean {
+export function hasPlanAccess(auth: AuthWithHas, plan: string): boolean {
 	if (isBetaAuth(auth)) {
 		return true;
 	}
@@ -105,5 +111,5 @@ export function getEffectivePlan(auth: AuthWithHas): string {
 		return PLAN_STARTER;
 	}
 
-	return PLAN_FREE;
+	return PLAN_NONE;
 }
