@@ -243,7 +243,7 @@ export const billingRouter = createTRPCRouter({
 				.then((rows) => rows[0]),
 		]);
 
-		// null limit = unlimited (beta) or no AI access (free/starter).
+		// null limit = unlimited (beta) or no AI access (no plan/starter).
 		// Numeric limit = paid plan with AI entitlements.
 		return {
 			chat: {

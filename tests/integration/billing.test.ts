@@ -37,11 +37,11 @@ describe("billing router", () => {
 	});
 
 	describe("getCurrentPlan", () => {
-		it("should return free plan for user without clerkAuth", async () => {
+		it("should return no plan for user without clerkAuth", async () => {
 			const result = await caller.billing.getCurrentPlan();
 
-			expect(result.plan).toBe("free");
-			expect(result.metadata).toEqual(PLAN_METADATA.free);
+			expect(result.plan).toBe("none");
+			expect(result.metadata).toEqual(PLAN_METADATA.none);
 		});
 
 		it("should return pro plan when clerkAuth has pro plan", async () => {

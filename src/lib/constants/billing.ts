@@ -6,8 +6,6 @@ export const PLAN_NONE = "none";
 export const PLAN_STARTER = "starter";
 export const PLAN_PRO = "pro";
 
-/** @deprecated Use PLAN_NONE instead. Will be removed in US-011. */
-export const PLAN_FREE = PLAN_NONE;
 
 // =============================================================================
 // FEATURE SLUGS (must match Clerk dashboard feature identifiers)

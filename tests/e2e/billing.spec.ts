@@ -33,7 +33,7 @@ test.describe("Settings Billing Tab", () => {
 
 		const planName = page.getByTestId("billing-plan-name");
 		await expect(planName).toBeVisible();
-		// Plan name should contain some text (Free, Starter, or Pro)
+		// Plan name should contain some text (No Plan, Starter, or Pro)
 		await expect(planName).not.toHaveText("");
 	});
 
@@ -53,8 +53,7 @@ test.describe("Settings Billing Tab", () => {
 		const comparison = page.getByTestId("billing-plans-comparison");
 		await expect(comparison).toBeVisible();
 
-		// Should show plan names in the comparison grid
-		await expect(comparison).toContainText("Free");
+		// Should show plan names in the comparison grid (Starter and Pro only)
 		await expect(comparison).toContainText("Starter");
 		await expect(comparison).toContainText("Pro");
 	});
@@ -76,7 +75,7 @@ test.describe("Settings Billing Tab", () => {
 			const reportsMeter = page.getByTestId("billing-usage-reports");
 			await expect(reportsMeter).toBeVisible();
 		}
-		// If no usage card, test passes — user is on Free/Starter plan
+		// If no usage card, test passes — user is on Starter plan or has no plan
 	});
 
 	test("can navigate to billing tab via tab trigger", async ({
@@ -104,14 +103,13 @@ test.describe("Settings Billing Tab", () => {
 // =========================================================================
 
 test.describe("Pricing Page", () => {
-	test("renders pricing section with all plan cards", async ({ page }) => {
+	test("renders pricing section with plan cards", async ({ page }) => {
 		await page.goto("/#pricing");
 
 		const pricingSection = page.getByTestId("pricing-section");
 		await expect(pricingSection).toBeVisible({ timeout: 15000 });
 
-		// All three plan cards should be visible
-		await expect(page.getByTestId("pricing-card-free")).toBeVisible();
+		// Starter and Pro plan cards should be visible
 		await expect(page.getByTestId("pricing-card-starter")).toBeVisible();
 		await expect(page.getByTestId("pricing-card-pro")).toBeVisible();
 	});
@@ -122,9 +120,6 @@ test.describe("Pricing Page", () => {
 		await expect(page.getByTestId("pricing-section")).toBeVisible({
 			timeout: 15000,
 		});
-
-		// Free plan shows $0
-		await expect(page.getByTestId("pricing-card-free")).toContainText("$0");
 
 		// Starter plan shows $10
 		await expect(page.getByTestId("pricing-card-starter")).toContainText("$10");
@@ -141,7 +136,6 @@ test.describe("Pricing Page", () => {
 		});
 
 		// Each plan card should have a CTA button
-		await expect(page.getByTestId("pricing-cta-free")).toBeVisible();
 		await expect(page.getByTestId("pricing-cta-starter")).toBeVisible();
 		await expect(page.getByTestId("pricing-cta-pro")).toBeVisible();
 	});
@@ -158,7 +152,6 @@ test.describe("Pricing Page", () => {
 		// Authenticated user should see plan-specific CTAs
 		// Can be: "Current Plan", "Go to Dashboard", "Upgrade to X", or "Change Plan"
 		const allCTAs = [
-			page.getByTestId("pricing-cta-free"),
 			page.getByTestId("pricing-cta-starter"),
 			page.getByTestId("pricing-cta-pro"),
 		];
@@ -170,7 +163,8 @@ test.describe("Pricing Page", () => {
 				text?.includes("Current Plan") ||
 				text?.includes("Go to Dashboard") ||
 				text?.includes("Upgrade") ||
-				text?.includes("Change Plan")
+				text?.includes("Change Plan") ||
+				text?.includes("Start")
 			) {
 				foundPlanAwareCTA = true;
 				break;
@@ -189,8 +183,8 @@ test.describe("Pricing Page - Unauthenticated", () => {
 		const pricingSection = page.getByTestId("pricing-section");
 		await expect(pricingSection).toBeVisible({ timeout: 15000 });
 
-		// Unauthenticated users should see "Start Free Trial" or "Get" CTAs
-		await expect(pricingSection).toContainText("Start Free Trial");
+		// Unauthenticated users should see "Start [Plan] Trial" CTAs
+		await expect(pricingSection).toContainText("Start Starter Trial");
 	});
 });
 
