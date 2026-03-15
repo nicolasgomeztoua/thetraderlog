@@ -435,7 +435,6 @@ PROCESSED_COMMENTS_FILE="$SCRIPT_DIR/.processed-comments"
 touch "$PROCESSED_COMMENTS_FILE"
 
 # Greptile summary state
-GREPTILE_SUMMARY_FILE="$SCRIPT_DIR/.greptile-summary-id"
 SUMMARY_ID=""
 SUMMARY_BODY=""
 GREPTILE_SCORE=0
@@ -460,7 +459,6 @@ fetch_greptile_summary() {
         if [ -n "$score_str" ]; then
             GREPTILE_SCORE=$(echo "$score_str" | grep -oE '[0-9]+' | head -1)
         fi
-        echo "$SUMMARY_ID" > "$GREPTILE_SUMMARY_FILE"
     fi
 }
 
@@ -495,50 +493,18 @@ wait_for_greptile() {
     return 1
 }
 
-# --- Helper: Post @greptileai tag to trigger a fresh re-review ---
-# Includes context about what was fixed and the score target.
-trigger_greptile_review() {
-    local current_score="${1:-0}"
-    local fix_summary="${2:-}"
-
-    local retag_body="@greptileai Please re-review this PR. All concerns from your previous ${current_score}/5 review have been addressed."
-    if [ -n "$fix_summary" ]; then
-        retag_body="$retag_body
-
-**Fixes applied:**
-$fix_summary"
-    fi
-    retag_body="$retag_body
-
-Please focus your review on whether the outstanding issues have been resolved and update the Confidence Score accordingly. Target: 5/5."
-
-    echo -e "${YELLOW}Tagging @greptileai for re-review (current: ${current_score}/5)...${NC}"
-    gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-        -f body="$retag_body" \
-        >/dev/null 2>&1 || echo -e "${RED}Warning: failed to tag @greptileai${NC}"
-}
-
-# --- Helper: Fetch ALL Greptile comments (issue + inline), most recent first ---
-fetch_all_greptile_comments() {
-    local issue_comments inline_comments
-    issue_comments=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-        --jq '[.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, created_at: .created_at, type: "issue"}]' \
-        2>/dev/null || echo "[]")
-    inline_comments=$(gh api "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" \
-        --jq '[.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, path: .path, line: .line, created_at: .created_at, type: "inline"}]' \
-        2>/dev/null || echo "[]")
-    # Merge and sort by created_at descending
-    echo "$issue_comments $inline_comments" | jq -s 'add | sort_by(.created_at) | reverse'
-}
-
 # --- Phase 4 Main Loop ---
+# Simple loop: fix → push → retag @greptileai → wait for score → repeat
 
-# Step 1: Wait for Greptile's initial summary (no fixed 8-min wait)
+# Step 1: Wait for Greptile's initial summary
 echo -e "${YELLOW}Waiting for Greptile's initial review...${NC}"
 if ! wait_for_greptile ""; then
     echo -e "${RED}Greptile didn't respond in time. Skipping review loop.${NC}"
 else
     REVIEW_APPROVED=false
+    STALE_SCORE_COUNT=0
+    PREV_GREPTILE_SCORE=$GREPTILE_SCORE
+    MAX_STALE_CYCLES=3
 
     for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
         echo ""
@@ -546,14 +512,14 @@ else
         echo -e "${CYAN} Review Cycle $cycle of $PR_REVIEW_CYCLES — Current Score: ${GREPTILE_SCORE}/5${NC}"
         echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
 
-        # 2a. Check if we've hit 5/5
+        # Check if we've already hit 5/5
         if [ "$GREPTILE_SCORE" -ge 5 ]; then
             echo -e "${GREEN}Confidence Score: 5/5! Safe to merge.${NC}"
             REVIEW_APPROVED=true
             break
         fi
 
-        # 2b. Fetch inline PR review comments from Greptile, filter to unprocessed
+        # --- Step A: Gather all Greptile feedback for Claude ---
         GREPTILE_COMMENTS=$(gh api \
             "repos/{owner}/{repo}/pulls/$PR_NUMBER/comments" \
             --jq '.[] | select(.user.login | test("greptile"; "i")) | {id: .id, body: .body, path: .path, line: .line, commit_id: .commit_id}' \
@@ -569,17 +535,14 @@ else
         done <<< "$GREPTILE_COMMENTS"
         NEW_COMMENTS=$(echo "$NEW_COMMENTS" | sed '/^$/d')
 
-        # 2c. Prepare context for Claude
         COMMENTS_FILE="$SCRIPT_DIR/.greptile-comments.json"
         SUMMARY_CONTEXT_FILE="$SCRIPT_DIR/.greptile-summary-context.md"
-        GREPTILE_RESPONSE_FILE="$SCRIPT_DIR/.greptile-latest-response.md"
 
         if [ -n "$NEW_COMMENTS" ]; then
             COMMENT_COUNT=$(echo "$NEW_COMMENTS" | grep -c '^{' || echo "0")
             echo -e "${GREEN}Found $COMMENT_COUNT new inline comment(s).${NC}"
             echo "$NEW_COMMENTS" | jq -s '.' > "$COMMENTS_FILE"
             echo "" > "$SUMMARY_CONTEXT_FILE"
-            echo "" > "$GREPTILE_RESPONSE_FILE"
         else
             echo -e "${YELLOW}No new inline comments, but score is ${GREPTILE_SCORE}/5.${NC}"
             echo -e "${YELLOW}Passing summary as context for proactive fixes.${NC}"
@@ -593,110 +556,58 @@ The Greptile reviewer gave this PR a score of **${GREPTILE_SCORE}/5**. There are
 
 $SUMMARY_BODY
 SUMMARYEOF
-            echo "" > "$GREPTILE_RESPONSE_FILE"
         fi
 
-        # 2d. Invoke Claude to fix issues
+        # --- Step B: Claude fixes issues ---
         echo -e "${YELLOW}Invoking Claude to address review feedback...${NC}"
-        FIX_SUMMARY_FILE="$SCRIPT_DIR/.fix-summary.md"
         OUTPUT=$(cd "$PROJECT_ROOT" && cat "$SCRIPT_DIR/pr-review-prompt.md" | claude --dangerously-skip-permissions -p 2>&1 | tee /dev/stderr) || true
 
-        FIX_SUMMARY=""
-        if [ -f "$FIX_SUMMARY_FILE" ]; then
-            FIX_SUMMARY=$(cat "$FIX_SUMMARY_FILE")
-        fi
-
-        # 2e. Mark inline comments as processed
+        # Mark inline comments as processed
         if [ -n "$NEW_COMMENTS" ]; then
             echo "$NEW_COMMENTS" | jq -r '.id' >> "$PROCESSED_COMMENTS_FILE"
         fi
         echo -e "${GREEN}Finished processing review feedback.${NC}"
 
-        # Check if this is the last cycle
+        # --- Step C: Push fixes and retag Greptile ---
+        echo -e "${YELLOW}Pushing fixes...${NC}"
+        git push origin "$WORK_BRANCH" 2>&1 || true
+
+        # Last cycle — don't retag, just exit
         if [ "$cycle" -eq "$PR_REVIEW_CYCLES" ]; then
             echo -e "${YELLOW}Reached max review cycles ($PR_REVIEW_CYCLES).${NC}"
             break
         fi
 
-        # 2f. Post conversational follow-up (NOT a full re-scan tag)
-        echo -e "${YELLOW}Asking Greptile if concerns are resolved...${NC}"
-        FOLLOWUP_BODY="@greptileai All concerns from your ${GREPTILE_SCORE}/5 review have been addressed."
-        if [ -n "$FIX_SUMMARY" ]; then
-            FOLLOWUP_BODY="$FOLLOWUP_BODY
-
-**Fixes applied:**
-$FIX_SUMMARY"
-        fi
-        FOLLOWUP_BODY="$FOLLOWUP_BODY
-
-Are there any remaining concerns with this PR, or is it ready to merge?"
-
+        # Retag @greptileai for a fresh re-review
+        echo -e "${YELLOW}Tagging @greptileai for re-review...${NC}"
         gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-            -f body="$FOLLOWUP_BODY" \
-            >/dev/null 2>&1 || echo -e "${RED}Warning: failed to post follow-up${NC}"
+            -f body="@greptileai Please re-review this PR." \
+            >/dev/null 2>&1 || echo -e "${RED}Warning: failed to tag @greptileai${NC}"
 
-        # 2g. Wait for Greptile's conversational reply
-        local_prev_hash=""
+        # --- Step D: Wait for Greptile's new score ---
+        prev_hash=""
         if [ -n "$SUMMARY_BODY" ]; then
-            local_prev_hash=$(echo "$SUMMARY_BODY" | md5)
+            prev_hash=$(echo "$SUMMARY_BODY" | md5)
         fi
 
-        echo -e "${YELLOW}Waiting for Greptile's response...${NC}"
-        GREPTILE_REPLIED=false
-        waited=0
-        LATEST_RESPONSE=""
-        while [ "$waited" -lt "$POLL_MAX_WAIT" ]; do
-            # Check for any new Greptile comment (issue or inline) since our follow-up
-            LATEST_RESPONSE=$(gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-                --jq '[.[] | select(.user.login | test("greptile"; "i"))] | sort_by(.created_at) | last | .body // ""' \
-                2>/dev/null || echo "")
-
-            # Check if this is a new response (not our follow-up echoed back)
-            if [ -n "$LATEST_RESPONSE" ] && ! echo "$LATEST_RESPONSE" | grep -q "Are there any remaining concerns"; then
-                # Check if it's newer than our follow-up by comparing content
-                curr_hash=$(echo "$LATEST_RESPONSE" | md5)
-                if [ "$curr_hash" != "$local_prev_hash" ]; then
-                    echo -e "${GREEN}Greptile responded!${NC}"
-                    GREPTILE_REPLIED=true
-                    break
-                fi
-            fi
-
-            sleep "$POLL_INTERVAL"
-            waited=$((waited + POLL_INTERVAL))
-            echo -e "  ${CYAN}... waited ${waited}s${NC}"
-        done
-
-        if [ "$GREPTILE_REPLIED" = false ]; then
+        if ! wait_for_greptile "$prev_hash"; then
             echo -e "${RED}Greptile didn't respond in time. Exiting review loop.${NC}"
             break
         fi
 
-        # 2h. Save Greptile's response and let Claude decide if we're done
-        echo "$LATEST_RESPONSE" > "$GREPTILE_RESPONSE_FILE"
-
-        # Also update summary/score if this was a full summary
-        if echo "$LATEST_RESPONSE" | grep -q "Confidence Score"; then
-            SUMMARY_BODY="$LATEST_RESPONSE"
-            local score_str
-            score_str=$(echo "$LATEST_RESPONSE" | grep -oE 'Confidence Score: [0-9]+/5' | head -1 || echo "")
-            if [ -n "$score_str" ]; then
-                GREPTILE_SCORE=$(echo "$score_str" | grep -oE '[0-9]+' | head -1)
-            fi
-        fi
-
-        # 2i. Let Claude evaluate Greptile's response and decide: continue or exit
-        echo -e "${YELLOW}Evaluating Greptile's response...${NC}"
-        EVAL_OUTPUT=$(cd "$PROJECT_ROOT" && cat "$SCRIPT_DIR/evaluate-review-prompt.md" | claude --dangerously-skip-permissions -p 2>&1 | tee /dev/stderr) || true
-
-        # Check for the exit signal from Claude
-        if echo "$EVAL_OUTPUT" | grep -q "<review_status>APPROVED</review_status>"; then
-            echo -e "${GREEN}Claude determined Greptile has approved the PR!${NC}"
-            REVIEW_APPROVED=true
-            break
+        # --- Step E: Stuck detection ---
+        if [ "$GREPTILE_SCORE" -le "$PREV_GREPTILE_SCORE" ]; then
+            STALE_SCORE_COUNT=$((STALE_SCORE_COUNT + 1))
+            echo -e "${YELLOW}Score unchanged at ${GREPTILE_SCORE}/5 (stale cycles: ${STALE_SCORE_COUNT}/${MAX_STALE_CYCLES})${NC}"
         else
-            echo -e "${YELLOW}Greptile has remaining concerns. Continuing...${NC}"
-            # Loop continues — next cycle will fix the new concerns
+            STALE_SCORE_COUNT=0
+            echo -e "${GREEN}Score improved: ${PREV_GREPTILE_SCORE}/5 → ${GREPTILE_SCORE}/5${NC}"
+        fi
+        PREV_GREPTILE_SCORE=$GREPTILE_SCORE
+
+        if [ "$STALE_SCORE_COUNT" -ge "$MAX_STALE_CYCLES" ]; then
+            echo -e "${RED}Score stuck at ${GREPTILE_SCORE}/5 for ${MAX_STALE_CYCLES} consecutive cycles. Exiting review loop.${NC}"
+            break
         fi
     done
 fi

@@ -214,6 +214,17 @@ vi.mock("@/server/db", () => ({
 ```
 Also mock `@/env` to provide required env vars. Use `vi.spyOn(globalThis, "fetch")` to mock external HTTP calls.
 
+### Testing Prefetch/Service Functions That Catch Errors Internally
+**When:** Integration-testing orchestration functions (e.g., `prefetchMarketDataForAllSymbols`) that call service functions which have their own try-catch
+**Problem:** Mocking `fetch` to throw doesn't cause the service function to throw — it catches the error and returns a fallback result (e.g., `{ dataQuality: "unavailable" }`)
+**Solution:** Mock the service functions directly (`getOHLCBars`, `hasCachedData`) to throw, rather than mocking `fetch`. Use `vi.fn()` at module level with `vi.mock()` lazy getters:
+```typescript
+const getOHLCBarsMock = vi.fn();
+vi.mock("@/lib/market-data/service", () => ({
+  get getOHLCBars() { return getOHLCBarsMock; },
+}));
+```
+
 ## Decisions
 
 <!-- Architectural decisions and rationale -->

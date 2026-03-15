@@ -15,7 +15,7 @@ You are reviewing code quality comments from Greptile AI on a pull request.
 2. For EACH comment, evaluate it **skeptically**
 3. Determine if the concern is valid or if Greptile is wrong
 4. If valid: fix the issue and commit
-5. Reply to EVERY comment on GitHub, tagging @greptileai
+5. If invalid: skip it — do NOT make unnecessary changes
 
 ## Critical: Be Skeptical of Greptile
 
@@ -26,63 +26,11 @@ Before accepting any Greptile comment as valid:
 - Verify the concern is actually real
 - Don't just take Greptile's word for it
 
-If the comment is valid, fix it. If Greptile is wrong, say so.
+If the comment is valid, fix it. If Greptile is wrong, skip it.
 
-## Response Format for Each Comment
+## Commit Format
 
-### If the concern is VALID:
-
-1. Make the fix
-2. Commit with message: `fix: address Greptile review - [brief description]`
-3. Reply to the comment:
-
-```
-@greptileai Good catch! This was a valid concern.
-
-**Issue:** [what was wrong]
-**Fix:** [what you changed]
-**Commit:** [commit hash]
-```
-
-### If the concern is INVALID:
-
-Reply to the comment explaining why:
-
-```
-@greptileai Thanks for the review, but I disagree with this suggestion.
-
-**Reason:** [why this is not actually an issue]
-**Context:** [relevant codebase context Greptile may have missed]
-
-No changes made.
-```
-
-### If the concern is PARTIALLY valid:
-
-```
-@greptileai Partially valid point.
-
-**Valid part:** [what was correct]
-**Invalid part:** [what was wrong]
-**Action:** [what you did or didn't do]
-**Commit:** [if applicable]
-```
-
-## How to Reply to Comments
-
-Use the GitHub CLI to reply:
-
-### For PR review comments (on specific lines):
-```bash
-gh api repos/{owner}/{repo}/pulls/[PR_NUMBER]/comments/[COMMENT_ID]/replies \
-  -f body="@greptileai [your response]"
-```
-
-### For general PR comments:
-```bash
-gh api repos/{owner}/{repo}/issues/[PR_NUMBER]/comments \
-  -f body="@greptileai Responding to your comment: [your response]"
-```
+Commit fixes with message: `fix: address Greptile review - [brief description]`
 
 ## Quality Checks After Fixes
 
@@ -95,24 +43,9 @@ Only commit if all checks pass.
 
 ## Important
 
-- Respond to EVERY Greptile comment - don't ignore any
-- Always tag @greptileai in your response
-- Be professional but firm when disagreeing
-- If you make fixes, push to the branch after all fixes are done
-- Don't make unnecessary changes just to appease Greptile
+- Do NOT reply to Greptile comments on GitHub — the script handles retagging
+- Do NOT post any comments on the PR
 - **IMPORTANT: Minimal changes only.** Each fix should be surgical — change only what's needed to address the specific concern. Do NOT refactor surrounding code, add new features, or "improve" things Greptile didn't mention. More code = more surface area for the next review to flag.
-
-## Fix Summary
-
-After completing all fixes, write a brief bullet-point summary of what was fixed to `scripts/ralph/.fix-summary.md`. This is used to give Greptile context when requesting re-review. Example:
-
-```
-- Fixed retryReport double-charge by checking status before increment
-- Added null guard on savedMessage in chat handler
-- Replaced Math.ceil with Math.floor for countdown hours
-```
-
-Keep it concise — one line per fix, no explanations.
 
 ## Summary-Only Mode
 
@@ -122,7 +55,7 @@ In this case:
 1. Read `scripts/ralph/.greptile-summary-context.md` for the full Greptile summary
 2. Analyze the concerns mentioned in the summary
 3. Proactively identify and fix the issues Greptile is flagging
-4. Commit fixes and push to the branch
+4. Commit fixes
 5. Run quality checks as usual
 
 The goal is to raise the confidence score to 5/5 by addressing every concern in the summary, even without specific inline comments pointing to exact lines.

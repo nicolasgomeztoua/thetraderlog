@@ -4,6 +4,7 @@ import { aiRouter } from "@/server/api/routers/ai";
 import { analyticsRouter } from "@/server/api/routers/analytics";
 import { billingRouter } from "@/server/api/routers/billing";
 import { bugReportsRouter } from "@/server/api/routers/bugReports";
+import { chartAnnotationsRouter } from "@/server/api/routers/chartAnnotations";
 import { dailyJournalRouter } from "@/server/api/routers/dailyJournal";
 import { filterPresetsRouter } from "@/server/api/routers/filterPresets";
 import { marketDataRouter } from "@/server/api/routers/marketData";
@@ -36,6 +37,7 @@ export const appRouter = createTRPCRouter({
 	billing: billingRouter,
 	sharing: sharingRouter,
 	bugReports: bugReportsRouter,
+	chartAnnotations: chartAnnotationsRouter,
 });
 
 // export type definition of API

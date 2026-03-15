@@ -154,6 +154,7 @@ export function ContentPanel({
 						stopLoss={trade.stopLoss}
 						symbol={trade.symbol}
 						takeProfit={trade.takeProfit}
+						tradeId={trade.id}
 						trailedStopLoss={trade.trailedStopLoss}
 						wasTrailed={trade.wasTrailed ?? undefined}
 					/>

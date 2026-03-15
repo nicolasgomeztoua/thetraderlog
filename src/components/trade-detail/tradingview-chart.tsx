@@ -4,13 +4,29 @@ import {
 	createChart,
 	createSeriesMarkers,
 	type IChartApi,
+	type IChartApiBase,
 	type IPriceLine,
+	type IPrimitivePaneRenderer,
+	type IPrimitivePaneView,
 	type ISeriesApi,
+	type ISeriesPrimitive,
+	type ISeriesPrimitiveAxisView,
+	LineStyle,
+	type SeriesAttachedParameter,
 	type SeriesMarker,
+	type SeriesType,
+	type Time,
 	type UTCTimestamp,
 } from "lightweight-charts";
-import { ExternalLink, Loader2, Maximize2 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+	ExternalLink,
+	Loader2,
+	Maximize2,
+	Minus,
+	SeparatorVertical,
+	Trash2,
+} from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	Select,
@@ -19,6 +35,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { DRAWING_COLORS, LINE_STYLE_MAP } from "@/lib/constants/chart";
 import { useTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
@@ -66,6 +83,7 @@ function getChartColors(themeConfig: ReturnType<typeof getThemeById>) {
 
 interface ChartProps {
 	symbol: string;
+	tradeId: string;
 	entryTime?: Date | string | null;
 	exitTime?: Date | string | null;
 	stopLoss?: string | null;
@@ -86,6 +104,137 @@ interface ChartProps {
 }
 
 type CandleDataPoint = CandlestickData<UTCTimestamp>;
+
+type DrawingTool = "horizontal" | "vertical" | null;
+
+type LineStyleOption = "solid" | "dashed";
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+// =============================================================================
+// VERTICAL LINE PRIMITIVE (ISeriesPrimitive)
+// =============================================================================
+
+class VerticalLinePaneView implements IPrimitivePaneView {
+	private _primitive: VerticalLinePrimitive;
+
+	constructor(primitive: VerticalLinePrimitive) {
+		this._primitive = primitive;
+	}
+
+	zOrder(): "normal" {
+		return "normal";
+	}
+
+	renderer(): IPrimitivePaneRenderer | null {
+		const primitive = this._primitive;
+		return {
+			draw: (target) => {
+				const chart = primitive.chart();
+				if (!chart) return;
+
+				const timeCoord = chart
+					.timeScale()
+					.timeToCoordinate(primitive.time as Time);
+				if (timeCoord === null) return;
+
+				const drawScope = target.useMediaCoordinateSpace.bind(target);
+				drawScope(({ context, mediaSize }) => {
+					context.beginPath();
+					context.strokeStyle = primitive.color;
+					context.lineWidth = 1;
+					if (primitive.lineStyleValue !== LineStyle.Solid) {
+						context.setLineDash([5, 3]);
+					} else {
+						context.setLineDash([]);
+					}
+					context.moveTo(timeCoord, 0);
+					context.lineTo(timeCoord, mediaSize.height);
+					context.stroke();
+					context.setLineDash([]);
+				});
+			},
+		};
+	}
+}
+
+class VerticalLineTimeAxisView implements ISeriesPrimitiveAxisView {
+	private _primitive: VerticalLinePrimitive;
+
+	constructor(primitive: VerticalLinePrimitive) {
+		this._primitive = primitive;
+	}
+
+	coordinate(): number {
+		const chart = this._primitive.chart();
+		if (!chart) return -1000;
+		const coord = chart
+			.timeScale()
+			.timeToCoordinate(this._primitive.time as Time);
+		return coord ?? -1000;
+	}
+
+	text(): string {
+		const ts = this._primitive.time as number;
+		const d = new Date(ts * 1000);
+		const h = d.getUTCHours().toString().padStart(2, "0");
+		const m = d.getUTCMinutes().toString().padStart(2, "0");
+		return `${h}:${m}`;
+	}
+
+	textColor(): string {
+		return "#050505";
+	}
+
+	backColor(): string {
+		return this._primitive.color;
+	}
+}
+
+class VerticalLinePrimitive implements ISeriesPrimitive {
+	readonly time: UTCTimestamp;
+	readonly color: string;
+	readonly lineStyleValue: LineStyle;
+
+	private _chart: IChartApiBase<Time> | null = null;
+	private _paneViews: readonly IPrimitivePaneView[];
+	private _timeAxisViews: readonly ISeriesPrimitiveAxisView[];
+
+	constructor(time: UTCTimestamp, color: string, lineStyle: LineStyleOption) {
+		this.time = time;
+		this.color = color;
+		this.lineStyleValue =
+			lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid;
+		this._paneViews = [new VerticalLinePaneView(this)];
+		this._timeAxisViews = [new VerticalLineTimeAxisView(this)];
+	}
+
+	attached(param: SeriesAttachedParameter<Time, SeriesType>): void {
+		this._chart = param.chart;
+	}
+
+	detached(): void {
+		this._chart = null;
+	}
+
+	chart(): IChartApiBase<Time> | null {
+		return this._chart;
+	}
+
+	updateAllViews(): void {
+		// Views recalculate on each draw
+	}
+
+	paneViews(): readonly IPrimitivePaneView[] {
+		return this._paneViews;
+	}
+
+	timeAxisViews(): readonly ISeriesPrimitiveAxisView[] {
+		return this._timeAxisViews;
+	}
+}
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -198,6 +347,7 @@ function TimeframeSelector({
 
 function LightweightChartInner({
 	symbol,
+	tradeId,
 	exitTime,
 	entryTime,
 	stopLoss,
@@ -216,6 +366,35 @@ function LightweightChartInner({
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 	const ohlcSnapLineRef = useRef<IPriceLine | null>(null);
 	const currentSnappedPriceRef = useRef<number | null>(null);
+
+	// Drawing tool state
+	const [activeTool, setActiveTool] = useState<DrawingTool>(null);
+	const [drawingLineStyle, setDrawingLineStyle] =
+		useState<LineStyleOption>("solid");
+	const [drawingColorIndex, setDrawingColorIndex] = useState(0);
+	const activeToolRef = useRef<DrawingTool>(null);
+	const drawingLineStyleRef = useRef<LineStyleOption>("solid");
+	const drawingColorRef = useRef(DRAWING_COLORS[0]);
+
+	// Track user-drawn annotation price lines for removal
+	const annotationPriceLinesRef = useRef<IPriceLine[]>([]);
+
+	// Track vertical line primitives for removal
+	const verticalLinePrimitivesRef = useRef<VerticalLinePrimitive[]>([]);
+
+	// Track crosshair time for vertical line placement
+	const crosshairTimeRef = useRef<UTCTimestamp | null>(null);
+
+	// Keep refs in sync with state
+	useEffect(() => {
+		activeToolRef.current = activeTool;
+	}, [activeTool]);
+	useEffect(() => {
+		drawingLineStyleRef.current = drawingLineStyle;
+	}, [drawingLineStyle]);
+	useEffect(() => {
+		drawingColorRef.current = DRAWING_COLORS[drawingColorIndex];
+	}, [drawingColorIndex]);
 
 	// Mobile detection
 	const isMobile = useIsMobile();
@@ -258,9 +437,107 @@ function LightweightChartInner({
 	const tvSymbol = getTradingViewSymbol(symbol);
 	const tradingViewUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
 
-	// Fetch full day(s) of 1-min data once - then aggregate client-side
+	// Determine which endpoint to use based on interval
 	const canFetchRealData = !!entryTime;
-	const { data: rawChartData, isLoading } =
+	const isHourly = interval === "1h";
+
+	// =========================================================================
+	// ANNOTATION QUERIES & MUTATIONS
+	// =========================================================================
+
+	const utils = api.useUtils();
+
+	const { data: annotations } = api.chartAnnotations.list.useQuery(
+		{ tradeId },
+		{ staleTime: STALE_TIME_MEDIUM },
+	);
+
+	const createAnnotation = api.chartAnnotations.create.useMutation({
+		onSuccess: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+		},
+		onError: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+			toast.error("Failed to save annotation");
+		},
+	});
+
+	const clearAllAnnotations = api.chartAnnotations.clearAll.useMutation({
+		onSuccess: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+		},
+		onError: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+			toast.error("Failed to clear annotations");
+		},
+	});
+
+	// =========================================================================
+	// DRAWING TOOL HANDLERS
+	// =========================================================================
+
+	const toggleTool = useCallback((tool: DrawingTool) => {
+		setActiveTool((prev) => (prev === tool ? null : tool));
+	}, []);
+
+	const cycleLineStyle = useCallback(() => {
+		setDrawingLineStyle((prev) => (prev === "solid" ? "dashed" : "solid"));
+	}, []);
+
+	const cycleColor = useCallback(() => {
+		setDrawingColorIndex((prev) => (prev + 1) % DRAWING_COLORS.length);
+	}, []);
+
+	const handleClearAll = useCallback(() => {
+		// Remove all annotation price lines from chart
+		if (seriesRef.current) {
+			for (const line of annotationPriceLinesRef.current) {
+				seriesRef.current.removePriceLine(line);
+			}
+			// Detach all vertical line primitives
+			for (const primitive of verticalLinePrimitivesRef.current) {
+				seriesRef.current.detachPrimitive(primitive);
+			}
+		}
+		annotationPriceLinesRef.current = [];
+		verticalLinePrimitivesRef.current = [];
+		clearAllAnnotations.mutate({ tradeId });
+	}, [clearAllAnnotations, tradeId]);
+
+	// =========================================================================
+	// KEYBOARD SHORTCUTS
+	// =========================================================================
+
+	useEffect(() => {
+		const container = containerRef.current?.parentElement;
+		if (!container) return;
+
+		const handleKeyDown = (e: KeyboardEvent) => {
+			// Only respond when chart container or its children are focused
+			if (
+				!container.contains(document.activeElement) &&
+				document.activeElement !== container
+			)
+				return;
+
+			if (e.key === "h" || e.key === "H") {
+				e.preventDefault();
+				toggleTool("horizontal");
+			} else if (e.key === "v" || e.key === "V") {
+				e.preventDefault();
+				toggleTool("vertical");
+			} else if (e.key === "Escape") {
+				e.preventDefault();
+				setActiveTool(null);
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [toggleTool]);
+
+	// Sub-hourly: fetch full day(s) of 1-min data, then aggregate client-side
+	const { data: rawChartData, isLoading: isLoadingSubHourly } =
 		api.marketData.getFullDayChartData.useQuery(
 			{
 				symbol,
@@ -270,13 +547,42 @@ function LightweightChartInner({
 				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
 			},
 			{
-				enabled: canFetchRealData,
+				enabled: canFetchRealData && !isHourly,
 				staleTime: STALE_TIME_MEDIUM,
 			},
 		);
 
+	// 1h: fetch extended date range (~7 trading sessions) of 1h bars server-side
+	const { data: extendedChartData, isLoading: isLoadingHourly } =
+		api.marketData.getExtendedChartData.useQuery(
+			{
+				symbol,
+				entryTime: entryTime
+					? new Date(entryTime).toISOString()
+					: new Date().toISOString(),
+				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
+			},
+			{
+				enabled: canFetchRealData && isHourly,
+				staleTime: STALE_TIME_MEDIUM,
+			},
+		);
+
+	const isLoading = isHourly ? isLoadingHourly : isLoadingSubHourly;
+
 	// Aggregate 1-min bars to selected interval client-side (instant!)
+	// For 1h, use extended data directly (already 1h bars from server)
 	const chartData = useMemo(() => {
+		if (isHourly) {
+			if (!extendedChartData?.bars?.length) return null;
+			return {
+				bars: extendedChartData.bars,
+				source: extendedChartData.source,
+				dataQuality: extendedChartData.dataQuality,
+				barCount: extendedChartData.barCount,
+			};
+		}
+
 		if (!rawChartData?.bars?.length) return null;
 
 		const aggregatedBars =
@@ -290,7 +596,7 @@ function LightweightChartInner({
 			dataQuality: rawChartData.dataQuality,
 			barCount: aggregatedBars.length,
 		};
-	}, [rawChartData, interval]);
+	}, [rawChartData, extendedChartData, interval, isHourly]);
 
 	// Determine if we have real data
 	const hasRealData = chartData && chartData.bars.length > 0;
@@ -569,8 +875,12 @@ function LightweightChartInner({
 					ohlcSnapLineRef.current = null;
 				}
 				currentSnappedPriceRef.current = null;
+				crosshairTimeRef.current = null;
 				return;
 			}
+
+			// Store crosshair time for vertical line placement
+			crosshairTimeRef.current = param.time as UTCTimestamp;
 
 			// Get the bar data at the crosshair time
 			const barData = param.seriesData.get(seriesRef.current);
@@ -616,17 +926,85 @@ function LightweightChartInner({
 			}
 		});
 
-		// Subscribe to click for copy-to-clipboard
+		// Subscribe to click — drawing mode or copy-to-clipboard
 		chart.subscribeClick(() => {
-			if (currentSnappedPriceRef.current !== null) {
-				navigator.clipboard.writeText(
-					currentSnappedPriceRef.current.toString(),
-				);
-				toast("Price copied", {
-					description: currentSnappedPriceRef.current.toString(),
+			// Drawing mode: place horizontal line
+			if (
+				activeToolRef.current === "horizontal" &&
+				seriesRef.current &&
+				currentSnappedPriceRef.current !== null
+			) {
+				const price = currentSnappedPriceRef.current;
+				const color = drawingColorRef.current;
+				const style = drawingLineStyleRef.current;
+
+				// Create visual price line immediately
+				const priceLine = seriesRef.current.createPriceLine({
+					price,
+					color,
+					lineWidth: 1,
+					lineStyle: LINE_STYLE_MAP[style],
+					axisLabelVisible: true,
+					title: "",
+				});
+				annotationPriceLinesRef.current.push(priceLine);
+
+				// Persist to DB
+				createAnnotation.mutate({
+					tradeId,
+					type: "horizontal",
+					value: price.toString(),
+					lineStyle: style,
+					color,
+				});
+
+				toast("Line placed", {
+					description: `Horizontal @ ${price}`,
 					duration: 1500,
 				});
+				return;
 			}
+
+			// Drawing mode: place vertical line
+			if (
+				activeToolRef.current === "vertical" &&
+				seriesRef.current &&
+				crosshairTimeRef.current !== null
+			) {
+				const time = crosshairTimeRef.current;
+				const color = drawingColorRef.current ?? "#d4ff00";
+				const style = drawingLineStyleRef.current;
+
+				// Create visual vertical line primitive
+				const primitive = new VerticalLinePrimitive(time, color, style);
+				seriesRef.current.attachPrimitive(primitive);
+				verticalLinePrimitivesRef.current.push(primitive);
+
+				// Persist to DB (value = Unix timestamp in seconds)
+				createAnnotation.mutate({
+					tradeId,
+					type: "vertical",
+					value: time.toString(),
+					lineStyle: style,
+					color,
+				});
+
+				const d = new Date((time as number) * 1000);
+				const timeStr = `${d.getUTCHours().toString().padStart(2, "0")}:${d.getUTCMinutes().toString().padStart(2, "0")}`;
+				toast("Line placed", {
+					description: `Vertical @ ${timeStr}`,
+					duration: 1500,
+				});
+				return;
+			}
+
+			// Default mode: copy price to clipboard
+			if (currentSnappedPriceRef.current === null) return;
+			navigator.clipboard.writeText(currentSnappedPriceRef.current.toString());
+			toast("Price copied", {
+				description: currentSnappedPriceRef.current.toString(),
+				duration: 1500,
+			});
 		});
 
 		// Cleanup
@@ -643,6 +1021,14 @@ function LightweightChartInner({
 				seriesRef.current.removePriceLine(ohlcSnapLineRef.current);
 				ohlcSnapLineRef.current = null;
 			}
+			annotationPriceLinesRef.current = [];
+			// Detach vertical line primitives before removing chart
+			if (seriesRef.current) {
+				for (const primitive of verticalLinePrimitivesRef.current) {
+					seriesRef.current.detachPrimitive(primitive);
+				}
+			}
+			verticalLinePrimitivesRef.current = [];
 			chart.remove();
 			chartRef.current = null;
 			seriesRef.current = null;
@@ -661,7 +1047,48 @@ function LightweightChartInner({
 		interval,
 		maePrice,
 		mfePrice,
+		tradeId,
+		createAnnotation.mutate,
 	]);
+
+	// Render persisted annotations separately to avoid full chart recreation on annotation changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: interval triggers chart rebuild; annotations must re-apply on the new series
+	useEffect(() => {
+		if (!seriesRef.current || !annotations) return;
+
+		// Remove previous annotation visuals
+		for (const line of annotationPriceLinesRef.current) {
+			seriesRef.current.removePriceLine(line);
+		}
+		for (const primitive of verticalLinePrimitivesRef.current) {
+			seriesRef.current.detachPrimitive(primitive);
+		}
+		annotationPriceLinesRef.current = [];
+		verticalLinePrimitivesRef.current = [];
+
+		// Re-apply from query data
+		for (const ann of annotations) {
+			if (ann.type === "horizontal") {
+				const priceLine = seriesRef.current.createPriceLine({
+					price: parseFloat(ann.value),
+					color: ann.color,
+					lineWidth: 1,
+					lineStyle: LINE_STYLE_MAP[ann.lineStyle as LineStyleOption] ?? 0,
+					axisLabelVisible: true,
+					title: "",
+				});
+				annotationPriceLinesRef.current.push(priceLine);
+			} else if (ann.type === "vertical") {
+				const primitive = new VerticalLinePrimitive(
+					parseFloat(ann.value) as UTCTimestamp,
+					ann.color,
+					ann.lineStyle as LineStyleOption,
+				);
+				seriesRef.current.attachPrimitive(primitive);
+				verticalLinePrimitivesRef.current.push(primitive);
+			}
+		}
+	}, [annotations, interval]);
 
 	// Show loading state
 	if (isLoading) {
@@ -699,8 +1126,19 @@ function LightweightChartInner({
 		);
 	}
 
+	const drawingColor = DRAWING_COLORS[drawingColorIndex];
+
 	return (
-		<div className={cn("relative h-full w-full overflow-hidden", className)}>
+		<div
+			className={cn(
+				"relative h-full w-full overflow-hidden",
+				activeTool && "cursor-crosshair",
+				className,
+			)}
+			data-testid="chart-container"
+			// biome-ignore lint/a11y/noNoninteractiveTabindex: chart needs focus for keyboard shortcuts (H, Escape)
+			tabIndex={0}
+		>
 			{/* Chart container */}
 			<div className="h-full w-full" ref={containerRef} />
 
@@ -724,12 +1162,88 @@ function LightweightChartInner({
 				{/* Fit to trade button */}
 				<button
 					className="flex min-h-[36px] min-w-[36px] items-center justify-center gap-1 rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-fit"
 					onClick={handleFitToTrade}
 					title="Fit to trade"
 					type="button"
 				>
 					<Maximize2 className="h-3 w-3" />
 					<span className="hidden sm:inline">Fit</span>
+				</button>
+
+				{/* Drawing toolbar separator */}
+				<div className="mx-0.5 h-5 w-px bg-border" />
+
+				{/* Horizontal line tool */}
+				<button
+					className={cn(
+						"flex min-h-[36px] min-w-[36px] items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+						activeTool === "horizontal"
+							? "bg-primary text-primary-foreground"
+							: "bg-muted text-muted-foreground hover:bg-muted/80",
+					)}
+					data-testid="chart-button-horizontal-line"
+					onClick={() => toggleTool("horizontal")}
+					title="Horizontal line (H)"
+					type="button"
+				>
+					<Minus className="h-3 w-3" />
+				</button>
+
+				{/* Vertical line tool */}
+				<button
+					className={cn(
+						"flex min-h-[36px] min-w-[36px] items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+						activeTool === "vertical"
+							? "bg-primary text-primary-foreground"
+							: "bg-muted text-muted-foreground hover:bg-muted/80",
+					)}
+					data-testid="chart-button-vertical-line"
+					onClick={() => toggleTool("vertical")}
+					title="Vertical line (V)"
+					type="button"
+				>
+					<SeparatorVertical className="h-3 w-3" />
+				</button>
+
+				{/* Line style toggle */}
+				<button
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-line-style"
+					onClick={cycleLineStyle}
+					title={`Line style: ${drawingLineStyle}`}
+					type="button"
+				>
+					{drawingLineStyle === "solid" ? (
+						<span className="block h-0.5 w-3 bg-current" />
+					) : (
+						<span className="block h-0.5 w-3 border-current border-t-2 border-dashed" />
+					)}
+				</button>
+
+				{/* Color picker cycling button */}
+				<button
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-color"
+					onClick={cycleColor}
+					title="Drawing color"
+					type="button"
+				>
+					<span
+						className="block h-3 w-3 rounded-full"
+						style={{ backgroundColor: drawingColor }}
+					/>
+				</button>
+
+				{/* Clear all button */}
+				<button
+					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-destructive sm:min-h-0 sm:min-w-0"
+					data-testid="chart-button-clear-all"
+					onClick={handleClearAll}
+					title="Clear all drawings"
+					type="button"
+				>
+					<Trash2 className="h-3 w-3" />
 				</button>
 			</div>
 

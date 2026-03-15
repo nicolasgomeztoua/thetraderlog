@@ -670,6 +670,87 @@ export async function getFullDayBars(
 }
 
 // =============================================================================
+// EXTENDED DATE RANGE FOR 1H CHARTS
+// =============================================================================
+
+/**
+ * Get extended date range of 1h bars for a trade.
+ * Fetches 3 calendar days before entry through 3 calendar days after exit
+ * (or up to today), giving ~7 trading sessions of context.
+ *
+ * Uses getOHLCBars(symbol, "1h", date) for each day — same cache-first logic.
+ *
+ * @param symbol - Trading symbol
+ * @param entryTime - Trade entry time
+ * @param exitTime - Trade exit time (or null for open trades)
+ * @returns Extended range of 1h bars
+ */
+export async function getExtendedDayBars(
+	symbol: string,
+	entryTime: Date,
+	exitTime: Date | null,
+): Promise<CacheResult> {
+	const effectiveExitTime = exitTime ?? new Date();
+
+	// 3 calendar days before entry
+	const rangeStart = new Date(entryTime);
+	rangeStart.setUTCDate(rangeStart.getUTCDate() - 3);
+	rangeStart.setUTCHours(0, 0, 0, 0);
+
+	// 3 calendar days after exit, capped at today
+	const rangeEnd = new Date(effectiveExitTime);
+	rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 3);
+	const today = new Date();
+	today.setUTCHours(23, 59, 59, 999);
+	if (rangeEnd > today) {
+		rangeEnd.setTime(today.getTime());
+	}
+	rangeEnd.setUTCHours(0, 0, 0, 0);
+
+	// Build list of dates, capped at 30 days to prevent unbounded ranges for old open trades
+	const MAX_CHART_DAYS = 30;
+	const dates: Date[] = [];
+	const currentDate = new Date(rangeStart);
+	while (currentDate <= rangeEnd && dates.length < MAX_CHART_DAYS) {
+		dates.push(new Date(currentDate));
+		currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+	}
+
+	// Fetch all days in parallel (always 1h for extended view)
+	const results = await Promise.all(
+		dates.map((date) => getOHLCBars(symbol, "1h", date)),
+	);
+
+	// Combine all bars from all days
+	const allBars: OHLCBar[] = [];
+	for (const result of results) {
+		allBars.push(...result.bars);
+	}
+
+	// Sort by timestamp
+	allBars.sort((a, b) => a.timestamp - b.timestamp);
+
+	// Determine data quality
+	const allUnavailable = results.every((r) => r.dataQuality === "unavailable");
+	const anyUnavailable = results.some((r) => r.dataQuality === "unavailable");
+
+	let dataQuality: DataQuality;
+	if (allUnavailable) {
+		dataQuality = "unavailable";
+	} else if (anyUnavailable) {
+		dataQuality = "partial";
+	} else {
+		dataQuality = "full";
+	}
+
+	// Determine source
+	const allFromCache = results.every((r) => r.source === "cache");
+	const source = allFromCache ? "cache" : "api";
+
+	return { bars: allBars, source, dataQuality };
+}
+
+// =============================================================================
 // CACHE MANAGEMENT
 // =============================================================================
 

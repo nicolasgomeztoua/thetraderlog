@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	type CacheInterval,
 	getCacheStats,
+	getExtendedDayBars,
 	getFullDayBars,
 	getOHLCForChart,
 	getOHLCForTimeRange,
@@ -264,6 +265,46 @@ export const marketDataRouter = createTRPCRouter({
 			const exitTime = input.exitTime ? new Date(input.exitTime) : null;
 
 			const { bars, source, dataQuality } = await getFullDayBars(
+				input.symbol,
+				new Date(input.entryTime),
+				exitTime,
+			);
+
+			// Convert timestamps to lightweight-charts format (seconds, not ms)
+			const chartBars = bars.map((bar) => ({
+				time: Math.floor(bar.timestamp / 1000),
+				open: bar.open,
+				high: bar.high,
+				low: bar.low,
+				close: bar.close,
+			}));
+
+			return {
+				bars: chartBars,
+				source,
+				dataQuality,
+				barCount: chartBars.length,
+			};
+		}),
+
+	/**
+	 * Get extended date range of 1h bars for a trade
+	 * Returns ~7 trading sessions: 3 calendar days before entry through
+	 * 3 calendar days after exit (capped at today).
+	 * Designed for the 1h timeframe chart view.
+	 */
+	getExtendedChartData: protectedProcedure
+		.input(
+			z.object({
+				symbol: z.string(),
+				entryTime: z.iso.datetime(),
+				exitTime: z.iso.datetime().optional(),
+			}),
+		)
+		.query(async ({ input }) => {
+			const exitTime = input.exitTime ? new Date(input.exitTime) : null;
+
+			const { bars, source, dataQuality } = await getExtendedDayBars(
 				input.symbol,
 				new Date(input.entryTime),
 				exitTime,

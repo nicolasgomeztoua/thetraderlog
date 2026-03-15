@@ -21,6 +21,8 @@ export const ERR_CHALLENGE_ACCOUNT_NOT_FOUND = "Challenge account not found";
 export const ERR_DELETED_TRADE_NOT_FOUND = "Deleted trade not found";
 export const ERR_PRESET_NOT_FOUND = "Preset not found or access denied";
 export const ERR_FILTER_PRESET_NOT_FOUND = "Filter preset not found";
+export const ERR_ANNOTATION_NOT_FOUND = "Annotation not found";
+export const ERR_ANNOTATION_CREATE_FAILED = "Failed to create annotation";
 
 // =============================================================================
 // CREATION / MUTATION FAILURES
