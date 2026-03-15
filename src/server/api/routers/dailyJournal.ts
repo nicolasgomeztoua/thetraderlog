@@ -172,8 +172,8 @@ export const dailyJournalRouter = createTRPCRouter({
 					userId: ctx.user.id,
 					content: input.content,
 					date: normalizedDate,
-				}).catch(() => {
-					// Search vector update is best-effort, don't fail the mutation
+				}).catch((err) => {
+					console.error("Failed to update search vector:", err);
 				});
 
 				return updated;
@@ -200,8 +200,8 @@ export const dailyJournalRouter = createTRPCRouter({
 				userId: ctx.user.id,
 				content: input.content,
 				date: normalizedDate,
-			}).catch(() => {
-				// Search vector update is best-effort, don't fail the mutation
+			}).catch((err) => {
+				console.error("Failed to update search vector:", err);
 			});
 
 			return created;
@@ -264,7 +264,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				sql`SELECT
 					dj.id,
 					dj.date,
-					ts_headline('english', COALESCE(dj.content, ''), plainto_tsquery('english', ${input.query}),
+					ts_headline('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'), plainto_tsquery('english', ${input.query}),
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
 					ts_rank(dj.search_vector, plainto_tsquery('english', ${input.query})) AS rank

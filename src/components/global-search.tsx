@@ -11,6 +11,7 @@ import {
 	SEARCH_MIN_QUERY_LENGTH,
 	SEARCH_PLACEHOLDER,
 } from "@/lib/constants/search";
+import { toDateString } from "@/lib/shared/timezone";
 import { api } from "@/trpc/react";
 
 export function GlobalSearch() {
@@ -62,7 +63,7 @@ export function GlobalSearch() {
 	const handleSelect = useCallback(
 		(dateStr: string) => {
 			const date = new Date(dateStr);
-			const formatted = date.toISOString().split("T")[0];
+			const formatted = toDateString(date);
 			router.push(`/daily-journal?date=${formatted}`);
 			setOpen(false);
 		},
