@@ -101,7 +101,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Skills: /backend. Ref: src/server/api/routers/dailyJournal.ts, src/lib/constants/errors.ts"
     },
     {

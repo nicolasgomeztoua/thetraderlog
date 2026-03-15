@@ -78,3 +78,17 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - Scripts need their own DB connection — can't import from @/server/db (requires env.js)
   - Use relative imports from scripts/ to src/ (e.g., "../src/lib/journal/search")
 ---
+
+## 2026-03-15 - US-005
+- Added search tRPC endpoint to dailyJournal router
+- Files changed: src/server/api/routers/dailyJournal.ts
+- Uses plainto_tsquery for safe keyword parsing
+- Returns journalId, date, snippet (with <mark> highlights), rank
+- Uses ts_headline for snippets, ts_rank for relevance ordering
+- Scoped to authenticated user only
+- Returns empty array for no matches
+- **Learnings for future iterations:**
+  - db.execute returns the array directly (not .rows) — use Array.isArray guard for safety
+  - ts_headline StartSel/StopSel can use HTML tags for frontend rendering
+  - plainto_tsquery is safer than to_tsquery (handles special chars without errors)
+---

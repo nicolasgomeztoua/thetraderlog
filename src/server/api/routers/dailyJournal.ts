@@ -8,6 +8,7 @@ import {
 	isNull,
 	lt,
 	lte,
+	sql,
 } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -244,6 +245,44 @@ export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
 	// JOURNAL QUERIES
 	// ============================================================================
+
+	// Search across journal entries by keyword
+	search: protectedProcedure
+		.input(
+			z.object({
+				query: z.string().min(2),
+				limit: z.number().int().min(1).max(50).default(20),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const results = await ctx.db.execute<{
+				id: string;
+				date: Date;
+				snippet: string;
+				rank: number;
+			}>(
+				sql`SELECT
+					dj.id,
+					dj.date,
+					ts_headline('english', COALESCE(dj.content, ''), plainto_tsquery('english', ${input.query}),
+						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
+					) AS snippet,
+					ts_rank(dj.search_vector, plainto_tsquery('english', ${input.query})) AS rank
+				FROM daily_journal dj
+				WHERE dj.user_id = ${ctx.user.id}
+					AND dj.search_vector IS NOT NULL
+					AND dj.search_vector @@ plainto_tsquery('english', ${input.query})
+				ORDER BY rank DESC
+				LIMIT ${input.limit}`,
+			);
+
+			return (Array.isArray(results) ? results : []).map((row) => ({
+				journalId: row.id,
+				date: row.date,
+				snippet: row.snippet,
+				rank: row.rank,
+			}));
+		}),
 
 	// Get journal by date, auto-create if not exists
 	getByDate: protectedProcedure
