@@ -119,3 +119,18 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - dangerouslySetInnerHTML for ts_headline snippets needs biome-ignore comment
   - `[&>mark]:bg-primary/20 [&>mark]:text-primary` for styling <mark> tags from ts_headline
 ---
+
+## 2026-03-15 - US-008
+- Created global search command palette component
+- Files changed: src/components/global-search.tsx (new), src/app/(protected)/layout.tsx
+- Cmd+K / Ctrl+K keyboard shortcut to open
+- Dialog-based command palette with dark overlay
+- Keyboard navigation: ArrowUp/Down + Enter
+- Results navigate to /daily-journal?date=YYYY-MM-DD
+- Added to header bar alongside BugReportButton
+- **Learnings for future iterations:**
+  - Don't use `instanceof Date` on a typed string parameter — TypeScript rejects it
+  - Biome useExhaustiveDependencies: can't use derived state (results/debouncedQuery) in deps if not used in effect body
+  - Reset index in onChange handler instead of separate useEffect
+  - Server components can render client components — GlobalSearch is 'use client' in server layout
+---

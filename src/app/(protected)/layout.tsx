@@ -1,4 +1,5 @@
 import { BugReportButton } from "@/components/bug-report/bug-report-button";
+import { GlobalSearch } from "@/components/global-search";
 import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
@@ -37,7 +38,8 @@ export default async function ProtectedLayout({
 									className="relative mr-2 h-4 bg-border"
 									orientation="vertical"
 								/>
-								<div className="relative ml-auto">
+								<div className="relative ml-auto flex items-center gap-2">
+									<GlobalSearch />
 									<BugReportButton />
 								</div>
 							</header>

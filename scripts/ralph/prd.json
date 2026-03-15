@@ -167,7 +167,7 @@
         "Verify in browser"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Skills: /frontend. Ref: .claude/skills/frontend/SKILL.md, .claude/skills/frontend/DESIGN_REFERENCE.md, src/app/(protected)/layout.tsx"
     },
     {
