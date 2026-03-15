@@ -52,18 +52,21 @@ describe("dailyJournal.search", () => {
 			userId: user.id,
 			content: journal1?.content ?? null,
 			date: new Date("2025-01-10"),
+			timezone: "UTC",
 		});
 		await updateJournalSearchVector(db, {
 			journalId: journal2?.id ?? "",
 			userId: user.id,
 			content: journal2?.content ?? null,
 			date: new Date("2025-01-11"),
+			timezone: "UTC",
 		});
 		await updateJournalSearchVector(db, {
 			journalId: journal3?.id ?? "",
 			userId: user.id,
 			content: journal3?.content ?? null,
 			date: new Date("2025-01-12"),
+			timezone: "UTC",
 		});
 	});
 
@@ -144,6 +147,7 @@ describe("dailyJournal.search", () => {
 			userId: otherUser.id,
 			content: otherJournal?.content ?? null,
 			date: new Date("2025-01-15"),
+			timezone: "UTC",
 		});
 
 		// Search as the original user — should NOT find the other user's journal

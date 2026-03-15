@@ -146,6 +146,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const normalizedDate = normalizeDate(new Date(input.date));
+			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
 
 			// Try to find existing journal
 			const existing = await ctx.db.query.dailyJournals.findFirst({
@@ -172,6 +173,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					userId: ctx.user.id,
 					content: input.content,
 					date: normalizedDate,
+					timezone: userTimezone,
 				}).catch((err) => {
 					console.error("Failed to update search vector:", err);
 				});
@@ -200,6 +202,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				userId: ctx.user.id,
 				content: input.content,
 				date: normalizedDate,
+				timezone: userTimezone,
 			}).catch((err) => {
 				console.error("Failed to update search vector:", err);
 			});

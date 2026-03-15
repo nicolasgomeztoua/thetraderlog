@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
@@ -16,6 +16,14 @@ if (!DATABASE_URL) {
 const conn = postgres(DATABASE_URL);
 const db = drizzle(conn, { schema });
 
+async function getUserTimezone(userId: string): Promise<string> {
+	const result = await db.query.userSettings.findFirst({
+		where: eq(schema.userSettings.userId, userId),
+		columns: { timezone: true },
+	});
+	return result?.timezone ?? "UTC";
+}
+
 async function backfill() {
 	console.log("Fetching all daily journals...");
 
@@ -30,16 +38,26 @@ async function backfill() {
 
 	console.log(`Found ${journals.length} journals to backfill.`);
 
+	// Cache user timezones to avoid repeated lookups
+	const timezoneCache = new Map<string, string>();
+
 	let updated = 0;
 	let errors = 0;
 
 	for (const journal of journals) {
 		try {
+			let timezone = timezoneCache.get(journal.userId);
+			if (!timezone) {
+				timezone = await getUserTimezone(journal.userId);
+				timezoneCache.set(journal.userId, timezone);
+			}
+
 			const texts = await gatherJournalSearchText(db, {
 				journalId: journal.id,
 				userId: journal.userId,
 				content: journal.content,
 				date: journal.date,
+				timezone,
 			});
 
 			const vectorSql = buildSearchVectorSql(texts);

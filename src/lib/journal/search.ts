@@ -1,4 +1,8 @@
 import { and, eq, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import {
+	getDayBoundsInTimezone,
+	getUTCDateString,
+} from "@/lib/shared/timezone";
 import type { db as dbType } from "@/server/db";
 import {
 	dailyChecklistTemplates,
@@ -64,6 +68,7 @@ export async function gatherJournalSearchText(
 		userId: string;
 		content: string | null;
 		date: Date;
+		timezone: string;
 	},
 ): Promise<{
 	journalContent: string;
@@ -73,11 +78,12 @@ export async function gatherJournalSearchText(
 }> {
 	const journalContent = stripHtmlTags(params.content);
 
-	// Gather trade notes for this date (trades within the same UTC day)
-	const startOfDay = new Date(params.date);
-	startOfDay.setUTCHours(0, 0, 0, 0);
-	const endOfDay = new Date(startOfDay);
-	endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+	// Gather trade notes for this date using timezone-aware day boundaries
+	const dateString = getUTCDateString(params.date);
+	const { start: startOfDay, end: endOfDay } = getDayBoundsInTimezone(
+		dateString,
+		params.timezone,
+	);
 
 	const tradeRows = await db.query.trades.findMany({
 		where: and(
@@ -135,6 +141,7 @@ export async function updateJournalSearchVector(
 		userId: string;
 		content: string | null;
 		date: Date;
+		timezone: string;
 	},
 ): Promise<void> {
 	const texts = await gatherJournalSearchText(db, params);
