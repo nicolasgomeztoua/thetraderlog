@@ -23,6 +23,7 @@ import {
 	ERR_TEMPLATE_NOT_FOUND,
 	errTemplateNotOwned,
 } from "@/lib/constants/errors";
+import { updateJournalSearchVector } from "@/lib/journal/search";
 import {
 	getDateStringInTimezone,
 	getDayBoundsInTimezone,
@@ -164,6 +165,16 @@ export const dailyJournalRouter = createTRPCRouter({
 					.where(eq(dailyJournals.id, existing.id))
 					.returning();
 
+				// Update search vector asynchronously (non-blocking)
+				updateJournalSearchVector(ctx.db, {
+					journalId: existing.id,
+					userId: ctx.user.id,
+					content: input.content,
+					date: normalizedDate,
+				}).catch(() => {
+					// Search vector update is best-effort, don't fail the mutation
+				});
+
 				return updated;
 			}
 
@@ -181,6 +192,16 @@ export const dailyJournalRouter = createTRPCRouter({
 			if (!created) {
 				throw new Error(ERR_JOURNAL_CREATE_FAILED);
 			}
+
+			// Update search vector asynchronously (non-blocking)
+			updateJournalSearchVector(ctx.db, {
+				journalId: created.id,
+				userId: ctx.user.id,
+				content: input.content,
+				date: normalizedDate,
+			}).catch(() => {
+				// Search vector update is best-effort, don't fail the mutation
+			});
 
 			return created;
 		}),

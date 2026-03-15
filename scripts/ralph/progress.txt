@@ -57,3 +57,13 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - Biome enforces alphabetical import sorting
   - tsvector weight concatenation uses || operator in PostgreSQL
 ---
+
+## 2026-03-15 - US-003
+- Hooked search vector update into the updateContent mutation
+- Files changed: src/server/api/routers/dailyJournal.ts
+- Search vector updates fire asynchronously (non-blocking, best-effort with .catch())
+- Covers both update and create paths in the upsert
+- **Learnings for future iterations:**
+  - Biome import ordering: @/lib/journal comes before @/lib/shared alphabetically
+  - Fire-and-forget pattern with .catch() is appropriate for non-critical side effects
+---
