@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { DEFAULT_ANNOTATION_COLOR } from "@/lib/constants/chart";
 import {
 	ERR_ANNOTATION_CREATE_FAILED,
 	ERR_ANNOTATION_NOT_FOUND,
@@ -60,7 +61,7 @@ export const chartAnnotationsRouter = createTRPCRouter({
 					type: input.type,
 					value: input.value,
 					lineStyle: input.lineStyle ?? "solid",
-					color: input.color ?? "#d4ff00",
+					color: input.color ?? DEFAULT_ANNOTATION_COLOR,
 				})
 				.returning();
 

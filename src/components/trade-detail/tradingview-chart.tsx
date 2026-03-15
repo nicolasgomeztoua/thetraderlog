@@ -35,6 +35,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { DRAWING_COLORS, LINE_STYLE_MAP } from "@/lib/constants/chart";
 import { useTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
@@ -112,12 +113,6 @@ type LineStyleOption = "solid" | "dashed";
 // CONSTANTS
 // =============================================================================
 
-const DRAWING_COLORS = ["#d4ff00", "#00d4ff", "#ff3b3b", "#00ff88", "#71717a"];
-
-const LINE_STYLE_MAP: Record<LineStyleOption, number> = {
-	solid: 0,
-	dashed: 2,
-};
 
 // =============================================================================
 // VERTICAL LINE PRIMITIVE (ISeriesPrimitive)
