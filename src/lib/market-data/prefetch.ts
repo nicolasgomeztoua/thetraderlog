@@ -46,12 +46,8 @@ async function fetchWithRetry(
 ): Promise<boolean> {
 	for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 		try {
-			const result = await getOHLCBars(symbol, interval, date);
+			await getOHLCBars(symbol, interval, date);
 			// Even "unavailable" (weekend/holiday) is a valid result — not a failure
-			if (result.dataQuality !== "unavailable" || result.source === "cache") {
-				return true;
-			}
-			// Unavailable from API means no data for that day (non-trading day) — skip retrying
 			return true;
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : "Unknown error";

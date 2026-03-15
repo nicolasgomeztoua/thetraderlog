@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { DEFAULT_ANNOTATION_COLOR } from "@/lib/constants/chart";
 import {
@@ -18,6 +18,7 @@ export const chartAnnotationsRouter = createTRPCRouter({
 				where: and(
 					eq(trades.id, input.tradeId),
 					eq(trades.userId, ctx.user.id),
+					isNull(trades.deletedAt),
 				),
 			});
 
@@ -37,7 +38,10 @@ export const chartAnnotationsRouter = createTRPCRouter({
 				type: z.enum(["horizontal", "vertical"]),
 				value: z.string(), // Decimal as string
 				lineStyle: z.enum(["solid", "dashed"]).optional(),
-				color: z.string().optional(),
+				color: z
+					.string()
+					.regex(/^#[0-9a-fA-F]{6}$/)
+					.optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -46,6 +50,7 @@ export const chartAnnotationsRouter = createTRPCRouter({
 				where: and(
 					eq(trades.id, input.tradeId),
 					eq(trades.userId, ctx.user.id),
+					isNull(trades.deletedAt),
 				),
 			});
 
@@ -100,6 +105,7 @@ export const chartAnnotationsRouter = createTRPCRouter({
 				where: and(
 					eq(trades.id, input.tradeId),
 					eq(trades.userId, ctx.user.id),
+					isNull(trades.deletedAt),
 				),
 			});
 

@@ -1041,6 +1041,7 @@ function LightweightChartInner({
 	]);
 
 	// Render persisted annotations separately to avoid full chart recreation on annotation changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: interval triggers chart rebuild; annotations must re-apply on the new series
 	useEffect(() => {
 		if (!seriesRef.current || !annotations) return;
 
@@ -1076,7 +1077,7 @@ function LightweightChartInner({
 				verticalLinePrimitivesRef.current.push(primitive);
 			}
 		}
-	}, [annotations]);
+	}, [annotations, interval]);
 
 	// Show loading state
 	if (isLoading) {
