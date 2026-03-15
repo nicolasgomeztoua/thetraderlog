@@ -678,7 +678,6 @@ Are there any remaining concerns with this PR, or is it ready to merge?"
         # Also update summary/score if this was a full summary
         if echo "$LATEST_RESPONSE" | grep -q "Confidence Score"; then
             SUMMARY_BODY="$LATEST_RESPONSE"
-            local score_str
             score_str=$(echo "$LATEST_RESPONSE" | grep -oE 'Confidence Score: [0-9]+/5' | head -1 || echo "")
             if [ -n "$score_str" ]; then
                 GREPTILE_SCORE=$(echo "$score_str" | grep -oE '[0-9]+' | head -1)
