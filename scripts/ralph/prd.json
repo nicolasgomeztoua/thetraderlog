@@ -80,7 +80,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Reuses utility from US-002 (src/lib/journal/search.ts)"
     },
     {

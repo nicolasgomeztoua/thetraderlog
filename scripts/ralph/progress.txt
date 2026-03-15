@@ -67,3 +67,14 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - Biome import ordering: @/lib/journal comes before @/lib/shared alphabetically
   - Fire-and-forget pattern with .catch() is appropriate for non-critical side effects
 ---
+
+## 2026-03-15 - US-004
+- Created backfill script at scripts/backfill-search-vectors.ts
+- Files changed: scripts/backfill-search-vectors.ts (new)
+- Uses standalone DB connection (not the app's cached connection)
+- Reuses gatherJournalSearchText and buildSearchVectorSql from US-002
+- Run with: bun run scripts/backfill-search-vectors.ts
+- **Learnings for future iterations:**
+  - Scripts need their own DB connection — can't import from @/server/db (requires env.js)
+  - Use relative imports from scripts/ to src/ (e.g., "../src/lib/journal/search")
+---
