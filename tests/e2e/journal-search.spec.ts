@@ -16,9 +16,6 @@ test.describe("Journal Search", () => {
 	}) => {
 		await page.goto("/daily-journal");
 
-		// Wait for page to load
-		await page.waitForTimeout(3000);
-
 		// Verify search component is visible
 		const search = page.getByTestId("journal-search");
 		await expect(search).toBeVisible({ timeout: 15000 });
@@ -38,17 +35,11 @@ test.describe("Journal Search", () => {
 		testInfo.setTimeout(30000);
 		await page.goto("/daily-journal");
 
-		// Wait for page to load
-		await page.waitForTimeout(3000);
-
 		const input = page.getByTestId("journal-search-input");
 		await expect(input).toBeVisible({ timeout: 15000 });
 
 		// Type a search query
 		await input.fill("journal");
-
-		// Wait for debounce + API call
-		await page.waitForTimeout(1000);
 
 		// Results dropdown should appear (even if empty)
 		const results = page.getByTestId("journal-search-results");
@@ -57,9 +48,6 @@ test.describe("Journal Search", () => {
 
 	test("clear button resets journal search", async ({ page }) => {
 		await page.goto("/daily-journal");
-
-		// Wait for page to load
-		await page.waitForTimeout(3000);
 
 		const input = page.getByTestId("journal-search-input");
 		await expect(input).toBeVisible({ timeout: 15000 });
@@ -80,9 +68,6 @@ test.describe("Journal Search", () => {
 	test("global search opens with Cmd+K", async ({ page }) => {
 		await page.goto("/daily-journal");
 
-		// Wait for page to load
-		await page.waitForTimeout(3000);
-
 		// Verify trigger button exists
 		const trigger = page.getByTestId("global-search-trigger");
 		await expect(trigger).toBeVisible({ timeout: 15000 });
@@ -102,9 +87,6 @@ test.describe("Journal Search", () => {
 	test("global search opens via trigger button", async ({ page }) => {
 		await page.goto("/daily-journal");
 
-		// Wait for page to load
-		await page.waitForTimeout(3000);
-
 		// Click the trigger button
 		const trigger = page.getByTestId("global-search-trigger");
 		await expect(trigger).toBeVisible({ timeout: 15000 });
@@ -118,8 +100,9 @@ test.describe("Journal Search", () => {
 	test("global search closes on Escape", async ({ page }) => {
 		await page.goto("/daily-journal");
 
-		// Wait for page to load
-		await page.waitForTimeout(3000);
+		// Wait for page to be ready before sending keyboard shortcut
+		const trigger = page.getByTestId("global-search-trigger");
+		await expect(trigger).toBeVisible({ timeout: 15000 });
 
 		// Open global search
 		await page.keyboard.press("Meta+k");

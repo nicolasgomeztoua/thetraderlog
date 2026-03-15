@@ -146,7 +146,6 @@ export const dailyJournalRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const normalizedDate = normalizeDate(new Date(input.date));
-			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
 
 			// Try to find existing journal
 			const existing = await ctx.db.query.dailyJournals.findFirst({
@@ -168,15 +167,20 @@ export const dailyJournalRouter = createTRPCRouter({
 					.returning();
 
 				// Update search vector asynchronously (non-blocking)
-				updateJournalSearchVector(ctx.db, {
-					journalId: existing.id,
-					userId: ctx.user.id,
-					content: input.content,
-					date: normalizedDate,
-					timezone: userTimezone,
-				}).catch((err) => {
-					console.error("Failed to update search vector:", err);
-				});
+				// Fetch timezone lazily to avoid extra DB round-trip on the hot path
+				getUserTimezone(ctx.db, ctx.user.id)
+					.then((timezone) =>
+						updateJournalSearchVector(ctx.db, {
+							journalId: existing.id,
+							userId: ctx.user.id,
+							content: input.content,
+							date: normalizedDate,
+							timezone,
+						}),
+					)
+					.catch((err) => {
+						console.error("Failed to update search vector:", err);
+					});
 
 				return updated;
 			}
@@ -197,15 +201,20 @@ export const dailyJournalRouter = createTRPCRouter({
 			}
 
 			// Update search vector asynchronously (non-blocking)
-			updateJournalSearchVector(ctx.db, {
-				journalId: created.id,
-				userId: ctx.user.id,
-				content: input.content,
-				date: normalizedDate,
-				timezone: userTimezone,
-			}).catch((err) => {
-				console.error("Failed to update search vector:", err);
-			});
+			// Fetch timezone lazily to avoid extra DB round-trip on the hot path
+			getUserTimezone(ctx.db, ctx.user.id)
+				.then((timezone) =>
+					updateJournalSearchVector(ctx.db, {
+						journalId: created.id,
+						userId: ctx.user.id,
+						content: input.content,
+						date: normalizedDate,
+						timezone,
+					}),
+				)
+				.catch((err) => {
+					console.error("Failed to update search vector:", err);
+				});
 
 			return created;
 		}),
@@ -264,17 +273,20 @@ export const dailyJournalRouter = createTRPCRouter({
 				snippet: string;
 				rank: number;
 			}>(
-				sql`SELECT
+				sql`WITH search_query AS (
+					SELECT plainto_tsquery('english', ${input.query}) AS q
+				)
+				SELECT
 					dj.id,
 					dj.date,
-					ts_headline('english', COALESCE(dj.search_plain_text, regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), plainto_tsquery('english', ${input.query}),
+					ts_headline('english', COALESCE(dj.search_plain_text, regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), sq.q,
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
-					ts_rank(dj.search_vector, plainto_tsquery('english', ${input.query})) AS rank
-				FROM daily_journal dj
+					ts_rank(dj.search_vector, sq.q) AS rank
+				FROM daily_journal dj, search_query sq
 				WHERE dj.user_id = ${ctx.user.id}
 					AND dj.search_vector IS NOT NULL
-					AND dj.search_vector @@ plainto_tsquery('english', ${input.query})
+					AND dj.search_vector @@ sq.q
 				ORDER BY rank DESC
 				LIMIT ${input.limit}`,
 			);
