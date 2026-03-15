@@ -458,6 +458,7 @@ function LightweightChartInner({
 		},
 		onError: () => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
+			toast.error("Failed to save annotation");
 		},
 	});
 
@@ -467,6 +468,7 @@ function LightweightChartInner({
 		},
 		onError: () => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
+			toast.error("Failed to clear annotations");
 		},
 	});
 

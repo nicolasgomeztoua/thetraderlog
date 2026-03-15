@@ -126,7 +126,12 @@ export const chartAnnotationsRouter = createTRPCRouter({
 
 			await ctx.db
 				.delete(chartAnnotations)
-				.where(eq(chartAnnotations.tradeId, input.tradeId));
+				.where(
+					and(
+						eq(chartAnnotations.tradeId, input.tradeId),
+						eq(chartAnnotations.userId, ctx.user.id),
+					),
+				);
 
 			return { success: true };
 		}),
