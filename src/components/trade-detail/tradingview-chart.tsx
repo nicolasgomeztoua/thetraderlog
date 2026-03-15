@@ -4,9 +4,18 @@ import {
 	createChart,
 	createSeriesMarkers,
 	type IChartApi,
+	type IChartApiBase,
 	type IPriceLine,
+	type IPrimitivePaneRenderer,
+	type IPrimitivePaneView,
 	type ISeriesApi,
+	type ISeriesPrimitive,
+	type ISeriesPrimitiveAxisView,
+	LineStyle,
+	type SeriesAttachedParameter,
 	type SeriesMarker,
+	type SeriesType,
+	type Time,
 	type UTCTimestamp,
 } from "lightweight-charts";
 import {
@@ -95,7 +104,7 @@ interface ChartProps {
 
 type CandleDataPoint = CandlestickData<UTCTimestamp>;
 
-type DrawingTool = "horizontal" | null;
+type DrawingTool = "horizontal" | "vertical" | null;
 
 type LineStyleOption = "solid" | "dashed";
 
@@ -109,6 +118,126 @@ const LINE_STYLE_MAP: Record<LineStyleOption, number> = {
 	solid: 0,
 	dashed: 2,
 };
+
+// =============================================================================
+// VERTICAL LINE PRIMITIVE (ISeriesPrimitive)
+// =============================================================================
+
+class VerticalLinePaneView implements IPrimitivePaneView {
+	private _primitive: VerticalLinePrimitive;
+
+	constructor(primitive: VerticalLinePrimitive) {
+		this._primitive = primitive;
+	}
+
+	zOrder(): "normal" {
+		return "normal";
+	}
+
+	renderer(): IPrimitivePaneRenderer | null {
+		const primitive = this._primitive;
+		return {
+			draw: (target, utils) => {
+				const chart = primitive.chart();
+				if (!chart) return;
+
+				const timeCoord = chart
+					.timeScale()
+					.timeToCoordinate(primitive.time as Time);
+				if (timeCoord === null) return;
+
+				const drawScope = target.useMediaCoordinateSpace.bind(target);
+				drawScope(({ context, mediaSize }) => {
+					context.beginPath();
+					context.strokeStyle = primitive.color;
+					context.lineWidth = 1;
+					if (utils && primitive.lineStyleValue !== LineStyle.Solid) {
+						utils.setLineStyle(context, primitive.lineStyleValue);
+					}
+					context.moveTo(timeCoord, 0);
+					context.lineTo(timeCoord, mediaSize.height);
+					context.stroke();
+				});
+			},
+		};
+	}
+}
+
+class VerticalLineTimeAxisView implements ISeriesPrimitiveAxisView {
+	private _primitive: VerticalLinePrimitive;
+
+	constructor(primitive: VerticalLinePrimitive) {
+		this._primitive = primitive;
+	}
+
+	coordinate(): number {
+		const chart = this._primitive.chart();
+		if (!chart) return -1000;
+		const coord = chart
+			.timeScale()
+			.timeToCoordinate(this._primitive.time as Time);
+		return coord ?? -1000;
+	}
+
+	text(): string {
+		const ts = this._primitive.time as number;
+		const d = new Date(ts * 1000);
+		const h = d.getUTCHours().toString().padStart(2, "0");
+		const m = d.getUTCMinutes().toString().padStart(2, "0");
+		return `${h}:${m}`;
+	}
+
+	textColor(): string {
+		return "#050505";
+	}
+
+	backColor(): string {
+		return this._primitive.color;
+	}
+}
+
+class VerticalLinePrimitive implements ISeriesPrimitive {
+	readonly time: UTCTimestamp;
+	readonly color: string;
+	readonly lineStyleValue: LineStyle;
+
+	private _chart: IChartApiBase<Time> | null = null;
+	private _paneViews: readonly IPrimitivePaneView[];
+	private _timeAxisViews: readonly ISeriesPrimitiveAxisView[];
+
+	constructor(time: UTCTimestamp, color: string, lineStyle: LineStyleOption) {
+		this.time = time;
+		this.color = color;
+		this.lineStyleValue =
+			lineStyle === "dashed" ? LineStyle.Dashed : LineStyle.Solid;
+		this._paneViews = [new VerticalLinePaneView(this)];
+		this._timeAxisViews = [new VerticalLineTimeAxisView(this)];
+	}
+
+	attached(param: SeriesAttachedParameter<Time, SeriesType>): void {
+		this._chart = param.chart;
+	}
+
+	detached(): void {
+		this._chart = null;
+	}
+
+	chart(): IChartApiBase<Time> | null {
+		return this._chart;
+	}
+
+	updateAllViews(): void {
+		// Views recalculate on each draw
+	}
+
+	paneViews(): readonly IPrimitivePaneView[] {
+		return this._paneViews;
+	}
+
+	timeAxisViews(): readonly ISeriesPrimitiveAxisView[] {
+		return this._timeAxisViews;
+	}
+}
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -253,6 +382,12 @@ function LightweightChartInner({
 	// Track user-drawn annotation price lines for removal
 	const annotationPriceLinesRef = useRef<IPriceLine[]>([]);
 
+	// Track vertical line primitives for removal
+	const verticalLinePrimitivesRef = useRef<VerticalLinePrimitive[]>([]);
+
+	// Track crosshair time for vertical line placement
+	const crosshairTimeRef = useRef<UTCTimestamp | null>(null);
+
 	// Keep refs in sync with state
 	useEffect(() => {
 		activeToolRef.current = activeTool;
@@ -354,8 +489,13 @@ function LightweightChartInner({
 			for (const line of annotationPriceLinesRef.current) {
 				seriesRef.current.removePriceLine(line);
 			}
+			// Detach all vertical line primitives
+			for (const primitive of verticalLinePrimitivesRef.current) {
+				seriesRef.current.detachPrimitive(primitive);
+			}
 		}
 		annotationPriceLinesRef.current = [];
+		verticalLinePrimitivesRef.current = [];
 		clearAllAnnotations.mutate({ tradeId });
 	}, [clearAllAnnotations, tradeId]);
 
@@ -378,6 +518,9 @@ function LightweightChartInner({
 			if (e.key === "h" || e.key === "H") {
 				e.preventDefault();
 				toggleTool("horizontal");
+			} else if (e.key === "v" || e.key === "V") {
+				e.preventDefault();
+				toggleTool("vertical");
 			} else if (e.key === "Escape") {
 				e.preventDefault();
 				setActiveTool(null);
@@ -651,8 +794,9 @@ function LightweightChartInner({
 			});
 		}
 
-		// Render persisted annotations as price lines
+		// Render persisted annotations as price lines / vertical primitives
 		annotationPriceLinesRef.current = [];
+		verticalLinePrimitivesRef.current = [];
 		if (annotations) {
 			for (const ann of annotations) {
 				if (ann.type === "horizontal") {
@@ -665,6 +809,14 @@ function LightweightChartInner({
 						title: "",
 					});
 					annotationPriceLinesRef.current.push(priceLine);
+				} else if (ann.type === "vertical") {
+					const primitive = new VerticalLinePrimitive(
+						parseFloat(ann.value) as UTCTimestamp,
+						ann.color,
+						ann.lineStyle as LineStyleOption,
+					);
+					candlestickSeries.attachPrimitive(primitive);
+					verticalLinePrimitivesRef.current.push(primitive);
 				}
 			}
 		}
@@ -745,8 +897,12 @@ function LightweightChartInner({
 					ohlcSnapLineRef.current = null;
 				}
 				currentSnappedPriceRef.current = null;
+				crosshairTimeRef.current = null;
 				return;
 			}
+
+			// Store crosshair time for vertical line placement
+			crosshairTimeRef.current = param.time as UTCTimestamp;
 
 			// Get the bar data at the crosshair time
 			const barData = param.seriesData.get(seriesRef.current);
@@ -794,10 +950,12 @@ function LightweightChartInner({
 
 		// Subscribe to click — drawing mode or copy-to-clipboard
 		chart.subscribeClick(() => {
-			if (currentSnappedPriceRef.current === null) return;
-
 			// Drawing mode: place horizontal line
-			if (activeToolRef.current === "horizontal" && seriesRef.current) {
+			if (
+				activeToolRef.current === "horizontal" &&
+				seriesRef.current &&
+				currentSnappedPriceRef.current !== null
+			) {
 				const price = currentSnappedPriceRef.current;
 				const color = drawingColorRef.current;
 				const style = drawingLineStyleRef.current;
@@ -829,7 +987,41 @@ function LightweightChartInner({
 				return;
 			}
 
+			// Drawing mode: place vertical line
+			if (
+				activeToolRef.current === "vertical" &&
+				seriesRef.current &&
+				crosshairTimeRef.current !== null
+			) {
+				const time = crosshairTimeRef.current;
+				const color = drawingColorRef.current ?? "#d4ff00";
+				const style = drawingLineStyleRef.current;
+
+				// Create visual vertical line primitive
+				const primitive = new VerticalLinePrimitive(time, color, style);
+				seriesRef.current.attachPrimitive(primitive);
+				verticalLinePrimitivesRef.current.push(primitive);
+
+				// Persist to DB (value = Unix timestamp in seconds)
+				createAnnotation.mutate({
+					tradeId,
+					type: "vertical",
+					value: time.toString(),
+					lineStyle: style,
+					color,
+				});
+
+				const d = new Date((time as number) * 1000);
+				const timeStr = `${d.getUTCHours().toString().padStart(2, "0")}:${d.getUTCMinutes().toString().padStart(2, "0")}`;
+				toast("Line placed", {
+					description: `Vertical @ ${timeStr}`,
+					duration: 1500,
+				});
+				return;
+			}
+
 			// Default mode: copy price to clipboard
+			if (currentSnappedPriceRef.current === null) return;
 			navigator.clipboard.writeText(currentSnappedPriceRef.current.toString());
 			toast("Price copied", {
 				description: currentSnappedPriceRef.current.toString(),
@@ -852,6 +1044,13 @@ function LightweightChartInner({
 				ohlcSnapLineRef.current = null;
 			}
 			annotationPriceLinesRef.current = [];
+			// Detach vertical line primitives before removing chart
+			if (seriesRef.current) {
+				for (const primitive of verticalLinePrimitivesRef.current) {
+					seriesRef.current.detachPrimitive(primitive);
+				}
+			}
+			verticalLinePrimitivesRef.current = [];
 			chart.remove();
 			chartRef.current = null;
 			seriesRef.current = null;
@@ -975,12 +1174,17 @@ function LightweightChartInner({
 					<Minus className="h-3 w-3" />
 				</button>
 
-				{/* Vertical line tool (disabled placeholder for US-008) */}
+				{/* Vertical line tool */}
 				<button
-					className="flex min-h-[36px] min-w-[36px] cursor-not-allowed items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground opacity-50 transition-colors sm:min-h-0 sm:min-w-0"
+					className={cn(
+						"flex min-h-[36px] min-w-[36px] items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+						activeTool === "vertical"
+							? "bg-primary text-primary-foreground"
+							: "bg-muted text-muted-foreground hover:bg-muted/80",
+					)}
 					data-testid="chart-button-vertical-line"
-					disabled
-					title="Vertical line (coming soon)"
+					onClick={() => toggleTool("vertical")}
+					title="Vertical line (V)"
 					type="button"
 				>
 					<SeparatorVertical className="h-3 w-3" />
