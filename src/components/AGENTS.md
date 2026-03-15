@@ -313,6 +313,16 @@ if (isLoading || !data) {
 - `src/components/mdx/components.tsx` — mdxComponents map for next-mdx-remote
 - `src/components/mdx/chart-wrappers.tsx` — 11 chart wrapper components
 
+### ISeriesPrimitive for Custom Chart Overlays (lightweight-charts)
+**When:** Drawing custom visual elements on lightweight-charts (vertical lines, zones, etc.) that aren't built-in price lines
+**How:**
+1. Implement `ISeriesPrimitive` with `paneViews()` for main chart drawing and `timeAxisViews()` for time axis labels
+2. Use `attached(param)` lifecycle to store `param.chart` reference for coordinate conversions
+3. In the renderer's `draw()`, use `chart.timeScale().timeToCoordinate(time)` to get x position
+4. Use `target.useMediaCoordinateSpace.bind(target)` instead of calling directly — Biome false-flags `useMediaCoordinateSpace` as a React hook
+5. Attach via `seriesRef.current.attachPrimitive(instance)`, detach via `detachPrimitive()`
+6. Store primitives in a ref array for bulk cleanup (clear all, chart unmount)
+
 ## Gotchas
 
 ### Calendar Date → API Date String (Frontend)

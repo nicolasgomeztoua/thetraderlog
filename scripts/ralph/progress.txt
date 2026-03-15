@@ -116,3 +116,20 @@ Started: Sat Mar 14 23:24:11 WET 2026
   - Toolbar buttons follow existing pattern: `bg-muted px-2 py-1 font-mono text-[10px]` with `min-h-[36px] min-w-[36px]` for mobile touch targets
   - Active tool highlighted with `bg-primary text-primary-foreground` matching timeframe selector pattern
 ---
+
+## 2026-03-15 - US-008
+- Implemented vertical line drawing tool using ISeriesPrimitive interface
+- Files changed:
+  - `src/components/trade-detail/tradingview-chart.tsx` — Added VerticalLinePrimitive class, enabled vertical line button, added V keyboard shortcut, vertical line click handler, persistence/restore on mount, clear all support
+- Architecture:
+  - `VerticalLinePrimitive` implements `ISeriesPrimitive` with `paneViews()` (draws vertical line via canvas) and `timeAxisViews()` (shows time label)
+  - Stores chart reference from `attached()` lifecycle to convert time→coordinate via `timeScale().timeToCoordinate()`
+  - Crosshair time tracked in `crosshairTimeRef` from `subscribeCrosshairMove` for vertical line placement
+  - Vertical primitives stored in `verticalLinePrimitivesRef` for cleanup (detachPrimitive on clear all or chart unmount)
+  - Annotations persisted to DB with type "vertical" and value as Unix timestamp seconds
+- **Learnings for future iterations:**
+  - Biome false-positives: `target.useMediaCoordinateSpace()` triggers "hooks after early return" because it starts with "use". Fix: bind method to variable first (`const drawScope = target.useMediaCoordinateSpace.bind(target)`)
+  - `ISeriesPrimitive.attached()` provides `chart`, `series`, and `requestUpdate` — store chart ref for coordinate conversions
+  - Array index access (e.g., `COLORS[0]`) returns `T | undefined` in strict TS — use literal fallback string instead of array access as fallback
+  - Vertical line time axis labels: use `getUTCHours()`/`getUTCMinutes()` since lightweight-charts timestamps are UTC
+---

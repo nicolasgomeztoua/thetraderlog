@@ -166,7 +166,7 @@
         "Verify in browser: place vertical lines, switch styles/colors, clear all removes them, refresh page and see lines persist"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
