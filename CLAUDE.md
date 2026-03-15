@@ -167,9 +167,9 @@ cp scripts/ralph/prd.example.json scripts/ralph/prd.json
 # Edit prd.json with your stories
 
 # 3. Run Ralph
-./scripts/ralph/ralph.sh              # Default: 30 impl iterations, 5 PR review cycles
-./scripts/ralph/ralph.sh 30           # 30 impl iterations, 5 PR review cycles
-./scripts/ralph/ralph.sh 30 3         # 30 impl iterations, 3 PR review cycles
+./scripts/ralph/ralph.sh              # Default: 30 impl iterations, 10 PR review cycles
+./scripts/ralph/ralph.sh 30           # 30 impl iterations, 10 PR review cycles
+./scripts/ralph/ralph.sh 30 5         # 30 impl iterations, 5 PR review cycles
 ```
 
 ### Workflow Phases
@@ -237,13 +237,12 @@ After each story, Ralph adds learnings (patterns, mistakes, decisions) so future
 
 ### Greptile Review Handling
 
-Ralph uses a **score-driven review loop** targeting Confidence Score 5/5:
-- **Polls every 30s** for Greptile's summary comment (10min timeout per cycle)
-- **Evaluates skeptically** - Greptile can be wrong
-- **Fixes valid issues** - commits with `fix: address Greptile review`
-- **Summary-only mode** - when no inline comments but score < 5, reads summary context to proactively fix flagged concerns
-- **Tags @greptileai** after each fix cycle to trigger re-review
-- **Exits early** when score reaches 5/5
+Ralph uses a **simple fix-retag loop** targeting Confidence Score 5/5:
+- **Fix** - Claude addresses inline comments and summary concerns (skeptically — Greptile can be wrong)
+- **Push & retag** - pushes fixes, tags `@greptileai` for a fresh re-review
+- **Wait** - polls every 30s for Greptile's updated score (10min timeout)
+- **Repeat** - continues until 5/5 or max cycles (default 10)
+- **Stuck detection** - exits if score doesn't improve for 3 consecutive cycles
 
 ### Debugging
 
