@@ -1,3 +1,32 @@
 # Ralph Progress Log
 Started: Sun Mar 15 19:49:56 WET 2026
 ---
+
+## Codebase Patterns
+- No existing tsvector/tsquery usage in the codebase — this is a greenfield addition
+- HTML stripping pattern exists in `getJournalAdjacency`: `content.replace(/<[^>]*>/g, " ")`
+- Journal content is stored as HTML (Tiptap editor, contentFormat: "html")
+- `updateContent` mutation in dailyJournal.ts is the hook point for search vector updates (upsert pattern)
+- `getRange` uses `gte/lte` on normalized dates — same pattern for search date filtering
+- Trade notes are on the `trades` table (`notes` field), linked by date, not by journalId
+- Checklist text lives on `dailyChecklistTemplates.text` (user-level, not per-journal)
+- Attachment captions are on `journalAttachments.caption`
+- ilike already used in admin routers for case-insensitive search (see AGENTS.md)
+
+## 2026-03-15 - US-000
+- Audited existing utilities for full-text search
+- Files reviewed: src/server/api/routers/dailyJournal.ts, src/server/db/schema.ts, src/lib/ (search utilities), all AGENTS.md files
+- **Findings:**
+  - No tsvector/tsquery usage anywhere in codebase
+  - No search/filter utilities in src/lib/ (only ilike usage in admin routers)
+  - `getRange` pattern: date normalization + gte/lte filtering — reusable for search date scoping
+  - `getJournalAdjacency` has HTML stripping regex: `content.replace(/<[^>]*>/g, " ")` — reuse for search vector building
+  - `updateContent` mutation is the hook point for updating search vectors on save
+  - dailyJournals table columns: id, userId, date, content (HTML), contentFormat, dayStartedAt, createdAt, updatedAt
+  - Related data for search: trades.notes (by date), dailyChecklistTemplates.text (user-level), journalAttachments.caption (by journalId)
+- **Learnings for future iterations:**
+  - Content is HTML from Tiptap — must strip tags before indexing
+  - Trade notes are date-correlated, not FK'd to journals — need timezone-aware date matching to gather notes
+  - Checklist templates are user-level (not per-journal) — may not be useful for per-journal search vectors
+  - Use weighted tsvector: journal content (A) > trade notes (B) > captions (C)
+---

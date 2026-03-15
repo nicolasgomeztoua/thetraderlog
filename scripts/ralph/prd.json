@@ -16,8 +16,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Audit complete. No existing tsvector/tsquery usage. No search utilities in src/lib/. Key patterns found in dailyJournal.ts: getRange (date filtering), getJournalAdjacency (HTML strip with regex), updateContent (upsert pattern to hook into)."
     },
     {
       "id": "US-001",
