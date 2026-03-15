@@ -33,6 +33,13 @@ export function buildSearchVectorSql(parts: {
 	checklistText: string;
 	attachmentCaptions: string;
 }) {
+	const weightLiterals: Record<string, ReturnType<typeof sql>> = {
+		A: sql`'A'`,
+		B: sql`'B'`,
+		C: sql`'C'`,
+		D: sql`'D'`,
+	};
+
 	const combined = [
 		{ text: parts.journalContent, weight: "A" },
 		{ text: parts.tradeNotes, weight: "B" },
@@ -42,7 +49,7 @@ export function buildSearchVectorSql(parts: {
 		.filter((p) => p.text.length > 0)
 		.map(
 			(p) =>
-				sql`setweight(to_tsvector('english', ${p.text}), ${sql.raw(`'${p.weight}'`)})`,
+				sql`setweight(to_tsvector('english', ${p.text}), ${weightLiterals[p.weight] ?? weightLiterals.D})`,
 		);
 
 	if (combined.length === 0) {

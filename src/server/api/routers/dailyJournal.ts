@@ -276,7 +276,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				sql`WITH search_query AS (
 					SELECT plainto_tsquery('english', ${input.query}) AS q
 				)
-				SELECT
+				(SELECT
 					dj.id,
 					dj.date,
 					ts_headline('english', COALESCE(dj.search_plain_text, regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), sq.q,
@@ -285,8 +285,20 @@ export const dailyJournalRouter = createTRPCRouter({
 					ts_rank(dj.search_vector, sq.q) AS rank
 				FROM daily_journal dj, search_query sq
 				WHERE dj.user_id = ${ctx.user.id}
-					AND dj.search_vector IS NOT NULL
-					AND dj.search_vector @@ sq.q
+					AND dj.search_vector @@ sq.q)
+				UNION ALL
+				(SELECT
+					dj.id,
+					dj.date,
+					ts_headline('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'), sq.q,
+						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
+					) AS snippet,
+					ts_rank(to_tsvector('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), sq.q) AS rank
+				FROM daily_journal dj, search_query sq
+				WHERE dj.user_id = ${ctx.user.id}
+					AND dj.search_vector IS NULL
+					AND dj.content IS NOT NULL
+					AND to_tsvector('english', regexp_replace(dj.content, '<[^>]*>', ' ', 'g')) @@ sq.q)
 				ORDER BY rank DESC
 				LIMIT ${input.limit}`,
 			);

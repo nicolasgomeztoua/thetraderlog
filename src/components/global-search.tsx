@@ -48,8 +48,6 @@ export function GlobalSearch() {
 			setQuery("");
 			setDebouncedQuery("");
 			setSelectedIndex(0);
-			// Focus input after render
-			setTimeout(() => inputRef.current?.focus(), 0);
 		}
 	}, [open]);
 
@@ -116,6 +114,10 @@ export function GlobalSearch() {
 				<DialogContent
 					className="max-w-lg gap-0 overflow-hidden p-0 sm:max-w-xl"
 					data-testid="global-search-dialog"
+					onOpenAutoFocus={(e) => {
+						e.preventDefault();
+						inputRef.current?.focus();
+					}}
 				>
 					<DialogTitle className="sr-only">Search Journal</DialogTitle>
 					<div className="flex items-center border-border border-b px-4">
