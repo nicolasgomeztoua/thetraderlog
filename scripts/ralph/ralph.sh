@@ -540,7 +540,7 @@ if ! wait_for_greptile ""; then
 else
     REVIEW_APPROVED=false
     STALE_SCORE_COUNT=0
-    PREV_GREPTILE_SCORE=0
+    PREV_GREPTILE_SCORE=$GREPTILE_SCORE
     MAX_STALE_CYCLES=3
 
     for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
@@ -555,23 +555,6 @@ else
             REVIEW_APPROVED=true
             break
         fi
-
-        # 2a2. Stuck detection — bail if score hasn't improved for $MAX_STALE_CYCLES cycles
-        if [ "$cycle" -gt 1 ]; then
-            if [ "$GREPTILE_SCORE" -le "$PREV_GREPTILE_SCORE" ]; then
-                STALE_SCORE_COUNT=$((STALE_SCORE_COUNT + 1))
-                echo -e "${YELLOW}Score unchanged at ${GREPTILE_SCORE}/5 (stale cycles: ${STALE_SCORE_COUNT}/${MAX_STALE_CYCLES})${NC}"
-            else
-                STALE_SCORE_COUNT=0
-                echo -e "${GREEN}Score improved: ${PREV_GREPTILE_SCORE}/5 → ${GREPTILE_SCORE}/5${NC}"
-            fi
-
-            if [ "$STALE_SCORE_COUNT" -ge "$MAX_STALE_CYCLES" ]; then
-                echo -e "${RED}Score stuck at ${GREPTILE_SCORE}/5 for ${MAX_STALE_CYCLES} consecutive cycles. Exiting review loop to avoid infinite loop.${NC}"
-                break
-            fi
-        fi
-        PREV_GREPTILE_SCORE=$GREPTILE_SCORE
 
         # 2b. Fetch inline PR review comments from Greptile, filter to unprocessed
         GREPTILE_COMMENTS=$(gh api \
@@ -702,6 +685,27 @@ Are there any remaining concerns with this PR, or is it ready to merge?"
             if [ -n "$score_str" ]; then
                 GREPTILE_SCORE=$(echo "$score_str" | grep -oE '[0-9]+' | head -1)
             fi
+        fi
+
+        # 2h2. Stuck detection — now that we have the updated score, check if we're making progress
+        if [ "$GREPTILE_SCORE" -ge 5 ]; then
+            echo -e "${GREEN}Confidence Score: 5/5! Safe to merge.${NC}"
+            REVIEW_APPROVED=true
+            break
+        fi
+
+        if [ "$GREPTILE_SCORE" -le "$PREV_GREPTILE_SCORE" ]; then
+            STALE_SCORE_COUNT=$((STALE_SCORE_COUNT + 1))
+            echo -e "${YELLOW}Score unchanged at ${GREPTILE_SCORE}/5 (stale cycles: ${STALE_SCORE_COUNT}/${MAX_STALE_CYCLES})${NC}"
+        else
+            STALE_SCORE_COUNT=0
+            echo -e "${GREEN}Score improved: ${PREV_GREPTILE_SCORE}/5 → ${GREPTILE_SCORE}/5${NC}"
+        fi
+        PREV_GREPTILE_SCORE=$GREPTILE_SCORE
+
+        if [ "$STALE_SCORE_COUNT" -ge "$MAX_STALE_CYCLES" ]; then
+            echo -e "${RED}Score stuck at ${GREPTILE_SCORE}/5 for ${MAX_STALE_CYCLES} consecutive cycles. Exiting review loop to avoid infinite loop.${NC}"
+            break
         fi
 
         # 2i. Let Claude evaluate Greptile's response and decide: continue or exit
