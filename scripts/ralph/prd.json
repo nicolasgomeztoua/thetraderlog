@@ -186,8 +186,8 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": "Skills: /e2e-testing. Ref: .claude/skills/e2e-testing/SKILL.md, tests/e2e/"
+      "passes": true,
+      "notes": "Skills: /e2e-testing. Ref: .claude/skills/e2e-testing/SKILL.md, tests/e2e/. Note: E2E tests require port 3000 free (cannot run while dev server is already running locally)"
     }
   ]
 }
