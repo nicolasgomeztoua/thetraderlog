@@ -19,7 +19,13 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { toast } from "sonner";
 import { TagManager } from "@/components/tags/tag-manager";
 import { Badge } from "@/components/ui/badge";
@@ -245,9 +251,11 @@ function SettingsTabBar({ activeTab }: { activeTab: string }) {
 		requestAnimationFrame(() => setHasTransition(true));
 	}, [updateIndicator]);
 
-	// Update on tab change
-	useEffect(() => {
-		updateIndicator();
+	// Re-measure when active tab changes
+	useLayoutEffect(() => {
+		if (activeTab) {
+			updateIndicator();
+		}
 	}, [activeTab, updateIndicator]);
 
 	// Update on resize
@@ -259,8 +267,8 @@ function SettingsTabBar({ activeTab }: { activeTab: string }) {
 	return (
 		<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
 			<TabsList
-				ref={tabsRef}
 				className="relative inline-flex h-auto w-auto min-w-full border border-border bg-secondary p-0 pb-[2px] sm:grid sm:w-full sm:grid-cols-5"
+				ref={tabsRef}
 			>
 				{/* Animated active indicator */}
 				<span
@@ -275,9 +283,9 @@ function SettingsTabBar({ activeTab }: { activeTab: string }) {
 				/>
 				{SETTINGS_TABS.map((tab) => (
 					<TabsTrigger
-						key={tab.value}
-						className="h-full min-h-8 flex-1 justify-center whitespace-nowrap rounded-none border-none px-3 py-0 font-mono text-[10px] uppercase tracking-wider text-muted-foreground shadow-none transition-colors duration-200 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none sm:px-4 sm:text-xs"
+						className="h-full min-h-8 flex-1 justify-center whitespace-nowrap rounded-none border-none px-3 py-0 font-mono text-[10px] text-muted-foreground uppercase tracking-wider shadow-none transition-colors duration-200 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none sm:px-4 sm:text-xs"
 						data-testid={"testId" in tab ? tab.testId : undefined}
+						key={tab.value}
 						value={tab.value}
 					>
 						{tab.label}

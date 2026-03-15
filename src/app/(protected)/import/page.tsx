@@ -996,9 +996,9 @@ export default function ImportPage() {
 								<Button
 									className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 									onClick={async () => {
-									await utils.trades.getAll.invalidate();
-									router.push("/journal");
-								}}
+										await utils.trades.getAll.invalidate();
+										router.push("/journal");
+									}}
 								>
 									View Journal
 								</Button>
