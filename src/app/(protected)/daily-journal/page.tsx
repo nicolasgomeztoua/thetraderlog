@@ -9,6 +9,7 @@ import { ChecklistSettings } from "@/components/daily-journal/checklist-settings
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import { EditorSkeleton } from "@/components/daily-journal/editor-skeleton";
+import { JournalSearch } from "@/components/daily-journal/journal-search";
 import { TradesSummary } from "@/components/daily-journal/trades-summary";
 import { Button } from "@/components/ui/button";
 import {
@@ -213,6 +214,16 @@ export default function DailyJournalPage() {
 				<SheetContent className="w-[300px] overflow-y-auto p-0" side="left">
 					<SheetTitle className="sr-only">Navigation Sidebar</SheetTitle>
 					<div className="px-4 pt-12 pb-4">
+						{/* Search */}
+						<div className="mb-4">
+							<JournalSearch
+								onSelectDate={(date) => {
+									setSelectedDate(date);
+									setSidebarOpen(false);
+								}}
+							/>
+						</div>
+
 						{/* Calendar */}
 						<div className="mb-4 rounded border border-border/50 bg-muted/30 p-4">
 							<CalendarSidebar
@@ -273,6 +284,11 @@ export default function DailyJournalPage() {
 						minSize={15}
 					>
 						<div className="h-full overflow-y-auto p-4">
+							{/* Search */}
+							<div className="mb-4">
+								<JournalSearch onSelectDate={setSelectedDate} />
+							</div>
+
 							{/* Calendar */}
 							<div className="mb-4 rounded border border-border/50 bg-muted/30 p-4">
 								<CalendarSidebar

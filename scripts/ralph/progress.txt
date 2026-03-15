@@ -104,3 +104,18 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - Need to call updateJournalSearchVector explicitly in tests (fire-and-forget won't complete)
   - Biome formatter collapses short function calls to single lines
 ---
+
+## 2026-03-15 - US-007
+- Created journal search bar component and constants
+- Files changed: src/components/daily-journal/journal-search.tsx (new), src/lib/constants/search.ts (new), src/app/(protected)/daily-journal/page.tsx
+- Search bar added to both desktop left panel and mobile sidebar, above calendar
+- Debounced input (300ms), results dropdown with date + snippet + highlights
+- Clear button, loading spinner, empty state message
+- Terminal design: monospace, chartreuse accent, dark dropdown
+- data-testid attributes on all interactive elements
+- **Learnings for future iterations:**
+  - Biome enforces sorted CSS classes (useSortedClasses) and sorted JSX props (useSortedAttributes)
+  - Use `bunx biome check --fix` to auto-fix class/prop sorting
+  - dangerouslySetInnerHTML for ts_headline snippets needs biome-ignore comment
+  - `[&>mark]:bg-primary/20 [&>mark]:text-primary` for styling <mark> tags from ts_headline
+---
