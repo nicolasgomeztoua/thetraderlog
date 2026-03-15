@@ -456,10 +456,16 @@ function LightweightChartInner({
 		onSuccess: () => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
 		},
+		onError: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+		},
 	});
 
 	const clearAllAnnotations = api.chartAnnotations.clearAll.useMutation({
 		onSuccess: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
+		},
+		onError: () => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
 		},
 	});
