@@ -24,6 +24,10 @@ import {
 	ERR_TEMPLATE_NOT_FOUND,
 	errTemplateNotOwned,
 } from "@/lib/constants/errors";
+import {
+	SEARCH_DEFAULT_LIMIT,
+	SEARCH_MIN_QUERY_LENGTH,
+} from "@/lib/constants/search";
 import { updateJournalSearchVector } from "@/lib/journal/search";
 import {
 	getDateStringInTimezone,
@@ -262,8 +266,8 @@ export const dailyJournalRouter = createTRPCRouter({
 	search: protectedProcedure
 		.input(
 			z.object({
-				query: z.string().min(2),
-				limit: z.number().int().min(1).max(50).default(20),
+				query: z.string().min(SEARCH_MIN_QUERY_LENGTH),
+				limit: z.number().int().min(1).max(50).default(SEARCH_DEFAULT_LIMIT),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
