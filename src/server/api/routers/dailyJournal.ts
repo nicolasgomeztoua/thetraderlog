@@ -168,7 +168,7 @@ export const dailyJournalRouter = createTRPCRouter({
 
 				// Update search vector asynchronously (non-blocking)
 				// Fetch timezone lazily to avoid extra DB round-trip on the hot path
-				getUserTimezone(ctx.db, ctx.user.id)
+				void getUserTimezone(ctx.db, ctx.user.id)
 					.then((timezone) =>
 						updateJournalSearchVector(ctx.db, {
 							journalId: existing.id,
@@ -202,7 +202,7 @@ export const dailyJournalRouter = createTRPCRouter({
 
 			// Update search vector asynchronously (non-blocking)
 			// Fetch timezone lazily to avoid extra DB round-trip on the hot path
-			getUserTimezone(ctx.db, ctx.user.id)
+			void getUserTimezone(ctx.db, ctx.user.id)
 				.then((timezone) =>
 					updateJournalSearchVector(ctx.db, {
 						journalId: created.id,
@@ -290,15 +290,19 @@ export const dailyJournalRouter = createTRPCRouter({
 				(SELECT
 					dj.id,
 					dj.date,
-					ts_headline('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'), sq.q,
+					ts_headline('english', stripped.plain_text, sq.q,
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
-					ts_rank(to_tsvector('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), sq.q) AS rank
-				FROM daily_journal dj, search_query sq
+					ts_rank(stripped.vec, sq.q) AS rank
+				FROM daily_journal dj, search_query sq,
+				LATERAL (SELECT
+					regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g') AS plain_text,
+					to_tsvector('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')) AS vec
+				) stripped
 				WHERE dj.user_id = ${ctx.user.id}
 					AND dj.search_vector IS NULL
 					AND dj.content IS NOT NULL
-					AND to_tsvector('english', regexp_replace(dj.content, '<[^>]*>', ' ', 'g')) @@ sq.q)
+					AND stripped.vec @@ sq.q)
 				ORDER BY rank DESC
 				LIMIT ${input.limit}`,
 			);

@@ -1,4 +1,5 @@
 import { and, eq, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { FORCED_CHECKLIST_LABELS } from "@/lib/constants/checklist";
 import {
 	getDayBoundsInTimezone,
 	getUTCDateString,
@@ -133,7 +134,11 @@ export async function gatherJournalSearchText(
 		},
 	});
 	const checklistText = checkRows
-		.map((r) => r.template?.text ?? "")
+		.map(
+			(r) =>
+				r.template?.text ??
+				(r.forcedItemId ? (FORCED_CHECKLIST_LABELS[r.forcedItemId] ?? "") : ""),
+		)
 		.filter(Boolean)
 		.join(" ");
 
