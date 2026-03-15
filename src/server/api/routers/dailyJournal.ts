@@ -267,7 +267,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				sql`SELECT
 					dj.id,
 					dj.date,
-					ts_headline('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'), plainto_tsquery('english', ${input.query}),
+					ts_headline('english', COALESCE(dj.search_plain_text, regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), plainto_tsquery('english', ${input.query}),
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
 					ts_rank(dj.search_vector, plainto_tsquery('english', ${input.query})) AS rank

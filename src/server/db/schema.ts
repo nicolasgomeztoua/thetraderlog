@@ -771,6 +771,7 @@ export const dailyJournals = createTable(
 			() => new Date(),
 		),
 		searchVector: tsvector("search_vector"), // Full-text search vector (nullable, populated on save)
+		searchPlainText: text("search_plain_text"), // Combined plain text for ts_headline snippets
 	},
 	(t) => [
 		index("daily_journal_user_id_idx").on(t.userId),

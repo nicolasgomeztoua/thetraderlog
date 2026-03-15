@@ -5,7 +5,7 @@ import {
 } from "@/lib/shared/timezone";
 import type { db as dbType } from "@/server/db";
 import {
-	dailyChecklistTemplates,
+	dailyChecklistChecks,
 	journalAttachments,
 	trades,
 } from "@/server/db/schema";
@@ -113,15 +113,22 @@ export async function gatherJournalSearchText(
 		.filter(Boolean)
 		.join(" ");
 
-	// Gather checklist template text for this user's active templates
-	const templateRows = await db.query.dailyChecklistTemplates.findMany({
+	// Gather checklist text only for items checked on this specific journal
+	const checkRows = await db.query.dailyChecklistChecks.findMany({
 		where: and(
-			eq(dailyChecklistTemplates.userId, params.userId),
-			eq(dailyChecklistTemplates.isActive, true),
+			eq(dailyChecklistChecks.journalId, params.journalId),
+			eq(dailyChecklistChecks.checked, true),
 		),
-		columns: { text: true },
+		with: {
+			template: {
+				columns: { text: true },
+			},
+		},
 	});
-	const checklistText = templateRows.map((r) => r.text).join(" ");
+	const checklistText = checkRows
+		.map((r) => r.template?.text ?? "")
+		.filter(Boolean)
+		.join(" ");
 
 	return {
 		journalContent,
@@ -146,8 +153,16 @@ export async function updateJournalSearchVector(
 ): Promise<void> {
 	const texts = await gatherJournalSearchText(db, params);
 	const vectorSql = buildSearchVectorSql(texts);
+	const plainText = [
+		texts.journalContent,
+		texts.tradeNotes,
+		texts.checklistText,
+		texts.attachmentCaptions,
+	]
+		.filter(Boolean)
+		.join(" ");
 
 	await db.execute(
-		sql`UPDATE daily_journal SET search_vector = ${vectorSql} WHERE id = ${params.journalId}`,
+		sql`UPDATE daily_journal SET search_vector = ${vectorSql}, search_plain_text = ${plainText} WHERE id = ${params.journalId}`,
 	);
 }
