@@ -121,7 +121,7 @@
         "Typecheck passes (bun run check)"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Skills: /testing. Ref: .claude/skills/testing/SKILL.md, .claude/skills/testing/TESTING_REFERENCE.md, tests/integration/"
     },
     {

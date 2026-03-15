@@ -92,3 +92,15 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - ts_headline StartSel/StopSel can use HTML tags for frontend rendering
   - plainto_tsquery is safer than to_tsquery (handles special chars without errors)
 ---
+
+## 2026-03-15 - US-006
+- Created integration tests for journal search endpoint
+- Files changed: tests/integration/journal-search.test.ts (new)
+- 7 tests: keyword match, empty results, relevance ranking, snippet highlighting, short query rejection, user ownership isolation, auth rejection
+- Uses updateJournalSearchVector directly (synchronously) to populate test data
+- All tests pass
+- **Learnings for future iterations:**
+  - tsvector search in Testcontainers PostgreSQL works identically to production
+  - Need to call updateJournalSearchVector explicitly in tests (fire-and-forget won't complete)
+  - Biome formatter collapses short function calls to single lines
+---
