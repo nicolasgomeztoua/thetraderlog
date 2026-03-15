@@ -29,6 +29,8 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - Trade notes are date-correlated, not FK'd to journals — need timezone-aware date matching to gather notes
   - Checklist templates are user-level (not per-journal) — may not be useful for per-journal search vectors
   - Use weighted tsvector: journal content (A) > trade notes (B) > captions (C)
+- `db.execute` in Drizzle returns array directly, NOT `.rows` — use Drizzle query builder instead
+- Biome requires alphabetically sorted imports (`isNotNull` before `isNull`)
 ---
 
 ## 2026-03-15 - US-001
@@ -42,4 +44,16 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - Drizzle ORM doesn't have a built-in tsvector type — use `customType` from drizzle-orm/pg-core
   - GIN index supports `.using("gin", column).concurrently()` syntax in Drizzle
   - The searchVector column is nullable so existing rows won't break
+---
+
+## 2026-03-15 - US-002
+- Created search vector update utility at src/lib/journal/search.ts
+- Files changed: src/lib/journal/search.ts (new)
+- Exports: stripHtmlTags, buildSearchVectorSql, gatherJournalSearchText, updateJournalSearchVector
+- Uses Drizzle query builder (not raw SQL) for gathering trade notes, captions, templates
+- Uses raw SQL only for tsvector operations (setweight, to_tsvector) and UPDATE
+- **Learnings for future iterations:**
+  - Use Drizzle query builder for SELECT queries — db.execute returns RowList, not .rows
+  - Biome enforces alphabetical import sorting
+  - tsvector weight concatenation uses || operator in PostgreSQL
 ---
