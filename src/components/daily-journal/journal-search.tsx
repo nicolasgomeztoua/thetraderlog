@@ -72,7 +72,8 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 		inputRef.current?.focus();
 	};
 
-	const showDropdown = isOpen && query.length >= SEARCH_MIN_QUERY_LENGTH;
+	const showDropdown =
+		isOpen && debouncedQuery.length >= SEARCH_MIN_QUERY_LENGTH;
 
 	return (
 		<div

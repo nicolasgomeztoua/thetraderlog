@@ -43,6 +43,7 @@ async function backfill() {
 				date: true,
 				content: true,
 			},
+			orderBy: (t, { asc }) => [asc(t.id)],
 			limit: BATCH_SIZE,
 			offset,
 		});
