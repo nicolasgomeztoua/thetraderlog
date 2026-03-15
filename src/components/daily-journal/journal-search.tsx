@@ -10,6 +10,7 @@ import {
 	SEARCH_MIN_QUERY_LENGTH,
 	SEARCH_PLACEHOLDER,
 } from "@/lib/constants/search";
+import { formatDateString, getUTCDateString } from "@/lib/shared/timezone";
 import { api } from "@/trpc/react";
 
 interface JournalSearchProps {
@@ -53,8 +54,9 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 	}, []);
 
 	const handleSelect = useCallback(
-		(dateStr: string) => {
-			const date = new Date(dateStr);
+		(dateString: string) => {
+			// Parse as local noon to avoid DST/offset edge cases
+			const date = new Date(`${dateString}T12:00:00`);
 			onSelectDate(date);
 			setQuery("");
 			setDebouncedQuery("");
@@ -127,39 +129,29 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 							<Loader2Icon className="size-4 animate-spin text-muted-foreground" />
 						</div>
 					) : results && results.length > 0 ? (
-						results.map((result) => (
-							<button
-								className="flex w-full flex-col gap-1 border-border border-b px-3 py-2.5 text-left last:border-b-0 hover:bg-muted/50"
-								data-testid="journal-search-result-item"
-								key={result.journalId}
-								onClick={() =>
-									handleSelect(
-										result.date instanceof Date
-											? result.date.toISOString()
-											: String(result.date),
-									)
-								}
-								type="button"
-							>
-								<span className="font-mono text-primary text-xs">
-									{new Date(
-										result.date instanceof Date
-											? result.date
-											: String(result.date),
-									).toLocaleDateString("en-US", {
-										weekday: "short",
-										month: "short",
-										day: "numeric",
-										year: "numeric",
-									})}
-								</span>
-								<span
-									className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary"
-									// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
-									dangerouslySetInnerHTML={{ __html: result.snippet }}
-								/>
-							</button>
-						))
+						results.map((result) => {
+							const dateStr = getUTCDateString(
+								result.date instanceof Date ? result.date : String(result.date),
+							);
+							return (
+								<button
+									className="flex w-full flex-col gap-1 border-border border-b px-3 py-2.5 text-left last:border-b-0 hover:bg-muted/50"
+									data-testid="journal-search-result-item"
+									key={result.journalId}
+									onClick={() => handleSelect(dateStr)}
+									type="button"
+								>
+									<span className="font-mono text-primary text-xs">
+										{formatDateString(dateStr, "EEE, MMM d, yyyy")}
+									</span>
+									<span
+										className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary"
+										// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
+										dangerouslySetInnerHTML={{ __html: result.snippet }}
+									/>
+								</button>
+							);
+						})
 					) : (
 						<div className="p-4 text-center font-mono text-muted-foreground text-xs">
 							{SEARCH_EMPTY_STATE}

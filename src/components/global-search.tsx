@@ -11,7 +11,7 @@ import {
 	SEARCH_MIN_QUERY_LENGTH,
 	SEARCH_PLACEHOLDER,
 } from "@/lib/constants/search";
-import { toDateString } from "@/lib/shared/timezone";
+import { formatDateString, getUTCDateString } from "@/lib/shared/timezone";
 import { api } from "@/trpc/react";
 
 export function GlobalSearch() {
@@ -61,10 +61,8 @@ export function GlobalSearch() {
 	);
 
 	const handleSelect = useCallback(
-		(dateStr: string) => {
-			const date = new Date(dateStr);
-			const formatted = toDateString(date);
-			router.push(`/daily-journal?date=${formatted}`);
+		(dateString: string) => {
+			router.push(`/daily-journal?date=${dateString}`);
 			setOpen(false);
 		},
 		[router],
@@ -86,9 +84,11 @@ export function GlobalSearch() {
 				const selected = results[selectedIndex];
 				if (selected) {
 					handleSelect(
-						selected.date instanceof Date
-							? selected.date.toISOString()
-							: String(selected.date),
+						getUTCDateString(
+							selected.date instanceof Date
+								? selected.date
+								: String(selected.date),
+						),
 					);
 				}
 			}
@@ -149,44 +149,36 @@ export function GlobalSearch() {
 
 						{shouldSearch && !isLoading && results && results.length > 0 && (
 							<div className="py-1">
-								{results.map((result, index) => (
-									<button
-										className={`flex w-full flex-col gap-1 px-4 py-2.5 text-left ${
-											index === selectedIndex
-												? "bg-primary/10"
-												: "hover:bg-muted/50"
-										}`}
-										data-testid="global-search-result-item"
-										key={result.journalId}
-										onClick={() =>
-											handleSelect(
-												result.date instanceof Date
-													? result.date.toISOString()
-													: String(result.date),
-											)
-										}
-										onMouseEnter={() => setSelectedIndex(index)}
-										type="button"
-									>
-										<span className="font-mono text-primary text-xs">
-											{new Date(
-												result.date instanceof Date
-													? result.date
-													: String(result.date),
-											).toLocaleDateString("en-US", {
-												weekday: "short",
-												month: "short",
-												day: "numeric",
-												year: "numeric",
-											})}
-										</span>
-										<span
-											className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary"
-											// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
-											dangerouslySetInnerHTML={{ __html: result.snippet }}
-										/>
-									</button>
-								))}
+								{results.map((result, index) => {
+									const dateStr = getUTCDateString(
+										result.date instanceof Date
+											? result.date
+											: String(result.date),
+									);
+									return (
+										<button
+											className={`flex w-full flex-col gap-1 px-4 py-2.5 text-left ${
+												index === selectedIndex
+													? "bg-primary/10"
+													: "hover:bg-muted/50"
+											}`}
+											data-testid="global-search-result-item"
+											key={result.journalId}
+											onClick={() => handleSelect(dateStr)}
+											onMouseEnter={() => setSelectedIndex(index)}
+											type="button"
+										>
+											<span className="font-mono text-primary text-xs">
+												{formatDateString(dateStr, "EEE, MMM d, yyyy")}
+											</span>
+											<span
+												className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary"
+												// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
+												dangerouslySetInnerHTML={{ __html: result.snippet }}
+											/>
+										</button>
+									);
+								})}
 							</div>
 						)}
 
