@@ -286,7 +286,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					ts_headline('english', COALESCE(dj.search_plain_text, regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), sq.q,
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
-					ts_rank(dj.search_vector, sq.q) AS rank
+					ts_rank(dj.search_vector, sq.q, 1) AS rank
 				FROM daily_journal dj, search_query sq
 				WHERE dj.user_id = ${ctx.user.id}
 					AND dj.search_vector @@ sq.q)
@@ -297,7 +297,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					ts_headline('english', stripped.plain_text, sq.q,
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
-					ts_rank(stripped.vec, sq.q) AS rank
+					ts_rank(stripped.vec, sq.q, 1) AS rank
 				FROM daily_journal dj, search_query sq,
 				LATERAL (SELECT
 					regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g') AS plain_text,

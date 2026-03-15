@@ -101,6 +101,7 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 				/>
 				{query && !(isLoading && shouldSearch) && (
 					<button
+						aria-label="Clear search"
 						className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground hover:text-foreground"
 						data-testid="journal-search-button-clear"
 						onClick={handleClear}
