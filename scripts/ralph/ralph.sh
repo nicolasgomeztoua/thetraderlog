@@ -575,7 +575,7 @@ SUMMARYEOF
         # Retag @greptileai for a fresh re-review
         echo -e "${YELLOW}Tagging @greptileai for re-review...${NC}"
         gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-            -f body="@greptileai Please re-review this PR." \
+            -f body="@greptileai" \
             >/dev/null 2>&1 || echo -e "${RED}Warning: failed to tag @greptileai${NC}"
 
         # --- Step D: Wait for Greptile's new score ---
