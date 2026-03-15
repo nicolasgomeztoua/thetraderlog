@@ -81,21 +81,18 @@ test.describe("Journal Search", () => {
 		const results = page.getByTestId("journal-search-results");
 		await expect(results).toBeVisible({ timeout: 10000 });
 
+		// Verify we have actual results (not empty state) — fail fast if data is missing
+		const resultItems = page.getByTestId("journal-search-result-item");
+		const resultCount = await resultItems.count();
+		expect(resultCount).toBeGreaterThan(0);
+
 		// Click the first result item
-		const firstResult = page.getByTestId("journal-search-result-item").first();
-		const resultCount = await page
-			.getByTestId("journal-search-result-item")
-			.count();
+		await resultItems.first().click();
 
-		// Only proceed if there are actual results (not empty state)
-		if (resultCount > 0) {
-			await firstResult.click();
-
-			// URL should contain ?date=YYYY-MM-DD
-			await expect(page).toHaveURL(/\/daily-journal\?date=\d{4}-\d{2}-\d{2}/, {
-				timeout: 5000,
-			});
-		}
+		// URL should contain ?date=YYYY-MM-DD
+		await expect(page).toHaveURL(/\/daily-journal\?date=\d{4}-\d{2}-\d{2}/, {
+			timeout: 5000,
+		});
 	});
 
 	test("global search opens with Cmd+K", async ({ page }) => {

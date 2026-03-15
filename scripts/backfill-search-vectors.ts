@@ -1,7 +1,8 @@
-import { and, eq, isNull, notInArray } from "drizzle-orm";
+import { and, isNull, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { updateJournalSearchVector } from "../src/lib/journal/search";
+import { getUserTimezone } from "../src/server/api/helpers";
 import * as schema from "../src/server/db/schema";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -12,14 +13,6 @@ if (!DATABASE_URL) {
 
 const conn = postgres(DATABASE_URL);
 const db = drizzle(conn, { schema });
-
-async function getUserTimezone(userId: string): Promise<string> {
-	const result = await db.query.userSettings.findFirst({
-		where: eq(schema.userSettings.userId, userId),
-		columns: { timezone: true },
-	});
-	return result?.timezone ?? "UTC";
-}
 
 async function backfill() {
 	console.log("Backfilling search vectors in batches...");
@@ -56,7 +49,7 @@ async function backfill() {
 			try {
 				let timezone = timezoneCache.get(journal.userId);
 				if (!timezone) {
-					timezone = await getUserTimezone(journal.userId);
+					timezone = await getUserTimezone(db, journal.userId);
 					timezoneCache.set(journal.userId, timezone);
 				}
 
