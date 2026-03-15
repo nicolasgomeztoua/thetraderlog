@@ -86,7 +86,11 @@ export const chartAnnotationsRouter = createTRPCRouter({
 				with: { trade: true },
 			});
 
-			if (!annotation || annotation.trade.userId !== ctx.user.id) {
+			if (
+				!annotation ||
+				annotation.trade.userId !== ctx.user.id ||
+				annotation.trade.deletedAt !== null
+			) {
 				throw new Error(ERR_ANNOTATION_NOT_FOUND);
 			}
 
