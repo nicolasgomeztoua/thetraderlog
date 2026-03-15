@@ -27,7 +27,10 @@ export const chartAnnotationsRouter = createTRPCRouter({
 			}
 
 			return ctx.db.query.chartAnnotations.findMany({
-				where: eq(chartAnnotations.tradeId, input.tradeId),
+				where: and(
+					eq(chartAnnotations.tradeId, input.tradeId),
+					eq(chartAnnotations.userId, ctx.user.id),
+				),
 			});
 		}),
 
@@ -36,7 +39,11 @@ export const chartAnnotationsRouter = createTRPCRouter({
 			z.object({
 				tradeId: z.string(),
 				type: z.enum(["horizontal", "vertical"]),
-				value: z.string(), // Decimal as string
+				value: z
+					.string()
+					.refine((v) => !Number.isNaN(Number(v)) && v.trim() !== "", {
+						message: "Value must be a valid numeric string",
+					}),
 				lineStyle: z.enum(["solid", "dashed"]).optional(),
 				color: z
 					.string()
