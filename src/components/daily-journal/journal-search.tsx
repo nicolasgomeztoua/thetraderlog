@@ -98,7 +98,7 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 					ref={inputRef}
 					value={query}
 				/>
-				{query && (
+				{query && !(isLoading && shouldSearch) && (
 					<button
 						className="-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground hover:text-foreground"
 						data-testid="journal-search-button-clear"
