@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 MAX_ITERATIONS=${1:-30}
-PR_REVIEW_CYCLES=${2:-10}
+PR_REVIEW_CYCLES=${2:-5}
 POLL_INTERVAL=30             # Check every 30 seconds for Greptile response
 POLL_MAX_WAIT=1200            # Max 10 minutes waiting per poll cycle
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -539,6 +539,9 @@ if ! wait_for_greptile ""; then
     echo -e "${RED}Greptile didn't respond in time. Skipping review loop.${NC}"
 else
     REVIEW_APPROVED=false
+    STALE_SCORE_COUNT=0
+    PREV_GREPTILE_SCORE=0
+    MAX_STALE_CYCLES=3
 
     for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
         echo ""
@@ -552,6 +555,23 @@ else
             REVIEW_APPROVED=true
             break
         fi
+
+        # 2a2. Stuck detection — bail if score hasn't improved for $MAX_STALE_CYCLES cycles
+        if [ "$cycle" -gt 1 ]; then
+            if [ "$GREPTILE_SCORE" -le "$PREV_GREPTILE_SCORE" ]; then
+                STALE_SCORE_COUNT=$((STALE_SCORE_COUNT + 1))
+                echo -e "${YELLOW}Score unchanged at ${GREPTILE_SCORE}/5 (stale cycles: ${STALE_SCORE_COUNT}/${MAX_STALE_CYCLES})${NC}"
+            else
+                STALE_SCORE_COUNT=0
+                echo -e "${GREEN}Score improved: ${PREV_GREPTILE_SCORE}/5 → ${GREPTILE_SCORE}/5${NC}"
+            fi
+
+            if [ "$STALE_SCORE_COUNT" -ge "$MAX_STALE_CYCLES" ]; then
+                echo -e "${RED}Score stuck at ${GREPTILE_SCORE}/5 for ${MAX_STALE_CYCLES} consecutive cycles. Exiting review loop to avoid infinite loop.${NC}"
+                break
+            fi
+        fi
+        PREV_GREPTILE_SCORE=$GREPTILE_SCORE
 
         # 2b. Fetch inline PR review comments from Greptile, filter to unprocessed
         GREPTILE_COMMENTS=$(gh api \

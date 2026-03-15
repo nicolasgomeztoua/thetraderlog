@@ -167,9 +167,9 @@ cp scripts/ralph/prd.example.json scripts/ralph/prd.json
 # Edit prd.json with your stories
 
 # 3. Run Ralph
-./scripts/ralph/ralph.sh              # Default: 20 impl iterations, 10 PR review cycles
-./scripts/ralph/ralph.sh 30           # 30 impl iterations, 10 PR review cycles
-./scripts/ralph/ralph.sh 30 5         # 30 impl iterations, 5 PR review cycles
+./scripts/ralph/ralph.sh              # Default: 30 impl iterations, 5 PR review cycles
+./scripts/ralph/ralph.sh 30           # 30 impl iterations, 5 PR review cycles
+./scripts/ralph/ralph.sh 30 3         # 30 impl iterations, 3 PR review cycles
 ```
 
 ### Workflow Phases
