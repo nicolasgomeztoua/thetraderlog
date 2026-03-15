@@ -5,7 +5,7 @@
  * Extracted from the Trigger.dev task wrapper for testability.
  */
 
-import { isNotNull } from "drizzle-orm";
+import { and, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { trades } from "@/server/db/schema";
 import type { BaseInterval } from "./service";
@@ -30,7 +30,7 @@ export async function discoverSymbols(): Promise<string[]> {
 	const rows = await db
 		.selectDistinct({ symbol: trades.symbol })
 		.from(trades)
-		.where(isNotNull(trades.symbol));
+		.where(and(isNotNull(trades.symbol), isNull(trades.deletedAt)));
 
 	return rows.map((r) => r.symbol);
 }

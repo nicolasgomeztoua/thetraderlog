@@ -113,7 +113,6 @@ type LineStyleOption = "solid" | "dashed";
 // CONSTANTS
 // =============================================================================
 
-
 // =============================================================================
 // VERTICAL LINE PRIMITIVE (ISeriesPrimitive)
 // =============================================================================
@@ -789,33 +788,6 @@ function LightweightChartInner({
 			});
 		}
 
-		// Render persisted annotations as price lines / vertical primitives
-		annotationPriceLinesRef.current = [];
-		verticalLinePrimitivesRef.current = [];
-		if (annotations) {
-			for (const ann of annotations) {
-				if (ann.type === "horizontal") {
-					const priceLine = candlestickSeries.createPriceLine({
-						price: parseFloat(ann.value),
-						color: ann.color,
-						lineWidth: 1,
-						lineStyle: LINE_STYLE_MAP[ann.lineStyle as LineStyleOption] ?? 0,
-						axisLabelVisible: true,
-						title: "",
-					});
-					annotationPriceLinesRef.current.push(priceLine);
-				} else if (ann.type === "vertical") {
-					const primitive = new VerticalLinePrimitive(
-						parseFloat(ann.value) as UTCTimestamp,
-						ann.color,
-						ann.lineStyle as LineStyleOption,
-					);
-					candlestickSeries.attachPrimitive(primitive);
-					verticalLinePrimitivesRef.current.push(primitive);
-				}
-			}
-		}
-
 		// Apply zoom: only on initial load, use saved visibleBarsCount or auto-fit
 		const savedBarsCount = initialVisibleBarsCountRef.current;
 		const shouldApplyInitialZoom =
@@ -1064,10 +1036,47 @@ function LightweightChartInner({
 		interval,
 		maePrice,
 		mfePrice,
-		annotations,
 		tradeId,
 		createAnnotation.mutate,
 	]);
+
+	// Render persisted annotations separately to avoid full chart recreation on annotation changes
+	useEffect(() => {
+		if (!seriesRef.current || !annotations) return;
+
+		// Remove previous annotation visuals
+		for (const line of annotationPriceLinesRef.current) {
+			seriesRef.current.removePriceLine(line);
+		}
+		for (const primitive of verticalLinePrimitivesRef.current) {
+			seriesRef.current.detachPrimitive(primitive);
+		}
+		annotationPriceLinesRef.current = [];
+		verticalLinePrimitivesRef.current = [];
+
+		// Re-apply from query data
+		for (const ann of annotations) {
+			if (ann.type === "horizontal") {
+				const priceLine = seriesRef.current.createPriceLine({
+					price: parseFloat(ann.value),
+					color: ann.color,
+					lineWidth: 1,
+					lineStyle: LINE_STYLE_MAP[ann.lineStyle as LineStyleOption] ?? 0,
+					axisLabelVisible: true,
+					title: "",
+				});
+				annotationPriceLinesRef.current.push(priceLine);
+			} else if (ann.type === "vertical") {
+				const primitive = new VerticalLinePrimitive(
+					parseFloat(ann.value) as UTCTimestamp,
+					ann.color,
+					ann.lineStyle as LineStyleOption,
+				);
+				seriesRef.current.attachPrimitive(primitive);
+				verticalLinePrimitivesRef.current.push(primitive);
+			}
+		}
+	}, [annotations]);
 
 	// Show loading state
 	if (isLoading) {
