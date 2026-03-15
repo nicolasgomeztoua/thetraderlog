@@ -31,7 +31,7 @@
         "Build passes (bun run build)"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Skills: /backend, /architecture. Ref: src/server/db/schema.ts"
     },
     {

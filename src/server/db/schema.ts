@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
 	check,
+	customType,
 	date,
 	decimal,
 	index,
@@ -17,6 +18,13 @@ import {
 import { ids } from "@/lib/shared";
 
 export const createTable = pgTableCreator((name) => name);
+
+// Custom tsvector type for PostgreSQL full-text search
+const tsvector = customType<{ data: string }>({
+	dataType() {
+		return "tsvector";
+	},
+});
 
 // ============================================================================
 // ENUMS
@@ -762,10 +770,14 @@ export const dailyJournals = createTable(
 		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
 			() => new Date(),
 		),
+		searchVector: tsvector("search_vector"), // Full-text search vector (nullable, populated on save)
 	},
 	(t) => [
 		index("daily_journal_user_id_idx").on(t.userId),
 		uniqueIndex("daily_journal_user_date_idx").on(t.userId, t.date),
+		index("daily_journal_search_vector_idx")
+			.using("gin", t.searchVector)
+			.concurrently(),
 	],
 );
 

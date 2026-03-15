@@ -30,3 +30,16 @@ Started: Sun Mar 15 19:49:56 WET 2026
   - Checklist templates are user-level (not per-journal) — may not be useful for per-journal search vectors
   - Use weighted tsvector: journal content (A) > trade notes (B) > captions (C)
 ---
+
+## 2026-03-15 - US-001
+- Added tsvector column and GIN index to dailyJournals table
+- Files changed: src/server/db/schema.ts
+- Added `customType` import from drizzle-orm/pg-core for tsvector type definition
+- Added `searchVector` column (tsvector, nullable) to dailyJournals
+- Added GIN index `daily_journal_search_vector_idx` on searchVector
+- `bun run db:push` applied successfully
+- **Learnings for future iterations:**
+  - Drizzle ORM doesn't have a built-in tsvector type — use `customType` from drizzle-orm/pg-core
+  - GIN index supports `.using("gin", column).concurrently()` syntax in Drizzle
+  - The searchVector column is nullable so existing rows won't break
+---
