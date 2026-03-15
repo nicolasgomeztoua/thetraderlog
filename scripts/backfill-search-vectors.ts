@@ -1,4 +1,4 @@
-import { eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
@@ -33,10 +33,16 @@ async function backfill() {
 
 	let updated = 0;
 	let errors = 0;
+	const failedIds = new Set<string>();
 
 	while (true) {
 		const journals = await db.query.dailyJournals.findMany({
-			where: isNull(schema.dailyJournals.searchVector),
+			where: and(
+				isNull(schema.dailyJournals.searchVector),
+				failedIds.size > 0
+					? notInArray(schema.dailyJournals.id, [...failedIds])
+					: undefined,
+			),
 			columns: {
 				id: true,
 				userId: true,
@@ -85,6 +91,7 @@ async function backfill() {
 				}
 			} catch (err) {
 				errors++;
+				failedIds.add(journal.id);
 				console.error(`  Error updating journal ${journal.id}:`, err);
 			}
 		}
