@@ -1,10 +1,7 @@
-import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, isNull, notInArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import {
-	buildSearchVectorSql,
-	gatherJournalSearchText,
-} from "../src/lib/journal/search";
+import { updateJournalSearchVector } from "../src/lib/journal/search";
 import * as schema from "../src/server/db/schema";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -63,27 +60,13 @@ async function backfill() {
 					timezoneCache.set(journal.userId, timezone);
 				}
 
-				const texts = await gatherJournalSearchText(db, {
+				await updateJournalSearchVector(db, {
 					journalId: journal.id,
 					userId: journal.userId,
 					content: journal.content,
 					date: journal.date,
 					timezone,
 				});
-
-				const vectorSql = buildSearchVectorSql(texts);
-				const plainText = [
-					texts.journalContent,
-					texts.tradeNotes,
-					texts.checklistText,
-					texts.attachmentCaptions,
-				]
-					.filter(Boolean)
-					.join(" ");
-
-				await db.execute(
-					sql`UPDATE daily_journal SET search_vector = ${vectorSql}, search_plain_text = ${plainText} WHERE id = ${journal.id}`,
-				);
 
 				updated++;
 				if (updated % 100 === 0) {
