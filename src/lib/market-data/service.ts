@@ -707,10 +707,11 @@ export async function getExtendedDayBars(
 	}
 	rangeEnd.setUTCHours(0, 0, 0, 0);
 
-	// Build list of dates
+	// Build list of dates, capped at 30 days to prevent unbounded ranges for old open trades
+	const MAX_CHART_DAYS = 30;
 	const dates: Date[] = [];
 	const currentDate = new Date(rangeStart);
-	while (currentDate <= rangeEnd) {
+	while (currentDate <= rangeEnd && dates.length < MAX_CHART_DAYS) {
 		dates.push(new Date(currentDate));
 		currentDate.setUTCDate(currentDate.getUTCDate() + 1);
 	}

@@ -131,7 +131,7 @@ class VerticalLinePaneView implements IPrimitivePaneView {
 	renderer(): IPrimitivePaneRenderer | null {
 		const primitive = this._primitive;
 		return {
-			draw: (target, utils) => {
+			draw: (target) => {
 				const chart = primitive.chart();
 				if (!chart) return;
 
@@ -145,12 +145,15 @@ class VerticalLinePaneView implements IPrimitivePaneView {
 					context.beginPath();
 					context.strokeStyle = primitive.color;
 					context.lineWidth = 1;
-					if (utils && primitive.lineStyleValue !== LineStyle.Solid) {
-						utils.setLineStyle(context, primitive.lineStyleValue);
+					if (primitive.lineStyleValue !== LineStyle.Solid) {
+						context.setLineDash([5, 3]);
+					} else {
+						context.setLineDash([]);
 					}
 					context.moveTo(timeCoord, 0);
 					context.lineTo(timeCoord, mediaSize.height);
 					context.stroke();
+					context.setLineDash([]);
 				});
 			},
 		};
