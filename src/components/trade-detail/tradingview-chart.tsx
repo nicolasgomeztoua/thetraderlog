@@ -35,9 +35,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { DRAWING_COLORS, LINE_STYLE_MAP } from "@/lib/constants/chart";
 import { useTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DRAWING_COLORS, LINE_STYLE_MAP } from "@/lib/constants/chart";
 import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
 import {
 	type ChartInterval,

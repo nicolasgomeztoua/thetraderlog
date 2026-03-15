@@ -1,221 +1,221 @@
 {
-  "project": "EdgeJournal",
-  "branchName": "ralph/billing-cleanup",
-  "description": "Fix beta detection (publicMetadata), create /pricing page with Clerk PricingTable, remove free tier, thorough cleanup",
-  "userStories": [
-    {
-      "id": "US-001",
-      "title": "Add Clerk Public Metadata Types and Beta Helper",
-      "description": "As a developer, I want typed public metadata and a shared beta detection helper so that both client and server code can reliably check beta status from publicMetadata instead of Clerk entitlements.",
-      "acceptanceCriteria": [
-        "Create or update types/globals.d.ts with ClerkPublicMetadata interface: { features?: { beta_access?: boolean } }",
-        "Extend Clerk's UserPublicMetadata type globally so useUser().publicMetadata is typed",
-        "Add isBetaFromMetadata(metadata: Record<string, unknown>): boolean helper in src/lib/billing/utils.ts that checks metadata.features.beta_access === true",
-        "Keep existing isBetaAuth() temporarily for backward compat (will be removed in US-003)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 1,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-002",
-      "title": "Fix Server-Side Beta Detection to Use Public Metadata",
-      "description": "As a beta user, I want server-side feature gates to recognize my beta status from publicMetadata so that API calls are not blocked.",
-      "acceptanceCriteria": [
-        "Update isBetaAuth() in src/lib/billing/utils.ts to check sessionClaims.metadata (publicMetadata) instead of has({ feature: FEATURE_BETA_ACCESS })",
-        "Update AuthWithHas interface to include sessionClaims with metadata — or create a new type that accepts the auth object shape from Clerk's auth()",
-        "requireFeature middleware in src/server/api/trpc.ts works with publicMetadata beta check",
-        "requirePlan middleware in src/server/api/trpc.ts works with publicMetadata beta check",
-        "getCurrentPlan in src/server/api/routers/billing.ts uses publicMetadata beta check",
-        "getUsage in src/server/api/routers/billing.ts uses publicMetadata beta check",
-        "AI router beta checks in src/server/api/routers/ai.ts use publicMetadata beta check",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 2,
-      "passes": true,
-      "notes": "Server-side: auth() returns sessionClaims which includes publicMetadata. Access via auth.sessionClaims?.metadata or similar. Check Clerk's actual auth() return shape."
-    },
-    {
-      "id": "US-003",
-      "title": "Fix Client-Side Beta Detection to Use Public Metadata",
-      "description": "As a beta user, I want client-side components to recognize my beta status from publicMetadata so that I don't see paywalls.",
-      "acceptanceCriteria": [
-        "UpgradePrompt in src/components/billing/upgrade-prompt.tsx uses useUser().publicMetadata instead of has({ feature: FEATURE_BETA_ACCESS })",
-        "BillingTab in src/app/(protected)/settings/_components/billing-tab.tsx uses useUser().publicMetadata for beta detection",
-        "Pricing component in src/app/(marketing)/_components/pricing.tsx uses useUser().publicMetadata for beta detection",
-        "usage-limit-banner.tsx uses useUser().publicMetadata for beta detection (if it references beta)",
-        "Remove FEATURE_BETA_ACCESS constant from src/lib/constants/billing.ts (no longer needed)",
-        "Remove all imports of FEATURE_BETA_ACCESS across the codebase",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "Client-side: use useUser() hook from @clerk/nextjs, access user.publicMetadata.features?.beta_access. The useUser hook is different from useAuth — useAuth has has() but useUser has publicMetadata."
-    },
-    {
-      "id": "US-004",
-      "title": "Integration Tests for Beta Detection Fix",
-      "description": "As a developer, I want integration tests verifying beta users bypass all feature gates using the new publicMetadata approach.",
-      "acceptanceCriteria": [
-        "Update tests in tests/integration/billing.test.ts to mock beta via publicMetadata (not has({ feature }))",
-        "Update tests/integration/entitlements.test.ts to mock beta via publicMetadata",
-        "Test: beta user (publicMetadata.features.beta_access = true) can access Starter-gated features",
-        "Test: beta user can access Pro-gated features (AI chat, reports, PDF)",
-        "Test: beta user gets unlimited AI usage (no limits enforced)",
-        "Test: non-beta user without plan gets denied",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "The test helpers likely mock clerkAuth with a has() function. Need to also provide sessionClaims.metadata to match the new beta detection path."
-    },
-    {
-      "id": "US-005",
-      "title": "Create /pricing Page with Clerk PricingTable",
-      "description": "As a user clicking Upgrade, I want to land on a working /pricing page so I can select and purchase a plan.",
-      "acceptanceCriteria": [
-        "Create src/app/(marketing)/pricing/page.tsx route",
-        "Page renders Clerk's <PricingTable> component (import from @clerk/nextjs)",
-        "Style PricingTable using Clerk's appearance API to match Terminal design: dark bg #050505, primary accent #d4ff00, monospace fonts",
-        "Page has proper metadata (title: Pricing | EdgeJournal)",
-        "Page is accessible to both authenticated and unauthenticated users",
-        "Falls back gracefully if PricingTable has no plans configured (show message)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser: /pricing loads without 404"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Clerk PricingTable is a drop-in component. Use appearance prop for theming. Terminal tokens: bg #050505, primary #d4ff00, secondary #00d4ff, font-family monospace."
-    },
-    {
-      "id": "US-006",
-      "title": "Remove Free Tier from Constants and Billing Utils",
-      "description": "As a developer, I want the free tier removed from billing constants so the system only knows about Starter and Pro.",
-      "acceptanceCriteria": [
-        "Remove PLAN_FREE export from src/lib/constants/billing.ts",
-        "Remove free tier entry from PLAN_METADATA",
-        "Add PLAN_NONE constant for the no-subscription state",
-        "Update getEffectivePlan() in src/lib/billing/utils.ts to return PLAN_NONE instead of PLAN_FREE",
-        "Update hasPlanAccess() if it references PLAN_FREE",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "PLAN_NONE represents 'user has no subscription' — it replaces PLAN_FREE semantically. Users in this state see upgrade prompts for all gated features."
-    },
-    {
-      "id": "US-007",
-      "title": "Update Billing Router — Remove Free Tier Fallback",
-      "description": "As a developer, I want the billing router to return PLAN_NONE instead of PLAN_FREE for users without a subscription.",
-      "acceptanceCriteria": [
-        "getCurrentPlan in src/server/api/routers/billing.ts returns PLAN_NONE instead of PLAN_FREE for users without a subscription",
-        "Remove PLAN_FREE imports from billing router",
-        "getUsage still works correctly for users with no plan (returns zero usage, null limits)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-008",
-      "title": "Update Pricing Component — Remove Free Tier",
-      "description": "As a visitor viewing the landing page pricing section, I want to see only Starter and Pro plans with 30-day trial badges.",
-      "acceptanceCriteria": [
-        "Remove free tier card from src/app/(marketing)/_components/pricing.tsx",
-        "Show only Starter ($10/mo) and Pro ($24/mo) cards",
-        "Both plans show 30-day free trial badge",
-        "Update copy: remove Get Started Free language",
-        "Update PLAN_HIERARCHY to remove PLAN_FREE",
-        "Update PlanCTA: signed-out users route to sign-up, signed-in users route to /pricing for checkout",
-        "Update trial note copy at bottom (remove no credit card required)",
-        "Remove PLAN_FREE imports",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-009",
-      "title": "Update Billing Settings Tab — Remove Free Tier",
-      "description": "As a user on the billing settings page, I want to see only Starter and Pro in the plan comparison with clear upgrade paths.",
-      "acceptanceCriteria": [
-        "Remove free tier from All Plans comparison grid in billing-tab.tsx",
-        "Show only Starter and Pro in comparison",
-        "Update Current Plan card: if user has PLAN_NONE, show No active plan with upgrade CTA",
-        "Handle PLAN_NONE state gracefully (no crash, clear messaging)",
-        "Remove PLAN_FREE imports",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)",
-        "Verify in browser"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-010",
-      "title": "Update Upgrade Prompt — Remove Free Tier References",
-      "description": "As a user seeing a paywall, I want the upgrade prompt to work correctly with the new two-tier model.",
-      "acceptanceCriteria": [
-        "UpgradePrompt in src/components/billing/upgrade-prompt.tsx has no PLAN_FREE references",
-        "Beta detection uses publicMetadata approach (from US-003)",
-        "Links to /pricing (which now exists from US-005)",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-011",
-      "title": "Clean Up All Remaining Free Tier References",
-      "description": "As a developer, I want all free tier references removed across the entire codebase for consistency.",
-      "acceptanceCriteria": [
-        "Search entire codebase for PLAN_FREE, free (in plan context) references — remove or update all",
-        "Update error messages in src/lib/constants/errors.ts if they reference free tier",
-        "Update usage-limit-banner.tsx if it references free tier",
-        "Update download-pdf-button.tsx if it references free tier",
-        "Update AI router if it references free tier",
-        "Update AGENTS.md files if they reference free tier",
-        "Verify no dead imports or unused constants remain",
-        "Typecheck passes (bun run check)",
-        "Build passes (bun run build)"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-012",
-      "title": "Update Integration Tests for Free Tier Removal",
-      "description": "As a developer, I want all integration tests updated to reflect the two-tier billing model with PLAN_NONE.",
-      "acceptanceCriteria": [
-        "Update tests/integration/billing.test.ts: remove free tier test cases, add PLAN_NONE state tests",
-        "Update tests/integration/entitlements.test.ts: remove free tier scenarios, verify no-plan users are denied",
-        "Verify all test fixtures/mocks no longer reference PLAN_FREE",
-        "Test: user with PLAN_NONE gets denied feature access",
-        "Test: Starter user gets Starter features",
-        "Test: Pro user gets all features",
-        "Test: beta user (via publicMetadata) gets all features",
-        "All tests pass (bun run test)",
-        "Typecheck passes (bun run check)"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": ""
-    }
-  ]
+	"project": "EdgeJournal",
+	"branchName": "ralph/billing-cleanup",
+	"description": "Fix beta detection (publicMetadata), create /pricing page with Clerk PricingTable, remove free tier, thorough cleanup",
+	"userStories": [
+		{
+			"id": "US-001",
+			"title": "Add Clerk Public Metadata Types and Beta Helper",
+			"description": "As a developer, I want typed public metadata and a shared beta detection helper so that both client and server code can reliably check beta status from publicMetadata instead of Clerk entitlements.",
+			"acceptanceCriteria": [
+				"Create or update types/globals.d.ts with ClerkPublicMetadata interface: { features?: { beta_access?: boolean } }",
+				"Extend Clerk's UserPublicMetadata type globally so useUser().publicMetadata is typed",
+				"Add isBetaFromMetadata(metadata: Record<string, unknown>): boolean helper in src/lib/billing/utils.ts that checks metadata.features.beta_access === true",
+				"Keep existing isBetaAuth() temporarily for backward compat (will be removed in US-003)",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 1,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-002",
+			"title": "Fix Server-Side Beta Detection to Use Public Metadata",
+			"description": "As a beta user, I want server-side feature gates to recognize my beta status from publicMetadata so that API calls are not blocked.",
+			"acceptanceCriteria": [
+				"Update isBetaAuth() in src/lib/billing/utils.ts to check sessionClaims.metadata (publicMetadata) instead of has({ feature: FEATURE_BETA_ACCESS })",
+				"Update AuthWithHas interface to include sessionClaims with metadata — or create a new type that accepts the auth object shape from Clerk's auth()",
+				"requireFeature middleware in src/server/api/trpc.ts works with publicMetadata beta check",
+				"requirePlan middleware in src/server/api/trpc.ts works with publicMetadata beta check",
+				"getCurrentPlan in src/server/api/routers/billing.ts uses publicMetadata beta check",
+				"getUsage in src/server/api/routers/billing.ts uses publicMetadata beta check",
+				"AI router beta checks in src/server/api/routers/ai.ts use publicMetadata beta check",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 2,
+			"passes": true,
+			"notes": "Server-side: auth() returns sessionClaims which includes publicMetadata. Access via auth.sessionClaims?.metadata or similar. Check Clerk's actual auth() return shape."
+		},
+		{
+			"id": "US-003",
+			"title": "Fix Client-Side Beta Detection to Use Public Metadata",
+			"description": "As a beta user, I want client-side components to recognize my beta status from publicMetadata so that I don't see paywalls.",
+			"acceptanceCriteria": [
+				"UpgradePrompt in src/components/billing/upgrade-prompt.tsx uses useUser().publicMetadata instead of has({ feature: FEATURE_BETA_ACCESS })",
+				"BillingTab in src/app/(protected)/settings/_components/billing-tab.tsx uses useUser().publicMetadata for beta detection",
+				"Pricing component in src/app/(marketing)/_components/pricing.tsx uses useUser().publicMetadata for beta detection",
+				"usage-limit-banner.tsx uses useUser().publicMetadata for beta detection (if it references beta)",
+				"Remove FEATURE_BETA_ACCESS constant from src/lib/constants/billing.ts (no longer needed)",
+				"Remove all imports of FEATURE_BETA_ACCESS across the codebase",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 3,
+			"passes": true,
+			"notes": "Client-side: use useUser() hook from @clerk/nextjs, access user.publicMetadata.features?.beta_access. The useUser hook is different from useAuth — useAuth has has() but useUser has publicMetadata."
+		},
+		{
+			"id": "US-004",
+			"title": "Integration Tests for Beta Detection Fix",
+			"description": "As a developer, I want integration tests verifying beta users bypass all feature gates using the new publicMetadata approach.",
+			"acceptanceCriteria": [
+				"Update tests in tests/integration/billing.test.ts to mock beta via publicMetadata (not has({ feature }))",
+				"Update tests/integration/entitlements.test.ts to mock beta via publicMetadata",
+				"Test: beta user (publicMetadata.features.beta_access = true) can access Starter-gated features",
+				"Test: beta user can access Pro-gated features (AI chat, reports, PDF)",
+				"Test: beta user gets unlimited AI usage (no limits enforced)",
+				"Test: non-beta user without plan gets denied",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 4,
+			"passes": true,
+			"notes": "The test helpers likely mock clerkAuth with a has() function. Need to also provide sessionClaims.metadata to match the new beta detection path."
+		},
+		{
+			"id": "US-005",
+			"title": "Create /pricing Page with Clerk PricingTable",
+			"description": "As a user clicking Upgrade, I want to land on a working /pricing page so I can select and purchase a plan.",
+			"acceptanceCriteria": [
+				"Create src/app/(marketing)/pricing/page.tsx route",
+				"Page renders Clerk's <PricingTable> component (import from @clerk/nextjs)",
+				"Style PricingTable using Clerk's appearance API to match Terminal design: dark bg #050505, primary accent #d4ff00, monospace fonts",
+				"Page has proper metadata (title: Pricing | EdgeJournal)",
+				"Page is accessible to both authenticated and unauthenticated users",
+				"Falls back gracefully if PricingTable has no plans configured (show message)",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser: /pricing loads without 404"
+			],
+			"priority": 5,
+			"passes": true,
+			"notes": "Clerk PricingTable is a drop-in component. Use appearance prop for theming. Terminal tokens: bg #050505, primary #d4ff00, secondary #00d4ff, font-family monospace."
+		},
+		{
+			"id": "US-006",
+			"title": "Remove Free Tier from Constants and Billing Utils",
+			"description": "As a developer, I want the free tier removed from billing constants so the system only knows about Starter and Pro.",
+			"acceptanceCriteria": [
+				"Remove PLAN_FREE export from src/lib/constants/billing.ts",
+				"Remove free tier entry from PLAN_METADATA",
+				"Add PLAN_NONE constant for the no-subscription state",
+				"Update getEffectivePlan() in src/lib/billing/utils.ts to return PLAN_NONE instead of PLAN_FREE",
+				"Update hasPlanAccess() if it references PLAN_FREE",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 6,
+			"passes": true,
+			"notes": "PLAN_NONE represents 'user has no subscription' — it replaces PLAN_FREE semantically. Users in this state see upgrade prompts for all gated features."
+		},
+		{
+			"id": "US-007",
+			"title": "Update Billing Router — Remove Free Tier Fallback",
+			"description": "As a developer, I want the billing router to return PLAN_NONE instead of PLAN_FREE for users without a subscription.",
+			"acceptanceCriteria": [
+				"getCurrentPlan in src/server/api/routers/billing.ts returns PLAN_NONE instead of PLAN_FREE for users without a subscription",
+				"Remove PLAN_FREE imports from billing router",
+				"getUsage still works correctly for users with no plan (returns zero usage, null limits)",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 7,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-008",
+			"title": "Update Pricing Component — Remove Free Tier",
+			"description": "As a visitor viewing the landing page pricing section, I want to see only Starter and Pro plans with 30-day trial badges.",
+			"acceptanceCriteria": [
+				"Remove free tier card from src/app/(marketing)/_components/pricing.tsx",
+				"Show only Starter ($10/mo) and Pro ($24/mo) cards",
+				"Both plans show 30-day free trial badge",
+				"Update copy: remove Get Started Free language",
+				"Update PLAN_HIERARCHY to remove PLAN_FREE",
+				"Update PlanCTA: signed-out users route to sign-up, signed-in users route to /pricing for checkout",
+				"Update trial note copy at bottom (remove no credit card required)",
+				"Remove PLAN_FREE imports",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 8,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-009",
+			"title": "Update Billing Settings Tab — Remove Free Tier",
+			"description": "As a user on the billing settings page, I want to see only Starter and Pro in the plan comparison with clear upgrade paths.",
+			"acceptanceCriteria": [
+				"Remove free tier from All Plans comparison grid in billing-tab.tsx",
+				"Show only Starter and Pro in comparison",
+				"Update Current Plan card: if user has PLAN_NONE, show No active plan with upgrade CTA",
+				"Handle PLAN_NONE state gracefully (no crash, clear messaging)",
+				"Remove PLAN_FREE imports",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)",
+				"Verify in browser"
+			],
+			"priority": 9,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-010",
+			"title": "Update Upgrade Prompt — Remove Free Tier References",
+			"description": "As a user seeing a paywall, I want the upgrade prompt to work correctly with the new two-tier model.",
+			"acceptanceCriteria": [
+				"UpgradePrompt in src/components/billing/upgrade-prompt.tsx has no PLAN_FREE references",
+				"Beta detection uses publicMetadata approach (from US-003)",
+				"Links to /pricing (which now exists from US-005)",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 10,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-011",
+			"title": "Clean Up All Remaining Free Tier References",
+			"description": "As a developer, I want all free tier references removed across the entire codebase for consistency.",
+			"acceptanceCriteria": [
+				"Search entire codebase for PLAN_FREE, free (in plan context) references — remove or update all",
+				"Update error messages in src/lib/constants/errors.ts if they reference free tier",
+				"Update usage-limit-banner.tsx if it references free tier",
+				"Update download-pdf-button.tsx if it references free tier",
+				"Update AI router if it references free tier",
+				"Update AGENTS.md files if they reference free tier",
+				"Verify no dead imports or unused constants remain",
+				"Typecheck passes (bun run check)",
+				"Build passes (bun run build)"
+			],
+			"priority": 11,
+			"passes": true,
+			"notes": ""
+		},
+		{
+			"id": "US-012",
+			"title": "Update Integration Tests for Free Tier Removal",
+			"description": "As a developer, I want all integration tests updated to reflect the two-tier billing model with PLAN_NONE.",
+			"acceptanceCriteria": [
+				"Update tests/integration/billing.test.ts: remove free tier test cases, add PLAN_NONE state tests",
+				"Update tests/integration/entitlements.test.ts: remove free tier scenarios, verify no-plan users are denied",
+				"Verify all test fixtures/mocks no longer reference PLAN_FREE",
+				"Test: user with PLAN_NONE gets denied feature access",
+				"Test: Starter user gets Starter features",
+				"Test: Pro user gets all features",
+				"Test: beta user (via publicMetadata) gets all features",
+				"All tests pass (bun run test)",
+				"Typecheck passes (bun run check)"
+			],
+			"priority": 12,
+			"passes": true,
+			"notes": ""
+		}
+	]
 }
