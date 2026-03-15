@@ -133,3 +133,23 @@ Started: Sat Mar 14 23:24:11 WET 2026
   - Array index access (e.g., `COLORS[0]`) returns `T | undefined` in strict TS — use literal fallback string instead of array access as fallback
   - Vertical line time axis labels: use `getUTCHours()`/`getUTCMinutes()` since lightweight-charts timestamps are UTC
 ---
+
+## 2026-03-15 - US-009
+- Implemented E2E smoke tests for chart drawing tools and 7-day view
+- Files created:
+  - `tests/e2e/chart-tools.spec.ts` — 8 smoke tests covering drawing toolbar, tool activation, line style/color, clear all, 1h interval, tool switching
+- Tests cover:
+  - Drawing toolbar renders on trade detail page (all buttons visible)
+  - Horizontal line tool activates/deactivates on click (cursor-crosshair class)
+  - Vertical line tool activates/deactivates on click
+  - Line style toggles between solid/dashed (title attribute check)
+  - Color cycles through palette on click
+  - Clear all button is clickable without errors
+  - 1h interval shows chart with extended date range
+  - Switching between tools deactivates the previous one
+- **Learnings for future iterations:**
+  - E2E tests for chart interactions use `cursor-crosshair` CSS class to verify tool activation state — no need to check canvas internals
+  - Navigate to trade detail by finding `a[href*="/journal/"]` links on journal page — avoids hardcoding trade IDs
+  - Biome auto-fix (`npx biome check --write`) handles formatting issues before commit
+  - Pre-existing Biome errors in settings-content.tsx and package.json — don't try to fix unrelated files
+---
