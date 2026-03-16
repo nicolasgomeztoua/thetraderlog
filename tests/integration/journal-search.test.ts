@@ -98,8 +98,11 @@ describe("dailyJournal.search", () => {
 	});
 
 	it("should return results ranked by relevance", async () => {
-		const results = await caller.dailyJournal.search({ query: "trading" });
+		// "losses" appears in journal 2 (Jan 11) and "stop losses" in journal 3 (Jan 12),
+		// so we get multiple results and actually verify rank ordering
+		const results = await caller.dailyJournal.search({ query: "losses" });
 
+		expect(results.length).toBeGreaterThanOrEqual(2);
 		// Results should be ordered by rank descending
 		for (let i = 1; i < results.length; i++) {
 			expect(results[i - 1]?.rank ?? 0).toBeGreaterThanOrEqual(

@@ -165,9 +165,9 @@ export async function updateJournalSearchVector(
 	const vectorSql = buildSearchVectorSql(texts);
 	const plainText = [
 		texts.journalContent,
-		stripHtmlTags(texts.tradeNotes),
-		stripHtmlTags(texts.checklistText),
-		stripHtmlTags(texts.attachmentCaptions),
+		texts.tradeNotes,
+		texts.checklistText,
+		texts.attachmentCaptions,
 	]
 		.filter(Boolean)
 		.join(" ");

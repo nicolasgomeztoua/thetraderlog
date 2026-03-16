@@ -60,7 +60,9 @@ export function GlobalSearch() {
 
 	const handleSelect = useCallback(
 		(dateString: string) => {
-			router.push(`/daily-journal?date=${dateString}`);
+			// Append T12:00:00 so page.tsx's new Date() parses as local noon,
+			// avoiding the UTC-midnight off-by-one for UTC-negative timezones
+			router.push(`/daily-journal?date=${dateString}T12:00:00`);
 			setOpen(false);
 		},
 		[router],
