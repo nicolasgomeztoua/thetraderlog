@@ -311,7 +311,9 @@ export const dailyJournalRouter = createTRPCRouter({
 							regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
 							'&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"'
 						) AS plain_text,
-						to_tsvector('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')) AS vec
+						to_tsvector('english', replace(replace(replace(replace(
+						regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
+						'&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')) AS vec
 					FROM daily_journal dj
 					WHERE dj.user_id = ${ctx.user.id}
 						AND dj.search_vector IS NULL
@@ -319,7 +321,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					LIMIT 500
 				) sub
 				WHERE sub.vec @@ sq.q)
-				ORDER BY rank DESC
+				ORDER BY rank DESC, date DESC
 				LIMIT ${input.limit}`,
 			);
 
