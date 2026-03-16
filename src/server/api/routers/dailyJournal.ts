@@ -283,7 +283,9 @@ export const dailyJournalRouter = createTRPCRouter({
 				(SELECT
 					dj.id,
 					dj.date,
-					ts_headline('english', COALESCE(dj.search_plain_text, regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')), sq.q,
+					ts_headline('english', COALESCE(dj.search_plain_text, replace(replace(replace(replace(
+						regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
+						'&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')), sq.q,
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
 					ts_rank(dj.search_vector, sq.q, 1) AS rank
@@ -291,22 +293,32 @@ export const dailyJournalRouter = createTRPCRouter({
 				WHERE dj.user_id = ${ctx.user.id}
 					AND dj.search_vector @@ sq.q)
 				UNION ALL
+				/* Temporary fallback for unbackfilled journals (search_vector IS NULL).
+				   Caps at 500 candidate rows to bound scan cost. Run backfill-search-vectors.ts to eliminate this path. */
 				(SELECT
-					dj.id,
-					dj.date,
-					ts_headline('english', stripped.plain_text, sq.q,
+					sub.id,
+					sub.date,
+					ts_headline('english', sub.plain_text, sq.q,
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
-					ts_rank(stripped.vec, sq.q, 1) AS rank
-				FROM daily_journal dj, search_query sq,
-				LATERAL (SELECT
-					regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g') AS plain_text,
-					to_tsvector('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')) AS vec
-				) stripped
-				WHERE dj.user_id = ${ctx.user.id}
-					AND dj.search_vector IS NULL
-					AND dj.content IS NOT NULL
-					AND stripped.vec @@ sq.q)
+					ts_rank(sub.vec, sq.q, 1) AS rank
+				FROM search_query sq,
+				LATERAL (
+					SELECT
+						dj.id,
+						dj.date,
+						replace(replace(replace(replace(
+							regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
+							'&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"'
+						) AS plain_text,
+						to_tsvector('english', regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g')) AS vec
+					FROM daily_journal dj
+					WHERE dj.user_id = ${ctx.user.id}
+						AND dj.search_vector IS NULL
+						AND dj.content IS NOT NULL
+					LIMIT 500
+				) sub
+				WHERE sub.vec @@ sq.q)
 				ORDER BY rank DESC
 				LIMIT ${input.limit}`,
 			);
