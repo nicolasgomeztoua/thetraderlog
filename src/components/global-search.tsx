@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	SEARCH_DEBOUNCE_MS,
 	SEARCH_EMPTY_STATE,
+	SEARCH_ERROR_STATE,
 	SEARCH_INITIAL_HINT,
 	SEARCH_MIN_LENGTH_HINT,
 	SEARCH_MIN_QUERY_LENGTH,
@@ -55,7 +56,11 @@ export function GlobalSearch() {
 
 	const shouldSearch = debouncedQuery.length >= SEARCH_MIN_QUERY_LENGTH;
 
-	const { data: results, isLoading } = api.dailyJournal.search.useQuery(
+	const {
+		data: results,
+		isLoading,
+		isError,
+	} = api.dailyJournal.search.useQuery(
 		{ query: debouncedQuery },
 		{ enabled: shouldSearch },
 	);
@@ -147,11 +152,21 @@ export function GlobalSearch() {
 						className="max-h-80 overflow-y-auto"
 						data-testid="global-search-results"
 					>
-						{shouldSearch && !isLoading && results && results.length === 0 && (
-							<div className="p-6 text-center font-mono text-muted-foreground text-xs">
-								{SEARCH_EMPTY_STATE}
+						{shouldSearch && !isLoading && isError && (
+							<div className="p-6 text-center font-mono text-destructive text-xs">
+								{SEARCH_ERROR_STATE}
 							</div>
 						)}
+
+						{shouldSearch &&
+							!isLoading &&
+							!isError &&
+							results &&
+							results.length === 0 && (
+								<div className="p-6 text-center font-mono text-muted-foreground text-xs">
+									{SEARCH_EMPTY_STATE}
+								</div>
+							)}
 
 						{shouldSearch && !isLoading && results && results.length > 0 && (
 							<div className="py-1">

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import {
 	SEARCH_DEBOUNCE_MS,
 	SEARCH_EMPTY_STATE,
+	SEARCH_ERROR_STATE,
 	SEARCH_HELPER_TEXT,
 	SEARCH_MIN_QUERY_LENGTH,
 	SEARCH_PLACEHOLDER,
@@ -34,7 +35,11 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 
 	const shouldSearch = debouncedQuery.length >= SEARCH_MIN_QUERY_LENGTH;
 
-	const { data: results, isLoading } = api.dailyJournal.search.useQuery(
+	const {
+		data: results,
+		isLoading,
+		isError,
+	} = api.dailyJournal.search.useQuery(
 		{ query: debouncedQuery },
 		{ enabled: shouldSearch },
 	);
@@ -129,6 +134,10 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 					{isLoading ? (
 						<div className="flex items-center justify-center p-4">
 							<Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+						</div>
+					) : isError ? (
+						<div className="p-4 text-center font-mono text-destructive text-xs">
+							{SEARCH_ERROR_STATE}
 						</div>
 					) : results && results.length > 0 ? (
 						results.map((result) => {

@@ -26,6 +26,7 @@ export function stripHtmlTags(html: string | null): string {
 		.replace(/&gt;/g, ">")
 		.replace(/&quot;/g, '"')
 		.replace(/&#39;/g, "'")
+		.replace(/<[^>]*>/g, " ")
 		.trim();
 }
 
