@@ -82,6 +82,10 @@ async function backfill() {
 	console.log(`\nBackfill complete: ${updated} updated, ${errors} errors.`);
 
 	await conn.end();
+
+	if (errors > 0) {
+		process.exit(1);
+	}
 }
 
 backfill().catch((err) => {

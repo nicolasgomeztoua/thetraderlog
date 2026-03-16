@@ -218,6 +218,43 @@ describe("dailyJournal.search", () => {
 		expect(results.some((r) => r.journalId === journal?.id)).toBe(true);
 	});
 
+	it("should scope trade notes using timezone-aware day bounds", async () => {
+		const db = getTestDb();
+
+		// Create a journal for Feb 1
+		const journal = await caller.dailyJournal.updateContent({
+			date: "2025-02-01",
+			content: "<p>Timezone boundary test day</p>",
+		});
+
+		// Create a trade at 2025-02-02T01:30:00Z = 2025-02-01 20:30 ET (still Feb 1 in New York)
+		const account = await db.query.accounts.findFirst({
+			where: (a, { eq }) => eq(a.userId, user.id),
+		});
+		await createTestTrade(user.id, account?.id ?? "", {
+			entryTime: new Date("2025-02-02T01:30:00Z"),
+			exitTime: new Date("2025-02-02T02:00:00Z"),
+			notes: "Oversized vwap reclaim scalp during late session",
+			status: "closed",
+		});
+
+		// Update search vector with America/New_York timezone
+		// The trade at 01:30 UTC on Feb 2 is 20:30 ET on Feb 1 — should be included
+		await updateJournalSearchVector(db, {
+			journalId: journal?.id ?? "",
+			userId: user.id,
+			content: journal?.content ?? null,
+			date: new Date("2025-02-01"),
+			timezone: "America/New_York",
+		});
+
+		const results = await caller.dailyJournal.search({
+			query: "vwap reclaim scalp",
+		});
+		expect(results.length).toBeGreaterThanOrEqual(1);
+		expect(results.some((r) => r.journalId === journal?.id)).toBe(true);
+	});
+
 	it("should find journals by attachment caption", async () => {
 		const db = getTestDb();
 		const { journalAttachments } = await import("@/server/db/schema");
