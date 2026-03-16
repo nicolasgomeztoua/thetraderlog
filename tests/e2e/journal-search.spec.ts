@@ -130,6 +130,50 @@ test.describe("Journal Search", () => {
 		await expect(dialog).toBeVisible({ timeout: 5000 });
 	});
 
+	test("clicking a global search result navigates to the correct date", async ({
+		page,
+	}, testInfo) => {
+		testInfo.setTimeout(30000);
+		await page.goto("/daily-journal");
+
+		// Open global search
+		const trigger = page.getByTestId("global-search-trigger");
+		await expect(trigger).toBeVisible({ timeout: 15000 });
+		await trigger.click();
+
+		const dialog = page.getByTestId("global-search-dialog");
+		await expect(dialog).toBeVisible({ timeout: 5000 });
+
+		const input = page.getByTestId("global-search-input");
+		await input.fill("journal");
+
+		// Wait for results
+		const resultItems = page.getByTestId("global-search-result-item");
+		await expect(resultItems.first())
+			.toBeVisible({ timeout: 10000 })
+			.catch(() => {});
+
+		const resultCount = await resultItems.count();
+		if (resultCount === 0) {
+			test.skip(
+				true,
+				"No journal data seeded — cannot test global search click-to-navigate",
+			);
+			return;
+		}
+
+		// Click the first result
+		await resultItems.first().click();
+
+		// Should navigate to journal with date param
+		await expect(page).toHaveURL(/\/daily-journal\?date=\d{4}-\d{2}-\d{2}/, {
+			timeout: 5000,
+		});
+
+		// Dialog should close after navigation
+		await expect(dialog).not.toBeVisible({ timeout: 5000 });
+	});
+
 	test("global search closes on Escape", async ({ page }) => {
 		await page.goto("/daily-journal");
 
