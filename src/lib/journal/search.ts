@@ -7,6 +7,7 @@ import {
 import type { db as dbType } from "@/server/db";
 import {
 	dailyChecklistChecks,
+	dailyJournals,
 	journalAttachments,
 	trades,
 } from "@/server/db/schema";
@@ -44,23 +45,22 @@ export function buildSearchVectorSql(parts: {
 	checklistText: string;
 	attachmentCaptions: string;
 }) {
-	const weightLiterals: Record<string, ReturnType<typeof sql>> = {
+	const weightLiterals = {
 		A: sql`'A'`,
 		B: sql`'B'`,
 		C: sql`'C'`,
-		D: sql`'D'`,
-	};
+	} as const satisfies Record<string, ReturnType<typeof sql>>;
 
 	const combined = [
-		{ text: parts.journalContent, weight: "A" },
-		{ text: parts.tradeNotes, weight: "B" },
-		{ text: parts.checklistText, weight: "C" },
-		{ text: parts.attachmentCaptions, weight: "C" },
+		{ text: parts.journalContent, weight: "A" as const },
+		{ text: parts.tradeNotes, weight: "B" as const },
+		{ text: parts.checklistText, weight: "C" as const },
+		{ text: parts.attachmentCaptions, weight: "C" as const },
 	]
 		.filter((p) => p.text.length > 0)
 		.map(
 			(p) =>
-				sql`setweight(to_tsvector('english', ${p.text}), ${weightLiterals[p.weight] ?? weightLiterals.D})`,
+				sql`setweight(to_tsvector('english', ${p.text}), ${weightLiterals[p.weight]})`,
 		);
 
 	if (combined.length === 0) {
@@ -182,7 +182,11 @@ export async function updateJournalSearchVector(
 		.filter(Boolean)
 		.join(" ");
 
-	await db.execute(
-		sql`UPDATE daily_journal SET search_vector = ${vectorSql}, search_plain_text = ${plainText} WHERE id = ${params.journalId}`,
-	);
+	await db
+		.update(dailyJournals)
+		.set({
+			searchVector: sql`${vectorSql}` as unknown as string,
+			searchPlainText: plainText,
+		})
+		.where(eq(dailyJournals.id, params.journalId));
 }
