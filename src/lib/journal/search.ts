@@ -93,46 +93,44 @@ export async function gatherJournalSearchText(
 		params.timezone,
 	);
 
-	const tradeRows = await db.query.trades.findMany({
-		where: and(
-			eq(trades.userId, params.userId),
-			gte(trades.entryTime, startOfDay),
-			lt(trades.entryTime, endOfDay),
-			isNull(trades.deletedAt),
-			isNotNull(trades.notes),
-		),
-		columns: { notes: true },
-	});
+	const [tradeRows, captionRows, checkRows] = await Promise.all([
+		db.query.trades.findMany({
+			where: and(
+				eq(trades.userId, params.userId),
+				gte(trades.entryTime, startOfDay),
+				lt(trades.entryTime, endOfDay),
+				isNull(trades.deletedAt),
+				isNotNull(trades.notes),
+			),
+			columns: { notes: true },
+		}),
+		db.query.journalAttachments.findMany({
+			where: and(
+				eq(journalAttachments.journalId, params.journalId),
+				isNotNull(journalAttachments.caption),
+			),
+			columns: { caption: true },
+		}),
+		db.query.dailyChecklistChecks.findMany({
+			where: and(
+				eq(dailyChecklistChecks.journalId, params.journalId),
+				eq(dailyChecklistChecks.checked, true),
+			),
+			with: {
+				template: {
+					columns: { text: true },
+				},
+			},
+		}),
+	]);
 	const tradeNotes = tradeRows
 		.map((r) => r.notes ?? "")
 		.filter(Boolean)
 		.join(" ");
-
-	// Gather attachment captions for this journal
-	const captionRows = await db.query.journalAttachments.findMany({
-		where: and(
-			eq(journalAttachments.journalId, params.journalId),
-			isNotNull(journalAttachments.caption),
-		),
-		columns: { caption: true },
-	});
 	const attachmentCaptions = captionRows
 		.map((r) => r.caption ?? "")
 		.filter(Boolean)
 		.join(" ");
-
-	// Gather checklist text only for items checked on this specific journal
-	const checkRows = await db.query.dailyChecklistChecks.findMany({
-		where: and(
-			eq(dailyChecklistChecks.journalId, params.journalId),
-			eq(dailyChecklistChecks.checked, true),
-		),
-		with: {
-			template: {
-				columns: { text: true },
-			},
-		},
-	});
 	const checklistText = checkRows
 		.map(
 			(r) =>
