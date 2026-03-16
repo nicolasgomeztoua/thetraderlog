@@ -776,7 +776,9 @@ export const dailyJournals = createTable(
 	(t) => [
 		index("daily_journal_user_id_idx").on(t.userId),
 		uniqueIndex("daily_journal_user_date_idx").on(t.userId, t.date),
-		index("daily_journal_search_vector_idx").using("gin", t.searchVector),
+		index("daily_journal_search_vector_idx")
+			.using("gin", t.searchVector)
+			.concurrently(),
 	],
 );
 

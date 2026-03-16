@@ -288,9 +288,9 @@ export const dailyJournalRouter = createTRPCRouter({
 				(SELECT
 					dj.id,
 					dj.date,
-					ts_headline('english', COALESCE(dj.search_plain_text, replace(replace(replace(replace(
+					ts_headline('english', COALESCE(dj.search_plain_text, replace(replace(replace(replace(replace(
 						regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
-						'&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')), sq.q,
+						'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')), sq.q,
 						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
 					) AS snippet,
 					ts_rank(dj.search_vector, sq.q, 1) AS rank
@@ -312,13 +312,13 @@ export const dailyJournalRouter = createTRPCRouter({
 					SELECT
 						dj.id,
 						dj.date,
-						replace(replace(replace(replace(
+						replace(replace(replace(replace(replace(
 							regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
-							'&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"'
+							'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"'
 						) AS plain_text,
-						to_tsvector('english', replace(replace(replace(replace(
+						to_tsvector('english', replace(replace(replace(replace(replace(
 						regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
-						'&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')) AS vec
+						'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')) AS vec
 					FROM daily_journal dj
 					WHERE dj.user_id = ${ctx.user.id}
 						AND dj.search_vector IS NULL

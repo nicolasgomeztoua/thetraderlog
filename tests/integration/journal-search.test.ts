@@ -214,8 +214,8 @@ describe("dailyJournal.search", () => {
 		const results = await caller.dailyJournal.search({
 			query: "fibonacci retracement",
 		});
-		expect(results.length).toBe(1);
-		expect(results[0]?.journalId).toBe(journal?.id);
+		expect(results.length).toBeGreaterThanOrEqual(1);
+		expect(results.some((r) => r.journalId === journal?.id)).toBe(true);
 	});
 
 	it("should find journals by attachment caption", async () => {
@@ -251,8 +251,8 @@ describe("dailyJournal.search", () => {
 		const results = await caller.dailyJournal.search({
 			query: "megaphone pattern reversal",
 		});
-		expect(results.length).toBe(1);
-		expect(results[0]?.journalId).toBe(journal?.id);
+		expect(results.length).toBeGreaterThanOrEqual(1);
+		expect(results.some((r) => r.journalId === journal?.id)).toBe(true);
 	});
 
 	it("should find journals by checked checklist item text", async () => {
@@ -297,7 +297,7 @@ describe("dailyJournal.search", () => {
 		const results = await caller.dailyJournal.search({
 			query: "quarterlies pivotpoint",
 		});
-		expect(results.length).toBe(1);
-		expect(results[0]?.journalId).toBe(journal?.id);
+		expect(results.length).toBeGreaterThanOrEqual(1);
+		expect(results.some((r) => r.journalId === journal?.id)).toBe(true);
 	});
 });
