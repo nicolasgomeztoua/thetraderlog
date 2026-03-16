@@ -13,6 +13,11 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import {
+	FORCED_ITEM_PRE_MARKET,
+	FORCED_ITEM_SL_CHECK,
+	TOGGLEABLE_FORCED_ITEMS,
+} from "@/lib/constants/checklist";
+import {
 	ERR_ATTACHMENT_CREATE_FAILED,
 	ERR_ATTACHMENT_NOT_FOUND,
 	ERR_CHECKLIST_AUTO_CALCULATED,
@@ -318,6 +323,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					WHERE dj.user_id = ${ctx.user.id}
 						AND dj.search_vector IS NULL
 						AND dj.content IS NOT NULL
+					ORDER BY dj.date DESC
 					LIMIT 500
 				) sub
 				WHERE sub.vec @@ sq.q)
@@ -513,10 +519,10 @@ export const dailyJournalRouter = createTRPCRouter({
 			if (dayStarted || hasTrades) {
 				// Check if pre-market check exists in checklist checks (uses forcedItemId column)
 				const preMarketCheck = journal?.checklistChecks?.find(
-					(c) => c.forcedItemId === "forced-pre-market",
+					(c) => c.forcedItemId === FORCED_ITEM_PRE_MARKET,
 				);
 				forcedItems.push({
-					id: "forced-pre-market",
+					id: FORCED_ITEM_PRE_MARKET,
 					text: "Pre Market Check",
 					isForced: true,
 					checked: preMarketCheck?.checked ?? false,
@@ -528,7 +534,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			if (hasTrades) {
 				const allTradesHaveSL = tradesForDate.every((t) => t.stopLoss !== null);
 				forcedItems.push({
-					id: "forced-sl-check",
+					id: FORCED_ITEM_SL_CHECK,
 					text: "Added SL to all trades",
 					isForced: true,
 					checked: allTradesHaveSL, // Auto-calculated from trade data
@@ -859,7 +865,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			const normalizedDate = normalizeDate(new Date(input.date));
 
 			// Only allow toggling specific forced items (not auto-calculated ones)
-			const allowedForcedItems = ["forced-pre-market"];
+			const allowedForcedItems = TOGGLEABLE_FORCED_ITEMS;
 			if (!allowedForcedItems.includes(input.itemId)) {
 				throw new Error(ERR_CHECKLIST_AUTO_CALCULATED);
 			}

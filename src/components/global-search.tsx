@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	SEARCH_DEBOUNCE_MS,
 	SEARCH_EMPTY_STATE,
+	SEARCH_INITIAL_HINT,
+	SEARCH_MIN_LENGTH_HINT,
 	SEARCH_MIN_QUERY_LENGTH,
 	SEARCH_PLACEHOLDER,
 } from "@/lib/constants/search";
@@ -188,13 +190,13 @@ export function GlobalSearch() {
 
 						{!shouldSearch && query.length > 0 && (
 							<div className="p-6 text-center font-mono text-muted-foreground text-xs">
-								Type at least {SEARCH_MIN_QUERY_LENGTH} characters to search
+								{SEARCH_MIN_LENGTH_HINT}
 							</div>
 						)}
 
 						{query.length === 0 && (
 							<div className="p-6 text-center font-mono text-muted-foreground text-xs">
-								Start typing to search journal entries...
+								{SEARCH_INITIAL_HINT}
 							</div>
 						)}
 					</div>
