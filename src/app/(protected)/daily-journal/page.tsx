@@ -76,7 +76,11 @@ export default function DailyJournalPage() {
 	// Selected date state - initialize from URL param if present
 	const [selectedDate, setSelectedDate] = useState<Date>(() => {
 		if (dateParam) {
-			const parsed = new Date(dateParam);
+			// Parse as local noon to avoid UTC-midnight off-by-one in negative timezones
+			const normalizedParam = dateParam.includes("T")
+				? dateParam
+				: `${dateParam}T12:00:00`;
+			const parsed = new Date(normalizedParam);
 			if (!Number.isNaN(parsed.getTime())) {
 				return parsed;
 			}
