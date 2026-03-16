@@ -45,6 +45,12 @@ async function backfill() {
 
 		if (journals.length === 0) break;
 
+		if (failedIds.size > 500) {
+			console.warn(
+				`Warning: ${failedIds.size} failed journals excluded from query. Consider investigating the errors before continuing.`,
+			);
+		}
+
 		for (const journal of journals) {
 			try {
 				let timezone = timezoneCache.get(journal.userId);

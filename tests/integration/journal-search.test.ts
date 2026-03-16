@@ -9,6 +9,7 @@ import { updateJournalSearchVector } from "@/lib/journal/search";
 import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
+	createTestTrade,
 	createTestUser,
 	createUnauthenticatedCaller,
 	getTestDb,
@@ -172,5 +173,128 @@ describe("dailyJournal.search", () => {
 		await expect(
 			unauthCaller.dailyJournal.search({ query: "trading" }),
 		).rejects.toThrow("UNAUTHORIZED");
+	});
+
+	// ============================================================================
+	// TRADE NOTES, CHECKLIST, AND CAPTION INDEXING
+	// ============================================================================
+
+	it("should find journals by trade notes content", async () => {
+		const db = getTestDb();
+
+		// Create a journal for a specific date
+		const journal = await caller.dailyJournal.updateContent({
+			date: "2025-02-01",
+			content: "<p>Normal trading day nothing special</p>",
+		});
+
+		// Create a trade with unique notes on the same date
+		const account = await db.query.accounts.findFirst({
+			where: (a, { eq }) => eq(a.userId, user.id),
+		});
+		await createTestTrade(user.id, account?.id ?? "", {
+			entryTime: new Date("2025-02-01T14:00:00Z"),
+			exitTime: new Date("2025-02-01T15:00:00Z"),
+			notes: "Fibonacci retracement confluence zone breakout",
+			status: "closed",
+		});
+
+		// Update search vector (includes trade notes)
+		await updateJournalSearchVector(db, {
+			journalId: journal?.id ?? "",
+			userId: user.id,
+			content: journal?.content ?? null,
+			date: new Date("2025-02-01"),
+			timezone: "UTC",
+		});
+
+		const results = await caller.dailyJournal.search({
+			query: "fibonacci retracement",
+		});
+		expect(results.length).toBe(1);
+		expect(results[0]?.journalId).toBe(journal?.id);
+	});
+
+	it("should find journals by attachment caption", async () => {
+		const db = getTestDb();
+		const { journalAttachments } = await import("@/server/db/schema");
+
+		// Create a journal
+		const journal = await caller.dailyJournal.updateContent({
+			date: "2025-02-02",
+			content: "<p>Regular entry nothing unique here</p>",
+		});
+
+		// Insert an attachment with a unique caption
+		await db.insert(journalAttachments).values({
+			journalId: journal?.id ?? "",
+			url: "https://example.com/screenshot.png",
+			key: "test/screenshot.png",
+			filename: "screenshot.png",
+			mimeType: "image/png",
+			size: 1024,
+			caption: "Megaphone pattern reversal at resistance",
+		});
+
+		// Update search vector (includes caption)
+		await updateJournalSearchVector(db, {
+			journalId: journal?.id ?? "",
+			userId: user.id,
+			content: journal?.content ?? null,
+			date: new Date("2025-02-02"),
+			timezone: "UTC",
+		});
+
+		const results = await caller.dailyJournal.search({
+			query: "megaphone pattern reversal",
+		});
+		expect(results.length).toBe(1);
+		expect(results[0]?.journalId).toBe(journal?.id);
+	});
+
+	it("should find journals by checked checklist item text", async () => {
+		const db = getTestDb();
+		const { dailyChecklistTemplates, dailyChecklistChecks } = await import(
+			"@/server/db/schema"
+		);
+
+		// Create a journal
+		const journal = await caller.dailyJournal.updateContent({
+			date: "2025-02-03",
+			content: "<p>Another plain journal entry</p>",
+		});
+
+		// Create a checklist template
+		const [template] = await db
+			.insert(dailyChecklistTemplates)
+			.values({
+				userId: user.id,
+				text: "Quarterlies pivotpoint analysis completed",
+				order: 0,
+			})
+			.returning();
+
+		// Create a checked checklist check linked to the journal
+		await db.insert(dailyChecklistChecks).values({
+			journalId: journal?.id ?? "",
+			templateId: template?.id ?? "",
+			checked: true,
+			checkedAt: new Date(),
+		});
+
+		// Update search vector (includes checklist text)
+		await updateJournalSearchVector(db, {
+			journalId: journal?.id ?? "",
+			userId: user.id,
+			content: journal?.content ?? null,
+			date: new Date("2025-02-03"),
+			timezone: "UTC",
+		});
+
+		const results = await caller.dailyJournal.search({
+			query: "quarterlies pivotpoint",
+		});
+		expect(results.length).toBe(1);
+		expect(results[0]?.journalId).toBe(journal?.id);
 	});
 });

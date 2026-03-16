@@ -306,7 +306,9 @@ export const dailyJournalRouter = createTRPCRouter({
 				WHERE dj.user_id = ${ctx.user.id}
 					AND dj.search_vector IS NULL
 					AND dj.content IS NOT NULL
-					AND stripped.vec @@ sq.q)
+					AND stripped.vec @@ sq.q
+				ORDER BY dj.date DESC
+				LIMIT ${input.limit})
 				ORDER BY rank DESC
 				LIMIT ${input.limit}`,
 			);
