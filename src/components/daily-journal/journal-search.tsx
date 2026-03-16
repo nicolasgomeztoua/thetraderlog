@@ -115,9 +115,6 @@ export function JournalSearch({ onSelectDate }: JournalSearchProps) {
 						<XIcon className="size-4" />
 					</button>
 				)}
-				{isLoading && shouldSearch && !showDropdown && (
-					<Loader2Icon className="-translate-y-1/2 absolute top-1/2 right-3 size-4 animate-spin text-muted-foreground" />
-				)}
 			</div>
 
 			{!showDropdown && query.length === 0 && (
