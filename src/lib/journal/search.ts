@@ -23,8 +23,6 @@ export function stripHtmlTags(html: string | null): string {
 		.replace(/&nbsp;/g, " ")
 		.replace(/&#160;/g, " ")
 		.replace(/&amp;/g, "&")
-		.replace(/&lt;/g, "<")
-		.replace(/&gt;/g, ">")
 		.replace(/&quot;/g, '"')
 		.trim();
 }
