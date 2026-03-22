@@ -9,3 +9,5 @@ export const SEARCH_HELPER_TEXT =
 export const SEARCH_MIN_LENGTH_HINT = `Type at least ${SEARCH_MIN_QUERY_LENGTH} characters to search`;
 export const SEARCH_INITIAL_HINT = "Start typing to search journal entries...";
 export const SEARCH_ERROR_STATE = "Search unavailable. Please try again.";
+export const SEARCH_LABEL_JOURNAL = "Journal";
+export const SEARCH_LABEL_TRADE_NOTE = "Trade Note";

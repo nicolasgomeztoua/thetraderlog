@@ -364,6 +364,10 @@ export const trades = createTable(
 		// Soft delete
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 
+		// Full-text search
+		searchVector: tsvector("search_vector"),
+		searchPlainText: text("search_plain_text"),
+
 		// Timestamps
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
@@ -381,6 +385,7 @@ export const trades = createTable(
 		index("trade_status_idx").on(t.status),
 		index("trade_deleted_at_idx").on(t.deletedAt),
 		index("trade_hash_idx").on(t.tradeHash),
+		index("trade_search_vector_idx").using("gin", t.searchVector),
 	],
 );
 

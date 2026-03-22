@@ -16,8 +16,8 @@ import {
 	Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ContentPanel, StatsPanel } from "@/components/trade-detail";
 import { Badge } from "@/components/ui/badge";
@@ -95,8 +95,18 @@ function saveSizes(sizes: number[]) {
 // =============================================================================
 
 export default function TradeDetailPage() {
+	return (
+		<Suspense>
+			<TradeDetailPageContent />
+		</Suspense>
+	);
+}
+
+function TradeDetailPageContent() {
 	const params = useParams();
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const initialTab = searchParams.get("tab") ?? undefined;
 	const tradeId = params.id as string;
 	const { timezone } = useTimezone();
 	const isMobile = useIsMobile();
@@ -502,6 +512,7 @@ export default function TradeDetailPage() {
 				<>
 					<div className="min-h-0 flex-1 overflow-hidden">
 						<ContentPanel
+							initialTab={initialTab}
 							onUpdateField={updateField}
 							trade={{
 								id: trade.id,
@@ -688,6 +699,7 @@ export default function TradeDetailPage() {
 						minSize={20}
 					>
 						<ContentPanel
+							initialTab={initialTab}
 							onUpdateField={updateField}
 							trade={{
 								id: trade.id,

@@ -1,20 +1,14 @@
-import { and, eq, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { FORCED_CHECKLIST_LABELS } from "@/lib/constants/checklist";
-import {
-	getDayBoundsInTimezone,
-	getUTCDateString,
-} from "@/lib/shared/timezone";
 import type { db as dbType } from "@/server/db";
 import {
 	dailyChecklistChecks,
 	dailyJournals,
 	journalAttachments,
-	trades,
 } from "@/server/db/schema";
 
 /**
  * Strip HTML tags from content, returning plain text.
- * Reuses the same regex pattern from getJournalAdjacency.
  */
 export function stripHtmlTags(html: string | null): string {
 	if (!html) return "";
@@ -32,26 +26,22 @@ export function stripHtmlTags(html: string | null): string {
  *
  * Weights:
  * - A: Journal content (highest relevance)
- * - B: Trade notes
- * - C: Checklist text and attachment captions
+ * - B: Checklist text and attachment captions
  */
 export function buildSearchVectorSql(parts: {
 	journalContent: string;
-	tradeNotes: string;
 	checklistText: string;
 	attachmentCaptions: string;
 }) {
 	const weightLiterals = {
 		A: sql`'A'`,
 		B: sql`'B'`,
-		C: sql`'C'`,
 	} as const satisfies Record<string, ReturnType<typeof sql>>;
 
 	const combined = [
 		{ text: parts.journalContent, weight: "A" as const },
-		{ text: parts.tradeNotes, weight: "B" as const },
-		{ text: parts.checklistText, weight: "C" as const },
-		{ text: parts.attachmentCaptions, weight: "C" as const },
+		{ text: parts.checklistText, weight: "B" as const },
+		{ text: parts.attachmentCaptions, weight: "B" as const },
 	]
 		.filter((p) => p.text.length > 0)
 		.map(
@@ -74,6 +64,7 @@ export function buildSearchVectorSql(parts: {
 
 /**
  * Gather all text related to a journal entry for search indexing.
+ * Trade notes are indexed separately on the trades table.
  */
 export async function gatherJournalSearchText(
 	db: typeof dbType,
@@ -86,30 +77,12 @@ export async function gatherJournalSearchText(
 	},
 ): Promise<{
 	journalContent: string;
-	tradeNotes: string;
 	checklistText: string;
 	attachmentCaptions: string;
 }> {
 	const journalContent = stripHtmlTags(params.content);
 
-	// Gather trade notes for this date using timezone-aware day boundaries
-	const dateString = getUTCDateString(params.date);
-	const { start: startOfDay, end: endOfDay } = getDayBoundsInTimezone(
-		dateString,
-		params.timezone,
-	);
-
-	const [tradeRows, captionRows, checkRows] = await Promise.all([
-		db.query.trades.findMany({
-			where: and(
-				eq(trades.userId, params.userId),
-				gte(trades.entryTime, startOfDay),
-				lt(trades.entryTime, endOfDay),
-				isNull(trades.deletedAt),
-				isNotNull(trades.notes),
-			),
-			columns: { notes: true },
-		}),
+	const [captionRows, checkRows] = await Promise.all([
 		db.query.journalAttachments.findMany({
 			where: and(
 				eq(journalAttachments.journalId, params.journalId),
@@ -129,10 +102,6 @@ export async function gatherJournalSearchText(
 			},
 		}),
 	]);
-	const tradeNotes = tradeRows
-		.map((r) => r.notes ?? "")
-		.filter(Boolean)
-		.join(" ");
 	const attachmentCaptions = captionRows
 		.map((r) => r.caption ?? "")
 		.filter(Boolean)
@@ -148,7 +117,6 @@ export async function gatherJournalSearchText(
 
 	return {
 		journalContent,
-		tradeNotes,
 		checklistText,
 		attachmentCaptions,
 	};
@@ -171,7 +139,6 @@ export async function updateJournalSearchVector(
 	const vectorSql = buildSearchVectorSql(texts);
 	const plainText = [
 		texts.journalContent,
-		texts.tradeNotes,
 		texts.checklistText,
 		texts.attachmentCaptions,
 	]

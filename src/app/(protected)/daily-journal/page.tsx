@@ -3,7 +3,7 @@
 import { CheckCircleIcon, Loader2Icon, MenuIcon, PlayIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { CalendarSidebar } from "@/components/daily-journal/calendar-sidebar";
 import { ChecklistSettings } from "@/components/daily-journal/checklist-settings";
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
@@ -69,6 +69,14 @@ function saveSizes(sizes: number[]) {
 // =============================================================================
 
 export default function DailyJournalPage() {
+	return (
+		<Suspense>
+			<DailyJournalPageContent />
+		</Suspense>
+	);
+}
+
+function DailyJournalPageContent() {
 	// Read date from URL query parameter
 	const searchParams = useSearchParams();
 	const dateParam = searchParams.get("date");

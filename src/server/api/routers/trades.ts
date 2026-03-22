@@ -28,6 +28,10 @@ import {
 	ERR_TRADE_NOT_FOUND,
 	ERR_TRADES_BULK_NOT_FOUND,
 } from "@/lib/constants/errors";
+import {
+	SEARCH_DEFAULT_LIMIT,
+	SEARCH_MIN_QUERY_LENGTH,
+} from "@/lib/constants/search";
 import type { SortField } from "@/lib/constants/trade-log";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 import {
@@ -48,6 +52,7 @@ import { buildEvaluationContext, evaluateAutoCondition } from "@/lib/strategy";
 import type { AutoCondition } from "@/lib/strategy/types";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import { computeTradeHash } from "@/lib/trades/hash";
+import { updateTradeSearchVector } from "@/lib/trades/search";
 import {
 	getActiveAccountsSubquery,
 	getUserBreakevenThreshold,
@@ -704,6 +709,16 @@ export const tradesRouter = createTRPCRouter({
 				);
 			}
 
+			// Update search vector if trade has notes (non-blocking)
+			if (newTrade?.notes) {
+				updateTradeSearchVector(ctx.db, {
+					tradeId: newTrade.id,
+					notes: newTrade.notes,
+				}).catch((err) =>
+					console.error("Failed to update trade search vector:", err),
+				);
+			}
+
 			return newTrade;
 		}),
 
@@ -905,6 +920,16 @@ export const tradesRouter = createTRPCRouter({
 			// Auto-evaluate strategy rules when trade is closed
 			if (isBeingClosed && existingTrade.strategyId) {
 				await autoEvaluateTradeRules(ctx.db, id, ctx.user.id);
+			}
+
+			// Update search vector if notes changed (non-blocking)
+			if (updateData.notes !== undefined && updated) {
+				updateTradeSearchVector(ctx.db, {
+					tradeId: id,
+					notes: updated.notes,
+				}).catch((err) =>
+					console.error("Failed to update trade search vector:", err),
+				);
 			}
 
 			return updated;
@@ -1879,5 +1904,81 @@ export const tradesRouter = createTRPCRouter({
 				.where(eq(tradeAttachments.id, input.id));
 
 			return { success: true };
+		}),
+
+	// Full-text search across trade notes
+	searchNotes: protectedProcedure
+		.input(
+			z.object({
+				query: z.string().min(SEARCH_MIN_QUERY_LENGTH),
+				limit: z.number().int().min(1).max(50).default(SEARCH_DEFAULT_LIMIT),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const results = await ctx.db.execute<{
+				id: string;
+				symbol: string;
+				entry_time: Date;
+				snippet: string;
+				rank: number;
+			}>(
+				sql`WITH search_query AS (
+					SELECT plainto_tsquery('english', ${input.query}) AS q
+				)
+				(SELECT
+					t.id,
+					t.symbol,
+					t.entry_time,
+					ts_headline('english', COALESCE(t.search_plain_text, ''), sq.q,
+						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
+					) AS snippet,
+					ts_rank(t.search_vector, sq.q, 1) AS rank
+				FROM trade t, search_query sq
+				WHERE t.user_id = ${ctx.user.id}
+					AND t.deleted_at IS NULL
+					AND t.search_vector @@ sq.q)
+				UNION ALL
+				(SELECT
+					sub.id,
+					sub.symbol,
+					sub.entry_time,
+					ts_headline('english', sub.plain_text, sq.q,
+						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
+					) AS snippet,
+					ts_rank(sub.vec, sq.q, 1) AS rank
+				FROM search_query sq,
+				LATERAL (
+					SELECT
+						t.id,
+						t.symbol,
+						t.entry_time,
+						replace(replace(replace(replace(replace(
+							regexp_replace(COALESCE(t.notes, ''), '<[^>]*>', ' ', 'g'),
+							'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"'
+						) AS plain_text,
+						to_tsvector('english', replace(replace(replace(replace(replace(
+							regexp_replace(COALESCE(t.notes, ''), '<[^>]*>', ' ', 'g'),
+							'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"'
+						)) AS vec
+					FROM trade t
+					WHERE t.user_id = ${ctx.user.id}
+						AND t.deleted_at IS NULL
+						AND t.search_vector IS NULL
+						AND t.notes IS NOT NULL
+					ORDER BY t.entry_time DESC
+					LIMIT 500
+				) sub
+				WHERE sub.vec @@ sq.q)
+				ORDER BY rank DESC, entry_time DESC
+				LIMIT ${input.limit}`,
+			);
+
+			return (Array.isArray(results) ? results : []).map((row) => ({
+				tradeId: row.id,
+				symbol: row.symbol,
+				entryTime: row.entry_time,
+				snippet: row.snippet,
+				rank: row.rank,
+			}));
 		}),
 });

@@ -3,20 +3,39 @@
 import { Loader2Icon, SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useTransition,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
 	SEARCH_DEBOUNCE_MS,
+	SEARCH_DEFAULT_LIMIT,
 	SEARCH_EMPTY_STATE,
 	SEARCH_ERROR_STATE,
 	SEARCH_INITIAL_HINT,
+	SEARCH_LABEL_JOURNAL,
+	SEARCH_LABEL_TRADE_NOTE,
 	SEARCH_MIN_LENGTH_HINT,
 	SEARCH_MIN_QUERY_LENGTH,
 	SEARCH_PLACEHOLDER,
 } from "@/lib/constants/search";
 import { formatDateString, getUTCDateString } from "@/lib/shared/timezone";
 import { api } from "@/trpc/react";
+
+type SearchResult = {
+	type: "journal" | "trade-note";
+	id: string;
+	label: string;
+	snippet: string;
+	rank: number;
+	href: string;
+};
 
 export function GlobalSearch() {
 	const [open, setOpen] = useState(false);
@@ -26,6 +45,7 @@ export function GlobalSearch() {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const router = useRouter();
 	const pathname = usePathname();
+	const [isPending, startTransition] = useTransition();
 
 	// Cmd+K / Ctrl+K shortcut
 	useEffect(() => {
@@ -59,24 +79,83 @@ export function GlobalSearch() {
 	const shouldSearch = debouncedQuery.length >= SEARCH_MIN_QUERY_LENGTH;
 
 	const {
-		data: results,
-		isLoading,
-		isError,
+		data: journalResults,
+		isLoading: isJournalLoading,
+		isError: isJournalError,
 	} = api.dailyJournal.search.useQuery(
 		{ query: debouncedQuery },
 		{ enabled: shouldSearch },
 	);
 
-	const handleSelect = useCallback(
-		(dateString: string) => {
-			const url = `/daily-journal?date=${dateString}`;
-			setOpen(false);
-			if (pathname === "/daily-journal") {
-				// Same page — replace to force searchParams update
-				router.replace(url);
-			} else {
-				router.push(url);
+	const {
+		data: tradeResults,
+		isLoading: isTradeLoading,
+		isError: isTradeError,
+	} = api.trades.searchNotes.useQuery(
+		{ query: debouncedQuery },
+		{ enabled: shouldSearch },
+	);
+
+	const isLoading = isJournalLoading || isTradeLoading;
+	const isError = isJournalError && isTradeError;
+
+	// Merge and sort results by rank
+	const mergedResults = useMemo<SearchResult[]>(() => {
+		const merged: SearchResult[] = [];
+
+		if (journalResults) {
+			for (const r of journalResults) {
+				const dateStr = getUTCDateString(
+					r.date instanceof Date ? r.date : String(r.date),
+				);
+				merged.push({
+					type: "journal",
+					id: r.journalId,
+					label: formatDateString(dateStr, "EEE, MMM d, yyyy"),
+					snippet: r.snippet,
+					rank: r.rank,
+					href: `/daily-journal?date=${dateStr}`,
+				});
 			}
+		}
+
+		if (tradeResults) {
+			for (const r of tradeResults) {
+				const date =
+					r.entryTime instanceof Date
+						? r.entryTime
+						: new Date(String(r.entryTime));
+				const dateLabel = date.toLocaleDateString("en-US", {
+					month: "short",
+					day: "numeric",
+					year: "numeric",
+				});
+				merged.push({
+					type: "trade-note",
+					id: r.tradeId,
+					label: `${r.symbol}  ${dateLabel}`,
+					snippet: r.snippet,
+					rank: r.rank,
+					href: `/journal/${r.tradeId}?tab=notes`,
+				});
+			}
+		}
+
+		merged.sort((a, b) => b.rank - a.rank);
+		return merged.slice(0, SEARCH_DEFAULT_LIMIT);
+	}, [journalResults, tradeResults]);
+
+	const handleNavigate = useCallback(
+		(href: string) => {
+			const basePath = href.split("?")[0] ?? href;
+			startTransition(() => {
+				if (pathname === basePath) {
+					router.replace(href);
+				} else {
+					router.push(href);
+				}
+				setOpen(false);
+			});
 		},
 		[router, pathname],
 	);
@@ -84,29 +163,25 @@ export function GlobalSearch() {
 	// Keyboard navigation
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
-			if (!results || results.length === 0) return;
+			if (mergedResults.length === 0) return;
 
 			if (e.key === "ArrowDown") {
 				e.preventDefault();
-				setSelectedIndex((prev) => Math.min(prev + 1, results.length - 1));
+				setSelectedIndex((prev) =>
+					Math.min(prev + 1, mergedResults.length - 1),
+				);
 			} else if (e.key === "ArrowUp") {
 				e.preventDefault();
 				setSelectedIndex((prev) => Math.max(prev - 1, 0));
 			} else if (e.key === "Enter") {
 				e.preventDefault();
-				const selected = results[selectedIndex];
+				const selected = mergedResults[selectedIndex];
 				if (selected) {
-					handleSelect(
-						getUTCDateString(
-							selected.date instanceof Date
-								? selected.date
-								: String(selected.date),
-						),
-					);
+					handleNavigate(selected.href);
 				}
 			}
 		},
-		[results, selectedIndex, handleSelect],
+		[mergedResults, selectedIndex, handleNavigate],
 	);
 
 	return (
@@ -155,9 +230,14 @@ export function GlobalSearch() {
 					</div>
 
 					<div
-						className="max-h-80 overflow-y-auto"
+						className="relative max-h-80 overflow-y-auto"
 						data-testid="global-search-results"
 					>
+						{isPending && (
+							<div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+								<Loader2Icon className="size-5 animate-spin text-primary" />
+							</div>
+						)}
 						{shouldSearch && !isLoading && isError && (
 							<div className="p-6 text-center font-mono text-destructive text-xs">
 								{SEARCH_ERROR_STATE}
@@ -167,48 +247,55 @@ export function GlobalSearch() {
 						{shouldSearch &&
 							!isLoading &&
 							!isError &&
-							results &&
-							results.length === 0 && (
+							mergedResults.length === 0 && (
 								<div className="p-6 text-center font-mono text-muted-foreground text-xs">
 									{SEARCH_EMPTY_STATE}
 								</div>
 							)}
 
-						{shouldSearch && !isLoading && results && results.length > 0 && (
+						{shouldSearch && !isLoading && mergedResults.length > 0 && (
 							<div className="py-1">
-								{results.map((result, index) => {
-									const dateStr = getUTCDateString(
-										result.date instanceof Date
-											? result.date
-											: String(result.date),
-									);
-									return (
-										<Link
-											className={`flex w-full flex-col gap-1 px-4 py-2.5 text-left ${
-												index === selectedIndex
-													? "bg-primary/10"
-													: "hover:bg-muted/50"
-											}`}
-											data-testid="global-search-result-item"
-											href={`/daily-journal?date=${dateStr}`}
-											key={result.journalId}
-											onClick={(e) => {
-												e.preventDefault();
-												handleSelect(dateStr);
-											}}
-											onMouseEnter={() => setSelectedIndex(index)}
-										>
+								{mergedResults.map((result, index) => (
+									<Link
+										className={`flex w-full flex-col gap-1 px-4 py-2.5 text-left ${
+											index === selectedIndex
+												? "bg-primary/10"
+												: "hover:bg-muted/50"
+										}`}
+										data-testid="global-search-result-item"
+										href={result.href}
+										key={`${result.type}-${result.id}`}
+										onClick={(e) => {
+											e.preventDefault();
+											handleNavigate(result.href);
+										}}
+										onMouseEnter={() => setSelectedIndex(index)}
+									>
+										<span className="flex items-center gap-2">
 											<span className="font-mono text-primary text-xs">
-												{formatDateString(dateStr, "EEE, MMM d, yyyy")}
+												{result.label}
 											</span>
 											<span
-												className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary"
-												// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
-												dangerouslySetInnerHTML={{ __html: result.snippet }}
-											/>
-										</Link>
-									);
-								})}
+												className={`rounded px-1.5 py-0.5 font-mono text-[9px] uppercase ${
+													result.type === "trade-note"
+														? "border border-primary/30 text-primary"
+														: "border border-muted-foreground/30 text-muted-foreground"
+												}`}
+											>
+												{result.type === "trade-note"
+													? SEARCH_LABEL_TRADE_NOTE
+													: SEARCH_LABEL_JOURNAL}
+											</span>
+										</span>
+										<span
+											className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary"
+											// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
+											dangerouslySetInnerHTML={{
+												__html: result.snippet,
+											}}
+										/>
+									</Link>
+								))}
 							</div>
 						)}
 

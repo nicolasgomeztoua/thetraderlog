@@ -30,6 +30,7 @@ interface ContentPanelProps {
 		value: string | number | boolean | null,
 	) => void;
 	className?: string;
+	initialTab?: string;
 }
 
 // =============================================================================
@@ -108,12 +109,16 @@ export function ContentPanel({
 	trade,
 	onUpdateField,
 	className,
+	initialTab,
 }: ContentPanelProps) {
 	return (
 		<div
 			className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}
 		>
-			<Tabs className="flex h-full min-w-0 flex-col" defaultValue="chart">
+			<Tabs
+				className="flex h-full min-w-0 flex-col"
+				defaultValue={initialTab ?? "chart"}
+			>
 				<TabsList className="w-full shrink-0 justify-start overflow-x-auto rounded-none border-border border-b bg-transparent px-2">
 					<TabsTrigger
 						className="rounded-none border-transparent border-b-2 font-mono text-[10px] uppercase tracking-wider data-[state=active]:border-primary data-[state=active]:bg-transparent"
