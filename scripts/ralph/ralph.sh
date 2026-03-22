@@ -1,7 +1,7 @@
 #!/bin/bash
 # Ralph - Long-running Claude Code agent loop
 # Adapted from https://github.com/snarktank/ralph for Claude Code CLI
-# Usage: ./ralph.sh [options] [max_iterations] [pr_review_cycles]
+# Usage: ./ralph.sh [options] [max_iterations]
 #
 # Options:
 #   --base <branch>    PR target branch (skips interactive menu)
@@ -9,9 +9,11 @@
 #   --auto             Shorthand: use prd.json branchName as work, "main" as base
 #   --greptile         Skip to Greptile review loop (Phase 4 only)
 #
+# The Greptile review loop always targets 5/5 and keeps going until it gets there.
+#
 # Examples:
 #   ./ralph.sh --auto                    # Non-interactive, branches from prd.json
-#   ./ralph.sh --auto 20 5               # Non-interactive, 20 iters, 5 PR cycles
+#   ./ralph.sh --auto 20                 # Non-interactive, 20 impl iterations
 #   ./ralph.sh --base main --work ralph/my-feature 30
 #   ./ralph.sh --greptile                # Jump straight to Greptile review on existing PR
 
@@ -48,9 +50,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 MAX_ITERATIONS=${1:-30}
-PR_REVIEW_CYCLES=${2:-10}
+PR_REVIEW_CYCLES=${2:-20}   # Keep going until 5/5, max 20 cycles
 POLL_INTERVAL=30             # Check every 30 seconds for Greptile response
-POLL_MAX_WAIT=1200            # Max 10 minutes waiting per poll cycle
+POLL_MAX_WAIT=1200            # Max 20 minutes waiting per poll cycle
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
@@ -265,7 +267,7 @@ commit_all_changes "chore: ralph pre-run setup (prd.json, progress, branch confi
 echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════════════════════════╗"
 echo "║           Ralph - Claude Code Agent Loop                  ║"
-echo "║         Max iterations: $MAX_ITERATIONS | PR review cycles: $PR_REVIEW_CYCLES        ║"
+echo "║         Max iterations: $MAX_ITERATIONS | PR review: until 5/5        ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -502,9 +504,7 @@ if ! wait_for_greptile ""; then
     echo -e "${RED}Greptile didn't respond in time. Skipping review loop.${NC}"
 else
     REVIEW_APPROVED=false
-    STALE_SCORE_COUNT=0
     PREV_GREPTILE_SCORE=$GREPTILE_SCORE
-    MAX_STALE_CYCLES=3
 
     for cycle in $(seq 1 $PR_REVIEW_CYCLES); do
         echo ""
@@ -572,16 +572,10 @@ SUMMARYEOF
         echo -e "${YELLOW}Pushing fixes...${NC}"
         git push origin "$WORK_BRANCH" 2>&1 || true
 
-        # Last cycle — don't retag, just exit
-        if [ "$cycle" -eq "$PR_REVIEW_CYCLES" ]; then
-            echo -e "${YELLOW}Reached max review cycles ($PR_REVIEW_CYCLES).${NC}"
-            break
-        fi
-
         # Retag @greptileai for a fresh re-review
         echo -e "${YELLOW}Tagging @greptileai for re-review...${NC}"
         gh api "repos/{owner}/{repo}/issues/$PR_NUMBER/comments" \
-            -f body="@greptileai Please re-review this PR." \
+            -f body="@greptileai" \
             >/dev/null 2>&1 || echo -e "${RED}Warning: failed to tag @greptileai${NC}"
 
         # --- Step D: Wait for Greptile's new score ---
@@ -595,28 +589,19 @@ SUMMARYEOF
             break
         fi
 
-        # --- Step E: Stuck detection ---
-        if [ "$GREPTILE_SCORE" -le "$PREV_GREPTILE_SCORE" ]; then
-            STALE_SCORE_COUNT=$((STALE_SCORE_COUNT + 1))
-            echo -e "${YELLOW}Score unchanged at ${GREPTILE_SCORE}/5 (stale cycles: ${STALE_SCORE_COUNT}/${MAX_STALE_CYCLES})${NC}"
-        else
-            STALE_SCORE_COUNT=0
+        # --- Step E: Score tracking ---
+        if [ "$GREPTILE_SCORE" -gt "$PREV_GREPTILE_SCORE" ]; then
             echo -e "${GREEN}Score improved: ${PREV_GREPTILE_SCORE}/5 → ${GREPTILE_SCORE}/5${NC}"
+        else
+            echo -e "${YELLOW}Score unchanged at ${GREPTILE_SCORE}/5 — continuing until 5/5${NC}"
         fi
         PREV_GREPTILE_SCORE=$GREPTILE_SCORE
-
-        if [ "$STALE_SCORE_COUNT" -ge "$MAX_STALE_CYCLES" ]; then
-            echo -e "${RED}Score stuck at ${GREPTILE_SCORE}/5 for ${MAX_STALE_CYCLES} consecutive cycles. Exiting review loop.${NC}"
-            break
-        fi
     done
 fi
 
 # Summary
-if [ "$REVIEW_APPROVED" = true ]; then
-    echo -e "${GREEN}PR review approved! Safe to merge.${NC}"
-elif [ "$GREPTILE_SCORE" -ge 5 ]; then
-    echo -e "${GREEN}PR achieved Confidence Score 5/5!${NC}"
+if [ "$REVIEW_APPROVED" = true ] || [ "$GREPTILE_SCORE" -ge 5 ]; then
+    echo -e "${GREEN}PR achieved Confidence Score 5/5! Safe to merge.${NC}"
 else
     echo -e "${YELLOW}Review loop ended with score: ${GREPTILE_SCORE}/5${NC}"
 fi

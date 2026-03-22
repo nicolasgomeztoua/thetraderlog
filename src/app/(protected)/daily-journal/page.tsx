@@ -9,6 +9,7 @@ import { ChecklistSettings } from "@/components/daily-journal/checklist-settings
 import { DailyChecklist } from "@/components/daily-journal/daily-checklist";
 import { DateNavigation } from "@/components/daily-journal/date-navigation";
 import { EditorSkeleton } from "@/components/daily-journal/editor-skeleton";
+import { JournalSearch } from "@/components/daily-journal/journal-search";
 import { TradesSummary } from "@/components/daily-journal/trades-summary";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,7 +76,11 @@ export default function DailyJournalPage() {
 	// Selected date state - initialize from URL param if present
 	const [selectedDate, setSelectedDate] = useState<Date>(() => {
 		if (dateParam) {
-			const parsed = new Date(dateParam);
+			// Parse as local noon to avoid UTC-midnight off-by-one in negative timezones
+			const normalizedParam = dateParam.includes("T")
+				? dateParam
+				: `${dateParam}T12:00:00`;
+			const parsed = new Date(normalizedParam);
 			if (!Number.isNaN(parsed.getTime())) {
 				return parsed;
 			}
@@ -213,6 +218,16 @@ export default function DailyJournalPage() {
 				<SheetContent className="w-[300px] overflow-y-auto p-0" side="left">
 					<SheetTitle className="sr-only">Navigation Sidebar</SheetTitle>
 					<div className="px-4 pt-12 pb-4">
+						{/* Search */}
+						<div className="mb-4">
+							<JournalSearch
+								onSelectDate={(date) => {
+									setSelectedDate(date);
+									setSidebarOpen(false);
+								}}
+							/>
+						</div>
+
 						{/* Calendar */}
 						<div className="mb-4 rounded border border-border/50 bg-muted/30 p-4">
 							<CalendarSidebar
@@ -273,6 +288,11 @@ export default function DailyJournalPage() {
 						minSize={15}
 					>
 						<div className="h-full overflow-y-auto p-4">
+							{/* Search */}
+							<div className="mb-4">
+								<JournalSearch onSelectDate={setSelectedDate} />
+							</div>
+
 							{/* Calendar */}
 							<div className="mb-4 rounded border border-border/50 bg-muted/30 p-4">
 								<CalendarSidebar

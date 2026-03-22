@@ -437,26 +437,25 @@ Tick-by-tick trade replay functionality.
 > **Priority:** MEDIUM | **Dependencies:** None | **Estimate:** 1-2 weeks per parser
 >
 > **Sub-plan:** [./plans/phase-8-brokers.md](./plans/phase-8-brokers.md)
+>
+> **Status:** ✅ Complete (CSV parsers done, API integrations post-launch)
 
 ### Goal
 Direct broker connections for auto-sync.
 
 ### Tasks
 
-#### 8.1 CSV Parser Expansion
-- [x] ProjectX parser *(fully implemented)*
-- [ ] NinjaTrader parser
-- [ ] cTrader parser
-- [ ] TradingView parser
-- [ ] Tradovate parser
-- [ ] Rithmic parser
-- [ ] Topstep parser
-- [ ] Apex parser
+#### 8.1 CSV Parser Expansion ✅
+- [x] ProjectX parser
+- [x] NinjaTrader parser
+- [x] cTrader parser
+- [x] TradingView parser
+- [x] Tradovate parser
+- [x] Rithmic parser
+- [x] Topstep parser
+- [x] Apex parser
 
-**Files to modify:**
-- `src/lib/csv-parsers/`
-
-#### 8.2 Direct API Integrations (Future)
+#### 8.2 Direct API Integrations (Future — Post-Launch)
 - [ ] OAuth flow for brokers
 - [ ] Scheduled sync jobs
 - [ ] Real-time trade detection
@@ -545,7 +544,7 @@ Deep AI-powered analysis. Users ask ANY question via chat or get professional-gr
 
 > **Priority:** HIGHEST | **Dependencies:** None | **Estimate:** 3-5 days
 >
-> **Status:** ⏳ Pending
+> **Status:** 🔄 In Progress
 
 ### Goal
 Monetize EdgeJournal with a simple Free → Pro subscription model using Clerk Billing (built on Stripe). Launch with unlimited AI for paid users, add caps later only if needed.
@@ -673,12 +672,12 @@ ALTER TABLE user_settings ADD COLUMN dashboard_layout_id INTEGER;
 | 5 | Trade Detail Enhancements | 2 weeks | ✅ Complete |
 | 6 | Daily Journal System | 3 weeks | ✅ Complete (39 stories, search ⏳) |
 | 7 | Trade Replay | 3-4 weeks | ✅ Complete |
-| 8 | Broker Integrations | 1-2 weeks per parser | ⏳ Pending (ProjectX done, others pending) |
+| 8 | Broker Integrations | 1-2 weeks per parser | ✅ Complete (CSV parsers done, API integrations post-launch) |
 | 9 | Mobile Optimization | 2 weeks | ✅ Complete |
 | 10 | AI Analytics (Core Differentiator) | 10-15 weeks | ✅ Complete (chat + MDX reports + email + UI redesign) |
-| **11** | **Payments & Billing** | **3-5 days** | **⏳ Next up** |
+| **11** | **Payments & Billing** | **3-5 days** | **🔄 In Progress** |
 
-**8 of 9 original phases complete. Phase 11 (Payments via Clerk Billing) is next.**
+**9 of 9 original phases complete. Phase 11 (Payments & Billing) in progress for launch.**
 
 ---
 

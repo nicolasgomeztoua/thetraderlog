@@ -8,9 +8,15 @@ import {
 	isNull,
 	lt,
 	lte,
+	sql,
 } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import {
+	FORCED_ITEM_PRE_MARKET,
+	FORCED_ITEM_SL_CHECK,
+	TOGGLEABLE_FORCED_ITEMS,
+} from "@/lib/constants/checklist";
 import {
 	ERR_ATTACHMENT_CREATE_FAILED,
 	ERR_ATTACHMENT_NOT_FOUND,
@@ -23,6 +29,11 @@ import {
 	ERR_TEMPLATE_NOT_FOUND,
 	errTemplateNotOwned,
 } from "@/lib/constants/errors";
+import {
+	SEARCH_DEFAULT_LIMIT,
+	SEARCH_MIN_QUERY_LENGTH,
+} from "@/lib/constants/search";
+import { updateJournalSearchVector } from "@/lib/journal/search";
 import {
 	getDateStringInTimezone,
 	getDayBoundsInTimezone,
@@ -164,6 +175,22 @@ export const dailyJournalRouter = createTRPCRouter({
 					.where(eq(dailyJournals.id, existing.id))
 					.returning();
 
+				// Update search vector asynchronously (non-blocking)
+				// Fetch timezone lazily to avoid extra DB round-trip on the hot path
+				void getUserTimezone(ctx.db, ctx.user.id)
+					.then((timezone) =>
+						updateJournalSearchVector(ctx.db, {
+							journalId: existing.id,
+							userId: ctx.user.id,
+							content: input.content,
+							date: normalizedDate,
+							timezone,
+						}),
+					)
+					.catch((err) => {
+						console.error("Failed to update search vector:", err);
+					});
+
 				return updated;
 			}
 
@@ -181,6 +208,22 @@ export const dailyJournalRouter = createTRPCRouter({
 			if (!created) {
 				throw new Error(ERR_JOURNAL_CREATE_FAILED);
 			}
+
+			// Update search vector asynchronously (non-blocking)
+			// Fetch timezone lazily to avoid extra DB round-trip on the hot path
+			void getUserTimezone(ctx.db, ctx.user.id)
+				.then((timezone) =>
+					updateJournalSearchVector(ctx.db, {
+						journalId: created.id,
+						userId: ctx.user.id,
+						content: input.content,
+						date: normalizedDate,
+						timezone,
+					}),
+				)
+				.catch((err) => {
+					console.error("Failed to update search vector:", err);
+				});
 
 			return created;
 		}),
@@ -223,6 +266,78 @@ export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
 	// JOURNAL QUERIES
 	// ============================================================================
+
+	// Search across journal entries by keyword
+	search: protectedProcedure
+		.input(
+			z.object({
+				query: z.string().min(SEARCH_MIN_QUERY_LENGTH),
+				limit: z.number().int().min(1).max(50).default(SEARCH_DEFAULT_LIMIT),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const results = await ctx.db.execute<{
+				id: string;
+				date: Date;
+				snippet: string;
+				rank: number;
+			}>(
+				sql`WITH search_query AS (
+					SELECT plainto_tsquery('english', ${input.query}) AS q
+				)
+				(SELECT
+					dj.id,
+					dj.date,
+					ts_headline('english', COALESCE(dj.search_plain_text, replace(replace(replace(replace(replace(
+						regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
+						'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')), sq.q,
+						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
+					) AS snippet,
+					ts_rank(dj.search_vector, sq.q, 1) AS rank
+				FROM daily_journal dj, search_query sq
+				WHERE dj.user_id = ${ctx.user.id}
+					AND dj.search_vector @@ sq.q)
+				UNION ALL
+				/* Temporary fallback for unbackfilled journals (search_vector IS NULL).
+				   Caps at 500 candidate rows to bound scan cost. Run backfill-search-vectors.ts to eliminate this path. */
+				(SELECT
+					sub.id,
+					sub.date,
+					ts_headline('english', sub.plain_text, sq.q,
+						'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, MaxFragments=1'
+					) AS snippet,
+					ts_rank(sub.vec, sq.q, 1) AS rank
+				FROM search_query sq,
+				LATERAL (
+					SELECT
+						dj.id,
+						dj.date,
+						replace(replace(replace(replace(replace(
+							regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
+							'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"'
+						) AS plain_text,
+						to_tsvector('english', replace(replace(replace(replace(replace(
+						regexp_replace(COALESCE(dj.content, ''), '<[^>]*>', ' ', 'g'),
+						'&nbsp;', ' '), '&amp;', '&'), '&lt;', '<'), '&gt;', '>'), '&quot;', '"')) AS vec
+					FROM daily_journal dj
+					WHERE dj.user_id = ${ctx.user.id}
+						AND dj.search_vector IS NULL
+						AND dj.content IS NOT NULL
+					ORDER BY dj.date DESC
+					LIMIT 500
+				) sub
+				WHERE sub.vec @@ sq.q)
+				ORDER BY rank DESC, date DESC
+				LIMIT ${input.limit}`,
+			);
+
+			return (Array.isArray(results) ? results : []).map((row) => ({
+				journalId: row.id,
+				date: row.date,
+				snippet: row.snippet,
+				rank: row.rank,
+			}));
+		}),
 
 	// Get journal by date, auto-create if not exists
 	getByDate: protectedProcedure
@@ -404,10 +519,10 @@ export const dailyJournalRouter = createTRPCRouter({
 			if (dayStarted || hasTrades) {
 				// Check if pre-market check exists in checklist checks (uses forcedItemId column)
 				const preMarketCheck = journal?.checklistChecks?.find(
-					(c) => c.forcedItemId === "forced-pre-market",
+					(c) => c.forcedItemId === FORCED_ITEM_PRE_MARKET,
 				);
 				forcedItems.push({
-					id: "forced-pre-market",
+					id: FORCED_ITEM_PRE_MARKET,
 					text: "Pre Market Check",
 					isForced: true,
 					checked: preMarketCheck?.checked ?? false,
@@ -419,7 +534,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			if (hasTrades) {
 				const allTradesHaveSL = tradesForDate.every((t) => t.stopLoss !== null);
 				forcedItems.push({
-					id: "forced-sl-check",
+					id: FORCED_ITEM_SL_CHECK,
 					text: "Added SL to all trades",
 					isForced: true,
 					checked: allTradesHaveSL, // Auto-calculated from trade data
@@ -750,7 +865,7 @@ export const dailyJournalRouter = createTRPCRouter({
 			const normalizedDate = normalizeDate(new Date(input.date));
 
 			// Only allow toggling specific forced items (not auto-calculated ones)
-			const allowedForcedItems = ["forced-pre-market"];
+			const allowedForcedItems = TOGGLEABLE_FORCED_ITEMS;
 			if (!allowedForcedItems.includes(input.itemId)) {
 				throw new Error(ERR_CHECKLIST_AUTO_CALCULATED);
 			}
