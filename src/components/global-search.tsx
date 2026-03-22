@@ -1,7 +1,8 @@
 "use client";
 
 import { Loader2Icon, SearchIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -24,6 +25,7 @@ export function GlobalSearch() {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const router = useRouter();
+	const pathname = usePathname();
 
 	// Cmd+K / Ctrl+K shortcut
 	useEffect(() => {
@@ -67,10 +69,16 @@ export function GlobalSearch() {
 
 	const handleSelect = useCallback(
 		(dateString: string) => {
-			router.push(`/daily-journal?date=${dateString}`);
+			const url = `/daily-journal?date=${dateString}`;
 			setOpen(false);
+			if (pathname === "/daily-journal") {
+				// Same page — replace to force searchParams update
+				router.replace(url);
+			} else {
+				router.push(url);
+			}
 		},
-		[router],
+		[router, pathname],
 	);
 
 	// Keyboard navigation
@@ -175,17 +183,20 @@ export function GlobalSearch() {
 											: String(result.date),
 									);
 									return (
-										<button
+										<Link
 											className={`flex w-full flex-col gap-1 px-4 py-2.5 text-left ${
 												index === selectedIndex
 													? "bg-primary/10"
 													: "hover:bg-muted/50"
 											}`}
 											data-testid="global-search-result-item"
+											href={`/daily-journal?date=${dateStr}`}
 											key={result.journalId}
-											onClick={() => handleSelect(dateStr)}
+											onClick={(e) => {
+												e.preventDefault();
+												handleSelect(dateStr);
+											}}
 											onMouseEnter={() => setSelectedIndex(index)}
-											type="button"
 										>
 											<span className="font-mono text-primary text-xs">
 												{formatDateString(dateStr, "EEE, MMM d, yyyy")}
@@ -195,7 +206,7 @@ export function GlobalSearch() {
 												// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
 												dangerouslySetInnerHTML={{ __html: result.snippet }}
 											/>
-										</button>
+										</Link>
 									);
 								})}
 							</div>

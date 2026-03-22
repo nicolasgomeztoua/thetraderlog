@@ -126,7 +126,11 @@ export default function DailyJournalPage() {
 	// Sync selected date when URL param changes
 	useEffect(() => {
 		if (dateParam) {
-			const parsed = new Date(dateParam);
+			// Parse as local noon to avoid UTC-midnight off-by-one in negative timezones
+			const normalizedParam = dateParam.includes("T")
+				? dateParam
+				: `${dateParam}T12:00:00`;
+			const parsed = new Date(normalizedParam);
 			if (!Number.isNaN(parsed.getTime())) {
 				setSelectedDate(parsed);
 			}
