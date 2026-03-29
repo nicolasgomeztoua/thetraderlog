@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive mobile adaptation of EdgeJournal webapp. The Daily Journal page serves as the reference implementation, demonstrating the pattern: `useMediaQuery` hook + Sheet drawer + conditional rendering. All other protected pages and marketing pages need to be adapted following this same pattern.
+Comprehensive mobile adaptation of TheTraderLog webapp. The Daily Journal page serves as the reference implementation, demonstrating the pattern: `useMediaQuery` hook + Sheet drawer + conditional rendering. All other protected pages and marketing pages need to be adapted following this same pattern.
 
 ## Goals
 

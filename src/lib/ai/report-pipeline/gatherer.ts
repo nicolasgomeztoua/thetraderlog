@@ -36,7 +36,7 @@ interface GathererResult {
 // GATHERER SYSTEM PROMPT
 // =============================================================================
 
-const GATHERER_PERSONA = `You are the data gathering phase of EdgeJournal's report pipeline. Your ONLY job is to execute the analysis plan by calling tools to collect all required data.
+const GATHERER_PERSONA = `You are the data gathering phase of TheTraderLog's report pipeline. Your ONLY job is to execute the analysis plan by calling tools to collect all required data.
 
 CRITICAL RULES:
 - After EVERY successful tool call, IMMEDIATELY call store_report_data to save the result before making more tool calls

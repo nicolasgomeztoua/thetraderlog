@@ -56,7 +56,7 @@ The billing system has three bugs/issues that need fixing:
 - [ ] Create `src/app/(marketing)/pricing/page.tsx` route
 - [ ] Page renders Clerk's `<PricingTable>` component
 - [ ] Style PricingTable using Clerk's appearance API to match Terminal design system (dark theme, chartreuse accent, monospace fonts)
-- [ ] Page has proper metadata (title: "Pricing | EdgeJournal")
+- [ ] Page has proper metadata (title: "Pricing | TheTraderLog")
 - [ ] Page is accessible to both authenticated and unauthenticated users
 - [ ] Falls back gracefully if Clerk billing is not configured
 - [ ] Typecheck passes (`bun run check`)

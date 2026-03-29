@@ -1,6 +1,6 @@
 # AI Features Exploration
 
-> Working document for planning EdgeJournal's AI capabilities
+> Working document for planning TheTraderLog's AI capabilities
 
 ## Current State
 

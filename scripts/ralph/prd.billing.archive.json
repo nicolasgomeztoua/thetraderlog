@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/billing",
 	"description": "Add Clerk Billing integration with plan-gated features, AI usage tracking, and upgrade prompt UI",
 	"userStories": [

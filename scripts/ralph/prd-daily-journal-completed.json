@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/daily-journal",
 	"description": "Daily journaling system with rich text editor, file uploads, checklists, and trade integration",
 	"userStories": [

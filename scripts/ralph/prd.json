@@ -1,5 +1,5 @@
 {
-  "project": "EdgeJournal",
+  "project": "TheTraderLog",
   "branchName": "ralph/journal-fulltext-search",
   "description": "Full-text search across journal entries, trade notes, checklists, and attachment captions using PostgreSQL tsvector",
   "userStories": [

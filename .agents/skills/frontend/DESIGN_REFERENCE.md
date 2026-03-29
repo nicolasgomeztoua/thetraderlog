@@ -1,6 +1,6 @@
-# EdgeJournal Design System - Complete Reference
+# TheTraderLog Design System - Complete Reference
 
-This is the comprehensive design reference for EdgeJournal's "Terminal" design language. Use this document when you need detailed implementation guidance beyond what's provided in SKILL.md.
+This is the comprehensive design reference for TheTraderLog's "Terminal" design language. Use this document when you need detailed implementation guidance beyond what's provided in SKILL.md.
 
 ---
 
@@ -25,7 +25,7 @@ This is the comprehensive design reference for EdgeJournal's "Terminal" design l
 
 ### The "Lightning in a Bottle" Formula
 
-What makes EdgeJournal's UI feel special:
+What makes TheTraderLog's UI feel special:
 
 - **Terminal window chrome** (traffic light dots) on preview cards
 - **Command prompt characters** (`$`, `→`, `>`) for interactive elements
@@ -257,7 +257,7 @@ The signature element—use this for any preview/demo content:
       <div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
     </div>
     <span className="font-mono text-[10px] text-muted-foreground">
-      edgejournal — dashboard
+      traderlog — dashboard
     </span>
     <div className="w-14" /> {/* Spacer for centering */}
   </div>

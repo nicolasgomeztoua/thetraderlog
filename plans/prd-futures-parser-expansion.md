@@ -1,6 +1,6 @@
 # PRD: Futures CSV Parser Expansion (Ralph Loop Ready)
 
-**Author:** EdgeJournal
+**Author:** TheTraderLog
 **Date:** 2026-02-18
 **Status:** Draft
 **Priority:** High

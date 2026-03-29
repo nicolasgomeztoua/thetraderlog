@@ -1,4 +1,4 @@
-// Theme definitions for EdgeJournal
+// Theme definitions for TheTraderLog
 // Featuring top-rated IDE themes loved by developers worldwide
 
 export interface Theme {
@@ -19,10 +19,10 @@ export const themes: Theme[] = [
 	// DARK THEMES
 	// ============================================
 
-	// EdgeJournal - Our signature dark theme
+	// TheTraderLog - Our signature dark theme
 	{
-		id: "edgejournal",
-		name: "EdgeJournal",
+		id: "traderlog",
+		name: "TheTraderLog",
 		isDark: true,
 		description: "Signature theme - Obsidian black + Electric chartreuse",
 		preview: {
@@ -88,12 +88,12 @@ export const themes: Theme[] = [
 	// LIGHT THEMES
 	// ============================================
 
-	// EdgeJournal Light - Our signature theme adapted for light mode
+	// TheTraderLog Light - Our signature theme adapted for light mode
 	{
-		id: "edgejournal-light",
-		name: "EdgeJournal Light",
+		id: "traderlog-light",
+		name: "TheTraderLog Light",
 		isDark: false,
-		description: "Signature EdgeJournal aesthetic for daytime trading",
+		description: "Signature TheTraderLog aesthetic for daytime trading",
 		preview: {
 			background: "#fafafa",
 			primary: "#4d7c0f",
@@ -144,7 +144,7 @@ export const themes: Theme[] = [
 export const darkThemes = themes.filter((t) => t.isDark);
 export const lightThemes = themes.filter((t) => !t.isDark);
 
-export const DEFAULT_THEME = "edgejournal";
+export const DEFAULT_THEME = "traderlog";
 
 export function getThemeById(id: string): Theme | undefined {
 	return themes.find((t) => t.id === id);

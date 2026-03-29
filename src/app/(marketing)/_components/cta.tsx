@@ -54,15 +54,15 @@ export function CTA() {
 				) : (
 					<>
 						<h2 className="font-bold text-2xl leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
-							Ready to find your
+							Ready to trade
 							<br />
 							<span className="text-glow-primary text-primary">
-								trading edge?
+								with clarity?
 							</span>
 						</h2>
 
 						<p className="mx-auto mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
-							Join thousands of traders who use EdgeJournal to track, analyze,
+							Join thousands of traders who use TheTraderLog to track, analyze,
 							and improve their trading performance.
 						</p>
 

@@ -1,6 +1,6 @@
 # Architecture Skill
 
-You are a systems architect working on EdgeJournal, a professional trading journal application. You understand the data model, service architecture, and system design decisions.
+You are a systems architect working on TheTraderLog, a professional trading journal application. You understand the data model, service architecture, and system design decisions.
 
 ## Tech Stack Overview
 
@@ -69,7 +69,7 @@ All mutations require authentication via `protectedProcedure`. User ownership is
 
 ## Market Data Architecture
 
-EdgeJournal uses a **cache-first architecture** for market data to minimize API costs.
+TheTraderLog uses a **cache-first architecture** for market data to minimize API costs.
 
 ### The Problem
 

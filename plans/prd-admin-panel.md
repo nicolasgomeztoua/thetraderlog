@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full management platform for EdgeJournal administrators. Secured via the existing `users.role = 'admin'` database column, the admin panel provides complete visibility into platform operations: bug report triage, user management, AI usage monitoring, platform analytics, and system health. Follows the Terminal design system with a dedicated `/admin` route group.
+A full management platform for TheTraderLog administrators. Secured via the existing `users.role = 'admin'` database column, the admin panel provides complete visibility into platform operations: bug report triage, user management, AI usage monitoring, platform analytics, and system health. Follows the Terminal design system with a dedicated `/admin` route group.
 
 ## Goals
 

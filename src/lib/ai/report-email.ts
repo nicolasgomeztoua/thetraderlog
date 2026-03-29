@@ -55,7 +55,7 @@ export async function sendReportEmail(params: {
 	});
 
 	await resend.emails.send({
-		from: "EdgeJournal <reports@edgejournal.com>",
+		from: "TheTraderLog <reports@thetraderlog.com>",
 		to,
 		subject: `Report Ready: ${safeTitle}`,
 		html,

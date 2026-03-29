@@ -140,7 +140,7 @@ export function AppSidebar() {
 						viewBox="0 0 32 32"
 						xmlns="http://www.w3.org/2000/svg"
 					>
-						<title id="sidebar-logo-title">EdgeJournal Logo</title>
+						<title id="sidebar-logo-title">TheTraderLog Logo</title>
 						<rect className="fill-primary" height="32" rx="2" width="32" />
 						<path
 							className="fill-primary-foreground"
@@ -148,7 +148,7 @@ export function AppSidebar() {
 						/>
 					</svg>
 					<span className="font-medium font-mono text-sm uppercase tracking-tight">
-						Edge<span className="text-primary">Journal</span>
+						The<span className="text-primary">TraderLog</span>
 					</span>
 				</Link>
 

@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "nicolasgomeztoua/cancun",
 	"description": "Performance optimization based on Vercel React best practices audit: bundle size reduction, waterfall elimination, and rendering improvements",
 	"userStories": [

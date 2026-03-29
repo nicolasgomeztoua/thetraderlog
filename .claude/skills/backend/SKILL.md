@@ -1,6 +1,6 @@
 # Backend Development Skill
 
-Quick reference for tRPC endpoints, Drizzle ORM, and API patterns in EdgeJournal.
+Quick reference for tRPC endpoints, Drizzle ORM, and API patterns in TheTraderLog.
 
 ## Philosophy
 

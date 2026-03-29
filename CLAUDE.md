@@ -1,4 +1,4 @@
-# EdgeJournal
+# TheTraderLog
 
 A professional trading journal for futures traders. Terminal-inspired dark UI, data-dense analytics, and AI-powered insights.
 

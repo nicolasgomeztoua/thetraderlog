@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/command-center-dashboard",
 	"description": "Complete dashboard redesign into an adaptive Command Center with journal adjacency, rule compliance scorecard, P&L calendar, and page snapshots",
 	"userStories": [

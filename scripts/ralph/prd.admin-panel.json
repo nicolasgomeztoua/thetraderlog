@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/admin-panel",
 	"description": "Full admin panel with bug report triage, user management, AI usage monitoring, platform analytics, and system health",
 	"userStories": [

@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive overhaul of EdgeJournal's strategy section with two major initiatives: (1) redesigning the strategy creation and editing experience to be more spacious, visually distinctive, and engaging with dedicated pages and cover images, and (2) introducing a strategy marketplace where users can share, discover, vote on, and download trading strategies from the community.
+A comprehensive overhaul of TheTraderLog's strategy section with two major initiatives: (1) redesigning the strategy creation and editing experience to be more spacious, visually distinctive, and engaging with dedicated pages and cover images, and (2) introducing a strategy marketplace where users can share, discover, vote on, and download trading strategies from the community.
 
 ## Goals
 

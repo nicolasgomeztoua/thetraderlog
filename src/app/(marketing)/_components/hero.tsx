@@ -310,15 +310,15 @@ export function Hero() {
 
 						{/* Main headline */}
 						<h1 className="mb-4 font-bold text-3xl leading-none tracking-tight sm:mb-5 sm:text-5xl lg:text-6xl xl:text-7xl">
-							<span className="block">Find Your</span>
+							<span className="block">Track Everything.</span>
 							<span className="block text-glow-primary text-primary">
-								Trading Edge
+								Miss Nothing.
 							</span>
 						</h1>
 
 						{/* Subheadline */}
 						<p className="mx-auto max-w-xl font-mono text-muted-foreground text-xs sm:text-sm md:text-base">
-							The AI-powered trading journal for futures traders.
+							The AI-powered trading log for futures traders.
 							<br className="hidden sm:block" />
 							Track. Analyze. Improve.{" "}
 							<span className="text-foreground">Repeat.</span>
@@ -390,7 +390,7 @@ export function Hero() {
 								<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-2.5 sm:w-2.5" />
 							</div>
 							<span className="hidden font-mono text-[10px] text-muted-foreground sm:block">
-								edgejournal — dashboard
+								traderlog — dashboard
 							</span>
 							<div className="hidden w-14 sm:block" />
 						</div>

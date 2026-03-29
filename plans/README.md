@@ -1,4 +1,4 @@
-# EdgeJournal Development Plans
+# TheTraderLog Development Plans
 
 This folder contains detailed sub-plans for each phase of the TradeZella feature parity roadmap.
 

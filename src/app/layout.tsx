@@ -9,9 +9,9 @@ import { CLERK_THEME } from "@/lib/shared";
 import { TRPCReactProvider } from "@/trpc/react";
 
 export const metadata: Metadata = {
-	title: "EdgeJournal - AI Trading Analytics for Serious Traders",
+	title: "TheTraderLog - AI Trading Analytics for Serious Traders",
 	description:
-		"The professional trading journal for futures traders. Track trades, analyze patterns, and get AI-driven insights to find your edge.",
+		"The professional trading log for futures traders. Track trades, analyze patterns, and get AI-driven insights to trade with clarity.",
 	icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 

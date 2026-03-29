@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/billing-cleanup",
 	"description": "Fix beta detection (publicMetadata), create /pricing page with Clerk PricingTable, remove free tier, thorough cleanup",
 	"userStories": [
@@ -82,7 +82,7 @@
 				"Create src/app/(marketing)/pricing/page.tsx route",
 				"Page renders Clerk's <PricingTable> component (import from @clerk/nextjs)",
 				"Style PricingTable using Clerk's appearance API to match Terminal design: dark bg #050505, primary accent #d4ff00, monospace fonts",
-				"Page has proper metadata (title: Pricing | EdgeJournal)",
+				"Page has proper metadata (title: Pricing | TheTraderLog)",
 				"Page is accessible to both authenticated and unauthenticated users",
 				"Falls back gracefully if PricingTable has no plans configured (show message)",
 				"Typecheck passes (bun run check)",

@@ -26,7 +26,7 @@ export function BaseLayout({ preview, children }: BaseLayoutProps) {
 				<Container style={container}>
 					{/* Header */}
 					<Section style={header}>
-						<Text style={headerLabel}>EDGEJOURNAL</Text>
+						<Text style={headerLabel}>TRADERLOG</Text>
 					</Section>
 
 					{/* Content */}
@@ -37,7 +37,7 @@ export function BaseLayout({ preview, children }: BaseLayoutProps) {
 					<Section style={footer}>
 						<Text style={footerText}>Generated: {timestamp}</Text>
 						<Text style={footerText}>
-							EdgeJournal — Professional Trading Journal
+							TheTraderLog — Professional Trading Journal
 						</Text>
 					</Section>
 				</Container>

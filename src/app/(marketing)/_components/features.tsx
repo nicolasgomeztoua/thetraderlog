@@ -14,7 +14,7 @@ import {
 const features = [
 	{
 		icon: LineChart,
-		title: "Trade Journal",
+		title: "Trade Log",
 		description:
 			"Log every trade with entry/exit prices, position sizing, stop losses, take profits, and detailed notes.",
 		highlight: true,
@@ -193,7 +193,7 @@ export function Features() {
 					</span>
 					<h2 className="font-bold text-2xl leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
 						Everything you need to{" "}
-						<span className="text-primary">find your edge</span>
+						<span className="text-primary">trade with clarity</span>
 					</h2>
 					<p className="mt-4 font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
 						A complete toolkit for serious traders who want to consistently

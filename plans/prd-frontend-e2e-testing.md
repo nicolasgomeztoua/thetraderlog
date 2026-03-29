@@ -54,7 +54,7 @@ Implement a frontend E2E testing infrastructure using **Playwright** with **@cle
 
 **Acceptance Criteria**:
 - [ ] Create `tests/e2e/README.md` with setup instructions
-- [ ] Document: Create test user in Clerk dev dashboard (e.g., `e2e-test@edgejournal.dev`)
+- [ ] Document: Create test user in Clerk dev dashboard (e.g., `e2e-test@traderlog.dev`)
 - [ ] Document: Enable email/password auth in Clerk
 - [ ] Document: Required env vars (`E2E_CLERK_USER_EMAIL`, `E2E_CLERK_USER_PASSWORD`)
 - [ ] Create `.env.test.example` with placeholders
@@ -146,7 +146,7 @@ Implement a frontend E2E testing infrastructure using **Playwright** with **@cle
 ### Environment Variables
 ```bash
 # .env.local (gitignored)
-E2E_CLERK_USER_EMAIL=e2e-test@edgejournal.dev
+E2E_CLERK_USER_EMAIL=e2e-test@traderlog.dev
 E2E_CLERK_USER_PASSWORD=your-secure-password
 ```
 

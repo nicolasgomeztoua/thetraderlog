@@ -39,7 +39,7 @@ export function AdminSidebar() {
 						viewBox="0 0 32 32"
 						xmlns="http://www.w3.org/2000/svg"
 					>
-						<title id="admin-logo-title">EdgeJournal Admin Logo</title>
+						<title id="admin-logo-title">TheTraderLog Admin Logo</title>
 						<rect className="fill-primary" height="32" rx="2" width="32" />
 						<path
 							className="fill-primary-foreground"
@@ -48,7 +48,7 @@ export function AdminSidebar() {
 					</svg>
 					<div className="flex flex-col">
 						<span className="font-medium font-mono text-sm uppercase tracking-tight">
-							Edge<span className="text-primary">Journal</span>
+							The<span className="text-primary">TraderLog</span>
 						</span>
 						<span className="font-mono text-[10px] text-primary uppercase tracking-widest">
 							Admin

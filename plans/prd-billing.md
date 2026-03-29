@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add subscription billing to EdgeJournal using Clerk Billing. Three plans (Free Trial, Starter, Pro) gate access to features like trade management, AI chat, AI reports, and PDF export. Clerk handles plan management, checkout, trials, and entitlements natively. We handle AI usage counters (daily chat cap, monthly report cap), a closed beta bypass flag, custom pricing page wiring, a billing settings tab, and upgrade prompt components throughout the app.
+Add subscription billing to TheTraderLog using Clerk Billing. Three plans (Free Trial, Starter, Pro) gate access to features like trade management, AI chat, AI reports, and PDF export. Clerk handles plan management, checkout, trials, and entitlements natively. We handle AI usage counters (daily chat cap, monthly report cap), a closed beta bypass flag, custom pricing page wiring, a billing settings tab, and upgrade prompt components throughout the app.
 
 ## Goals
 

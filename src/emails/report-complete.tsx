@@ -44,7 +44,7 @@ export function ReportCompleteEmail({
 			</Section>
 
 			<Text style={subtitle}>
-				Your report is permanently available in EdgeJournal.
+				Your report is permanently available in TheTraderLog.
 			</Text>
 
 			{/* Optional metadata */}

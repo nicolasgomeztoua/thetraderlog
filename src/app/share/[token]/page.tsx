@@ -31,7 +31,7 @@ export async function generateMetadata({
 	});
 
 	if (!link || !link.isActive) {
-		return { title: "Shared Report — EdgeJournal" };
+		return { title: "Shared Report — TheTraderLog" };
 	}
 
 	if (link.resourceType === "report") {
@@ -42,18 +42,18 @@ export async function generateMetadata({
 
 		const title = report?.prompt ?? report?.title ?? "Shared Report";
 		return {
-			title: `${title} — EdgeJournal`,
-			description: "AI-powered trading analysis report shared via EdgeJournal.",
+			title: `${title} — TheTraderLog`,
+			description: "AI-powered trading analysis report shared via TheTraderLog.",
 			openGraph: {
-				title: `${title} — EdgeJournal`,
+				title: `${title} — TheTraderLog`,
 				description:
-					"AI-powered trading analysis report shared via EdgeJournal.",
+					"AI-powered trading analysis report shared via TheTraderLog.",
 				type: "article",
 			},
 		};
 	}
 
-	return { title: "Shared Report — EdgeJournal" };
+	return { title: "Shared Report — TheTraderLog" };
 }
 
 // =============================================================================
@@ -166,7 +166,7 @@ async function SharedReport({
 					{/* Branded header */}
 					<div className="mb-6 border-white/10 border-b pb-4">
 						<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
-							<span className="font-bold text-primary">EDGEJOURNAL</span>
+							<span className="font-bold text-primary">TRADERLOG</span>
 							<span className="text-muted-foreground">{"// "}</span>
 							<span className="text-muted-foreground">SHARED REPORT</span>
 						</div>
@@ -211,7 +211,7 @@ async function SharedReport({
 								className="text-primary transition-colors hover:text-accent"
 								href="/"
 							>
-								EdgeJournal
+								TheTraderLog
 							</Link>{" "}
 							— AI-powered trading analytics
 						</p>
@@ -251,7 +251,7 @@ function ShareError({ type }: { type: "revoked" | "expired" }) {
 					className="mt-6 inline-block rounded border border-white/10 bg-white/[0.02] px-4 py-2 font-mono text-foreground text-xs transition-colors hover:border-accent/30 hover:text-accent"
 					href="/"
 				>
-					Go to EdgeJournal
+					Go to TheTraderLog
 				</Link>
 			</div>
 		</div>

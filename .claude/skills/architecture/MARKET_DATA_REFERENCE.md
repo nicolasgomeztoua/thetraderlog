@@ -21,7 +21,7 @@
 
 ### Provider Strategy
 
-EdgeJournal uses Databento as its sole market data provider for futures:
+TheTraderLog uses Databento as its sole market data provider for futures:
 
 | Provider | Instruments | API Key Env Var |
 |----------|-------------|-----------------|

@@ -157,7 +157,7 @@ export function AIShowcase() {
 									<div className="h-2 w-2 rounded-full bg-profit/60 sm:h-3 sm:w-3" />
 								</div>
 								<span className="hidden font-mono text-muted-foreground text-xs sm:ml-4 sm:block">
-									edge-ai
+									traderlog — ai
 								</span>
 							</div>
 							<div className="flex items-center gap-1.5 sm:gap-2">

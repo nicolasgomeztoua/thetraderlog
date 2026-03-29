@@ -16,7 +16,7 @@
 
 ## Overview
 
-EdgeJournal already collects comprehensive prop firm data at account creation (max drawdown, daily loss limit, profit target, consistency rule, min trading days, challenge dates, drawdown type). But none of it is surfaced meaningfully. Traders on prop challenges have to manually track whether they're about to blow their account — the #1 anxiety for prop traders.
+TheTraderLog already collects comprehensive prop firm data at account creation (max drawdown, daily loss limit, profit target, consistency rule, min trading days, challenge dates, drawdown type). But none of it is surfaced meaningfully. Traders on prop challenges have to manually track whether they're about to blow their account — the #1 anxiety for prop traders.
 
 This feature adds three layers of prop firm awareness:
 1. **Backend compliance engine** — single `getPropCompliance` query computing all metrics

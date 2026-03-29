@@ -1,8 +1,8 @@
-# EdgeJournal Testing Guide
+# TheTraderLog Testing Guide
 
 > **💡 Claude Code Skill Available:** For AI-assisted test development, use the `testing` skill located at `.claude/skills/testing/`. The skill provides contextual guidance for writing tests following these patterns, fixtures, and conventions.
 
-This document establishes the testing philosophy and conventions for EdgeJournal. It serves as a reference for both developers and AI assistants when writing or maintaining tests.
+This document establishes the testing philosophy and conventions for TheTraderLog. It serves as a reference for both developers and AI assistants when writing or maintaining tests.
 
 ---
 

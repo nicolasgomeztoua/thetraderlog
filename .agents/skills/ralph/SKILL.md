@@ -57,7 +57,7 @@ Create and checkout the feature branch.
 
 ```json
 {
-  "project": "EdgeJournal",
+  "project": "TheTraderLog",
   "branchName": "ralph/[feature-kebab-case]",
   "description": "Brief feature description",
   "userStories": [
@@ -83,7 +83,7 @@ Create and checkout the feature branch.
 
 | Field | Description |
 |-------|-------------|
-| `project` | Always "EdgeJournal" |
+| `project` | Always "TheTraderLog" |
 | `branchName` | `ralph/[feature-name]` format |
 | `description` | One-line feature summary |
 | `id` | `US-XXX` format, sequential |
@@ -135,7 +135,7 @@ For every tRPC router, include a test story immediately after.
 }
 ```
 
-## EdgeJournal-Specific Criteria
+## TheTraderLog-Specific Criteria
 
 Add these when applicable:
 - "Uses protectedProcedure for auth"
@@ -191,7 +191,7 @@ After generating `prd.json`:
 **Output JSON** (`scripts/ralph/prd.json`):
 ```json
 {
-  "project": "EdgeJournal",
+  "project": "TheTraderLog",
   "branchName": "ralph/screenshot-upload",
   "description": "Add trade screenshot upload functionality",
   "userStories": [

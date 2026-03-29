@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/mdx-report-viewer-emails",
 	"description": "Replace PDF report pipeline with MDX report viewer using real React components, add React Email system",
 	"userStories": [
@@ -143,8 +143,8 @@
 				"Install @react-email/components: bun add @react-email/components",
 				"Create src/emails/components/base-layout.tsx with Terminal-themed email layout",
 				"Dark background (#050505), monospace fonts (Courier New fallback), chartreuse accent (#d4ff00)",
-				"Header: EDGEJOURNAL branding with accent border",
-				"Content slot (children) and footer with EdgeJournal branding + timestamp",
+				"Header: TRADERLOG branding with accent border",
+				"Content slot (children) and footer with TheTraderLog branding + timestamp",
 				"Uses @react-email/components: Html, Head, Body, Container, Section, Text, Hr, Preview",
 				"Export BaseLayout component with props: { preview: string, children: React.ReactNode }",
 				"Fully responsive (mobile email clients)",
@@ -164,7 +164,7 @@
 				"Preview text: Your AI analysis report is ready — view it now",
 				"Report title displayed in ice blue (#00d4ff) monospace",
 				"VIEW REPORT button: chartreuse background (#d4ff00), dark text, links to /ai/reports/[reportId]",
-				"Subtitle: Your report is permanently available in EdgeJournal",
+				"Subtitle: Your report is permanently available in TheTraderLog",
 				"Optional report metadata (generation time, charts generated)",
 				"Export ReportCompleteEmail component with props: { reportTitle, reportUrl, metadata? }",
 				"Export renderReportCompleteEmail function that returns HTML string via render()",
@@ -254,7 +254,7 @@
 				"Uses html2canvas-pro to capture rendered report content area",
 				"Generates PDF via jsPDF with A4 page size",
 				"Handles multi-page reports (split canvas into page-sized chunks)",
-				"Adds header on first page: EDGEJOURNAL // AI ANALYSIS REPORT + title",
+				"Adds header on first page: TRADERLOG // AI ANALYSIS REPORT + title",
 				"Adds footer on each page: page number",
 				"Downloads as {slug}-report.pdf",
 				"Add Download PDF button in report viewer header with Terminal design styling",
@@ -266,7 +266,7 @@
 			],
 			"priority": 13,
 			"passes": true,
-			"notes": "Installed html2canvas-pro@1.6.7 and jspdf@4.1.0. Created src/lib/export/pdf-export.ts with exportReportToPdf(element, title) function: captures report content via html2canvas-pro (scale 2, dark background), generates multi-page A4 PDF via jsPDF with page slicing, branded header on first page (EDGEJOURNAL // AI ANALYSIS REPORT + title), page numbers on each page, downloads as {slug}-report.pdf. Created download-pdf-button.tsx client component with dynamic import of pdf-export (lazy loading), loading state (spinner + Generating...), queries DOM for report-viewer-content testid. Updated page.tsx: replaced disabled PDF placeholder with DownloadPdfButton for completed reports, added showPdfDownload prop to ReportHeader. Added print CSS to globals.css hiding ToC sidebar, header actions, and back button. Added print:hidden Tailwind class to ToC sidebar and actions div. Biome check and build pass."
+			"notes": "Installed html2canvas-pro@1.6.7 and jspdf@4.1.0. Created src/lib/export/pdf-export.ts with exportReportToPdf(element, title) function: captures report content via html2canvas-pro (scale 2, dark background), generates multi-page A4 PDF via jsPDF with page slicing, branded header on first page (TRADERLOG // AI ANALYSIS REPORT + title), page numbers on each page, downloads as {slug}-report.pdf. Created download-pdf-button.tsx client component with dynamic import of pdf-export (lazy loading), loading state (spinner + Generating...), queries DOM for report-viewer-content testid. Updated page.tsx: replaced disabled PDF placeholder with DownloadPdfButton for completed reports, added showPdfDownload prop to ReportHeader. Added print CSS to globals.css hiding ToC sidebar, header actions, and back button. Added print:hidden Tailwind class to ToC sidebar and actions div. Biome check and build pass."
 		},
 		{
 			"id": "US-013",

@@ -1,11 +1,11 @@
 ---
 name: e2e-testing
-description: Playwright end-to-end testing workflow for EdgeJournal.
+description: Playwright end-to-end testing workflow for TheTraderLog.
 ---
 
 # E2E Testing Skill
 
-You are a frontend test engineer writing E2E tests for EdgeJournal using Playwright with Clerk authentication.
+You are a frontend test engineer writing E2E tests for TheTraderLog using Playwright with Clerk authentication.
 
 ## Running Tests
 

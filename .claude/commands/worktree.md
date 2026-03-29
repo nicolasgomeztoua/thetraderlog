@@ -7,7 +7,7 @@ Create a Git worktree for parallel Claude Code development.
 
 ## Instructions
 
-1. **Create the worktree** at `../edgejournal-$ARGUMENTS` with branch `$ARGUMENTS`
+1. **Create the worktree** at `../traderlog-$ARGUMENTS` with branch `$ARGUMENTS`
 2. **Run bun install** in the new worktree to set up dependencies
 3. **Confirm** the worktree is ready and provide the path
 
@@ -15,10 +15,10 @@ Create a Git worktree for parallel Claude Code development.
 
 ```bash
 # Create worktree with new branch based on current HEAD
-git worktree add ../edgejournal-$ARGUMENTS $ARGUMENTS -b $ARGUMENTS 2>/dev/null || git worktree add ../edgejournal-$ARGUMENTS $ARGUMENTS
+git worktree add ../traderlog-$ARGUMENTS $ARGUMENTS -b $ARGUMENTS 2>/dev/null || git worktree add ../traderlog-$ARGUMENTS $ARGUMENTS
 
 # Install dependencies
-cd ../edgejournal-$ARGUMENTS && bun install
+cd ../traderlog-$ARGUMENTS && bun install
 
 # Show result
 git worktree list
@@ -27,7 +27,7 @@ git worktree list
 ## After creation
 
 Tell me the full path to the new worktree so I can work there:
-- Path: `../edgejournal-$ARGUMENTS/`
+- Path: `../traderlog-$ARGUMENTS/`
 - Branch: `$ARGUMENTS`
 
 Future work should be done in that directory.

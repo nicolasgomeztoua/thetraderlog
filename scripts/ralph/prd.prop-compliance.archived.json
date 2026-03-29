@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/prop-compliance",
 	"description": "Prop firm compliance dashboard — backend engine, dashboard widget, dedicated /prop page, Monte Carlo simulator, and AI integration",
 	"userStories": [

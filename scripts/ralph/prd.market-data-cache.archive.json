@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/progressive-market-data-cache",
 	"description": "Progressive market data cache: smart same-day append, eliminate redundant derived-interval storage, add observability logging",
 	"userStories": [

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AI section (Chat + Reports) currently has a brutalist, unpolished UI that doesn't match the quality bar of modern chat applications or the rest of EdgeJournal. This redesign transforms it into a fully-featured, tasteful interface — preserving the Terminal design identity while bringing the polish and micro-interactions users expect from apps like ChatGPT, Claude.ai, and T3 Chat.
+The AI section (Chat + Reports) currently has a brutalist, unpolished UI that doesn't match the quality bar of modern chat applications or the rest of TheTraderLog. This redesign transforms it into a fully-featured, tasteful interface — preserving the Terminal design identity while bringing the polish and micro-interactions users expect from apps like ChatGPT, Claude.ai, and T3 Chat.
 
 **Scope**: Primarily UI/UX. One backend enhancement: granular report progress tracking (new DB columns + Trigger.dev task updates + tRPC endpoint changes) to replace the current fake progress percentages with real pipeline stages.
 
@@ -569,7 +569,7 @@ grep -rn "export function\|export const" src/lib/utils.ts
 
 ## Success Metrics
 
-- AI section visually matches the quality of the rest of EdgeJournal (dashboard, journal)
+- AI section visually matches the quality of the rest of TheTraderLog (dashboard, journal)
 - Chat interface feels comparable to modern AI chat apps while maintaining Terminal identity
 - Report interface feels like a premium feature, not an afterthought
 - Full mobile usability via sidebar drawer

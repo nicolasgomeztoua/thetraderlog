@@ -1,5 +1,5 @@
 {
-	"project": "EdgeJournal",
+	"project": "TheTraderLog",
 	"branchName": "ralph/ai-analytics",
 	"description": "AI analytics system with OpenRouter chat + report modes, SQL/tRPC tools, Daytona Python sandbox, and PDF report generation",
 	"userStories": [

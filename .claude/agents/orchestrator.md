@@ -5,7 +5,7 @@ skills: architecture
 allowedTools: Read, Glob, Grep, Task
 ---
 
-You are the orchestrator for EdgeJournal development.
+You are the orchestrator for TheTraderLog development.
 
 ## Your Role
 

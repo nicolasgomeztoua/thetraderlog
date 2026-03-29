@@ -200,9 +200,9 @@ grep -rn "@react-pdf/renderer" src/
 - [ ] Create `src/emails/components/base-layout.tsx`:
   - Terminal-themed email layout matching the app's design system
   - Dark background (`#050505`), monospace fonts (Courier New fallback), chartreuse accent (`#d4ff00`)
-  - Header: "EDGEJOURNAL" branding with accent border
+  - Header: "TRADERLOG" branding with accent border
   - Content slot (children)
-  - Footer: "EdgeJournal — Professional Trading Journal" + timestamp
+  - Footer: "TheTraderLog — Professional Trading Journal" + timestamp
   - Fully responsive (mobile email clients)
   - Uses `@react-email/components`: `Html`, `Head`, `Body`, `Container`, `Section`, `Text`, `Hr`, `Preview`
 - [ ] Export `BaseLayout` component with props: `{ preview: string, children: React.ReactNode }`
@@ -221,7 +221,7 @@ grep -rn "@react-pdf/renderer" src/
   - Preview text: "Your AI analysis report is ready — view it now"
   - Report title displayed in ice blue (`#00d4ff`) monospace
   - "VIEW REPORT" button: chartreuse background (`#d4ff00`), dark text, links to `/ai/reports/[reportId]`
-  - Subtitle: "Your report is permanently available in EdgeJournal" (no more "expires in 7 days")
+  - Subtitle: "Your report is permanently available in TheTraderLog" (no more "expires in 7 days")
   - Optional: report metadata (generation time, charts generated, tokens used)
   - Uses `@react-email/components`: `Button`, `Link`, `Section`, `Text`
 - [ ] Export `ReportCompleteEmail` component with props: `{ reportTitle: string, reportUrl: string, metadata?: { duration?: string, chartsGenerated?: number } }`
@@ -344,7 +344,7 @@ grep -rn "@react-pdf/renderer" src/
   - Uses `html2canvas-pro` to capture the rendered report content area
   - Generates PDF via `jsPDF` with A4 page size
   - Handles multi-page reports (split canvas into page-sized chunks)
-  - Adds header on first page: "EDGEJOURNAL // AI ANALYSIS REPORT" + title
+  - Adds header on first page: "TRADERLOG // AI ANALYSIS REPORT" + title
   - Adds footer on each page: page number
   - Downloads as `{slug}-report.pdf`
 - [ ] Add "Download PDF" button in report viewer header (US-011):

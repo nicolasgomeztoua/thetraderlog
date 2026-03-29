@@ -319,7 +319,7 @@ export function AnalyticsQueryBar({
 										<div className="size-2.5 rounded-full bg-[#28c840]" />
 									</div>
 									<span className="font-mono text-[10px] text-muted-foreground">
-										edgejournal — analytics query terminal
+										traderlog — analytics query terminal
 									</span>
 								</div>
 

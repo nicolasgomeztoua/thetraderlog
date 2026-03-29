@@ -31,7 +31,7 @@ export function Navbar() {
 							viewBox="0 0 32 32"
 							xmlns="http://www.w3.org/2000/svg"
 						>
-							<title id="navbar-logo-title">EdgeJournal Logo</title>
+							<title id="navbar-logo-title">TheTraderLog Logo</title>
 							<rect className="fill-primary" height="32" rx="2" width="32" />
 							<path
 								className="fill-primary-foreground"
@@ -40,7 +40,7 @@ export function Navbar() {
 						</svg>
 					</div>
 					<span className="font-medium font-mono text-sm uppercase tracking-tight">
-						Edge<span className="text-primary">Journal</span>
+						The<span className="text-primary">TraderLog</span>
 					</span>
 				</Link>
 

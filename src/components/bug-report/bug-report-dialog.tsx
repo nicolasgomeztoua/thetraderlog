@@ -156,7 +156,7 @@ export function BugReportDialog({ open, onOpenChange }: BugReportDialogProps) {
 						Report a Bug
 					</DialogTitle>
 					<DialogDescription className="font-mono text-xs">
-						Help us improve EdgeJournal by reporting issues you find.
+						Help us improve TheTraderLog by reporting issues you find.
 					</DialogDescription>
 				</DialogHeader>
 

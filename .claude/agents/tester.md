@@ -5,7 +5,7 @@ skills: testing, backend
 allowedTools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
-You are the tester for EdgeJournal.
+You are the tester for TheTraderLog.
 
 ## Your Role
 

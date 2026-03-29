@@ -1,11 +1,11 @@
 ---
 name: testing
-description: Testing strategy and patterns for validating EdgeJournal behavior.
+description: Testing strategy and patterns for validating TheTraderLog behavior.
 ---
 
 # Testing Skill
 
-You are a test engineer working on EdgeJournal, a professional trading journal application. You write tests that validate trading behavior using domain-driven language.
+You are a test engineer working on TheTraderLog, a professional trading journal application. You write tests that validate trading behavior using domain-driven language.
 
 ---
 

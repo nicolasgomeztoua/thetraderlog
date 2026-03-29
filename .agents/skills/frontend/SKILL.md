@@ -1,11 +1,11 @@
 ---
 name: frontend
-description: Frontend implementation patterns and terminal-style UI guidance for EdgeJournal.
+description: Frontend implementation patterns and terminal-style UI guidance for TheTraderLog.
 ---
 
 # Frontend Skill
 
-You are a frontend engineer working on EdgeJournal, a professional trading journal with a distinctive "Terminal" design aesthetic.
+You are a frontend engineer working on TheTraderLog, a professional trading journal with a distinctive "Terminal" design aesthetic.
 
 ---
 
@@ -14,7 +14,7 @@ You are a frontend engineer working on EdgeJournal, a professional trading journ
 Before coding, understand the context and commit to a BOLD aesthetic direction:
 
 - **Purpose**: What problem does this interface solve? Who uses it?
-- **Tone**: EdgeJournal uses a specific tone—brutalist, terminal-inspired, data-dense, dark-by-default. New components must match this established aesthetic.
+- **Tone**: TheTraderLog uses a specific tone—brutalist, terminal-inspired, data-dense, dark-by-default. New components must match this established aesthetic.
 - **Constraints**: Technical requirements (Next.js 15, Tailwind CSS v4, Shadcn UI).
 - **Differentiation**: What makes this UNFORGETTABLE? What's the one thing someone will remember?
 
@@ -23,7 +23,7 @@ Before coding, understand the context and commit to a BOLD aesthetic direction:
 Then implement working code that is:
 - Production-grade and functional
 - Visually striking and memorable
-- Cohesive with EdgeJournal's established aesthetic
+- Cohesive with TheTraderLog's established aesthetic
 - Meticulously refined in every detail
 
 ### Avoiding Generic AI Aesthetics
@@ -35,13 +35,13 @@ NEVER use:
 - Cookie-cutter design that lacks context-specific character
 - Large border radius (`rounded-lg`, `rounded-xl`)
 
-EdgeJournal uses distinctive choices: JetBrains Mono for UI, Electric Chartreuse (#d4ff00) accent, ultra-dark backgrounds, minimal border-radius.
+TheTraderLog uses distinctive choices: JetBrains Mono for UI, Electric Chartreuse (#d4ff00) accent, ultra-dark backgrounds, minimal border-radius.
 
 ---
 
 ## Design Philosophy
 
-EdgeJournal uses **"The Terminal"** design language—a high-end trading terminal aesthetic meets brutalist design. Every UI element should feel like it came from a professional trading terminal.
+TheTraderLog uses **"The Terminal"** design language—a high-end trading terminal aesthetic meets brutalist design. Every UI element should feel like it came from a professional trading terminal.
 
 ### Core Principles
 
@@ -150,7 +150,7 @@ Use for preview/demo content:
       <div className="h-2.5 w-2.5 rounded-full bg-breakeven/60" />
       <div className="h-2.5 w-2.5 rounded-full bg-profit/60" />
     </div>
-    <span className="font-mono text-[10px] text-muted-foreground">edgejournal — dashboard</span>
+    <span className="font-mono text-[10px] text-muted-foreground">traderlog — dashboard</span>
     <div className="w-14" />
   </div>
   <div className="p-6">{/* content */}</div>

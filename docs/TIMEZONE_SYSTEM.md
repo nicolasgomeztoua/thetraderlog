@@ -1,6 +1,6 @@
 # Timezone System Documentation
 
-This document explains EdgeJournal's timezone handling system, ensuring consistency across all date/time operations.
+This document explains TheTraderLog's timezone handling system, ensuring consistency across all date/time operations.
 
 ## Core Principles
 

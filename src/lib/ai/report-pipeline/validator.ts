@@ -168,7 +168,7 @@ function runStaticValidation(
 
 const MAX_REPAIR_ATTEMPTS = 2;
 
-const REPAIR_SYSTEM_PROMPT = `You are an MDX report repair assistant for EdgeJournal. Your job is to fix errors in an MDX trading report.
+const REPAIR_SYSTEM_PROMPT = `You are an MDX report repair assistant for TheTraderLog. Your job is to fix errors in an MDX trading report.
 
 You will receive the original MDX content and a list of specific errors. Fix ONLY the listed errors while preserving all other content exactly as-is.
 

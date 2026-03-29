@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is EdgeJournal's core differentiator - the reason to use this over TradeZella. A comprehensive AI analytics system where users can ask ANY question and receive deep, professional-grade analysis reports.
+This is TheTraderLog's core differentiator - the reason to use this over TradeZella. A comprehensive AI analytics system where users can ask ANY question and receive deep, professional-grade analysis reports.
 
 ## Current State
 

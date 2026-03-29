@@ -1,6 +1,6 @@
 # Ralph Agent Instructions
 
-You are an autonomous coding agent working on the EdgeJournal project.
+You are an autonomous coding agent working on the TheTraderLog project.
 
 ## Context
 
@@ -158,7 +158,7 @@ bun run test:e2e
 
 All E2E tests must pass before committing UI stories.
 
-## EdgeJournal-Specific Guidelines
+## TheTraderLog-Specific Guidelines
 
 - Database: Edit `src/server/db/schema.ts`, then `bun run db:push`
 - API: Use tRPC routers in `src/server/api/routers/`

@@ -17,7 +17,7 @@ Remove Git worktrees created for parallel development.
 
 ### If `$ARGUMENTS` is a specific branch name:
 
-1. **Remove the worktree** at `../edgejournal-$ARGUMENTS`
+1. **Remove the worktree** at `../traderlog-$ARGUMENTS`
 2. **Prune stale worktrees** to clean up references
 3. **Ask if the branch should be deleted** (local and remote)
 
@@ -28,7 +28,7 @@ Remove Git worktrees created for parallel development.
 git worktree list
 
 # Remove a specific worktree
-git worktree remove ../edgejournal-<branch> --force
+git worktree remove ../traderlog-<branch> --force
 
 # Prune stale worktrees
 git worktree prune
@@ -42,6 +42,6 @@ git push origin --delete <branch>
 
 ## Important
 
-- Never remove the main working directory (the one without `edgejournal-` prefix in parent folder)
+- Never remove the main working directory (the one without `traderlog-` prefix in parent folder)
 - Always confirm with user before deleting branches
 - If worktree has uncommitted changes, warn the user before force removal

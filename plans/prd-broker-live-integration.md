@@ -8,9 +8,9 @@
 
 ## Overview
 
-EdgeJournal currently requires manual CSV upload for every trade. Traders forget to journal, CSV exports are
+TheTraderLog currently requires manual CSV upload for every trade. Traders forget to journal, CSV exports are
 tedious, and there is no automatic capture safety net. This feature adds **read-only live broker sync** that
-automatically imports closed trades from a trader's broker into their EdgeJournal account — no manual export needed.
+automatically imports closed trades from a trader's broker into their TheTraderLog account — no manual export needed.
 
 > **Note:** This PRD was written before the futures-only pivot. Forex-specific brokers (OANDA, MetaApi/MT4/MT5) and forex detection logic are no longer in scope.
 
@@ -22,7 +22,7 @@ Target audiences:
 
 ## Goals
 
-- Auto-import closed trades from 10+ brokers/platforms covering ~90% of EdgeJournal's target users
+- Auto-import closed trades from 10+ brokers/platforms covering ~90% of TheTraderLog's target users
 - Eliminate manual CSV workflow for supported brokers
 - Ensure zero credential exposure: read-only scopes, encrypted storage, never returned to frontend
 - Match competitor coverage: Tradezella-level (13 auto-sync) in Phase 1, TraderSync-level (50+) via SnapTrade in Phase 3
@@ -257,7 +257,7 @@ history CSV so that my Rithmic-platform trades are imported without a live API c
 ### US-007: Tradovate Broker Adapter
 
 **Description**: As a developer, I want a Tradovate adapter so that users can connect their Tradovate account
-and have closed trades automatically synced to EdgeJournal.
+and have closed trades automatically synced to TheTraderLog.
 
 **API**: Tradovate REST API (`https://live.tradovateapi.com/v1/`)
 **Auth**: POST `/auth/accesstokenrequest` with `{name, password, appId, appVersion, deviceId, cid, sec}`
@@ -465,7 +465,7 @@ can connect via OAuth and have trades synced automatically.
 ### US-015: SnapTrade Aggregator Adapter
 
 **Description**: As a developer, I want a SnapTrade integration so that users of 25+ brokerages (Fidelity,
-E*Trade, Questrade, Coinbase, Webull, etc.) can connect via a single OAuth-based aggregator without EdgeJournal
+E*Trade, Questrade, Coinbase, Webull, etc.) can connect via a single OAuth-based aggregator without TheTraderLog
 needing individual integrations for each.
 
 **Service**: SnapTrade REST API (`https://api.snaptrade.com/api/v1`)
@@ -623,7 +623,7 @@ connect to brokers that use API keys, Flex tokens, or bearer tokens (Tradovate, 
 ### US-022: OAuth Connection Flow UI
 
 **Description**: As a trader, I want to connect TradeStation or Schwab via OAuth so that I never have to
-share my broker login credentials with EdgeJournal.
+share my broker login credentials with TheTraderLog.
 
 **Acceptance Criteria**:
 - [ ] Broker selector (US-021) includes TradeStation and Schwab with "Connect via OAuth" badge
@@ -709,7 +709,7 @@ and sync flow is verified end-to-end.
 
 1. **FR-001**: All broker credentials encrypted at rest using AES-256-GCM before database storage
 2. **FR-002**: Credentials NEVER returned to the frontend after initial connection
-3. **FR-003**: All connections are read-only — EdgeJournal must never place orders on behalf of users
+3. **FR-003**: All connections are read-only — TheTraderLog must never place orders on behalf of users
 4. **FR-004**: Sync is idempotent — re-syncing never creates duplicate trades (hash-based dedup)
 5. **FR-005**: `importSource = "broker_sync"` set on all auto-synced trades for auditability
 6. **FR-006**: Each sync run logged to `broker_sync_logs` with imported/skipped counts and duration
@@ -722,7 +722,7 @@ and sync flow is verified end-to-end.
 
 ## Non-Goals (Out of Scope)
 
-- **Order placement** — EdgeJournal is a journal, not a trading platform
+- **Order placement** — TheTraderLog is a journal, not a trading platform
 - **Real-time streaming / live P&L** — sync is batch-based (daily or on-demand)
 - **Rithmic R|Protocol API** — requires manual approval from Rithmic; CSV is v1, API is v2 (future)
 - **NinjaTrader live bridge** — local agent software is Phase 2; CSV is v1
@@ -802,7 +802,7 @@ SNAPTRADE_CONSUMER_KEY=
 - **Terminal design system** throughout (dark theme, chartreuse accents, monospace)
 - **Status badges**: `ACTIVE` (profit green `#00ff88`), `ERROR` (loss red `#ff3b3b`), `DISCONNECTED` (gray)
 - **Broker logos**: Use text abbreviations or simple SVG icons in chartreuse — avoid external CDN deps
-- **Security messaging**: Prominent "Read-only — EdgeJournal cannot place trades" in connection UI
+- **Security messaging**: Prominent "Read-only — TheTraderLog cannot place trades" in connection UI
 - **Credential fields**: `type="password"` with show/hide toggle, never logged
 - **Empty state**: Clear call-to-action with terminal-style ASCII border or icon
 
@@ -843,4 +843,4 @@ SNAPTRADE_CONSUMER_KEY=
 3. **TradeStation/Schwab OAuth app approval**: Register early (1-5 business days each).
 4. **On-login sync trigger**: Should we auto-sync all connections when user logs in? Adds latency but improves freshness.
 5. **Sync frequency limit**: Should we rate-limit manual syncs (e.g., once per 30 minutes) to avoid broker API abuse?
-6. **IBKR Flex Query template**: Should EdgeJournal provide a pre-built Flex Query template users can import, or give instructions to build their own?
+6. **IBKR Flex Query template**: Should TheTraderLog provide a pre-built Flex Query template users can import, or give instructions to build their own?

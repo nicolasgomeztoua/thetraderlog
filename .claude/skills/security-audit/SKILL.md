@@ -1,6 +1,6 @@
 # Security Audit Skill
 
-Run comprehensive security analysis on the EdgeJournal codebase.
+Run comprehensive security analysis on the TheTraderLog codebase.
 
 ## When to Use
 - Before major releases

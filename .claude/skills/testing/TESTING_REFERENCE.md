@@ -1,6 +1,6 @@
-# EdgeJournal Testing Reference
+# TheTraderLog Testing Reference
 
-Complete reference guide for the EdgeJournal testing infrastructure. This document provides in-depth coverage of the testing architecture, fixtures, patterns, and troubleshooting.
+Complete reference guide for the TheTraderLog testing infrastructure. This document provides in-depth coverage of the testing architecture, fixtures, patterns, and troubleshooting.
 
 ---
 

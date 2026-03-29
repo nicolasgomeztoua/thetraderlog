@@ -71,10 +71,10 @@
    DARK THEMES - Top Rated IDE Themes
    ============================================ */
 
-/* EDGEJOURNAL (Default) - Signature Dark Theme
+/* TRADERLOG (Default) - Signature Dark Theme
    Obsidian Black + Electric Chartreuse + Ice Blue */
 :root,
-.theme-edgejournal {
+.theme-traderlog {
 	--background: #121212;
 	--foreground: #fafafa;
 	--card: #0a0a0a;
@@ -271,9 +271,9 @@
    LIGHT THEMES - Top Rated Light Themes
    ============================================ */
 
-/* EDGEJOURNAL LIGHT - Signature Theme for Daytime Trading
-   EdgeJournal aesthetic adapted for light mode with rich lime-green accents */
-.theme-edgejournal-light {
+/* TRADERLOG LIGHT - Signature Theme for Daytime Trading
+   TheTraderLog aesthetic adapted for light mode with rich lime-green accents */
+.theme-traderlog-light {
 	--background: #fafafa;
 	--foreground: #171717;
 	--card: #ffffff;

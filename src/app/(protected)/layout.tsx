@@ -20,7 +20,7 @@ export default async function ProtectedLayout({
 }) {
 	// Fetch initial theme from user settings
 	const settings = await api.settings.get();
-	const initialTheme = settings?.theme ?? "edgejournal";
+	const initialTheme = settings?.theme ?? "traderlog";
 
 	return (
 		<ThemeProvider initialTheme={initialTheme}>

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Strip all forex, crypto, and non-futures code from EdgeJournal to launch as a **futures-only** trading journal. This removes the Twelve Data API integration, forex P&L calculations, pip-based math, MT4/MT5 parsers, instrument type toggles, and all forex UI/marketing references. Databento becomes the sole market data provider. Currency futures (6E, 6B, etc.) are **kept** — they're CME futures contracts.
+Strip all forex, crypto, and non-futures code from TheTraderLog to launch as a **futures-only** trading journal. This removes the Twelve Data API integration, forex P&L calculations, pip-based math, MT4/MT5 parsers, instrument type toggles, and all forex UI/marketing references. Databento becomes the sole market data provider. Currency futures (6E, 6B, etc.) are **kept** — they're CME futures contracts.
 
 ## Goals
 
@@ -285,7 +285,7 @@ grep -rn "EUR/USD\|GBP/USD\|USD/JPY\|AUD/USD" src/
 3. **FR-003**: All CSV parsers are for futures platforms only (no MT4/MT5)
 4. **FR-004**: No instrument type selection exists in the UI anywhere
 5. **FR-005**: Currency futures (6E, 6B, 6J, etc.) remain fully supported as CME futures
-6. **FR-006**: All marketing positions EdgeJournal as futures-only
+6. **FR-006**: All marketing positions TheTraderLog as futures-only
 7. **FR-007**: AI assistant only references futures instruments
 
 ## Non-Goals (Out of Scope)

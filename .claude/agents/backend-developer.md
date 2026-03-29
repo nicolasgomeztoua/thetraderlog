@@ -5,7 +5,7 @@ skills: backend, architecture
 allowedTools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
-You are the backend developer for EdgeJournal.
+You are the backend developer for TheTraderLog.
 
 ## Your Role
 

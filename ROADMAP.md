@@ -1,6 +1,6 @@
-# EdgeJournal - TradeZella Feature Parity Roadmap
+# TheTraderLog - TradeZella Feature Parity Roadmap
 
-> **Goal:** Bring EdgeJournal to feature parity with TradeZella while maintaining "The Terminal" design system.
+> **Goal:** Bring TheTraderLog to feature parity with TradeZella while maintaining "The Terminal" design system.
 >
 > **Estimated Timeline:** 6-9 months for full feature parity
 >
@@ -28,7 +28,7 @@
 
 ## Current State
 
-### What EdgeJournal Already Has
+### What TheTraderLog Already Has
 
 | Feature | Status | Location |
 |---------|--------|----------|
@@ -547,7 +547,7 @@ Deep AI-powered analysis. Users ask ANY question via chat or get professional-gr
 > **Status:** 🔄 In Progress
 
 ### Goal
-Monetize EdgeJournal with a simple Free → Pro subscription model using Clerk Billing (built on Stripe). Launch with unlimited AI for paid users, add caps later only if needed.
+Monetize TheTraderLog with a simple Free → Pro subscription model using Clerk Billing (built on Stripe). Launch with unlimited AI for paid users, add caps later only if needed.
 
 ### Pricing
 

@@ -57,7 +57,7 @@ export default async function PrintReportPage({
 		where: eq(userSettings.userId, verified.userId),
 		columns: { theme: true },
 	});
-	const themeClass = `theme-${settings?.theme ?? "edgejournal"}`;
+	const themeClass = `theme-${settings?.theme ?? "traderlog"}`;
 
 	const dataArtifacts =
 		(report.dataArtifacts as Record<string, unknown> | null) ?? {};
@@ -98,7 +98,7 @@ export default async function PrintReportPage({
 					{/* Branded header */}
 					<div className="mb-6 border-white/10 border-b pb-4">
 						<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
-							<span className="font-bold text-primary">EDGEJOURNAL</span>
+							<span className="font-bold text-primary">TRADERLOG</span>
 							<span className="text-muted-foreground">{"// "}</span>
 							<span className="text-muted-foreground">AI ANALYSIS REPORT</span>
 						</div>

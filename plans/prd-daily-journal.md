@@ -1,6 +1,6 @@
   │ Daily Journal Feature - Implementation Plan                                                        │
      │                                                                                                    │
-     │ Target: EdgeJournal Trading Journal                                                                │
+     │ Target: TheTraderLog Trading Journal                                                                │
      │ Scope: Daily journaling with rich text, file uploads, checklists, and trade sync                   │
      │ Execution: Ralph autonomous loop (33 user stories)                                                 │
      │                                                                                                    │
@@ -177,7 +177,7 @@
      │ S3_REGION=auto                                                                                     │
      │ S3_ACCESS_KEY_ID=xxx                                                                               │
      │ S3_SECRET_ACCESS_KEY=xxx                                                                           │
-     │ S3_BUCKET=edgejournal-uploads                                                                      │
+     │ S3_BUCKET=traderlog-uploads                                                                      │
      │                                                                                                    │
      │ S3 Client                                                                                          │
      │                                                                                                    │

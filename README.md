@@ -1,10 +1,10 @@
-# EdgeJournal
+# TheTraderLog
 
 A professional trading journal for serious traders who want to consistently find and refine their edge.
 
-## What is EdgeJournal?
+## What is TheTraderLog?
 
-EdgeJournal is a data-dense, terminal-inspired trading journal that helps traders track, analyze, and improve their performance. Built for futures traders who take their craft seriously.
+TheTraderLog is a data-dense, terminal-inspired trading journal that helps traders track, analyze, and improve their performance. Built for futures traders who take their craft seriously.
 
 ### Core Features
 
@@ -40,7 +40,7 @@ EdgeJournal is a data-dense, terminal-inspired trading journal that helps trader
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd edgejournal
+cd traderlog
 
 # Install dependencies
 bun install
@@ -60,7 +60,7 @@ bun run dev
 Create a `.env` file with:
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/edgejournal"
+DATABASE_URL="postgresql://user:password@localhost:5432/traderlog"
 CLERK_SECRET_KEY="sk_test_..."
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 ```

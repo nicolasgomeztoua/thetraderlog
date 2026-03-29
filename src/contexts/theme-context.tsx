@@ -50,7 +50,7 @@ export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
 		root.classList.add(themeClass);
 
 		// Store in localStorage for faster initial load
-		localStorage.setItem("edgejournal-theme", theme);
+		localStorage.setItem("traderlog-theme", theme);
 	}, [theme]);
 
 	const setTheme = useCallback((themeId: string) => {
@@ -114,7 +114,7 @@ export function useTheme() {
 export const themeScript = `
 (function() {
   try {
-    const stored = localStorage.getItem('edgejournal-theme');
+    const stored = localStorage.getItem('traderlog-theme');
     if (stored) {
       document.documentElement.classList.add('theme-' + stored);
     }

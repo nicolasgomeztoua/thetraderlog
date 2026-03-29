@@ -132,7 +132,7 @@ async function sendReportNotification(
 			columns: { email: true },
 		});
 		if (user?.email) {
-			const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://edgejournal.com"}/ai/reports/${reportId}`;
+			const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://thetraderlog.com"}/ai/reports/${reportId}`;
 			await sendReportEmail({
 				to: user.email,
 				reportTitle: title,

@@ -38,7 +38,7 @@ export function Footer() {
 								viewBox="0 0 32 32"
 								xmlns="http://www.w3.org/2000/svg"
 							>
-								<title id="footer-logo-title">EdgeJournal Logo</title>
+								<title id="footer-logo-title">TheTraderLog Logo</title>
 								<rect className="fill-primary" height="32" rx="2" width="32" />
 								<path
 									className="fill-primary-foreground"
@@ -46,12 +46,12 @@ export function Footer() {
 								/>
 							</svg>
 							<span className="font-medium font-mono text-sm uppercase tracking-tight">
-								Edge<span className="text-primary">Journal</span>
+								The<span className="text-primary">TraderLog</span>
 							</span>
 						</Link>
 						<p className="mt-4 max-w-xs font-mono text-muted-foreground text-xs leading-relaxed sm:mt-6 sm:text-sm">
-							The professional trading journal for futures traders who want to
-							find their edge.
+							The professional trading log for futures traders who demand
+							clarity.
 						</p>
 
 						{/* Status indicator */}
@@ -90,7 +90,7 @@ export function Footer() {
 				{/* Bottom bar */}
 				<div className="mt-10 flex flex-col items-center justify-between gap-4 border-border/50 border-t pt-6 sm:mt-16 sm:gap-6 sm:pt-8 lg:flex-row">
 					<p className="font-mono text-[10px] text-muted-foreground sm:text-xs">
-						© {new Date().getFullYear()} EdgeJournal. All rights reserved.
+						© {new Date().getFullYear()} TheTraderLog. All rights reserved.
 					</p>
 
 					{/* Social links */}
@@ -123,7 +123,7 @@ export function Footer() {
 			{/* Large background text - smaller on mobile */}
 			<div className="pointer-events-none absolute right-0 bottom-0 left-0 overflow-hidden">
 				<div className="translate-y-1/2 text-center font-bold text-[25vw] text-muted/20 leading-none sm:text-[20vw]">
-					EDGE
+					LOG
 				</div>
 			</div>
 		</footer>

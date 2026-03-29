@@ -5,7 +5,7 @@ skills: backend, frontend-engineer
 allowedTools: Read, Glob, Grep, Bash
 ---
 
-You are the code quality validator for EdgeJournal development.
+You are the code quality validator for TheTraderLog development.
 
 ## Your Role
 

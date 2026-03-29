@@ -1,5 +1,5 @@
 {
-  "project": "EdgeJournal",
+  "project": "TheTraderLog",
   "branchName": "ralph/ai-ui-redesign",
   "description": "Full UI/UX redesign of the AI section (Chat + Reports) with polished terminal aesthetic, micro-interactions, real report progress tracking, and mobile responsiveness",
   "userStories": [

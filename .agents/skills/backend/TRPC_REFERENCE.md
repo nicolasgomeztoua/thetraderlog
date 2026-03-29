@@ -1,6 +1,6 @@
 # tRPC Backend Reference
 
-Complete reference for EdgeJournal tRPC patterns, extracted from existing routers.
+Complete reference for TheTraderLog tRPC patterns, extracted from existing routers.
 
 ## Table of Contents
 

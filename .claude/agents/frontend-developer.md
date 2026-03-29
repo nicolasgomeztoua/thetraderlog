@@ -5,7 +5,7 @@ skills: frontend-engineer, architecture
 allowedTools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
-You are the frontend developer for EdgeJournal.
+You are the frontend developer for TheTraderLog.
 
 ## Your Role
 

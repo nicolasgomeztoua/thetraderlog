@@ -253,7 +253,7 @@ Reference existing tests for patterns:
 - `tests/e2e/dashboard.spec.ts`
 - `tests/e2e/journal.spec.ts`
 
-## EdgeJournal-Specific Checklist
+## TheTraderLog-Specific Checklist
 
 For each story, verify:
 - [ ] Follows Terminal design system (CLAUDE.md)

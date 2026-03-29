@@ -161,7 +161,7 @@ export function tradesToCSV(trades: ExportableTrade[]): string {
  * Generate a filename for the export
  */
 export function generateExportFilename(
-	prefix = "edgejournal_trades",
+	prefix = "traderlog_trades",
 	hasFilters = false,
 ): string {
 	const date = new Date().toISOString().split("T")[0];
@@ -197,6 +197,6 @@ export function exportTradesToCSV(
 	hasFilters = false,
 ): void {
 	const csvContent = tradesToCSV(trades);
-	const filename = generateExportFilename("edgejournal_trades", hasFilters);
+	const filename = generateExportFilename("traderlog_trades", hasFilters);
 	downloadCSV(csvContent, filename);
 }
