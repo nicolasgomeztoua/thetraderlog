@@ -43,7 +43,8 @@ export async function generateMetadata({
 		const title = report?.prompt ?? report?.title ?? "Shared Report";
 		return {
 			title: `${title} — TheTraderLog`,
-			description: "AI-powered trading analysis report shared via TheTraderLog.",
+			description:
+				"AI-powered trading analysis report shared via TheTraderLog.",
 			openGraph: {
 				title: `${title} — TheTraderLog`,
 				description:

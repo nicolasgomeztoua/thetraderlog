@@ -54,16 +54,16 @@ export function CTA() {
 				) : (
 					<>
 						<h2 className="font-bold text-2xl leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
-							Ready to trade
+							Stop guessing.
 							<br />
 							<span className="text-glow-primary text-primary">
-								with clarity?
+								Start logging.
 							</span>
 						</h2>
 
 						<p className="mx-auto mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
-							Join thousands of traders who use TheTraderLog to track, analyze,
-							and improve their trading performance.
+							Most traders repeat the same mistakes because they never track
+							them. TheTraderLog makes the patterns obvious.
 						</p>
 
 						{/* CTA buttons */}
@@ -94,9 +94,9 @@ export function CTA() {
 						<span className="text-primary">$</span>
 						<span className="text-muted-foreground">
 							<span className="hidden sm:inline">
-								Start your journey to consistent profitability
+								thetraderlog --import trades.csv --analyze
 							</span>
-							<span className="sm:hidden">Start your trading journey</span>
+							<span className="sm:hidden">thetraderlog --analyze</span>
 						</span>
 						<span className="animate-pulse text-primary">▌</span>
 					</div>

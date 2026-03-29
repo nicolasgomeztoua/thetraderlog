@@ -163,7 +163,7 @@ export function AIShowcase() {
 							<div className="flex items-center gap-1.5 sm:gap-2">
 								<Brain className="h-3.5 w-3.5 text-accent sm:h-4 sm:w-4" />
 								<span className="font-mono text-[10px] text-muted-foreground sm:text-xs">
-									<span className="hidden sm:inline">Claude 3.5 </span>Sonnet
+									AI Assistant
 								</span>
 							</div>
 						</div>

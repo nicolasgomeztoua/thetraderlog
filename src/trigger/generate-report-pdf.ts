@@ -29,7 +29,8 @@ export const generateReportPdf = task({
 	},
 	run: async (payload: z.infer<typeof inputSchema>) => {
 		const { reportId, userId, token } = payload;
-		const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://thetraderlog.com";
+		const appUrl =
+			process.env.NEXT_PUBLIC_APP_URL ?? "https://thetraderlog.com";
 		const printUrl = `${appUrl}/print/reports/${reportId}?token=${encodeURIComponent(token)}`;
 
 		logger.info("Starting PDF generation", { reportId, printUrl });

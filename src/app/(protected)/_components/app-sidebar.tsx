@@ -144,7 +144,7 @@ export function AppSidebar() {
 						<rect className="fill-primary" height="32" rx="2" width="32" />
 						<path
 							className="fill-primary-foreground"
-							d="M8 8h16v3H11v5h11v3H11v5h13v3H8V8z"
+							d="M7 8h18v4h-7v13h-4V12H7V8z"
 						/>
 					</svg>
 					<span className="font-medium font-mono text-sm uppercase tracking-tight">

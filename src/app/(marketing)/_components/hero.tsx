@@ -310,18 +310,18 @@ export function Hero() {
 
 						{/* Main headline */}
 						<h1 className="mb-4 font-bold text-3xl leading-none tracking-tight sm:mb-5 sm:text-5xl lg:text-6xl xl:text-7xl">
-							<span className="block">Track Everything.</span>
+							<span className="block">Your Trades.</span>
 							<span className="block text-glow-primary text-primary">
-								Miss Nothing.
+								Your Edge.
 							</span>
 						</h1>
 
 						{/* Subheadline */}
 						<p className="mx-auto max-w-xl font-mono text-muted-foreground text-xs sm:text-sm md:text-base">
-							The AI-powered trading log for futures traders.
+							The trading journal built for futures.
 							<br className="hidden sm:block" />
-							Track. Analyze. Improve.{" "}
-							<span className="text-foreground">Repeat.</span>
+							Log trades, spot patterns, and let AI surface what you{" "}
+							<span className="text-foreground">keep missing.</span>
 						</p>
 
 						{/* CTA buttons */}
@@ -345,7 +345,7 @@ export function Hero() {
 						<div className="mt-8 grid grid-cols-2 gap-4 border-border/50 border-t pt-6 sm:mt-12 sm:gap-6 sm:pt-8 md:grid-cols-4">
 							<div className="text-center">
 								<div className="font-bold font-mono text-2xl text-primary sm:text-3xl md:text-4xl">
-									<AnimatedCounter end={32} prefix="+" suffix="%" />
+									<AnimatedCounter end={12} prefix="+" suffix="%" />
 								</div>
 								<div className="mt-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:mt-2 sm:text-xs">
 									Avg Win Rate Gain

@@ -168,14 +168,7 @@ const features = [
 			"Your trading data stays private and encrypted at rest. Always.",
 		highlight: true,
 		className: "md:col-span-1",
-		visual: (
-			<div className="mt-6 font-mono text-xs">
-				<div className="rounded border border-profit/20 bg-profit/5 p-3">
-					<span className="text-profit">✓</span>{" "}
-					<span className="text-muted-foreground">Data encrypted at rest</span>
-				</div>
-			</div>
-		),
+		visual: <></>,
 	},
 ];
 
@@ -192,12 +185,12 @@ export function Features() {
 						Features
 					</span>
 					<h2 className="font-bold text-2xl leading-tight tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
-						Everything you need to{" "}
-						<span className="text-primary">trade with clarity</span>
+						Built for traders who{" "}
+						<span className="text-primary">review their tape</span>
 					</h2>
 					<p className="mt-4 font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
-						A complete toolkit for serious traders who want to consistently
-						improve.
+						Every tool you need to journal, analyze, and find the patterns
+						hiding in your trading data.
 					</p>
 				</div>
 
