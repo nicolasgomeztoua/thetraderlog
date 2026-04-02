@@ -32,6 +32,15 @@ export const AI_CHAT_DAILY_LIMIT = 50;
 export const AI_REPORTS_MONTHLY_LIMIT = 5;
 
 // =============================================================================
+// CLERK PLAN IDs (environment-specific, set in .env)
+// =============================================================================
+
+export const CLERK_PLAN_ID_STARTER =
+	process.env.NEXT_PUBLIC_CLERK_PLAN_ID_STARTER ?? "";
+export const CLERK_PLAN_ID_PRO =
+	process.env.NEXT_PUBLIC_CLERK_PLAN_ID_PRO ?? "";
+
+// =============================================================================
 // PLAN DISPLAY METADATA (for UI rendering)
 // =============================================================================
 

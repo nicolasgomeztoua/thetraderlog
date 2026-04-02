@@ -1,11 +1,14 @@
 "use client";
 
 import { SignUpButton, useAuth, useUser } from "@clerk/nextjs";
+import { CheckoutButton } from "@clerk/nextjs/experimental";
 import { ArrowRight, Check, Crown, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { isBetaFromMetadata } from "@/lib/billing/utils";
 import {
+	CLERK_PLAN_ID_PRO,
+	CLERK_PLAN_ID_STARTER,
 	PLAN_METADATA,
 	PLAN_NONE,
 	PLAN_PRO,
@@ -20,6 +23,7 @@ const proMeta = PLAN_METADATA[PLAN_PRO] as PlanMetadata;
 
 interface PricingPlan {
 	slug: string;
+	clerkPlanId: string;
 	name: string;
 	tagline: string;
 	price: string;
@@ -32,6 +36,7 @@ interface PricingPlan {
 const plans: PricingPlan[] = [
 	{
 		slug: PLAN_STARTER,
+		clerkPlanId: CLERK_PLAN_ID_STARTER,
 		name: starterMeta.name,
 		tagline: starterMeta.description,
 		price: "$10",
@@ -42,6 +47,7 @@ const plans: PricingPlan[] = [
 	},
 	{
 		slug: PLAN_PRO,
+		clerkPlanId: CLERK_PLAN_ID_PRO,
 		name: proMeta.name,
 		tagline: proMeta.description,
 		price: "$24",
@@ -133,17 +139,20 @@ function PlanCTA({ plan }: { plan: PricingPlan }) {
 	}
 
 	return (
-		<Button
-			asChild
-			className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
-			data-testid={`pricing-cta-${plan.slug}`}
-			variant={plan.highlighted ? "default" : "outline"}
+		<CheckoutButton
+			newSubscriptionRedirectUrl="/dashboard"
+			planId={plan.clerkPlanId}
+			planPeriod="month"
 		>
-			<Link href="/pricing">
+			<Button
+				className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				data-testid={`pricing-cta-${plan.slug}`}
+				variant={plan.highlighted ? "default" : "outline"}
+			>
 				{`Upgrade to ${plan.name}`}
 				<ArrowRight className="h-4 w-4" />
-			</Link>
-		</Button>
+			</Button>
+		</CheckoutButton>
 	);
 }
 
