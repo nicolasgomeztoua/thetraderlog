@@ -56,3 +56,15 @@ export type BreadcrumbList = {
 		item: string;
 	}>;
 };
+
+export type FAQPage = {
+	"@type": "FAQPage";
+	mainEntity: Array<{
+		"@type": "Question";
+		name: string;
+		acceptedAnswer: {
+			"@type": "Answer";
+			text: string;
+		};
+	}>;
+};

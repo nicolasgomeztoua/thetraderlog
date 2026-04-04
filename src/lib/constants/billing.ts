@@ -11,8 +11,7 @@ export const PLAN_PRO = "pro";
 // =============================================================================
 
 export const FEATURE_TRADE_MANAGEMENT = "trade_management";
-// Analytics is read-only and intentionally ungated — all plans get dashboard access.
-// Gate will be added when advanced analytics features are introduced.
+// Overview tab is free; advanced tabs (Time, Risk, Symbols, Behavior) gated to Starter+.
 export const FEATURE_ANALYTICS = "analytics";
 export const FEATURE_CSV_IMPORT_EXPORT = "csv_import_export";
 // Prop compliance is intentionally ungated for now — gate will be added with prop-firm-specific features.
@@ -39,6 +38,16 @@ export const CLERK_PLAN_ID_STARTER =
 	process.env.NEXT_PUBLIC_CLERK_PLAN_ID_STARTER ?? "";
 export const CLERK_PLAN_ID_PRO =
 	process.env.NEXT_PUBLIC_CLERK_PLAN_ID_PRO ?? "";
+export const CLERK_PLAN_ID_STARTER_ANNUAL =
+	process.env.NEXT_PUBLIC_CLERK_PLAN_ID_STARTER_ANNUAL ?? "";
+export const CLERK_PLAN_ID_PRO_ANNUAL =
+	process.env.NEXT_PUBLIC_CLERK_PLAN_ID_PRO_ANNUAL ?? "";
+
+// =============================================================================
+// ANNUAL BILLING
+// =============================================================================
+
+export const ANNUAL_DISCOUNT_PERCENT = 20;
 
 // =============================================================================
 // PLAN DISPLAY METADATA (for UI rendering)
@@ -48,6 +57,9 @@ export interface PlanMetadata {
 	slug: string;
 	name: string;
 	price: string;
+	priceMonthly: number;
+	priceAnnualMonthly: number;
+	priceAnnualTotal: number;
 	description: string;
 	features: string[];
 }
@@ -57,6 +69,9 @@ export const PLAN_METADATA: Record<string, PlanMetadata> = {
 		slug: PLAN_NONE,
 		name: "No Plan",
 		price: "$0",
+		priceMonthly: 0,
+		priceAnnualMonthly: 0,
+		priceAnnualTotal: 0,
 		description: "No active subscription",
 		features: [],
 	},
@@ -64,6 +79,9 @@ export const PLAN_METADATA: Record<string, PlanMetadata> = {
 		slug: PLAN_STARTER,
 		name: "Starter",
 		price: "$10/mo",
+		priceMonthly: 10,
+		priceAnnualMonthly: 8,
+		priceAnnualTotal: 96,
 		description: "Essential tools for active traders",
 		features: [
 			"Trade management & logging",
@@ -77,6 +95,9 @@ export const PLAN_METADATA: Record<string, PlanMetadata> = {
 		slug: PLAN_PRO,
 		name: "Pro",
 		price: "$24/mo",
+		priceMonthly: 24,
+		priceAnnualMonthly: 19,
+		priceAnnualTotal: 228,
 		description: "AI-powered insights for serious traders",
 		features: [
 			"Everything in Starter",

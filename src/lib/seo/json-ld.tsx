@@ -1,14 +1,23 @@
-import type { WithContext, Organization, WebApplication, Product, BreadcrumbList } from "./types";
+import type {
+	BreadcrumbList,
+	FAQPage,
+	Organization,
+	Product,
+	WebApplication,
+	WithContext,
+} from "./types";
 
 const BASE_URL = "https://thetraderlog.com";
 
 export function JsonLd<T extends Record<string, unknown>>({
 	data,
-}: { data: WithContext<T> }) {
+}: {
+	data: WithContext<T>;
+}) {
 	return (
 		<script
-			type="application/ld+json"
 			dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+			type="application/ld+json"
 		/>
 	);
 }
@@ -39,8 +48,8 @@ export function webApplicationJsonLd(): WithContext<WebApplication> {
 		offers: {
 			"@type": "AggregateOffer",
 			priceCurrency: "USD",
-			lowPrice: "0",
-			highPrice: "50",
+			lowPrice: "10",
+			highPrice: "24",
 			offerCount: "2",
 		},
 		featureList: [
@@ -68,22 +77,38 @@ export function pricingJsonLd(): WithContext<Product> {
 			{
 				"@type": "Offer",
 				name: "Starter",
-				price: "0",
+				price: "10",
 				priceCurrency: "USD",
-				description: "Free plan for getting started with trade journaling",
+				description: "Essential tools for active traders",
 				availability: "https://schema.org/InStock",
 			},
 			{
 				"@type": "Offer",
 				name: "Pro",
-				price: "50",
+				price: "24",
 				priceCurrency: "USD",
 				priceValidUntil: "2026-12-31",
-				description:
-					"Full-featured plan with AI insights and advanced analytics",
+				description: "AI-powered insights for serious traders",
 				availability: "https://schema.org/InStock",
 			},
 		],
+	};
+}
+
+export function faqJsonLd(
+	items: { q: string; a: string }[],
+): WithContext<FAQPage> {
+	return {
+		"@context": "https://schema.org",
+		"@type": "FAQPage",
+		mainEntity: items.map((item) => ({
+			"@type": "Question" as const,
+			name: item.q,
+			acceptedAnswer: {
+				"@type": "Answer" as const,
+				text: item.a,
+			},
+		})),
 	};
 }
 

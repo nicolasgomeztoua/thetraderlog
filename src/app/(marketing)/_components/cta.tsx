@@ -82,7 +82,7 @@ export function CTA() {
 						{/* Trust elements */}
 						<div className="mt-8 flex flex-col items-center justify-center gap-2 font-mono text-[10px] text-muted-foreground sm:mt-12 sm:flex-row sm:gap-x-8 sm:text-xs">
 							<span>✓ No credit card required</span>
-							<span>✓ 14-day Pro trial</span>
+							<span>✓ 30-day free trial</span>
 							<span>✓ Cancel anytime</span>
 						</div>
 					</>
@@ -91,12 +91,12 @@ export function CTA() {
 				{/* Decorative terminal line */}
 				<div className="mx-auto mt-10 max-w-lg rounded border border-border/50 bg-muted/30 p-3 sm:mt-16 sm:p-4">
 					<div className="flex items-center gap-2 font-mono text-xs sm:gap-3 sm:text-sm">
-						<span className="text-primary">$</span>
+						<span className="text-primary">&gt;</span>
 						<span className="text-muted-foreground">
 							<span className="hidden sm:inline">
-								thetraderlog --import trades.csv --analyze
+								importing 247 trades... analysis ready
 							</span>
-							<span className="sm:hidden">thetraderlog --analyze</span>
+							<span className="sm:hidden">analysis ready</span>
 						</span>
 						<span className="animate-pulse text-primary">▌</span>
 					</div>

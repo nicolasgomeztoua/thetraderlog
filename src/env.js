@@ -47,6 +47,8 @@ export const env = createEnv({
 		NEXT_PUBLIC_APP_URL: z.string().url().optional(),
 		NEXT_PUBLIC_CLERK_PLAN_ID_STARTER: z.string().optional(),
 		NEXT_PUBLIC_CLERK_PLAN_ID_PRO: z.string().optional(),
+		NEXT_PUBLIC_CLERK_PLAN_ID_STARTER_ANNUAL: z.string().optional(),
+		NEXT_PUBLIC_CLERK_PLAN_ID_PRO_ANNUAL: z.string().optional(),
 	},
 
 	/**
@@ -71,6 +73,10 @@ export const env = createEnv({
 		NEXT_PUBLIC_CLERK_PLAN_ID_STARTER:
 			process.env.NEXT_PUBLIC_CLERK_PLAN_ID_STARTER,
 		NEXT_PUBLIC_CLERK_PLAN_ID_PRO: process.env.NEXT_PUBLIC_CLERK_PLAN_ID_PRO,
+		NEXT_PUBLIC_CLERK_PLAN_ID_STARTER_ANNUAL:
+			process.env.NEXT_PUBLIC_CLERK_PLAN_ID_STARTER_ANNUAL,
+		NEXT_PUBLIC_CLERK_PLAN_ID_PRO_ANNUAL:
+			process.env.NEXT_PUBLIC_CLERK_PLAN_ID_PRO_ANNUAL,
 		DATABENTO_API_KEY: process.env.DATABENTO_API_KEY,
 		TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
 		S3_ENDPOINT: process.env.S3_ENDPOINT,
