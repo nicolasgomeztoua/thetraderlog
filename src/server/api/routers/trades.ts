@@ -14,6 +14,7 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
+import { logger } from "@/lib/logger";
 import {
 	FEATURE_CSV_IMPORT_EXPORT,
 	FEATURE_TRADE_MANAGEMENT,
@@ -253,8 +254,8 @@ async function autoEvaluateTradeRules(
 				});
 		}
 	} catch (error) {
-		// Log but don't throw - trade close should not fail due to evaluation errors
-		console.error("Failed to auto-evaluate trade rules:", error);
+		// Log but don't throw — trade close should not fail due to evaluation errors
+		logger.error("Failed to auto-evaluate trade rules", error, { tradeId, userId });
 	}
 }
 
@@ -715,7 +716,7 @@ export const tradesRouter = createTRPCRouter({
 					tradeId: newTrade.id,
 					notes: newTrade.notes,
 				}).catch((err) =>
-					console.error("Failed to update trade search vector:", err),
+					logger.error("Failed to update trade search vector", err, { tradeId: newTrade.id }),
 				);
 			}
 
@@ -928,7 +929,7 @@ export const tradesRouter = createTRPCRouter({
 					tradeId: id,
 					notes: updated.notes,
 				}).catch((err) =>
-					console.error("Failed to update trade search vector:", err),
+					logger.error("Failed to update trade search vector", err, { tradeId: id }),
 				);
 			}
 
@@ -1894,7 +1895,7 @@ export const tradesRouter = createTRPCRouter({
 				} catch {
 					// Log error but continue with database deletion
 					// The file may have already been deleted or not exist
-					console.error(`Failed to delete S3 object: ${attachment.key}`);
+					logger.error("Failed to delete S3 object", undefined, { key: attachment.key });
 				}
 			}
 

@@ -8,6 +8,7 @@
  */
 
 import { auth, currentUser } from "@clerk/nextjs/server";
+import * as Sentry from "@sentry/nextjs";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import superjson from "superjson";
@@ -18,6 +19,7 @@ import {
 	ERR_FEATURE_NOT_AVAILABLE,
 	ERR_PLAN_REQUIRED,
 } from "@/lib/constants/errors";
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db";
 import type { Database } from "@/server/db/create-db";
 import type { User } from "@/server/db/schema";
@@ -149,6 +151,46 @@ const timingMiddleware = t.middleware(async ({ next }) => {
 });
 
 /**
+ * Sentry middleware — sets user context and captures unhandled procedure errors.
+ * Wraps every procedure so Sentry Issues include userId, email, and procedure path.
+ * Intentional TRPCErrors (NOT_FOUND, UNAUTHORIZED) are NOT reported — only unexpected crashes.
+ */
+const sentryMiddleware = t.middleware(async ({ ctx, next, path, type }) => {
+	return Sentry.withScope(async (scope) => {
+		scope.setTag("trpc.path", path);
+		scope.setTag("trpc.type", type);
+
+		try {
+			const result = await next();
+			return result;
+		} catch (error) {
+			// Only report unexpected errors — not intentional TRPCErrors from business logic
+			const isIntentional =
+				error instanceof TRPCError &&
+				[
+					"BAD_REQUEST",
+					"UNAUTHORIZED",
+					"FORBIDDEN",
+					"NOT_FOUND",
+					"CONFLICT",
+					"PRECONDITION_FAILED",
+					"PARSE_ERROR",
+				].includes(error.code);
+
+			if (!isIntentional) {
+				logger.error("tRPC procedure failed", error, {
+					path,
+					type,
+					userId: ctx.userId,
+				});
+			}
+
+			throw error;
+		}
+	});
+});
+
+/**
  * Auth middleware - ensures user is authenticated and syncs user to DB if needed
  */
 const authMiddleware = t.middleware(async ({ ctx, next }) => {
@@ -224,6 +266,9 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
 		});
 	}
 
+	// Set Sentry user context so all errors/logs are attributed to this user
+	Sentry.setUser({ id: user.clerkId, email: user.email });
+
 	return next({
 		ctx: {
 			...ctx,
@@ -239,7 +284,9 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
-export const publicProcedure = t.procedure.use(timingMiddleware);
+export const publicProcedure = t.procedure
+	.use(timingMiddleware)
+	.use(sentryMiddleware);
 
 /**
  * Protected (authenticated) procedure
@@ -249,6 +296,7 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
  */
 export const protectedProcedure = t.procedure
 	.use(timingMiddleware)
+	.use(sentryMiddleware)
 	.use(authMiddleware);
 
 /**

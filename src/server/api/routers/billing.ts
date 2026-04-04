@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 import { getEffectivePlan, isBetaFromMetadata } from "@/lib/billing/utils";
+import { logger } from "@/lib/logger";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
@@ -73,10 +74,7 @@ export async function incrementAndCheckChatUsage(
 					and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
 				);
 		} catch (rollbackErr) {
-			console.error(
-				"Failed to rollback chat usage counter after limit exceeded",
-				{ userId, date: today, staleCount: used, rollbackErr },
-			);
+			logger.error("Failed to rollback chat usage counter", rollbackErr, { userId, date: today, staleCount: used });
 		}
 
 		throw new TRPCError({
@@ -139,10 +137,7 @@ export async function incrementAndCheckReportUsage(
 					),
 				);
 		} catch (rollbackErr) {
-			console.error(
-				"Failed to rollback report usage counter after limit exceeded",
-				{ userId, month, year, staleCount: used, rollbackErr },
-			);
+			logger.error("Failed to rollback report usage counter", rollbackErr, { userId, month, year, staleCount: used });
 		}
 
 		throw new TRPCError({

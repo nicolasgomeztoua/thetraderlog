@@ -31,6 +31,8 @@ export const env = createEnv({
 		DAYTONA_API_KEY: z.string().min(1).optional(),
 		// Resend API key for transactional emails (optional — only needed for report email delivery)
 		RESEND_API_KEY: z.string().min(1).optional(),
+		// Sentry DSN for server-side error monitoring (optional — errors silently dropped if unset)
+		SENTRY_DSN: z.string().url().optional(),
 	},
 
 	/**
@@ -49,6 +51,8 @@ export const env = createEnv({
 		NEXT_PUBLIC_CLERK_PLAN_ID_PRO: z.string().optional(),
 		NEXT_PUBLIC_CLERK_PLAN_ID_STARTER_ANNUAL: z.string().optional(),
 		NEXT_PUBLIC_CLERK_PLAN_ID_PRO_ANNUAL: z.string().optional(),
+		// Sentry DSN for client-side error monitoring (optional — errors silently dropped if unset)
+		NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
 	},
 
 	/**
@@ -88,6 +92,8 @@ export const env = createEnv({
 		OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 		DAYTONA_API_KEY: process.env.DAYTONA_API_KEY,
 		RESEND_API_KEY: process.env.RESEND_API_KEY,
+		SENTRY_DSN: process.env.SENTRY_DSN,
+		NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

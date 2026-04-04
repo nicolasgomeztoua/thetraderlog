@@ -17,6 +17,7 @@ import {
 	FORCED_ITEM_SL_CHECK,
 	TOGGLEABLE_FORCED_ITEMS,
 } from "@/lib/constants/checklist";
+import { logger } from "@/lib/logger";
 import {
 	ERR_ATTACHMENT_CREATE_FAILED,
 	ERR_ATTACHMENT_NOT_FOUND,
@@ -188,7 +189,7 @@ export const dailyJournalRouter = createTRPCRouter({
 						}),
 					)
 					.catch((err) => {
-						console.error("Failed to update search vector:", err);
+						logger.error("Failed to update journal search vector", err, { userId: ctx.user.id });
 					});
 
 				return updated;
@@ -222,7 +223,7 @@ export const dailyJournalRouter = createTRPCRouter({
 					}),
 				)
 				.catch((err) => {
-					console.error("Failed to update search vector:", err);
+					logger.error("Failed to update journal search vector", err, { userId: ctx.user.id });
 				});
 
 			return created;
@@ -1539,7 +1540,7 @@ export const dailyJournalRouter = createTRPCRouter({
 				} catch {
 					// Log error but continue with database deletion
 					// The file may have already been deleted or not exist
-					console.error(`Failed to delete S3 object: ${attachment.key}`);
+					logger.error("Failed to delete S3 object", undefined, { key: attachment.key });
 				}
 			}
 

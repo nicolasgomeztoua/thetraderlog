@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
 	"/api/queue(.*)", // QStash callback endpoint
 	"/print/(.*)", // PDF print pages (token auth, not Clerk)
 	"/share/(.*)", // Public share pages (token-based access)
+	"/monitoring(.*)", // Sentry tunnel route (ad-blocker bypass)
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

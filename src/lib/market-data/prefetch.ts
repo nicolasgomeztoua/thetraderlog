@@ -6,6 +6,7 @@
  */
 
 import { and, isNotNull, isNull } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db";
 import { trades } from "@/server/db/schema";
 import type { BaseInterval } from "./service";
@@ -51,9 +52,7 @@ async function fetchWithRetry(
 			return true;
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : "Unknown error";
-			console.warn(
-				`[daily-prefetch] ${symbol} ${interval} attempt ${attempt}/${MAX_RETRIES} failed: ${msg}`,
-			);
+			logger.warn("Prefetch attempt failed", { symbol, interval, attempt, maxRetries: MAX_RETRIES, error: msg });
 
 			if (attempt < MAX_RETRIES) {
 				const backoff = INITIAL_BACKOFF_MS * 2 ** (attempt - 1);
@@ -75,7 +74,7 @@ export async function prefetchMarketDataForAllSymbols(): Promise<PrefetchResult>
 	const symbols = await discoverSymbols();
 
 	if (symbols.length === 0) {
-		console.info("[daily-prefetch] No symbols found in trades table");
+		logger.info("No symbols found in trades table");
 		return {
 			total: 0,
 			successes: 0,
@@ -90,9 +89,7 @@ export async function prefetchMarketDataForAllSymbols(): Promise<PrefetchResult>
 	yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 	yesterday.setUTCHours(0, 0, 0, 0);
 
-	console.info(
-		`[daily-prefetch] Fetching data for ${symbols.length} symbols: ${symbols.join(", ")}`,
-	);
+	logger.info("Starting market data prefetch", { symbolCount: symbols.length, symbols: symbols.join(", ") });
 
 	let successes = 0;
 	let failures = 0;
@@ -112,9 +109,7 @@ export async function prefetchMarketDataForAllSymbols(): Promise<PrefetchResult>
 				]);
 
 				if (has1min && has1h) {
-					console.info(
-						`[daily-prefetch] ${symbol} already cached for both intervals — skipping`,
-					);
+					logger.debug("Symbol already cached, skipping", { symbol });
 					return "skipped" as const;
 				}
 
@@ -127,9 +122,7 @@ export async function prefetchMarketDataForAllSymbols(): Promise<PrefetchResult>
 					const ok = await fetchWithRetry(symbol, interval, yesterday);
 					if (!ok) {
 						allSucceeded = false;
-						console.error(
-							`[daily-prefetch] ${symbol} ${interval} failed after ${MAX_RETRIES} retries`,
-						);
+						logger.error("Prefetch exhausted all retries", undefined, { symbol, interval, maxRetries: MAX_RETRIES });
 					}
 				}
 

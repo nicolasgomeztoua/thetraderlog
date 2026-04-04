@@ -2,6 +2,7 @@ import type { WebhookEvent } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { Webhook } from "svix";
+import { logger } from "@/lib/logger";
 import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
 
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
 			"svix-signature": svix_signature,
 		}) as WebhookEvent;
 	} catch (err) {
-		console.error("Error verifying webhook:", err);
+		logger.error("Clerk webhook verification failed", err);
 		return new Response("Error occurred", {
 			status: 400,
 		});

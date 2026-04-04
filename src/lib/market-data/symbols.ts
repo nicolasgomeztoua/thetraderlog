@@ -295,7 +295,8 @@ export function calculateFuturesPnL(
 ): number {
 	const spec = getFuturesSpec(symbol);
 	if (!spec) {
-		console.warn(`No contract spec found for ${symbol}, using raw calculation`);
+		// Missing spec is expected for custom/unlisted symbols — not an error
+		// Using raw calculation as fallback (point value of 1)
 		// Fallback: assume point value of 1
 		const priceDiff =
 			direction === "long" ? exitPrice - entryPrice : entryPrice - exitPrice;

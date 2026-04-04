@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import {
 	type CacheInterval,
 	getCacheStats,
@@ -191,7 +192,7 @@ export const marketDataRouter = createTRPCRouter({
 					},
 				};
 			} catch (error) {
-				console.error("Market data analysis error:", error);
+				logger.error("Market data analysis failed", error, { symbol: input.symbol });
 				return { available: false, message: "Failed to analyze market data" };
 			}
 		}),

@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import type { ModelMessage } from "ai";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 import { aiGenerateText } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
 import { buildSystemPrompt } from "@/lib/ai/prompts/trading-analyst";
@@ -240,7 +241,7 @@ export const aiRouter = createTRPCRouter({
 					try {
 						await decrementChatUsage(ctx.db, ctx.user.id, usageDate);
 					} catch {
-						console.error("Failed to rollback chat usage after error");
+						logger.error("Failed to rollback chat usage", undefined, { userId: ctx.user.id });
 					}
 				}
 				throw error;
@@ -452,9 +453,7 @@ export const aiRouter = createTRPCRouter({
 					try {
 						await runs.cancel(triggerHandleId);
 					} catch {
-						console.error(
-							"Failed to cancel Trigger.dev run after startReport error",
-						);
+						logger.error("Failed to cancel Trigger.dev run after startReport error", undefined, { triggerHandleId });
 					}
 				}
 
@@ -467,7 +466,7 @@ export const aiRouter = createTRPCRouter({
 							usageYear,
 						);
 					} catch {
-						console.error("Failed to rollback report usage after error");
+						logger.error("Failed to rollback report usage", undefined, { userId: ctx.user.id });
 					}
 				}
 
@@ -490,7 +489,7 @@ export const aiRouter = createTRPCRouter({
 								.where(eq(aiConversations.id, current.conversationId));
 						}
 					} catch {
-						console.error("Failed to mark orphaned report as failed");
+						logger.error("Failed to mark orphaned report as failed", undefined, { reportId: createdReportId });
 					}
 				}
 
@@ -725,9 +724,7 @@ export const aiRouter = createTRPCRouter({
 					try {
 						await runs.cancel(retryTriggerHandleId);
 					} catch {
-						console.error(
-							"Failed to cancel Trigger.dev run after retryReport error",
-						);
+						logger.error("Failed to cancel Trigger.dev run after retryReport error", undefined, { retryTriggerHandleId, reportId: report.id });
 					}
 				}
 
@@ -743,9 +740,7 @@ export const aiRouter = createTRPCRouter({
 							usageYear,
 						);
 					} catch {
-						console.error(
-							"Failed to rollback report usage after retry failure",
-						);
+						logger.error("Failed to rollback report usage after retry", undefined, { userId: ctx.user.id, reportId: report.id });
 					}
 				}
 				try {
@@ -764,9 +759,7 @@ export const aiRouter = createTRPCRouter({
 							.where(eq(aiConversations.id, report.conversationId));
 					}
 				} catch {
-					console.error(
-						"Failed to reset report status after retry trigger failure",
-					);
+					logger.error("Failed to reset report status after retry trigger failure", undefined, { reportId: report.id });
 				}
 				throw error;
 			}
@@ -816,7 +809,7 @@ export const aiRouter = createTRPCRouter({
 				try {
 					await runs.cancel(handle.id);
 				} catch {
-					console.error("Failed to cancel PDF run after DB update failure");
+					logger.error("Failed to cancel PDF run after DB update failure", undefined, { runId: handle.id, reportId: input.reportId });
 				}
 				throw dbErr;
 			}
