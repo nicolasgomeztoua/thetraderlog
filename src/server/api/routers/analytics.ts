@@ -18,6 +18,7 @@ import {
 	findDrawdownPeriods,
 	parsePnl,
 } from "@/lib/analytics";
+import { FEATURE_CSV_IMPORT_EXPORT } from "@/lib/constants/billing";
 import { ERR_PRESET_NOT_FOUND } from "@/lib/constants/errors";
 import {
 	getDateStringInTimezone,
@@ -34,7 +35,11 @@ import {
 	getUserTradingSessions,
 	type TradingSession,
 } from "@/server/api/helpers";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	requireFeature,
+} from "@/server/api/trpc";
 import {
 	accounts,
 	filterPresets,
@@ -3531,7 +3536,7 @@ export const analyticsRouter = createTRPCRouter({
 	 * Export filtered trades for CSV download
 	 * Returns trades matching filters with all relevant fields for export
 	 */
-	exportFilteredTrades: protectedProcedure
+	exportFilteredTrades: requireFeature(FEATURE_CSV_IMPORT_EXPORT)
 		.input(
 			z
 				.object({

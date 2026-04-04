@@ -1,10 +1,14 @@
 "use client";
 
-import { ArrowRight, BookMarked, Plus } from "lucide-react";
+import { ArrowRight, BookMarked, Lock, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	UpgradeButtonCompact,
+	useHasFeature,
+} from "@/components/billing/upgrade-prompt";
 import { StrategyCard, StrategyLeaderboard } from "@/components/strategy";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { FEATURE_CUSTOM_STRATEGIES } from "@/lib/constants/billing";
 import {
 	ERR_STRATEGY_DELETE_FAILED,
 	ERR_STRATEGY_DUPLICATE_UI_FAILED,
@@ -29,6 +34,7 @@ import { api } from "@/trpc/react";
 // =============================================================================
 
 export default function StrategiesPage() {
+	const { hasAccess: hasStrategies } = useHasFeature(FEATURE_CUSTOM_STRATEGIES);
 	const router = useRouter();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [strategyToDelete, setStrategyToDelete] = useState<string | null>(null);
@@ -187,17 +193,21 @@ export default function StrategiesPage() {
 						</div>
 
 						{/* CTA Button */}
-						<Button
-							asChild
-							className="group min-h-[48px] shrink-0 px-4 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:px-6"
-							data-testid="strategies-header-new-button"
-						>
-							<Link href="/strategies/new">
-								<Plus className="mr-2 h-4 w-4" />
-								New Strategy
-								<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-							</Link>
-						</Button>
+						{hasStrategies ? (
+							<Button
+								asChild
+								className="group min-h-[48px] shrink-0 px-4 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:px-6"
+								data-testid="strategies-header-new-button"
+							>
+								<Link href="/strategies/new">
+									<Plus className="mr-2 h-4 w-4" />
+									New Strategy
+									<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+								</Link>
+							</Button>
+						) : (
+							<UpgradeButtonCompact feature={FEATURE_CUSTOM_STRATEGIES} />
+						)}
 					</div>
 				</div>
 
@@ -392,20 +402,31 @@ export default function StrategiesPage() {
 								/>
 							))}
 							{/* Create Strategy CTA Card */}
-							<Link
-								className="group flex min-h-[200px] flex-col items-center justify-center gap-4 rounded border-2 border-border border-dashed bg-muted p-6 transition-all hover:border-primary/50 hover:bg-muted"
-								data-testid="strategies-create-cta"
-								href="/strategies/new"
-							>
-								<div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted transition-colors group-hover:border-primary/50 group-hover:bg-primary/10">
-									<Plus className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
+							{hasStrategies ? (
+								<Link
+									className="group flex min-h-[200px] flex-col items-center justify-center gap-4 rounded border-2 border-border border-dashed bg-muted p-6 transition-all hover:border-primary/50 hover:bg-muted"
+									data-testid="strategies-create-cta"
+									href="/strategies/new"
+								>
+									<div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted transition-colors group-hover:border-primary/50 group-hover:bg-primary/10">
+										<Plus className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-primary" />
+									</div>
+									<div className="text-center">
+										<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors group-hover:text-primary">
+											Create New Strategy
+										</span>
+									</div>
+								</Link>
+							) : (
+								<div className="group flex min-h-[200px] flex-col items-center justify-center gap-4 rounded border-2 border-border border-dashed bg-muted p-6">
+									<div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted">
+										<Lock className="h-6 w-6 text-muted-foreground" />
+									</div>
+									<div className="text-center">
+										<UpgradeButtonCompact feature={FEATURE_CUSTOM_STRATEGIES} />
+									</div>
 								</div>
-								<div className="text-center">
-									<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors group-hover:text-primary">
-										Create New Strategy
-									</span>
-								</div>
-							</Link>
+							)}
 						</div>
 					</div>
 				)}

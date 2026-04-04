@@ -1,7 +1,15 @@
+"use client";
+
+import { Lock } from "lucide-react";
 import dynamic from "next/dynamic";
+import {
+	UpgradePrompt,
+	useHasFeature,
+} from "@/components/billing/upgrade-prompt";
 import { DailyJournalPreview } from "@/components/daily-journal/daily-journal-preview";
 import { TradeTags } from "@/components/tags/tag-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FEATURE_TRADE_REPLAY } from "@/lib/constants/billing";
 import { cn } from "@/lib/shared";
 import type { TradeForContentPanel } from "@/types";
 import { TradeReplay } from "./replay";
@@ -111,6 +119,8 @@ export function ContentPanel({
 	className,
 	initialTab,
 }: ContentPanelProps) {
+	const { hasAccess: hasReplay } = useHasFeature(FEATURE_TRADE_REPLAY);
+
 	return (
 		<div
 			className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}
@@ -137,6 +147,9 @@ export function ContentPanel({
 						value="replay"
 					>
 						Replay
+						{!hasReplay && (
+							<Lock className="ml-1 size-3 text-muted-foreground" />
+						)}
 					</TabsTrigger>
 					<TabsTrigger
 						className="rounded-none border-transparent border-b-2 font-mono text-[10px] uppercase tracking-wider data-[state=active]:border-primary data-[state=active]:bg-transparent"
@@ -172,26 +185,32 @@ export function ContentPanel({
 
 				{/* REPLAY TAB */}
 				<TabsContent className="m-0 flex-1 p-0" value="replay">
-					<TradeReplay
-						direction={trade.direction}
-						entryPrice={trade.entryPrice}
-						entryTime={trade.entryTime}
-						executions={trade.executions?.map((exec) => ({
-							id: exec.id,
-							executionType: exec.executionType,
-							executedAt: exec.executedAt,
-							price: exec.price,
-							quantity: exec.quantity,
-							realizedPnl: exec.realizedPnl,
-						}))}
-						exitPrice={trade.exitPrice}
-						exitTime={trade.exitTime}
-						quantity={trade.quantity}
-						stopLoss={trade.stopLoss}
-						symbol={trade.symbol}
-						takeProfit={trade.takeProfit}
-						tradeId={trade.id}
-					/>
+					{hasReplay ? (
+						<TradeReplay
+							direction={trade.direction}
+							entryPrice={trade.entryPrice}
+							entryTime={trade.entryTime}
+							executions={trade.executions?.map((exec) => ({
+								id: exec.id,
+								executionType: exec.executionType,
+								executedAt: exec.executedAt,
+								price: exec.price,
+								quantity: exec.quantity,
+								realizedPnl: exec.realizedPnl,
+							}))}
+							exitPrice={trade.exitPrice}
+							exitTime={trade.exitTime}
+							quantity={trade.quantity}
+							stopLoss={trade.stopLoss}
+							symbol={trade.symbol}
+							takeProfit={trade.takeProfit}
+							tradeId={trade.id}
+						/>
+					) : (
+						<UpgradePrompt feature={FEATURE_TRADE_REPLAY}>
+							<div />
+						</UpgradePrompt>
+					)}
 				</TabsContent>
 
 				{/* RUNNING P&L TAB */}

@@ -1,7 +1,15 @@
 "use client";
 
 import { useAuth, useUser } from "@clerk/nextjs";
-import { Lock, MessageSquare, Sparkles, Zap } from "lucide-react";
+import {
+	BarChart3,
+	BookOpen,
+	Lock,
+	MessageSquare,
+	Play,
+	Sparkles,
+	Zap,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -9,11 +17,14 @@ import { isBetaFromMetadata } from "@/lib/billing/utils";
 import {
 	FEATURE_AI_CHAT,
 	FEATURE_AI_REPORTS,
+	FEATURE_ANALYTICS,
 	FEATURE_CSV_IMPORT_EXPORT,
 	FEATURE_CUSTOM_STRATEGIES,
 	FEATURE_CUSTOM_TAGS,
+	FEATURE_DAILY_JOURNAL,
 	FEATURE_PDF_EXPORT,
 	FEATURE_TRADE_MANAGEMENT,
+	FEATURE_TRADE_REPLAY,
 	PLAN_PRO,
 	PLAN_STARTER,
 } from "@/lib/constants/billing";
@@ -82,7 +93,61 @@ const FEATURE_CONFIG: Record<
 		planRequired: PLAN_STARTER,
 		isAiFeature: false,
 	},
+	[FEATURE_ANALYTICS]: {
+		title: "Unlock Advanced Analytics",
+		description:
+			"Deep-dive into time, risk, and behavioral patterns across your trades.",
+		icon: BarChart3,
+		planRequired: PLAN_STARTER,
+		isAiFeature: false,
+	},
+	[FEATURE_DAILY_JOURNAL]: {
+		title: "Unlock Daily Journal",
+		description:
+			"Reflect on your trading day with a rich journal, checklists, and calendar.",
+		icon: BookOpen,
+		planRequired: PLAN_STARTER,
+		isAiFeature: false,
+	},
+	[FEATURE_TRADE_REPLAY]: {
+		title: "Unlock Trade Replay",
+		description:
+			"Replay your trades tick-by-tick to study entries, exits, and execution.",
+		icon: Play,
+		planRequired: PLAN_STARTER,
+		isAiFeature: false,
+	},
 };
+
+// =============================================================================
+// HOOKS
+// =============================================================================
+
+/**
+ * Reusable hook that checks if the current user has access to a feature.
+ * Includes beta bypass. Use for conditional rendering (lock icons, button swaps)
+ * without wrapping entire sections in <UpgradePrompt>.
+ */
+export function useHasFeature(feature: string): {
+	hasAccess: boolean;
+	isLoaded: boolean;
+} {
+	const { has, isLoaded } = useAuth();
+	const { user } = useUser();
+
+	if (!isLoaded) return { hasAccess: false, isLoaded: false };
+
+	const isBeta = isBetaFromMetadata(
+		user?.publicMetadata as Record<string, unknown> | undefined,
+	);
+	const hasAccess = isBeta || !!has?.({ feature });
+
+	return { hasAccess, isLoaded };
+}
+
+// =============================================================================
+// COMPONENTS
+// =============================================================================
 
 interface UpgradePromptProps {
 	feature: string;
@@ -90,8 +155,7 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
-	const { has, isLoaded } = useAuth();
-	const { user } = useUser();
+	const { hasAccess, isLoaded } = useHasFeature(feature);
 
 	if (!isLoaded) {
 		return (
@@ -100,11 +164,6 @@ export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
 			</div>
 		);
 	}
-
-	const isBeta = isBetaFromMetadata(
-		user?.publicMetadata as Record<string, unknown> | undefined,
-	);
-	const hasAccess = isBeta || has?.({ feature });
 
 	if (hasAccess) {
 		return <>{children}</>;
@@ -121,6 +180,47 @@ export function UpgradePrompt({ feature, children }: UpgradePromptProps) {
 	}
 
 	return <UpgradeCard config={config} />;
+}
+
+/**
+ * Blurred teaser gate — renders children blurred with upgrade card overlaid.
+ * Free users see the content exists (charts, tables) but can't interact.
+ */
+export function UpgradeOverlay({ feature, children }: UpgradePromptProps) {
+	const { hasAccess, isLoaded } = useHasFeature(feature);
+
+	if (!isLoaded) {
+		return (
+			<div className="flex h-full min-h-[300px] items-center justify-center p-6">
+				<div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+			</div>
+		);
+	}
+
+	if (hasAccess) {
+		return <>{children}</>;
+	}
+
+	const config = FEATURE_CONFIG[feature];
+	if (!config) {
+		if (process.env.NODE_ENV !== "production") {
+			console.warn(
+				`UpgradeOverlay: no config found for feature "${feature}". Add it to FEATURE_CONFIG.`,
+			);
+		}
+		return <>{children}</>;
+	}
+
+	return (
+		<div className="relative">
+			<div aria-hidden className="pointer-events-none select-none blur-sm">
+				{children}
+			</div>
+			<div className="absolute inset-0 flex items-center justify-center bg-background/60">
+				<UpgradeCard config={config} />
+			</div>
+		</div>
+	);
 }
 
 interface UpgradeCardInlineProps {

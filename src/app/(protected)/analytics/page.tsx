@@ -25,6 +25,7 @@ interface CumulativePnLChartData {
 }
 
 import { AgCharts } from "ag-charts-react";
+import { Lock } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -49,8 +50,13 @@ import {
 	SymbolTable,
 } from "@/components/analytics";
 import { ChartSkeleton } from "@/components/analytics/chart-skeleton";
+import {
+	UpgradeOverlay,
+	useHasFeature,
+} from "@/components/billing/upgrade-prompt";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FEATURE_ANALYTICS } from "@/lib/constants/billing";
 
 // Dynamic imports for AG Charts components (code-split for bundle optimization)
 const EquityCurve = dynamic(
@@ -1229,6 +1235,9 @@ export default function AnalyticsPage() {
 	// Manage presets dialog state
 	const [managePresetsOpen, setManagePresetsOpen] = useState(false);
 
+	// Check analytics feature access
+	const { hasAccess: hasAnalytics } = useHasFeature(FEATURE_ANALYTICS);
+
 	// Get selected account
 	const { selectedAccountId } = useAccount();
 
@@ -1352,24 +1361,36 @@ export default function AnalyticsPage() {
 							value="time"
 						>
 							Time
+							{!hasAnalytics && (
+								<Lock className="ml-1 size-3 text-muted-foreground" />
+							)}
 						</TabsTrigger>
 						<TabsTrigger
 							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="risk"
 						>
 							Risk
+							{!hasAnalytics && (
+								<Lock className="ml-1 size-3 text-muted-foreground" />
+							)}
 						</TabsTrigger>
 						<TabsTrigger
 							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="symbols"
 						>
 							Symbols
+							{!hasAnalytics && (
+								<Lock className="ml-1 size-3 text-muted-foreground" />
+							)}
 						</TabsTrigger>
 						<TabsTrigger
 							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="behavior"
 						>
 							Behavior
+							{!hasAnalytics && (
+								<Lock className="ml-1 size-3 text-muted-foreground" />
+							)}
 						</TabsTrigger>
 					</TabsList>
 				</div>
@@ -1408,22 +1429,30 @@ export default function AnalyticsPage() {
 
 				{/* Time Tab */}
 				<TabsContent className="space-y-4 sm:space-y-6" value="time">
-					<TimeTab />
+					<UpgradeOverlay feature={FEATURE_ANALYTICS}>
+						<TimeTab />
+					</UpgradeOverlay>
 				</TabsContent>
 
 				{/* Risk Tab */}
 				<TabsContent className="space-y-4 sm:space-y-6" value="risk">
-					<RiskTab />
+					<UpgradeOverlay feature={FEATURE_ANALYTICS}>
+						<RiskTab />
+					</UpgradeOverlay>
 				</TabsContent>
 
 				{/* Symbols Tab */}
 				<TabsContent className="space-y-4 sm:space-y-6" value="symbols">
-					<SymbolsTab />
+					<UpgradeOverlay feature={FEATURE_ANALYTICS}>
+						<SymbolsTab />
+					</UpgradeOverlay>
 				</TabsContent>
 
 				{/* Behavior Tab */}
 				<TabsContent className="space-y-4 sm:space-y-6" value="behavior">
-					<BehaviorTab />
+					<UpgradeOverlay feature={FEATURE_ANALYTICS}>
+						<BehaviorTab />
+					</UpgradeOverlay>
 				</TabsContent>
 			</Tabs>
 		</div>

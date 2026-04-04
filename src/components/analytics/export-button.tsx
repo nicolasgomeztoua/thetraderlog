@@ -2,6 +2,10 @@
 
 import { Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useState } from "react";
+import {
+	UpgradeButtonCompact,
+	useHasFeature,
+} from "@/components/billing/upgrade-prompt";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -10,6 +14,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAccount } from "@/contexts/account-context";
+import { FEATURE_CSV_IMPORT_EXPORT } from "@/lib/constants/billing";
 import { type ExportableTrade, exportTradesToCSV } from "@/lib/ui";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import { api } from "@/trpc/react";
@@ -64,6 +69,7 @@ function useApiFilters() {
 
 export function ExportButton({ className }: ExportButtonProps) {
 	const [isExporting, setIsExporting] = useState(false);
+	const { hasAccess: hasExport } = useHasFeature(FEATURE_CSV_IMPORT_EXPORT);
 	const { selectedAccountId } = useAccount();
 	const { hasActiveFilters } = useAnalyticsFilterStore();
 	const apiFilters = useApiFilters();
@@ -134,14 +140,20 @@ export function ExportButton({ className }: ExportButtonProps) {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="font-mono">
-				<DropdownMenuItem
-					className="cursor-pointer"
-					disabled={isExporting}
-					onClick={handleExportTrades}
-				>
-					<FileSpreadsheet className="mr-2 size-4" />
-					<span>Export Filtered Trades (CSV)</span>
-				</DropdownMenuItem>
+				{hasExport ? (
+					<DropdownMenuItem
+						className="cursor-pointer"
+						disabled={isExporting}
+						onClick={handleExportTrades}
+					>
+						<FileSpreadsheet className="mr-2 size-4" />
+						<span>Export Filtered Trades (CSV)</span>
+					</DropdownMenuItem>
+				) : (
+					<div className="p-1">
+						<UpgradeButtonCompact feature={FEATURE_CSV_IMPORT_EXPORT} />
+					</div>
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

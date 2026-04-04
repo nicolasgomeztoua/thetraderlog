@@ -12,12 +12,12 @@ import {
 } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { FEATURE_DAILY_JOURNAL } from "@/lib/constants/billing";
 import {
 	FORCED_ITEM_PRE_MARKET,
 	FORCED_ITEM_SL_CHECK,
 	TOGGLEABLE_FORCED_ITEMS,
 } from "@/lib/constants/checklist";
-import { logger } from "@/lib/logger";
 import {
 	ERR_ATTACHMENT_CREATE_FAILED,
 	ERR_ATTACHMENT_NOT_FOUND,
@@ -35,6 +35,7 @@ import {
 	SEARCH_MIN_QUERY_LENGTH,
 } from "@/lib/constants/search";
 import { updateJournalSearchVector } from "@/lib/journal/search";
+import { logger } from "@/lib/logger";
 import {
 	getDateStringInTimezone,
 	getDayBoundsInTimezone,
@@ -48,7 +49,11 @@ import {
 	transformHtmlWithPresignedUrls,
 } from "@/lib/storage/s3";
 import { getUserTimezone } from "@/server/api/helpers";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import {
+	createTRPCRouter,
+	protectedProcedure,
+	requireFeature,
+} from "@/server/api/trpc";
 import {
 	dailyChecklistChecks,
 	dailyChecklistTemplates,
@@ -147,7 +152,7 @@ export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
 
 	// Update journal content (upsert)
-	updateContent: protectedProcedure
+	updateContent: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				date: z.string(), // ISO date string
@@ -189,7 +194,9 @@ export const dailyJournalRouter = createTRPCRouter({
 						}),
 					)
 					.catch((err) => {
-						logger.error("Failed to update journal search vector", err, { userId: ctx.user.id });
+						logger.error("Failed to update journal search vector", err, {
+							userId: ctx.user.id,
+						});
 					});
 
 				return updated;
@@ -223,14 +230,16 @@ export const dailyJournalRouter = createTRPCRouter({
 					}),
 				)
 				.catch((err) => {
-					logger.error("Failed to update journal search vector", err, { userId: ctx.user.id });
+					logger.error("Failed to update journal search vector", err, {
+						userId: ctx.user.id,
+					});
 				});
 
 			return created;
 		}),
 
 	// Start journal for a day (marks the day as actively started)
-	startDay: protectedProcedure
+	startDay: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				date: z.string(), // ISO date string
@@ -579,7 +588,7 @@ export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
 
 	// Create a new checklist template
-	createTemplate: protectedProcedure
+	createTemplate: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				text: z.string().min(1),
@@ -619,7 +628,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		}),
 
 	// Update an existing checklist template
-	updateTemplate: protectedProcedure
+	updateTemplate: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				id: z.string(),
@@ -664,7 +673,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		}),
 
 	// Delete a checklist template
-	deleteTemplate: protectedProcedure
+	deleteTemplate: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				id: z.string(),
@@ -691,7 +700,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		}),
 
 	// Reorder checklist templates in bulk
-	reorderTemplates: protectedProcedure
+	reorderTemplates: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				items: z.array(
@@ -777,7 +786,7 @@ export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
 
 	// Toggle a check for a journal+template (creates if not exists)
-	toggleCheck: protectedProcedure
+	toggleCheck: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				date: z.string(), // ISO date string
@@ -855,7 +864,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		}),
 
 	// Toggle a forced checklist item check (e.g., "Pre Market Check")
-	toggleForcedCheck: protectedProcedure
+	toggleForcedCheck: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				date: z.string(), // YYYY-MM-DD date string
@@ -921,7 +930,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		}),
 
 	// Bulk update checks for a journal
-	bulkUpdateChecks: protectedProcedure
+	bulkUpdateChecks: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				date: z.string(), // ISO date string
@@ -1010,7 +1019,7 @@ export const dailyJournalRouter = createTRPCRouter({
 	// ============================================================================
 
 	// Get a presigned URL for uploading a file to S3
-	getUploadUrl: protectedProcedure
+	getUploadUrl: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				filename: z.string().min(1),
@@ -1042,7 +1051,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		}),
 
 	// Confirm an upload completed and create database record
-	confirmUpload: protectedProcedure
+	confirmUpload: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				journalId: z.string(),
@@ -1509,7 +1518,7 @@ export const dailyJournalRouter = createTRPCRouter({
 		}),
 
 	// Delete an attachment (from S3 and database)
-	deleteAttachment: protectedProcedure
+	deleteAttachment: requireFeature(FEATURE_DAILY_JOURNAL)
 		.input(
 			z.object({
 				id: z.string(),
@@ -1540,7 +1549,9 @@ export const dailyJournalRouter = createTRPCRouter({
 				} catch {
 					// Log error but continue with database deletion
 					// The file may have already been deleted or not exist
-					logger.error("Failed to delete S3 object", undefined, { key: attachment.key });
+					logger.error("Failed to delete S3 object", undefined, {
+						key: attachment.key,
+					});
 				}
 			}
 

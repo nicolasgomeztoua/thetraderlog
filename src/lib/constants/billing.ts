@@ -22,6 +22,8 @@ export const FEATURE_AI_CHAT = "ai_chat";
 export const FEATURE_AI_REPORTS = "ai_reports";
 export const FEATURE_PDF_EXPORT = "pdf_export";
 export const FEATURE_PRIORITY_SUPPORT = "priority_support";
+export const FEATURE_DAILY_JOURNAL = "daily_journal";
+export const FEATURE_TRADE_REPLAY = "trade_replay";
 
 // =============================================================================
 // USAGE LIMITS

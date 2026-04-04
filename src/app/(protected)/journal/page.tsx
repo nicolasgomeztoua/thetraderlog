@@ -5,6 +5,7 @@ import {
 	Circle,
 	Filter,
 	Loader2,
+	Lock,
 	MoreHorizontal,
 	Plus,
 	RotateCcw,
@@ -16,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useHasFeature } from "@/components/billing/upgrade-prompt";
 import { ColumnConfig } from "@/components/trade-log/column-config";
 import {
 	DEFAULT_FILTERS,
@@ -79,6 +81,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTimezone } from "@/hooks/use-timezone";
 import { useTradeColumns } from "@/hooks/use-trade-columns";
 import { useTradeSort } from "@/hooks/use-trade-sort";
+import { FEATURE_TRADE_MANAGEMENT } from "@/lib/constants/billing";
 import {
 	ERR_RATING_UPDATE_FAILED,
 	ERR_STRATEGY_UPDATE_FAILED,
@@ -93,6 +96,9 @@ import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import { api } from "@/trpc/react";
 
 export default function JournalPage() {
+	const { hasAccess: hasTradeManagement } = useHasFeature(
+		FEATURE_TRADE_MANAGEMENT,
+	);
 	const { selectedAccountId, selectedAccount } = useAccount();
 	const { formatDateTime } = useTimezone();
 	const isMobile = useIsMobile();
@@ -1142,6 +1148,7 @@ export default function JournalPage() {
 										size="sm"
 									>
 										<Link href="/trade/new">
+											{!hasTradeManagement && <Lock className="mr-1 size-3" />}
 											<Plus className="mr-2 h-3.5 w-3.5" />
 											Add Your First Trade
 										</Link>
