@@ -37,7 +37,11 @@ import {
 } from "@/components/ui/select";
 import { useTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DRAWING_COLORS, LINE_STYLE_MAP } from "@/lib/constants/chart";
+import {
+	DEFAULT_ANNOTATION_COLOR,
+	DRAWING_COLORS,
+	LINE_STYLE_MAP,
+} from "@/lib/constants/chart";
 import {
 	ERR_ANNOTATION_CLEAR_FAILED,
 	ERR_ANNOTATION_CREATE_FAILED,
@@ -51,6 +55,7 @@ import {
 	roundToCandle,
 	STALE_TIME_MEDIUM,
 } from "@/lib/shared";
+import { ids } from "@/lib/shared/id";
 import { getErrorMessage } from "@/lib/shared/utils";
 import { getThemeById } from "@/lib/ui";
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
@@ -387,6 +392,9 @@ function LightweightChartInner({
 	// Track vertical line primitives for removal
 	const verticalLinePrimitivesRef = useRef<VerticalLinePrimitive[]>([]);
 
+	// Track in-flight create mutations to avoid premature invalidation
+	const pendingCreateCountRef = useRef(0);
+
 	// Track crosshair time for vertical line placement
 	const crosshairTimeRef = useRef<UTCTimestamp | null>(null);
 
@@ -458,22 +466,66 @@ function LightweightChartInner({
 	);
 
 	const createAnnotation = api.chartAnnotations.create.useMutation({
-		onSuccess: () => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onMutate: async (newAnnotation) => {
+			await utils.chartAnnotations.list.cancel({ tradeId });
+			const tempId = ids.chartAnnotation();
+			pendingCreateCountRef.current += 1;
+
+			// Optimistically add the new annotation to the cache
+			utils.chartAnnotations.list.setData({ tradeId }, (old) => [
+				...(old ?? []),
+				{
+					id: tempId,
+					tradeId,
+					userId: "",
+					type: newAnnotation.type,
+					value: newAnnotation.value,
+					lineStyle: newAnnotation.lineStyle ?? "solid",
+					color: newAnnotation.color ?? DEFAULT_ANNOTATION_COLOR,
+					createdAt: new Date(),
+				},
+			]);
+
+			return { tempId };
 		},
-		onError: (error) => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onError: (error, _variables, context) => {
+			// Remove only the failed optimistic annotation by tempId
+			if (context?.tempId) {
+				utils.chartAnnotations.list.setData(
+					{ tradeId },
+					(old) => old?.filter((a) => a.id !== context.tempId) ?? [],
+				);
+			}
 			toast.error(getErrorMessage(error, ERR_ANNOTATION_CREATE_FAILED));
+		},
+		onSettled: () => {
+			// Only invalidate once all in-flight creates have settled
+			pendingCreateCountRef.current -= 1;
+			if (pendingCreateCountRef.current === 0) {
+				utils.chartAnnotations.list.invalidate({ tradeId });
+			}
 		},
 	});
 
 	const clearAllAnnotations = api.chartAnnotations.clearAll.useMutation({
-		onSuccess: () => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onMutate: async () => {
+			await utils.chartAnnotations.list.cancel({ tradeId });
+
+			const previousData = utils.chartAnnotations.list.getData({ tradeId });
+
+			// Optimistically clear all annotations
+			utils.chartAnnotations.list.setData({ tradeId }, () => []);
+
+			return { previousData };
 		},
-		onError: (error) => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onError: (error, _variables, context) => {
+			if (context?.previousData) {
+				utils.chartAnnotations.list.setData({ tradeId }, context.previousData);
+			}
 			toast.error(getErrorMessage(error, ERR_ANNOTATION_CLEAR_FAILED));
+		},
+		onSettled: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
 		},
 	});
 
