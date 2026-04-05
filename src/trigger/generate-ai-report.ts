@@ -159,11 +159,12 @@ export const generateAiReport = task({
 	// SQL queries, Python sandbox execution, and email delivery.
 	// 5 min global default is insufficient — allow up to 30 minutes.
 	maxDuration: 1800,
+	machine: "medium-2x",
 	queue: {
 		concurrencyLimit: 5,
 	},
 	retry: {
-		maxAttempts: 1,
+		maxAttempts: 2,
 	},
 	onFailure: async ({
 		payload,
@@ -193,9 +194,16 @@ export const generateAiReport = task({
 				errorString.includes("maxDuration") ||
 				errorString.includes("compute time");
 
+			const isOOM =
+				errorString.includes("memory limit") ||
+				errorString.includes("out of memory") ||
+				errorString.includes("OOM");
+
 			const errorMessage = isTimeout
 				? ERR_AI_TIMEOUT
-				: getUserFriendlyErrorMessage(error);
+				: isOOM
+					? "Report generation ran out of memory. Please try a shorter date range or simpler report."
+					: getUserFriendlyErrorMessage(error);
 
 			await db
 				.update(aiReports)
@@ -217,9 +225,14 @@ export const generateAiReport = task({
 				role: "assistant",
 				content: ERR_AI_REPORT_FALLBACK,
 			});
-		} catch {
-			// Last-resort: if even the failure handler fails, there's nothing more we can do.
-			// Trigger.dev will still log the original error.
+		} catch (handlerError) {
+			// Last-resort: if the failure handler itself fails, log it.
+			// Trigger.dev will still surface the original error.
+			logger.error("onFailure handler itself failed", {
+				reportId: payload.reportId,
+				originalError: String(error),
+				handlerError: String(handlerError),
+			});
 		}
 	},
 	run: async (

@@ -626,11 +626,40 @@ export const aiRouter = createTRPCRouter({
 					totalToolCalls: true,
 					chartsGenerated: true,
 					progressDetail: true,
+					createdAt: true,
 				},
 			});
 
 			if (!report) {
 				throw new Error(ERR_REPORT_NOT_FOUND);
+			}
+
+			// Recover stale reports: if stuck in queued/generating for over 35 min
+			// (task maxDuration is 30 min), the worker was killed without updating status.
+			const STALE_THRESHOLD_MS = 35 * 60 * 1000;
+			if (
+				(report.status === "queued" || report.status === "generating") &&
+				Date.now() - new Date(report.createdAt).getTime() > STALE_THRESHOLD_MS
+			) {
+				await ctx.db
+					.update(aiReports)
+					.set({
+						status: "failed",
+						progressStage: "failed",
+						completedAt: new Date(),
+						errorMessage:
+							"Report generation timed out. Please try again with a shorter date range.",
+					})
+					.where(eq(aiReports.id, report.id));
+
+				return {
+					...report,
+					status: "failed" as const,
+					progressStage: "failed",
+					completedAt: new Date(),
+					errorMessage:
+						"Report generation timed out. Please try again with a shorter date range.",
+				};
 			}
 
 			return report;
