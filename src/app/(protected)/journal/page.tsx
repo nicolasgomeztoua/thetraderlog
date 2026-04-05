@@ -3,6 +3,7 @@
 import {
 	CheckCircle2,
 	Circle,
+	FileSpreadsheet,
 	Filter,
 	Loader2,
 	Lock,
@@ -1152,17 +1153,32 @@ export default function JournalPage() {
 										(typeof v === "string" && v !== "" && v !== "all") ||
 										(Array.isArray(v) && v.length > 0),
 								) && (
-									<Button
-										asChild
-										className="font-mono text-xs uppercase tracking-wider"
-										size="sm"
-									>
-										<Link href="/trade/new">
-											{!hasTradeManagement && <Lock className="mr-1 size-3" />}
-											<Plus className="mr-2 h-3.5 w-3.5" />
-											Add Your First Trade
-										</Link>
-									</Button>
+									<div className="flex items-center gap-2">
+										<Button
+											asChild
+											className="font-mono text-xs uppercase tracking-wider"
+											size="sm"
+											variant="outline"
+										>
+											<Link href="/trade/new">
+												{!hasTradeManagement && (
+													<Lock className="mr-1 size-3" />
+												)}
+												<Plus className="mr-2 h-3.5 w-3.5" />
+												Manual Entry
+											</Link>
+										</Button>
+										<Button
+											asChild
+											className="font-mono text-xs uppercase tracking-wider"
+											size="sm"
+										>
+											<Link href="/import">
+												<FileSpreadsheet className="mr-2 h-3.5 w-3.5" />
+												Import CSV
+											</Link>
+										</Button>
+									</div>
 								)}
 							</div>
 						) : isMobile ? (
