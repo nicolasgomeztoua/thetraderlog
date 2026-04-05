@@ -10,10 +10,10 @@ export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
 
 /**
  * Default AI model used for report generation
- * Qwen 3.6 Plus: 1M context, SWE-Bench 78.8%, Terminal-Bench 61.6%
- * Pricing: $0.50/$2.00 per 1M tokens (input/output)
+ * MiMo-V2-Pro: 1M context, 1T params MoE, #1 on OpenRouter, near Opus-level agentic
+ * Pricing: $1.00/$3.00 per 1M tokens (input/output)
  */
-export const DEFAULT_REPORT_MODEL = "qwen/qwen3.6-plus";
+export const DEFAULT_REPORT_MODEL = "xiaomi/mimo-v2-pro";
 
 // =============================================================================
 // AI MODE OPTIONS
