@@ -38,6 +38,10 @@ import {
 import { useTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DRAWING_COLORS, LINE_STYLE_MAP } from "@/lib/constants/chart";
+import {
+	ERR_ANNOTATION_CLEAR_FAILED,
+	ERR_ANNOTATION_CREATE_FAILED,
+} from "@/lib/constants/errors";
 import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
 import {
 	type ChartInterval,
@@ -47,6 +51,7 @@ import {
 	roundToCandle,
 	STALE_TIME_MEDIUM,
 } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { getThemeById } from "@/lib/ui";
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
 import { api } from "@/trpc/react";
@@ -456,9 +461,9 @@ function LightweightChartInner({
 		onSuccess: () => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
 		},
-		onError: () => {
+		onError: (error) => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
-			toast.error("Failed to save annotation");
+			toast.error(getErrorMessage(error, ERR_ANNOTATION_CREATE_FAILED));
 		},
 	});
 
@@ -466,9 +471,9 @@ function LightweightChartInner({
 		onSuccess: () => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
 		},
-		onError: () => {
+		onError: (error) => {
 			utils.chartAnnotations.list.invalidate({ tradeId });
-			toast.error("Failed to clear annotations");
+			toast.error(getErrorMessage(error, ERR_ANNOTATION_CLEAR_FAILED));
 		},
 	});
 

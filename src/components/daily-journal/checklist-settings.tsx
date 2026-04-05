@@ -35,7 +35,14 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+	ERR_CHECKLIST_ITEM_CREATE_FAILED,
+	ERR_CHECKLIST_ITEM_DELETE_FAILED,
+	ERR_CHECKLIST_ITEM_UPDATE_FAILED,
+	ERR_CHECKLIST_REORDER_FAILED,
+} from "@/lib/constants/errors";
 import { cn } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 interface ChecklistSettingsProps {
@@ -257,6 +264,9 @@ export function ChecklistSettings({
 			setNewItemText("");
 			utils.dailyJournal.getTemplates.invalidate();
 		},
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_CHECKLIST_ITEM_CREATE_FAILED));
+		},
 	});
 
 	// Update template mutation with optimistic updates
@@ -289,13 +299,14 @@ export function ChecklistSettings({
 
 			return { previousTemplates };
 		},
-		onError: (_err, _vars, context) => {
+		onError: (error, _vars, context) => {
 			if (context?.previousTemplates) {
 				utils.dailyJournal.getTemplates.setData(
 					undefined,
 					context.previousTemplates,
 				);
 			}
+			toast.error(getErrorMessage(error, ERR_CHECKLIST_ITEM_UPDATE_FAILED));
 		},
 	});
 
@@ -304,6 +315,10 @@ export function ChecklistSettings({
 		onSuccess: () => {
 			setDeletingId(null);
 			utils.dailyJournal.getTemplates.invalidate();
+		},
+		onError: (error) => {
+			setDeletingId(null);
+			toast.error(getErrorMessage(error, ERR_CHECKLIST_ITEM_DELETE_FAILED));
 		},
 	});
 
@@ -324,13 +339,14 @@ export function ChecklistSettings({
 
 			return { previousTemplates };
 		},
-		onError: (_err, _vars, context) => {
+		onError: (error, _vars, context) => {
 			if (context?.previousTemplates) {
 				utils.dailyJournal.getTemplates.setData(
 					undefined,
 					context.previousTemplates,
 				);
 			}
+			toast.error(getErrorMessage(error, ERR_CHECKLIST_REORDER_FAILED));
 		},
 	});
 

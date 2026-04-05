@@ -136,6 +136,17 @@ export const ERR_TAG_DELETE_FAILED = "Failed to delete tag";
 export const ERR_TAG_ADD_FAILED = "Failed to add tag";
 export const ERR_TAG_REMOVE_FAILED = "Failed to remove tag";
 export const ERR_IMPORT_FAILED = "Failed to import trades. Please try again.";
+export const ERR_CHECKLIST_UPDATE_FAILED = "Failed to update checklist";
+export const ERR_CHECKLIST_ITEM_CREATE_FAILED =
+	"Failed to create checklist item";
+export const ERR_CHECKLIST_ITEM_UPDATE_FAILED =
+	"Failed to update checklist item";
+export const ERR_CHECKLIST_ITEM_DELETE_FAILED =
+	"Failed to delete checklist item";
+export const ERR_CHECKLIST_REORDER_FAILED = "Failed to reorder checklist items";
+export const ERR_ATTACHMENT_DELETE_FAILED = "Failed to delete attachment";
+export const ERR_ANNOTATION_CLEAR_FAILED = "Failed to clear annotations";
+export const ERR_PDF_GENERATE_FAILED = "Failed to start PDF generation";
 export const ERR_PRESET_LOAD_FAILED = "Failed to load preset";
 export const ERR_RULE_UPDATE_FAILED = "Failed to update rule";
 export const ERR_UPLOAD_FAILED = "Upload failed";
@@ -185,6 +196,8 @@ export const ERR_AI_REPORT_FALLBACK =
 // SHARING
 // =============================================================================
 
+export const ERR_SHARE_LINK_CREATE_FAILED = "Failed to create share link";
+export const ERR_SHARE_LINK_REVOKE_FAILED = "Failed to revoke share link";
 export const ERR_SHARE_LINK_NOT_FOUND = "Share link not found";
 export const ERR_SHARE_LINK_EXPIRED = "This share link has expired";
 export const ERR_SHARE_LINK_REVOKED = "This share link has been revoked";

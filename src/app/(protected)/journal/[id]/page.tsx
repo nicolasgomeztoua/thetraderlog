@@ -192,8 +192,8 @@ function TradeDetailPageContent() {
 	});
 
 	const updateRatingMutation = api.trades.updateRating.useMutation({
-		onError: () => {
-			toast.error(ERR_RATING_UPDATE_FAILED);
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_RATING_UPDATE_FAILED));
 		},
 	});
 
@@ -218,11 +218,11 @@ function TradeDetailPageContent() {
 			optimisticUpdate({ isReviewed });
 			return { previousTrade };
 		},
-		onError: (_error, _newData, context) => {
+		onError: (error, _newData, context) => {
 			if (context?.previousTrade) {
 				utils.trades.getById.setData({ id: tradeId }, context.previousTrade);
 			}
-			toast.error(ERR_REVIEW_UPDATE_FAILED);
+			toast.error(getErrorMessage(error, ERR_REVIEW_UPDATE_FAILED));
 		},
 	});
 

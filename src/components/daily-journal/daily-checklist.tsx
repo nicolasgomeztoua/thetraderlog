@@ -2,7 +2,7 @@
 
 import { Loader2Icon, LockIcon, SettingsIcon, ZapIcon } from "lucide-react";
 import { useMemo } from "react";
-
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -10,7 +10,9 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ERR_CHECKLIST_UPDATE_FAILED } from "@/lib/constants/errors";
 import { cn, formatLocalDate, toDateString } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 interface DailyChecklistProps {
@@ -112,7 +114,7 @@ export function DailyChecklist({
 
 			return { previousData };
 		},
-		onError: (_err, _newData, context) => {
+		onError: (error, _newData, context) => {
 			// Rollback on error
 			if (context?.previousData) {
 				utils.dailyJournal.getChecks.setData(
@@ -120,6 +122,7 @@ export function DailyChecklist({
 					context.previousData,
 				);
 			}
+			toast.error(getErrorMessage(error, ERR_CHECKLIST_UPDATE_FAILED));
 		},
 	});
 
@@ -186,13 +189,14 @@ export function DailyChecklist({
 
 			return { previousData };
 		},
-		onError: (_err, _newData, context) => {
+		onError: (error, _newData, context) => {
 			if (context?.previousData) {
 				utils.dailyJournal.getWithTrades.setData(
 					{ date: dateString },
 					context.previousData,
 				);
 			}
+			toast.error(getErrorMessage(error, ERR_CHECKLIST_UPDATE_FAILED));
 		},
 	});
 

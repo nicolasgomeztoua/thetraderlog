@@ -16,6 +16,11 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { SHARE_EXPIRY_OPTIONS } from "@/lib/constants";
+import {
+	ERR_SHARE_LINK_CREATE_FAILED,
+	ERR_SHARE_LINK_REVOKE_FAILED,
+} from "@/lib/constants/errors";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 export function ShareButton({ reportId }: { reportId: string }) {
@@ -38,8 +43,8 @@ export function ShareButton({ reportId }: { reportId: string }) {
 			});
 			toast.success("Share link created");
 		},
-		onError: (err) => {
-			toast.error(err.message);
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_SHARE_LINK_CREATE_FAILED));
 		},
 	});
 
@@ -51,8 +56,8 @@ export function ShareButton({ reportId }: { reportId: string }) {
 			});
 			toast.success("Share link revoked");
 		},
-		onError: (err) => {
-			toast.error(err.message);
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_SHARE_LINK_REVOKE_FAILED));
 		},
 	});
 
