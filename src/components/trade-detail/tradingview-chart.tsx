@@ -51,6 +51,7 @@ import {
 	roundToCandle,
 	STALE_TIME_MEDIUM,
 } from "@/lib/shared";
+import { ids } from "@/lib/shared/id";
 import { getErrorMessage } from "@/lib/shared/utils";
 import { getThemeById } from "@/lib/ui";
 import { useChartPreferencesStore } from "@/stores/chart-preferences-store";
@@ -458,22 +459,65 @@ function LightweightChartInner({
 	);
 
 	const createAnnotation = api.chartAnnotations.create.useMutation({
-		onSuccess: () => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onMutate: async (newAnnotation) => {
+			// Cancel any outgoing refetches so they don't overwrite our optimistic update
+			await utils.chartAnnotations.list.cancel({ tradeId });
+
+			// Snapshot current cache for rollback
+			const previousData = utils.chartAnnotations.list.getData({ tradeId });
+
+			// Optimistically add the new annotation to the cache
+			utils.chartAnnotations.list.setData({ tradeId }, (old) => {
+				if (!old) return old;
+				return [
+					...old,
+					{
+						id: ids.chartAnnotation(), // Temporary ID, replaced on server sync
+						tradeId,
+						userId: "", // Not used client-side
+						type: newAnnotation.type,
+						value: newAnnotation.value,
+						lineStyle: newAnnotation.lineStyle ?? "solid",
+						color: newAnnotation.color ?? "#d4ff00",
+						createdAt: new Date(),
+					},
+				];
+			});
+
+			return { previousData };
 		},
-		onError: (error) => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onError: (error, _variables, context) => {
+			// Rollback to previous cache state
+			if (context?.previousData) {
+				utils.chartAnnotations.list.setData({ tradeId }, context.previousData);
+			}
 			toast.error(getErrorMessage(error, ERR_ANNOTATION_CREATE_FAILED));
+		},
+		onSettled: () => {
+			// Always refetch to sync with server (replaces temp IDs with real ones)
+			utils.chartAnnotations.list.invalidate({ tradeId });
 		},
 	});
 
 	const clearAllAnnotations = api.chartAnnotations.clearAll.useMutation({
-		onSuccess: () => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onMutate: async () => {
+			await utils.chartAnnotations.list.cancel({ tradeId });
+
+			const previousData = utils.chartAnnotations.list.getData({ tradeId });
+
+			// Optimistically clear all annotations
+			utils.chartAnnotations.list.setData({ tradeId }, () => []);
+
+			return { previousData };
 		},
-		onError: (error) => {
-			utils.chartAnnotations.list.invalidate({ tradeId });
+		onError: (error, _variables, context) => {
+			if (context?.previousData) {
+				utils.chartAnnotations.list.setData({ tradeId }, context.previousData);
+			}
 			toast.error(getErrorMessage(error, ERR_ANNOTATION_CLEAR_FAILED));
+		},
+		onSettled: () => {
+			utils.chartAnnotations.list.invalidate({ tradeId });
 		},
 	});
 
