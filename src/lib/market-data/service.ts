@@ -606,14 +606,15 @@ async function fetchFromDatabento(
 // =============================================================================
 
 /**
- * Get full day(s) of 1-minute bars for a trade.
- * Returns all bars for each day the trade spans, without filtering to trade window.
+ * Get extended range of 1-minute bars for a trade.
+ * Fetches 3 calendar days before entry through 3 calendar days after exit
+ * (capped at today), giving ~7 trading sessions of context.
  * Optimized for client-side timeframe aggregation.
  *
  * @param symbol - Trading symbol
  * @param entryTime - Trade entry time
  * @param exitTime - Trade exit time (or null for open trades)
- * @returns Full day(s) of 1-minute bars
+ * @returns Extended range of 1-minute bars
  */
 export async function getFullDayBars(
 	symbol: string,
@@ -622,15 +623,26 @@ export async function getFullDayBars(
 ): Promise<CacheResult> {
 	const effectiveExitTime = exitTime ?? new Date();
 
-	// Get all unique dates from entry to exit
+	// 3 calendar days before entry
+	const rangeStart = new Date(entryTime);
+	rangeStart.setUTCDate(rangeStart.getUTCDate() - 3);
+	rangeStart.setUTCHours(0, 0, 0, 0);
+
+	// 3 calendar days after exit, capped at today
+	const rangeEnd = new Date(effectiveExitTime);
+	rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 3);
+	const today = new Date();
+	today.setUTCHours(23, 59, 59, 999);
+	if (rangeEnd > today) {
+		rangeEnd.setTime(today.getTime());
+	}
+	rangeEnd.setUTCHours(0, 0, 0, 0);
+
+	// Build list of dates, capped at 30 days to prevent unbounded ranges
+	const MAX_CHART_DAYS = 30;
 	const dates: Date[] = [];
-	const currentDate = new Date(entryTime);
-	currentDate.setUTCHours(0, 0, 0, 0);
-
-	const endDate = new Date(effectiveExitTime);
-	endDate.setUTCHours(0, 0, 0, 0);
-
-	while (currentDate <= endDate) {
+	const currentDate = new Date(rangeStart);
+	while (currentDate <= rangeEnd && dates.length < MAX_CHART_DAYS) {
 		dates.push(new Date(currentDate));
 		currentDate.setUTCDate(currentDate.getUTCDate() + 1);
 	}

@@ -250,10 +250,9 @@ export const marketDataRouter = createTRPCRouter({
 		}),
 
 	/**
-	 * Get full day(s) of 1-minute bars for a trade
-	 * Optimized for client-side timeframe aggregation
-	 *
-	 * Returns all bars for each day the trade spans, without filtering.
+	 * Get extended range of 1-minute bars for a trade
+	 * Fetches 3 calendar days before entry through 3 calendar days after exit
+	 * (capped at today), giving ~7 trading sessions of context.
 	 * Client can then aggregate to 5min/15min/30min/1h instantly.
 	 */
 	getFullDayChartData: protectedProcedure
