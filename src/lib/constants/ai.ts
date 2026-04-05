@@ -4,13 +4,16 @@
 
 /**
  * Default AI model used for chat mode
+ * Kimi K2.5: 262K context, AIME 96.1%, HumanEval 99.0, $0.38/$1.72
  */
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2-thinking";
+export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
 
 /**
  * Default AI model used for report generation
+ * Qwen 3.6 Plus: 1M context, SWE-Bench 78.8%, Terminal-Bench 61.6%, free preview
+ * Fallback: minimax/minimax-m2.7 ($0.30/$1.20, 205K context, Toolathon 46.3%)
  */
-export const DEFAULT_REPORT_MODEL = "z-ai/glm-5";
+export const DEFAULT_REPORT_MODEL = "qwen/qwen3.6-plus:free";
 
 // =============================================================================
 // AI MODE OPTIONS
