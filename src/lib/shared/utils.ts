@@ -146,5 +146,54 @@ export function getErrorMessage(error: unknown, fallback: string): string {
 	return fallback;
 }
 
+/**
+ * Decode common HTML entities produced by PostgreSQL's ts_headline.
+ */
+function decodeHtmlEntities(text: string): string {
+	return text
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'");
+}
+
+/**
+ * Parse a ts_headline snippet (containing <mark> tags) into safe segments.
+ * Use this instead of dangerouslySetInnerHTML to render search highlights.
+ */
+export function parseHighlightedSnippet(
+	snippet: string,
+): Array<{ text: string; highlighted: boolean }> {
+	const segments: Array<{ text: string; highlighted: boolean }> = [];
+	const regex = /<mark>(.*?)<\/mark>/g;
+	let lastIndex = 0;
+	let match: RegExpExecArray | null = regex.exec(snippet);
+
+	while (match !== null) {
+		if (match.index > lastIndex) {
+			segments.push({
+				text: decodeHtmlEntities(snippet.slice(lastIndex, match.index)),
+				highlighted: false,
+			});
+		}
+		segments.push({
+			text: decodeHtmlEntities(match[1] ?? ""),
+			highlighted: true,
+		});
+		lastIndex = regex.lastIndex;
+		match = regex.exec(snippet);
+	}
+
+	if (lastIndex < snippet.length) {
+		segments.push({
+			text: decodeHtmlEntities(snippet.slice(lastIndex)),
+			highlighted: false,
+		});
+	}
+
+	return segments;
+}
+
 // NOTE: calculateWinRate and calculateProfitFactor have been moved to
 // @/lib/stats-calculations.ts for consistency with aggregate stats

@@ -218,7 +218,6 @@ describe("entitlement gates", () => {
 			await expect(
 				noAccessCaller.trades.create({
 					symbol: "ES",
-					instrumentType: "futures",
 					direction: "long",
 					entryPrice: "5000.00",
 					quantity: "1",
@@ -237,7 +236,6 @@ describe("entitlement gates", () => {
 
 			const trade = await tradeCaller.trades.create({
 				symbol: "ES",
-				instrumentType: "futures",
 				direction: "long",
 				entryPrice: "5000.00",
 				quantity: "1",
@@ -346,7 +344,7 @@ describe("entitlement gates", () => {
 			await expect(
 				noAccessCaller.trades.create({
 					symbol: "ES",
-					instrumentType: "futures",
+
 					direction: "long",
 					entryPrice: "5000.00",
 					quantity: "1",
@@ -398,7 +396,7 @@ describe("entitlement gates", () => {
 		it("should allow trade creation", async () => {
 			const trade = await starterCaller.trades.create({
 				symbol: "NQ",
-				instrumentType: "futures",
+
 				direction: "short",
 				entryPrice: "18000.00",
 				quantity: "1",
@@ -450,7 +448,7 @@ describe("entitlement gates", () => {
 		it("should allow trade creation", async () => {
 			const trade = await proCaller.trades.create({
 				symbol: "ES",
-				instrumentType: "futures",
+
 				direction: "long",
 				entryPrice: "5100.00",
 				quantity: "1",
@@ -541,7 +539,7 @@ describe("entitlement gates", () => {
 
 			const trade = await betaCaller.trades.create({
 				symbol: "ES",
-				instrumentType: "futures",
+
 				direction: "long",
 				entryPrice: "5000.00",
 				quantity: "1",

@@ -129,19 +129,14 @@ export default async function PrintReportPage({
 				<PdfReadySignal />
 
 				{/* Print-specific CSS */}
-				<style
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS string
-					dangerouslySetInnerHTML={{
-						__html: `
-							.pdf-content > * {
-								page-break-inside: avoid;
-							}
-							@media print {
-								body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-							}
-						`,
-					}}
-				/>
+				<style>
+					{`.pdf-content > * {
+	page-break-inside: avoid;
+}
+@media print {
+	body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}`}
+				</style>
 			</ReportDataProvider>
 		</div>
 	);

@@ -5,7 +5,6 @@ import { useState } from "react";
 import {
 	type BillingPeriod,
 	buildPricingPlans,
-	type PricingPlan,
 } from "@/lib/constants/pricing-plans";
 import { BillingToggle } from "./shared/billing-toggle";
 import { PlanCTA } from "./shared/plan-cta";

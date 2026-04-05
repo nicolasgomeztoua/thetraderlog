@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	createTestCaller,
 	createTestTrade,
+	FULL_ACCESS_AUTH,
 	getAnalyticsFixtureDates,
 	setupTrader,
 	setupTraderWithAnalyticsData,
@@ -49,7 +50,11 @@ describe("Analytics Export", () => {
 	beforeAll(async () => {
 		await truncateAllTables();
 		testData = await setupTraderWithAnalyticsData();
-		caller = await createTestCaller(testData.user.clerkId, testData.user);
+		caller = await createTestCaller(
+			testData.user.clerkId,
+			testData.user,
+			FULL_ACCESS_AUTH,
+		);
 	});
 
 	afterAll(async () => {
@@ -231,7 +236,11 @@ describe("Analytics Export", () => {
 				netPnl: "1000",
 				stopLoss: undefined,
 			});
-			const newCaller = await createTestCaller(user.clerkId, user);
+			const newCaller = await createTestCaller(
+				user.clerkId,
+				user,
+				FULL_ACCESS_AUTH,
+			);
 
 			const result = await newCaller.analytics.exportFilteredTrades({
 				accountId: account.id,
@@ -518,7 +527,11 @@ describe("Analytics Export", () => {
 	describe("exportFilteredTrades - Authorization", () => {
 		it("should only return user's own trades", async () => {
 			const { user: otherUser } = await setupTrader();
-			const otherCaller = await createTestCaller(otherUser.clerkId, otherUser);
+			const otherCaller = await createTestCaller(
+				otherUser.clerkId,
+				otherUser,
+				FULL_ACCESS_AUTH,
+			);
 
 			// Other user should not be able to export first user's trades
 			const result = await otherCaller.analytics.exportFilteredTrades({
@@ -544,7 +557,11 @@ describe("Analytics Export", () => {
 				status: "closed",
 				netPnl: "1000",
 			});
-			const otherCaller = await createTestCaller(otherUser.clerkId, otherUser);
+			const otherCaller = await createTestCaller(
+				otherUser.clerkId,
+				otherUser,
+				FULL_ACCESS_AUTH,
+			);
 
 			// Query original user's account with ES filter
 			const result = await otherCaller.analytics.exportFilteredTrades({
@@ -564,7 +581,11 @@ describe("Analytics Export", () => {
 	describe("exportFilteredTrades - Edge Cases", () => {
 		it("should handle user with no trades", async () => {
 			const { user: emptyUser, account: emptyAccount } = await setupTrader();
-			const emptyCaller = await createTestCaller(emptyUser.clerkId, emptyUser);
+			const emptyCaller = await createTestCaller(
+				emptyUser.clerkId,
+				emptyUser,
+				FULL_ACCESS_AUTH,
+			);
 
 			const result = await emptyCaller.analytics.exportFilteredTrades({
 				accountId: emptyAccount.id,
@@ -840,7 +861,11 @@ describe("Analytics Export", () => {
 				netPnl: "500",
 			});
 
-			const newCaller = await createTestCaller(newUser.clerkId, newUser);
+			const newCaller = await createTestCaller(
+				newUser.clerkId,
+				newUser,
+				FULL_ACCESS_AUTH,
+			);
 
 			const result = await newCaller.analytics.exportFilteredTrades({
 				accountId: account1.id,

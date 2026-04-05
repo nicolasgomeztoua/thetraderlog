@@ -3,6 +3,7 @@ import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
 	createTestUser,
+	FULL_ACCESS_AUTH,
 	setupTrader,
 	type TestCaller,
 	truncateAllTables,
@@ -16,7 +17,7 @@ describe("dailyJournal router - core operations", () => {
 		await truncateAllTables();
 		const setup = await setupTrader();
 		user = setup.user;
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 	});
 
 	afterAll(async () => {

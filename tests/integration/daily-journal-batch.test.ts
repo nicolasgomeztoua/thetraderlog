@@ -10,6 +10,7 @@ import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
 	createUnauthenticatedCaller,
+	FULL_ACCESS_AUTH,
 	setupTrader,
 	type TestCaller,
 	truncateAllTables,
@@ -23,7 +24,7 @@ describe("dailyJournal.getBatchByDates", () => {
 		await truncateAllTables();
 		const setup = await setupTrader();
 		user = setup.user;
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 	});
 
 	afterAll(async () => {
@@ -141,7 +142,7 @@ describe("dailyJournal.getBatchByDates", () => {
 		beforeAll(async () => {
 			const setup2 = await setupTrader();
 			user2 = setup2.user;
-			caller2 = await createTestCaller(user2.clerkId, user2);
+			caller2 = await createTestCaller(user2.clerkId, user2, FULL_ACCESS_AUTH);
 
 			// Create journal entries for user2
 			await caller2.dailyJournal.updateContent({

@@ -14,12 +14,7 @@ export function JsonLd<T extends Record<string, unknown>>({
 }: {
 	data: WithContext<T>;
 }) {
-	return (
-		<script
-			dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-			type="application/ld+json"
-		/>
-	);
+	return <script type="application/ld+json">{JSON.stringify(data)}</script>;
 }
 
 export function organizationJsonLd(): WithContext<Organization> {
