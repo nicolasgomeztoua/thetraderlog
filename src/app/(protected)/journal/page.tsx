@@ -1151,7 +1151,9 @@ export default function JournalPage() {
 											variant="outline"
 										>
 											<Link href="/trade/new">
-												{!hasTradeManagement && <Lock className="mr-1 size-3" />}
+												{!hasTradeManagement && (
+													<Lock className="mr-1 size-3" />
+												)}
 												<Plus className="mr-2 h-3.5 w-3.5" />
 												Manual Entry
 											</Link>
