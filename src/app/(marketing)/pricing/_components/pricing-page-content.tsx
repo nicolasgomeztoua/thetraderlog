@@ -110,7 +110,7 @@ function PricingCard({
 		<div
 			className={`group relative flex flex-col rounded border p-6 transition-all sm:p-8 ${
 				plan.highlighted
-					? "border-primary/30 bg-primary/[0.02] shadow-lg shadow-primary/5"
+					? "border-primary/30 bg-primary/2 shadow-lg shadow-primary/5"
 					: "border-border bg-muted/30 hover:border-border/80"
 			}`}
 			data-testid={`pricing-card-${plan.slug}`}
