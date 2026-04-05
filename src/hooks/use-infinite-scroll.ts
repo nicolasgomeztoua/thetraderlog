@@ -26,8 +26,26 @@ export function useInfiniteScroll({
 	rootMargin = "100px",
 }: UseInfiniteScrollOptions) {
 	const observerRef = useRef<IntersectionObserver | null>(null);
-	const sentinelRef = useRef<HTMLDivElement | null>(null);
+	const sentinelNodeRef = useRef<HTMLDivElement | null>(null);
 
+	// Store latest values in refs so the observer callback always reads current state
+	const onLoadMoreRef = useRef(onLoadMore);
+	const hasMoreRef = useRef(hasMore);
+	const isLoadingRef = useRef(isLoading);
+
+	useEffect(() => {
+		onLoadMoreRef.current = onLoadMore;
+	}, [onLoadMore]);
+
+	useEffect(() => {
+		hasMoreRef.current = hasMore;
+	}, [hasMore]);
+
+	useEffect(() => {
+		isLoadingRef.current = isLoading;
+	}, [isLoading]);
+
+	// Stable callback ref — only recreated if threshold/rootMargin change (effectively never)
 	const setSentinelRef = useCallback(
 		(node: HTMLDivElement | null) => {
 			// Cleanup previous observer
@@ -36,18 +54,22 @@ export function useInfiniteScroll({
 			}
 
 			if (!node) {
-				sentinelRef.current = null;
+				sentinelNodeRef.current = null;
 				return;
 			}
 
-			sentinelRef.current = node;
+			sentinelNodeRef.current = node;
 
-			// Create new observer
+			// Create new observer — reads latest state from refs
 			observerRef.current = new IntersectionObserver(
 				(entries) => {
 					const [entry] = entries;
-					if (entry?.isIntersecting && hasMore && !isLoading) {
-						onLoadMore();
+					if (
+						entry?.isIntersecting &&
+						hasMoreRef.current &&
+						!isLoadingRef.current
+					) {
+						onLoadMoreRef.current();
 					}
 				},
 				{ threshold, rootMargin },
@@ -55,7 +77,7 @@ export function useInfiniteScroll({
 
 			observerRef.current.observe(node);
 		},
-		[onLoadMore, hasMore, isLoading, threshold, rootMargin],
+		[threshold, rootMargin],
 	);
 
 	// Cleanup on unmount
