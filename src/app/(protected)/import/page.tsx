@@ -52,6 +52,7 @@ import {
 	ERR_VALIDATION_CSV_UPLOAD,
 	ERR_VALIDATION_SELECT_ACCOUNT,
 } from "@/lib/constants/errors";
+import { getErrorMessage } from "@/lib/shared/utils";
 import type { ParsedTrade, TradingPlatform } from "@/lib/trades";
 import { detectPlatform, getParser, TRADING_PLATFORMS } from "@/lib/trades";
 import { api } from "@/trpc/react";
@@ -432,7 +433,7 @@ export default function ImportPage() {
 			setStep("complete");
 		} catch (error) {
 			console.error("Failed to import trades:", error);
-			toast.error(ERR_IMPORT_FAILED);
+			toast.error(getErrorMessage(error, ERR_IMPORT_FAILED));
 		} finally {
 			setImporting(false);
 		}

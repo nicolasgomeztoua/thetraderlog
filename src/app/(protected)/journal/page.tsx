@@ -84,6 +84,7 @@ import { useTradeSort } from "@/hooks/use-trade-sort";
 import { FEATURE_TRADE_MANAGEMENT } from "@/lib/constants/billing";
 import {
 	ERR_RATING_UPDATE_FAILED,
+	ERR_REVIEW_UPDATE_FAILED,
 	ERR_STRATEGY_UPDATE_FAILED,
 	ERR_TRADE_DELETE_FAILED,
 	ERR_TRADE_RESTORE_FAILED,
@@ -276,8 +277,8 @@ export default function JournalPage() {
 
 	// Rating mutation (raw, called by debounced handler)
 	const updateRatingMutation = api.trades.updateRating.useMutation({
-		onError: () => {
-			toast.error(ERR_RATING_UPDATE_FAILED);
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_RATING_UPDATE_FAILED));
 		},
 	});
 
@@ -302,6 +303,9 @@ export default function JournalPage() {
 			await utils.trades.getAll.invalidate();
 			clearOptimisticUpdates();
 		},
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_REVIEW_UPDATE_FAILED));
+		},
 	});
 
 	// Strategy update mutation with optimistic update
@@ -320,8 +324,8 @@ export default function JournalPage() {
 			await utils.trades.getAll.invalidate();
 			clearOptimisticUpdates();
 		},
-		onError: () => {
-			toast.error(ERR_STRATEGY_UPDATE_FAILED);
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_STRATEGY_UPDATE_FAILED));
 		},
 	});
 
@@ -340,6 +344,9 @@ export default function JournalPage() {
 			await utils.trades.getAll.invalidate();
 			clearOptimisticUpdates();
 		},
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_REVIEW_UPDATE_FAILED));
+		},
 	});
 
 	const bulkUpdateRating = api.trades.bulkUpdateRating.useMutation({
@@ -355,6 +362,9 @@ export default function JournalPage() {
 		onSettled: async () => {
 			await utils.trades.getAll.invalidate();
 			clearOptimisticUpdates();
+		},
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_RATING_UPDATE_FAILED));
 		},
 	});
 
@@ -977,7 +987,7 @@ export default function JournalPage() {
 					{/* Search + Filter button on mobile */}
 					<div className="flex gap-2">
 						<div className="relative flex-1">
-							<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+							<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 							<Input
 								className="pl-9 font-mono text-xs"
 								onChange={(e) => setSearch(e.target.value)}

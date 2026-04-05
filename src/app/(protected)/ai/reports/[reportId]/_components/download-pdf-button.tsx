@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { UpgradeButtonCompact } from "@/components/billing/upgrade-prompt";
 import { isBetaFromMetadata } from "@/lib/billing/utils";
 import { FEATURE_PDF_EXPORT } from "@/lib/constants/billing";
+import { ERR_PDF_GENERATE_FAILED } from "@/lib/constants/errors";
+import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 export function DownloadPdfButton({ reportId }: { reportId: string }) {
@@ -18,8 +20,8 @@ export function DownloadPdfButton({ reportId }: { reportId: string }) {
 		onSuccess: (data) => {
 			setRunId(data.runId);
 		},
-		onError: () => {
-			toast.error("Failed to start PDF generation");
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_PDF_GENERATE_FAILED));
 		},
 	});
 

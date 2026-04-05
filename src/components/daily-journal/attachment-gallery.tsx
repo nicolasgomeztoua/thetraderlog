@@ -8,10 +8,12 @@ import {
 	XIcon,
 } from "lucide-react";
 import { useCallback, useState } from "react";
-
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ERR_ATTACHMENT_DELETE_FAILED } from "@/lib/constants/errors";
 import { cn, toDateString } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
 import type { JournalAttachment } from "@/server/db/schema";
 import { api } from "@/trpc/react";
 
@@ -105,7 +107,7 @@ function LightboxWithSkeleton({ attachment, onClose }: LightboxProps) {
 			/>
 
 			{/* Filename */}
-			<div className="-translate-x-1/2 absolute bottom-4 left-1/2">
+			<div className="absolute bottom-4 left-1/2 -translate-x-1/2">
 				<span className="rounded bg-muted px-3 py-1 font-mono text-sm">
 					{attachment.filename}
 				</span>
@@ -151,8 +153,9 @@ export function AttachmentGallery({
 			// Invalidate journal data to refresh attachments
 			utils.dailyJournal.getByDate.invalidate({ date: dateString });
 		},
-		onError: () => {
+		onError: (error) => {
 			setDeletingId(null);
+			toast.error(getErrorMessage(error, ERR_ATTACHMENT_DELETE_FAILED));
 		},
 	});
 
