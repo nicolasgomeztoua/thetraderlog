@@ -48,17 +48,12 @@ export function StreakChart({
 		return Math.max(1, ...allCounts);
 	}, [streakDistribution]);
 
-	// Combine wins and losses for display
-	const maxStreakLength = useMemo(() => {
-		const winMax = Math.max(
-			0,
-			...streakDistribution.wins.map((s) => s.streakLength),
-		);
-		const lossMax = Math.max(
-			0,
-			...streakDistribution.losses.map((s) => s.streakLength),
-		);
-		return Math.max(winMax, lossMax, 5);
+	// Collect only streak lengths that have data
+	const activeStreakLengths = useMemo(() => {
+		const lengths = new Set<number>();
+		for (const s of streakDistribution.wins) lengths.add(s.streakLength);
+		for (const s of streakDistribution.losses) lengths.add(s.streakLength);
+		return Array.from(lengths).sort((a, b) => a - b);
 	}, [streakDistribution]);
 
 	const hasData =
@@ -139,8 +134,7 @@ export function StreakChart({
 				</div>
 
 				<div className="space-y-2">
-					{Array.from({ length: maxStreakLength }, (_, i) => i + 1).map(
-						(streakLength) => {
+					{activeStreakLengths.map((streakLength) => {
 							const winData = streakDistribution.wins.find(
 								(s) => s.streakLength === streakLength,
 							);
@@ -213,8 +207,7 @@ export function StreakChart({
 									</div>
 								</div>
 							);
-						},
-					)}
+						})}
 				</div>
 
 				{/* Legend */}
