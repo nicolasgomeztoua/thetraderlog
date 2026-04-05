@@ -18,7 +18,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useImagePreloader } from "@/hooks/use-image-preloader";
 import { ERR_UPLOAD_FAILED } from "@/lib/constants/errors";
 import { toDateString } from "@/lib/shared";
-import { getErrorMessage } from "@/lib/shared/utils";
 import { transformHtmlToS3Keys } from "@/lib/storage/s3-utils";
 import { api } from "@/trpc/react";
 

@@ -107,7 +107,7 @@ function LightboxWithSkeleton({ attachment, onClose }: LightboxProps) {
 			/>
 
 			{/* Filename */}
-			<div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+			<div className="-translate-x-1/2 absolute bottom-4 left-1/2">
 				<span className="rounded bg-muted px-3 py-1 font-mono text-sm">
 					{attachment.filename}
 				</span>
