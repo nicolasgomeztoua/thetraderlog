@@ -240,7 +240,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 										data-testid="report-prompt-input"
 										id="report-prompt"
 										onChange={(e) => setPrompt(e.target.value)}
-										placeholder="Describe the analysis you want..."
+										placeholder="Add as much detail as possible about the analysis you want..."
 										value={prompt}
 									/>
 								</div>
