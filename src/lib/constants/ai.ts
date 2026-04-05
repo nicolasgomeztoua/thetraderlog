@@ -10,10 +10,10 @@ export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
 
 /**
  * Default AI model used for report generation
- * Qwen 3.6 Plus: 1M context, SWE-Bench 78.8%, Terminal-Bench 61.6%, free preview
- * Fallback: minimax/minimax-m2.7 ($0.30/$1.20, 205K context, Toolathon 46.3%)
+ * Qwen 3.6 Plus: 1M context, SWE-Bench 78.8%, Terminal-Bench 61.6%
+ * Pricing: $0.50/$2.00 per 1M tokens (input/output)
  */
-export const DEFAULT_REPORT_MODEL = "qwen/qwen3.6-plus:free";
+export const DEFAULT_REPORT_MODEL = "qwen/qwen3.6-plus";
 
 // =============================================================================
 // AI MODE OPTIONS
