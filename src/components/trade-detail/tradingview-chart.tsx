@@ -37,7 +37,11 @@ import {
 } from "@/components/ui/select";
 import { useTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { DRAWING_COLORS, LINE_STYLE_MAP } from "@/lib/constants/chart";
+import {
+	DEFAULT_ANNOTATION_COLOR,
+	DRAWING_COLORS,
+	LINE_STYLE_MAP,
+} from "@/lib/constants/chart";
 import {
 	ERR_ANNOTATION_CLEAR_FAILED,
 	ERR_ANNOTATION_CREATE_FAILED,
@@ -388,6 +392,9 @@ function LightweightChartInner({
 	// Track vertical line primitives for removal
 	const verticalLinePrimitivesRef = useRef<VerticalLinePrimitive[]>([]);
 
+	// Track in-flight create mutations to avoid premature invalidation
+	const pendingCreateCountRef = useRef(0);
+
 	// Track crosshair time for vertical line placement
 	const crosshairTimeRef = useRef<UTCTimestamp | null>(null);
 
@@ -460,42 +467,43 @@ function LightweightChartInner({
 
 	const createAnnotation = api.chartAnnotations.create.useMutation({
 		onMutate: async (newAnnotation) => {
-			// Cancel any outgoing refetches so they don't overwrite our optimistic update
 			await utils.chartAnnotations.list.cancel({ tradeId });
-
-			// Snapshot current cache for rollback
-			const previousData = utils.chartAnnotations.list.getData({ tradeId });
+			const tempId = ids.chartAnnotation();
+			pendingCreateCountRef.current += 1;
 
 			// Optimistically add the new annotation to the cache
-			utils.chartAnnotations.list.setData({ tradeId }, (old) => {
-				if (!old) return old;
-				return [
-					...old,
-					{
-						id: ids.chartAnnotation(), // Temporary ID, replaced on server sync
-						tradeId,
-						userId: "", // Not used client-side
-						type: newAnnotation.type,
-						value: newAnnotation.value,
-						lineStyle: newAnnotation.lineStyle ?? "solid",
-						color: newAnnotation.color ?? "#d4ff00",
-						createdAt: new Date(),
-					},
-				];
-			});
+			utils.chartAnnotations.list.setData({ tradeId }, (old) => [
+				...(old ?? []),
+				{
+					id: tempId,
+					tradeId,
+					userId: "",
+					type: newAnnotation.type,
+					value: newAnnotation.value,
+					lineStyle: newAnnotation.lineStyle ?? "solid",
+					color: newAnnotation.color ?? DEFAULT_ANNOTATION_COLOR,
+					createdAt: new Date(),
+				},
+			]);
 
-			return { previousData };
+			return { tempId };
 		},
 		onError: (error, _variables, context) => {
-			// Rollback to previous cache state
-			if (context?.previousData) {
-				utils.chartAnnotations.list.setData({ tradeId }, context.previousData);
+			// Remove only the failed optimistic annotation by tempId
+			if (context?.tempId) {
+				utils.chartAnnotations.list.setData(
+					{ tradeId },
+					(old) => old?.filter((a) => a.id !== context.tempId) ?? [],
+				);
 			}
 			toast.error(getErrorMessage(error, ERR_ANNOTATION_CREATE_FAILED));
 		},
 		onSettled: () => {
-			// Always refetch to sync with server (replaces temp IDs with real ones)
-			utils.chartAnnotations.list.invalidate({ tradeId });
+			// Only invalidate once all in-flight creates have settled
+			pendingCreateCountRef.current -= 1;
+			if (pendingCreateCountRef.current === 0) {
+				utils.chartAnnotations.list.invalidate({ tradeId });
+			}
 		},
 	});
 
