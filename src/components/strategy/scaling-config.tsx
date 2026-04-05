@@ -100,7 +100,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 						→ Scale In Rules <span className="text-profit">↑</span>
 					</h4>
 					<Button
-						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
+						className="min-h-9 font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 						onClick={addScaleIn}
 						size="sm"
 						type="button"
@@ -127,7 +127,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										Trigger
 									</span>
 									<Input
-										className="min-h-[44px] font-mono text-sm sm:min-h-0"
+										className="min-h-11 font-mono text-sm sm:min-h-0"
 										onChange={(e) =>
 											updateScaleIn(idx, "trigger", e.target.value)
 										}
@@ -141,7 +141,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 											Size %
 										</span>
 										<Input
-											className="min-h-[44px] font-mono text-sm sm:min-h-0"
+											className="min-h-11 font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
 											onChange={(e) =>
 												updateScaleIn(
@@ -189,7 +189,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 						→ Scale Out Rules <span className="text-loss">↓</span>
 					</h4>
 					<Button
-						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
+						className="min-h-9 font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 						onClick={addScaleOut}
 						size="sm"
 						type="button"
@@ -216,7 +216,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 										Trigger
 									</span>
 									<Input
-										className="min-h-[44px] font-mono text-sm sm:min-h-0"
+										className="min-h-11 font-mono text-sm sm:min-h-0"
 										onChange={(e) =>
 											updateScaleOut(idx, "trigger", e.target.value)
 										}
@@ -230,7 +230,7 @@ export function ScalingConfig({ value, onChange }: ScalingConfigProps) {
 											Size %
 										</span>
 										<Input
-											className="min-h-[44px] font-mono text-sm sm:min-h-0"
+											className="min-h-11 font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
 											onChange={(e) =>
 												updateScaleOut(

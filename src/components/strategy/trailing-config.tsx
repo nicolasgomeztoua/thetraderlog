@@ -127,7 +127,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 								Trigger at R
 							</span>
 							<Input
-								className="min-h-[44px] font-mono sm:min-h-0"
+								className="min-h-11 font-mono sm:min-h-0"
 								inputMode="decimal"
 								onChange={(e) =>
 									updateBreakeven("triggerR", parseNumberInput(e.target.value))
@@ -143,7 +143,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 								Offset (ticks)
 							</span>
 							<Input
-								className="min-h-[44px] font-mono sm:min-h-0"
+								className="min-h-11 font-mono sm:min-h-0"
 								inputMode="numeric"
 								onChange={(e) =>
 									updateBreakeven("offsetTicks", parseIntInput(e.target.value))
@@ -176,7 +176,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 						→ Trailing Stop Rules
 					</h4>
 					<Button
-						className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
+						className="min-h-9 font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 						onClick={addTrailStop}
 						size="sm"
 						type="button"
@@ -204,7 +204,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 											At R
 										</span>
 										<Input
-											className="min-h-[44px] font-mono text-sm sm:min-h-0"
+											className="min-h-11 font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
 											onChange={(e) =>
 												updateTrailStop(
@@ -223,7 +223,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 											Value
 										</span>
 										<Input
-											className="min-h-[44px] font-mono text-sm sm:min-h-0"
+											className="min-h-11 font-mono text-sm sm:min-h-0"
 											inputMode="decimal"
 											onChange={(e) =>
 												updateTrailStop(
@@ -247,24 +247,24 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 											onValueChange={(v) => updateTrailStop(idx, "method", v)}
 											value={rule.method}
 										>
-											<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
+											<SelectTrigger className="min-h-11 font-mono text-sm sm:min-h-0">
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem
-													className="min-h-[44px] sm:min-h-0"
+													className="min-h-11 sm:min-h-0"
 													value="fixed_ticks"
 												>
 													Fixed Ticks
 												</SelectItem>
 												<SelectItem
-													className="min-h-[44px] sm:min-h-0"
+													className="min-h-11 sm:min-h-0"
 													value="atr_multiple"
 												>
 													ATR Multiple
 												</SelectItem>
 												<SelectItem
-													className="min-h-[44px] sm:min-h-0"
+													className="min-h-11 sm:min-h-0"
 													value="swing_low"
 												>
 													Swing Low/High
@@ -276,7 +276,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
 											Track
 										</span>
-										<div className="flex h-[44px] items-center justify-center sm:h-9">
+										<div className="flex h-11 items-center justify-center sm:h-9">
 											<Switch
 												checked={rule.enabled ?? false}
 												onCheckedChange={(checked) =>
@@ -290,7 +290,7 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 											&nbsp;
 										</span>
 										<Button
-											className="h-[44px] w-[44px] shrink-0 text-muted-foreground hover:text-loss sm:h-9 sm:w-9"
+											className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-9 sm:w-9"
 											onClick={() => removeTrailStop(idx)}
 											size="icon"
 											type="button"

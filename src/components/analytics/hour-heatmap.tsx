@@ -129,7 +129,7 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 									<div className="flex flex-col items-center gap-1">
 										<div
 											className={cn(
-												"h-8 w-full min-w-[24px] rounded transition-colors",
+												"h-8 w-full min-w-6 rounded transition-colors",
 												hourData.trades > 0
 													? getPnLColor(hourData.pnl, maxAbsPnl)
 													: "bg-secondary/30",
@@ -190,7 +190,7 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 									<div className="flex flex-col items-center gap-1">
 										<div
 											className={cn(
-												"h-8 w-full min-w-[24px] rounded transition-colors",
+												"h-8 w-full min-w-6 rounded transition-colors",
 												hourData.trades > 0
 													? getPnLColor(hourData.pnl, maxAbsPnl)
 													: "bg-secondary/30",
@@ -245,12 +245,12 @@ export function HourHeatmap({ data, className }: HourHeatmapProps) {
 				<span className="font-mono text-[10px] text-muted-foreground">
 					Loss
 				</span>
-				<div className="flex gap-[2px]">
-					<div className="h-[10px] w-[10px] rounded-sm bg-loss/80" />
-					<div className="h-[10px] w-[10px] rounded-sm bg-loss/40" />
-					<div className="h-[10px] w-[10px] rounded-sm bg-secondary" />
-					<div className="h-[10px] w-[10px] rounded-sm bg-profit/40" />
-					<div className="h-[10px] w-[10px] rounded-sm bg-profit/80" />
+				<div className="flex gap-0.5">
+					<div className="h-2.5 w-2.5 rounded-sm bg-loss/80" />
+					<div className="h-2.5 w-2.5 rounded-sm bg-loss/40" />
+					<div className="h-2.5 w-2.5 rounded-sm bg-secondary" />
+					<div className="h-2.5 w-2.5 rounded-sm bg-profit/40" />
+					<div className="h-2.5 w-2.5 rounded-sm bg-profit/80" />
 				</div>
 				<span className="font-mono text-[10px] text-muted-foreground">
 					Profit

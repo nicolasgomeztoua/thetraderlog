@@ -157,7 +157,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.status}
 				>
-					<SelectTrigger className="w-[120px] font-mono text-xs transition-colors hover:border-border">
+					<SelectTrigger className="w-30 font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Status" />
 					</SelectTrigger>
 					<SelectContent>
@@ -180,7 +180,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.direction}
 				>
-					<SelectTrigger className="w-[120px] font-mono text-xs transition-colors hover:border-border">
+					<SelectTrigger className="w-30 font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Direction" />
 					</SelectTrigger>
 					<SelectContent>
@@ -229,7 +229,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.isReviewed}
 				>
-					<SelectTrigger className="w-[140px] font-mono text-xs transition-colors hover:border-border">
+					<SelectTrigger className="w-35 font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Review Status" />
 					</SelectTrigger>
 					<SelectContent>
@@ -252,7 +252,7 @@ export function FilterPanel({ filters, onChange, onClear }: FilterPanelProps) {
 					}
 					value={filters.strategyId || "all"}
 				>
-					<SelectTrigger className="w-[160px] font-mono text-xs transition-colors hover:border-border">
+					<SelectTrigger className="w-40 font-mono text-xs transition-colors hover:border-border">
 						<SelectValue placeholder="Strategy">
 							{filters.strategyId ? (
 								<div className="flex items-center gap-1.5">

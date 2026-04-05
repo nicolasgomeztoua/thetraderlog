@@ -117,9 +117,7 @@ export function PresetSelector({
 					{activePreset ? (
 						<>
 							<Check className="size-3" />
-							<span className="max-w-[120px] truncate">
-								{activePreset.name}
-							</span>
+							<span className="max-w-30 truncate">{activePreset.name}</span>
 						</>
 					) : (
 						<span>Presets</span>

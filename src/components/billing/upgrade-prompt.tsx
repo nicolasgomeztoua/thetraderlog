@@ -220,7 +220,7 @@ export function UpgradeOverlay({ feature, children }: UpgradePromptProps) {
 			<div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
 				{/* Subtle gradient atmosphere */}
 				<div
-					className={`-left-20 pointer-events-none absolute top-1/4 size-[300px] rounded-full blur-[100px] ${
+					className={`-left-20 pointer-events-none absolute top-1/4 size-75 rounded-full blur-[100px] ${
 						config.isAiFeature ? "bg-accent/5" : "bg-primary/5"
 					}`}
 				/>

@@ -196,7 +196,7 @@ export default function StrategiesPage() {
 						{hasStrategies ? (
 							<Button
 								asChild
-								className="group min-h-[48px] shrink-0 px-4 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:px-6"
+								className="group min-h-12 shrink-0 px-4 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:px-6"
 								data-testid="strategies-header-new-button"
 							>
 								<Link href="/strategies/new">
@@ -234,7 +234,7 @@ export default function StrategiesPage() {
 								<div className="space-y-2 sm:space-y-3">
 									{[1, 2, 3].map((i) => (
 										<div
-											className="flex min-h-[48px] items-center justify-between rounded border border-border/50 bg-muted p-2.5 sm:min-h-0 sm:p-3"
+											className="flex min-h-12 items-center justify-between rounded border border-border/50 bg-muted p-2.5 sm:min-h-0 sm:p-3"
 											key={i}
 										>
 											<div className="flex items-center gap-2 sm:gap-3">
@@ -364,7 +364,7 @@ export default function StrategiesPage() {
 							{/* CTA Button */}
 							<Button
 								asChild
-								className="group mt-6 min-h-[48px] px-6 font-mono text-xs uppercase tracking-wider sm:mt-8 sm:min-h-0 sm:px-8"
+								className="group mt-6 min-h-12 px-6 font-mono text-xs uppercase tracking-wider sm:mt-8 sm:min-h-0 sm:px-8"
 								data-testid="strategies-empty-state-cta"
 							>
 								<Link href="/strategies/new">
@@ -445,14 +445,14 @@ export default function StrategiesPage() {
 						</DialogHeader>
 						<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
 							<Button
-								className="min-h-[44px] sm:min-h-0"
+								className="min-h-11 sm:min-h-0"
 								onClick={() => setDeleteDialogOpen(false)}
 								variant="ghost"
 							>
 								Cancel
 							</Button>
 							<Button
-								className="min-h-[44px] sm:min-h-0"
+								className="min-h-11 sm:min-h-0"
 								disabled={deleteMutation.isPending}
 								onClick={confirmDelete}
 								variant="destructive"
@@ -481,14 +481,14 @@ export default function StrategiesPage() {
 						</DialogHeader>
 						<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
 							<Button
-								className="min-h-[44px] sm:min-h-0"
+								className="min-h-11 sm:min-h-0"
 								onClick={() => setDuplicateDialogOpen(false)}
 								variant="ghost"
 							>
 								Cancel
 							</Button>
 							<Button
-								className="min-h-[44px] sm:min-h-0"
+								className="min-h-11 sm:min-h-0"
 								disabled={duplicateMutation.isPending}
 								onClick={confirmDuplicate}
 							>

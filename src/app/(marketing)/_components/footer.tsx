@@ -96,21 +96,21 @@ export function Footer() {
 					{/* Social links */}
 					<div className="flex items-center gap-4 sm:gap-6">
 						<Link
-							className="flex min-h-[44px] items-center font-mono text-muted-foreground text-xs transition-colors hover:text-primary"
+							className="flex min-h-11 items-center font-mono text-muted-foreground text-xs transition-colors hover:text-primary"
 							href="https://twitter.com"
 							target="_blank"
 						>
 							Twitter
 						</Link>
 						<Link
-							className="flex min-h-[44px] items-center font-mono text-muted-foreground text-xs transition-colors hover:text-primary"
+							className="flex min-h-11 items-center font-mono text-muted-foreground text-xs transition-colors hover:text-primary"
 							href="https://discord.com"
 							target="_blank"
 						>
 							Discord
 						</Link>
 						<Link
-							className="flex min-h-[44px] items-center font-mono text-muted-foreground text-xs transition-colors hover:text-primary"
+							className="flex min-h-11 items-center font-mono text-muted-foreground text-xs transition-colors hover:text-primary"
 							href="https://github.com"
 							target="_blank"
 						>

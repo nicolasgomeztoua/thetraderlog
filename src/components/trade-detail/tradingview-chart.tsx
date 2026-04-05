@@ -302,7 +302,7 @@ function TimeframeSelector({
 				value={interval}
 			>
 				<SelectTrigger
-					className="h-7 min-h-[36px] w-auto min-w-[60px] gap-1 border-none bg-muted px-2 font-mono text-[10px] uppercase hover:bg-muted/80"
+					className="h-7 min-h-9 w-auto min-w-15 gap-1 border-none bg-muted px-2 font-mono text-[10px] uppercase hover:bg-muted/80"
 					size="sm"
 				>
 					<SelectValue />
@@ -310,7 +310,7 @@ function TimeframeSelector({
 				<SelectContent>
 					{CHART_INTERVALS.map((tf) => (
 						<SelectItem
-							className="min-h-[44px] font-mono text-xs uppercase"
+							className="min-h-11 font-mono text-xs uppercase"
 							key={tf}
 							value={tf}
 						>
@@ -1166,7 +1166,7 @@ function LightweightChartInner({
 
 				{/* Fit to trade button */}
 				<button
-					className="flex min-h-[36px] min-w-[36px] items-center justify-center gap-1 rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground sm:min-h-0 sm:min-w-0"
+					className="flex min-h-9 min-w-9 items-center justify-center gap-1 rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground sm:min-h-0 sm:min-w-0"
 					data-testid="chart-button-fit"
 					onClick={handleFitToTrade}
 					title="Fit to trade"
@@ -1182,7 +1182,7 @@ function LightweightChartInner({
 				{/* Horizontal line tool */}
 				<button
 					className={cn(
-						"flex min-h-[36px] min-w-[36px] items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+						"flex min-h-9 min-w-9 items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
 						activeTool === "horizontal"
 							? "bg-primary text-primary-foreground"
 							: "bg-muted text-muted-foreground hover:bg-muted/80",
@@ -1198,7 +1198,7 @@ function LightweightChartInner({
 				{/* Vertical line tool */}
 				<button
 					className={cn(
-						"flex min-h-[36px] min-w-[36px] items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+						"flex min-h-9 min-w-9 items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
 						activeTool === "vertical"
 							? "bg-primary text-primary-foreground"
 							: "bg-muted text-muted-foreground hover:bg-muted/80",
@@ -1213,7 +1213,7 @@ function LightweightChartInner({
 
 				{/* Line style toggle */}
 				<button
-					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+					className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
 					data-testid="chart-button-line-style"
 					onClick={cycleLineStyle}
 					title={`Line style: ${drawingLineStyle}`}
@@ -1228,7 +1228,7 @@ function LightweightChartInner({
 
 				{/* Color picker cycling button */}
 				<button
-					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+					className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
 					data-testid="chart-button-color"
 					onClick={cycleColor}
 					title="Drawing color"
@@ -1242,7 +1242,7 @@ function LightweightChartInner({
 
 				{/* Clear all button */}
 				<button
-					className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-destructive sm:min-h-0 sm:min-w-0"
+					className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-destructive sm:min-h-0 sm:min-w-0"
 					data-testid="chart-button-clear-all"
 					onClick={handleClearAll}
 					title="Clear all drawings"

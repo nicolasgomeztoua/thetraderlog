@@ -267,13 +267,13 @@ function SettingsTabBar({ activeTab }: { activeTab: string }) {
 	return (
 		<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
 			<TabsList
-				className="relative inline-flex h-auto w-auto min-w-full border border-border bg-secondary p-0 pb-[2px] sm:grid sm:w-full sm:grid-cols-5"
+				className="relative inline-flex h-auto w-auto min-w-full border border-border bg-secondary p-0 pb-0.5 sm:grid sm:w-full sm:grid-cols-5"
 				ref={tabsRef}
 			>
 				{/* Animated active indicator */}
 				<span
 					className={cn(
-						"pointer-events-none absolute bottom-0 left-0 h-[2px] bg-primary",
+						"pointer-events-none absolute bottom-0 left-0 h-0.5 bg-primary",
 						hasTransition && "transition-all duration-300 ease-out",
 					)}
 					style={{
@@ -795,7 +795,7 @@ export function SettingsContent() {
 									</CardDescription>
 								</div>
 								<Button
-									className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+									className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 									onClick={() => openUserProfile()}
 									variant="outline"
 								>
@@ -806,7 +806,7 @@ export function SettingsContent() {
 						</CardHeader>
 						<CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
 							<button
-								className="-m-2 flex min-h-[44px] cursor-pointer items-center gap-4 rounded-lg p-2 text-left transition-colors hover:bg-secondary/50"
+								className="-m-2 flex min-h-11 cursor-pointer items-center gap-4 rounded-lg p-2 text-left transition-colors hover:bg-secondary/50"
 								onClick={() => openUserProfile()}
 								type="button"
 							>
@@ -1025,7 +1025,7 @@ export function SettingsContent() {
 								</div>
 								<div className="flex gap-2">
 									<Button
-										className="min-h-[36px] flex-1 font-mono text-[10px] sm:flex-none"
+										className="min-h-9 flex-1 font-mono text-[10px] sm:flex-none"
 										onClick={resetSessionsToDefault}
 										size="sm"
 										variant="outline"
@@ -1033,7 +1033,7 @@ export function SettingsContent() {
 										Reset
 									</Button>
 									<Button
-										className="min-h-[36px] flex-1 font-mono text-[10px] sm:flex-none"
+										className="min-h-9 flex-1 font-mono text-[10px] sm:flex-none"
 										onClick={addSession}
 										size="sm"
 										variant="outline"
@@ -1098,7 +1098,7 @@ export function SettingsContent() {
 													}
 													value={session.startHour.toString()}
 												>
-													<SelectTrigger className="min-h-[36px] w-[70px] font-mono text-xs sm:w-24">
+													<SelectTrigger className="min-h-9 w-[70px] font-mono text-xs sm:w-24">
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
@@ -1124,7 +1124,7 @@ export function SettingsContent() {
 													}
 													value={session.endHour.toString()}
 												>
-													<SelectTrigger className="min-h-[36px] w-[70px] font-mono text-xs sm:w-24">
+													<SelectTrigger className="min-h-9 w-[70px] font-mono text-xs sm:w-24">
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
@@ -1149,7 +1149,7 @@ export function SettingsContent() {
 													}
 													value={session.color}
 												>
-													<SelectTrigger className="min-h-[36px] w-12 sm:w-16">
+													<SelectTrigger className="min-h-9 w-12 sm:w-16">
 														<div
 															className="h-4 w-4 rounded"
 															style={{ backgroundColor: session.color }}
@@ -1257,7 +1257,7 @@ export function SettingsContent() {
 								>
 									<DialogTrigger asChild>
 										<Button
-											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+											className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 											variant="outline"
 										>
 											<Plus className="mr-2 h-3.5 w-3.5" />
@@ -1350,7 +1350,7 @@ export function SettingsContent() {
 											</div>
 											<div className="flex shrink-0 items-center gap-1">
 												<Button
-													className="min-h-[36px] min-w-[36px]"
+													className="min-h-9 min-w-9"
 													onClick={() => openEditGroup(group)}
 													size="sm"
 													variant="ghost"
@@ -1358,7 +1358,7 @@ export function SettingsContent() {
 													<Edit className="h-4 w-4" />
 												</Button>
 												<Button
-													className="min-h-[36px] min-w-[36px]"
+													className="min-h-9 min-w-9"
 													disabled={deleteGroup.isPending}
 													onClick={() => {
 														if (
@@ -1406,7 +1406,7 @@ export function SettingsContent() {
 									open={isAccountDialogOpen}
 								>
 									<DialogTrigger asChild>
-										<Button className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto">
+										<Button className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto">
 											<Plus className="mr-2 h-3.5 w-3.5" />
 											Add Account
 										</Button>
@@ -1965,7 +1965,7 @@ export function SettingsContent() {
 													account.challengeStatus === "active" && (
 														<>
 															<Button
-																className="min-h-[36px] min-w-[36px] text-green-500 hover:text-green-400"
+																className="min-h-9 min-w-9 text-green-500 hover:text-green-400"
 																onClick={() => openConvertDialog(account)}
 																size="sm"
 																title="Mark as Passed"
@@ -1974,7 +1974,7 @@ export function SettingsContent() {
 																<Trophy className="h-4 w-4" />
 															</Button>
 															<Button
-																className="min-h-[36px] min-w-[36px] text-red-500 hover:text-red-400"
+																className="min-h-9 min-w-9 text-red-500 hover:text-red-400"
 																disabled={markChallengeFailed.isPending}
 																onClick={() => {
 																	if (
@@ -1995,7 +1995,7 @@ export function SettingsContent() {
 													)}
 												{!account.isDefault && (
 													<Button
-														className="min-h-[36px] min-w-[36px]"
+														className="min-h-9 min-w-9"
 														disabled={setDefaultAccount.isPending}
 														onClick={() =>
 															setDefaultAccount.mutate({ id: account.id })
@@ -2008,7 +2008,7 @@ export function SettingsContent() {
 													</Button>
 												)}
 												<Button
-													className="min-h-[36px] min-w-[36px]"
+													className="min-h-9 min-w-9"
 													onClick={() => openEditAccount(account)}
 													size="sm"
 													title="Edit"
@@ -2017,7 +2017,7 @@ export function SettingsContent() {
 													<Edit className="h-4 w-4" />
 												</Button>
 												<Button
-													className="min-h-[36px] min-w-[36px]"
+													className="min-h-9 min-w-9"
 													disabled={deleteAccount.isPending}
 													onClick={() => {
 														if (
@@ -2221,7 +2221,7 @@ export function SettingsContent() {
 					)}
 				</div>
 				<Button
-					className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+					className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 					disabled={updateSettings.isPending || !hasUnsavedChanges}
 					onClick={handleSave}
 				>

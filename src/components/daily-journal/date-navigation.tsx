@@ -54,7 +54,7 @@ export function DateNavigation({
 			</Button>
 
 			{/* Date Display */}
-			<span className="flex min-w-[120px] items-center justify-start rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs uppercase tracking-wider sm:min-w-[160px] sm:px-3">
+			<span className="flex min-w-30 items-center justify-start rounded-md border border-input bg-background px-2 py-1.5 font-mono text-xs uppercase tracking-wider sm:min-w-40 sm:px-3">
 				<CalendarIcon className="mr-1.5 size-4 sm:mr-2" />
 				{formatDateInTimezone(date, timezone, { format: "MMM d, yyyy" })}
 			</span>

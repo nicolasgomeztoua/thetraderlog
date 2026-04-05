@@ -50,7 +50,7 @@ export default function NewStrategyPage() {
 				<div className="flex items-center gap-2 sm:gap-3">
 					<Button
 						asChild
-						className="min-h-[44px] min-w-[44px] shrink-0 sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
+						className="min-h-11 min-w-11 shrink-0 sm:h-8 sm:min-h-0 sm:w-8 sm:min-w-0"
 						size="icon"
 						variant="ghost"
 					>

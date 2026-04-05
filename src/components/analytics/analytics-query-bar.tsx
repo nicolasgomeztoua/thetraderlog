@@ -223,7 +223,7 @@ export function AnalyticsQueryBar({
 					{/* Clear button (if filters active) */}
 					{hasMounted && hasActiveFilters() && (
 						<button
-							className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded border border-border font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-border hover:text-foreground"
+							className="flex min-h-11 min-w-11 items-center justify-center rounded border border-border font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-border hover:text-foreground"
 							onClick={handleClearAll}
 							type="button"
 						>
@@ -236,7 +236,7 @@ export function AnalyticsQueryBar({
 						<SheetTrigger asChild>
 							<button
 								className={cn(
-									"flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded border px-3 font-mono text-xs uppercase tracking-wider transition-all",
+									"flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded border px-3 font-mono text-xs uppercase tracking-wider transition-all",
 									isSheetOpen
 										? "border-primary/40 bg-primary/10 text-primary"
 										: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground",
@@ -269,7 +269,7 @@ export function AnalyticsQueryBar({
 							{/* Action buttons - sticky at bottom */}
 							<div className="flex items-center gap-2 border-border/50 border-t pt-4">
 								<Button
-									className="min-h-[44px] flex-1 gap-1.5 font-mono text-xs"
+									className="min-h-11 flex-1 gap-1.5 font-mono text-xs"
 									onClick={handleReset}
 									size="sm"
 									variant="ghost"
@@ -278,7 +278,7 @@ export function AnalyticsQueryBar({
 									Reset
 								</Button>
 								<Button
-									className="min-h-[44px] flex-1 font-mono text-xs"
+									className="min-h-11 flex-1 font-mono text-xs"
 									onClick={handleApply}
 									size="sm"
 								>

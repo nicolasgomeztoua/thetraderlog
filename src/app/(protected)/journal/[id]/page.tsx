@@ -459,7 +459,7 @@ function TradeDetailPageContent() {
 					{/* Mark as reviewed - icon only on mobile */}
 					<button
 						className={cn(
-							"flex min-h-[44px] items-center gap-1.5 rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:min-h-0 sm:px-3",
+							"flex min-h-11 items-center gap-1.5 rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors sm:min-h-0 sm:px-3",
 							trade.isReviewed
 								? "bg-profit/10 text-profit"
 								: "text-muted-foreground hover:bg-muted",

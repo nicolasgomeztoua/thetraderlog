@@ -192,7 +192,7 @@ function DemoDashboard() {
 							+$2,847.50
 						</span>
 					</div>
-					<div className="flex h-20 items-end gap-[2px] sm:h-32">
+					<div className="flex h-20 items-end gap-0.5 sm:h-32">
 						{animatedEquity.map((value, i) => (
 							<div
 								className="flex-1 rounded-t bg-linear-to-t from-primary/60 to-primary/30 transition-all duration-300"

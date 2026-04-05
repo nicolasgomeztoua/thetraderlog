@@ -905,7 +905,7 @@ export default function JournalPage() {
 				{/* Bottom row: actions */}
 				<div className="flex items-center justify-end gap-2">
 					<Button
-						className="h-9 min-h-[44px] font-mono text-xs"
+						className="h-9 min-h-11 font-mono text-xs"
 						disabled={restoreTrade.isPending}
 						onClick={() => restoreTrade.mutate({ id: trade.id })}
 						size="sm"
@@ -915,7 +915,7 @@ export default function JournalPage() {
 						Restore
 					</Button>
 					<Button
-						className="h-9 min-h-[44px] font-mono text-xs"
+						className="h-9 min-h-11 font-mono text-xs"
 						disabled={permanentDelete.isPending}
 						onClick={() => {
 							if (
@@ -1001,7 +1001,7 @@ export default function JournalPage() {
 							<Sheet onOpenChange={setFilterSheetOpen} open={filterSheetOpen}>
 								<SheetTrigger asChild>
 									<Button
-										className="min-h-[44px] shrink-0 font-mono text-xs"
+										className="min-h-11 shrink-0 font-mono text-xs"
 										size="icon"
 										variant="outline"
 									>
@@ -1050,7 +1050,7 @@ export default function JournalPage() {
 								{selectedTrades.size} selected
 							</span>
 							<Button
-								className="min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+								className="min-h-11 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 								disabled={deleteMany.isPending}
 								onClick={handleBulkDelete}
 								size="sm"
@@ -1060,7 +1060,7 @@ export default function JournalPage() {
 								<span className="hidden sm:inline">Delete</span>
 							</Button>
 							<Button
-								className="min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+								className="min-h-11 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 								onClick={() =>
 									bulkMarkReviewed.mutate({
 										ids: Array.from(selectedTrades),
@@ -1076,7 +1076,7 @@ export default function JournalPage() {
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button
-										className="min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+										className="min-h-11 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 										size="sm"
 										variant="outline"
 									>
@@ -1112,7 +1112,7 @@ export default function JournalPage() {
 								</DropdownMenuContent>
 							</DropdownMenu>
 							<Button
-								className="min-h-[44px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+								className="min-h-11 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 								onClick={() => setSelectedTrades(new Set())}
 								size="sm"
 								variant="ghost"
@@ -1232,8 +1232,8 @@ export default function JournalPage() {
 												<TableHead
 													className={cn(
 														"font-mono text-[10px] text-muted-foreground uppercase tracking-wider",
-														col.id === "checkbox" && "w-[40px]",
-														col.id === "actions" && "w-[50px]",
+														col.id === "checkbox" && "w-10",
+														col.id === "actions" && "w-12.5",
 													)}
 													key={col.id}
 												>
@@ -1318,7 +1318,7 @@ export default function JournalPage() {
 						</p>
 						{deletedTrades && deletedTrades.length > 0 && (
 							<Button
-								className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
+								className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
 								disabled={emptyTrash.isPending}
 								onClick={() => setEmptyTrashDialogOpen(true)}
 								size="sm"
@@ -1385,7 +1385,7 @@ export default function JournalPage() {
 										<TableHead className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 											Deleted
 										</TableHead>
-										<TableHead className="w-[100px] font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+										<TableHead className="w-25 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
 											Actions
 										</TableHead>
 									</TableRow>

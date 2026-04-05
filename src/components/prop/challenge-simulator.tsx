@@ -69,7 +69,7 @@ export function ChallengeSimulator({
 				data-testid="challenge-simulator"
 			>
 				<SimulatorHeader />
-				<div className="mt-4 flex h-[140px] items-center justify-center rounded border border-white/5 border-dashed bg-white/1">
+				<div className="mt-4 flex h-35 items-center justify-center rounded border border-white/5 border-dashed bg-white/1">
 					<div className="text-center">
 						<Dices className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
 						<p className="font-mono text-muted-foreground text-xs">

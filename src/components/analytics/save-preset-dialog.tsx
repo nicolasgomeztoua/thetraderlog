@@ -150,7 +150,7 @@ export function SavePresetDialog({
 							<span className="text-muted-foreground">(optional)</span>
 						</Label>
 						<Textarea
-							className="min-h-[80px] resize-none font-mono text-sm"
+							className="min-h-20 resize-none font-mono text-sm"
 							id="preset-description"
 							maxLength={500}
 							onChange={(e) => setDescription(e.target.value)}

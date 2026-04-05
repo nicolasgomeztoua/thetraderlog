@@ -391,7 +391,7 @@ export function CalendarSidebar({
 					<span className="font-mono text-[10px] text-muted-foreground">
 						Loss
 					</span>
-					<div className="flex gap-[2px]">
+					<div className="flex gap-0.5">
 						<div className="size-2.5 rounded-sm bg-loss/80" />
 						<div className="size-2.5 rounded-sm bg-loss/40" />
 						<div className="size-2.5 rounded-sm bg-secondary/50" />

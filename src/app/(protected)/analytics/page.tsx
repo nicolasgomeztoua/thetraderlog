@@ -1351,13 +1351,13 @@ export default function AnalyticsPage() {
 				<div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
 					<TabsList className="inline-flex w-auto min-w-full bg-secondary/50 sm:w-full">
 						<TabsTrigger
-							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							className="min-h-10 flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="overview"
 						>
 							Overview
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							className="min-h-10 flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="time"
 						>
 							Time
@@ -1366,7 +1366,7 @@ export default function AnalyticsPage() {
 							)}
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							className="min-h-10 flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="risk"
 						>
 							Risk
@@ -1375,7 +1375,7 @@ export default function AnalyticsPage() {
 							)}
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							className="min-h-10 flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="symbols"
 						>
 							Symbols
@@ -1384,7 +1384,7 @@ export default function AnalyticsPage() {
 							)}
 						</TabsTrigger>
 						<TabsTrigger
-							className="min-h-[40px] flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
+							className="min-h-10 flex-1 px-3 font-mono text-[11px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground sm:min-h-0 sm:px-4 sm:text-xs"
 							value="behavior"
 						>
 							Behavior

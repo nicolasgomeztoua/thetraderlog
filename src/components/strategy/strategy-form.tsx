@@ -137,7 +137,7 @@ export function StrategyForm({
 				<div className="flex gap-1 border-border border-b pb-3 sm:flex-wrap sm:gap-1.5 sm:pb-4">
 					{sections.map((section) => (
 						<button
-							className={`min-h-[36px] shrink-0 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all sm:min-h-0 sm:px-3 sm:text-xs ${
+							className={`min-h-9 shrink-0 border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all sm:min-h-0 sm:px-3 sm:text-xs ${
 								activeSection === section.id
 									? "border-primary/50 bg-primary/10 text-primary"
 									: "border-transparent bg-muted text-muted-foreground hover:border-border hover:bg-muted/80"
@@ -167,7 +167,7 @@ export function StrategyForm({
 							→ Strategy Name <span className="text-loss">*</span>
 						</label>
 						<Input
-							className="min-h-[44px] font-mono sm:min-h-0"
+							className="min-h-11 font-mono sm:min-h-0"
 							data-testid="strategy-form-input-name"
 							id="strategy-name"
 							onChange={(e) => updateField("name", e.target.value)}
@@ -301,7 +301,7 @@ export function StrategyForm({
 							→ Add custom rules to check off when taking trades.
 						</p>
 						<Button
-							className="min-h-[36px] shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+							className="min-h-9 shrink-0 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 							onClick={addRule}
 							size="sm"
 							type="button"
@@ -334,7 +334,7 @@ export function StrategyForm({
 									your trade checklist
 								</p>
 								<Button
-									className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0"
+									className="min-h-9 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 									onClick={addRule}
 									type="button"
 									variant="outline"
@@ -368,7 +368,7 @@ export function StrategyForm({
 												<SelectContent>
 													{CATEGORY_OPTIONS.map((opt) => (
 														<SelectItem
-															className="min-h-[44px] sm:min-h-0"
+															className="min-h-11 sm:min-h-0"
 															key={opt.value}
 															value={opt.value}
 														>
@@ -389,7 +389,7 @@ export function StrategyForm({
 										</Button>
 									</div>
 									<Input
-										className="min-h-[44px] flex-1 font-mono text-sm sm:min-h-0"
+										className="min-h-11 flex-1 font-mono text-sm sm:min-h-0"
 										onChange={(e) => updateRule(idx, { text: e.target.value })}
 										placeholder="Enter rule text..."
 										value={rule.text}
@@ -413,7 +413,7 @@ export function StrategyForm({
 			{/* Submit Button */}
 			<div className="flex items-center justify-end gap-3 border-border border-t pt-4 sm:pt-6">
 				<Button
-					className="min-h-[44px] w-full gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
+					className="min-h-11 w-full gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:w-auto"
 					data-testid="strategy-form-button-submit"
 					disabled={isSubmitting || !formData.name}
 					type="submit"

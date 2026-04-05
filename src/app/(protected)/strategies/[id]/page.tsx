@@ -224,7 +224,7 @@ export default function StrategyDetailPage() {
 				<p className="mb-4 text-center text-muted-foreground text-sm sm:text-base">
 					This strategy doesn&apos;t exist or you don&apos;t have access.
 				</p>
-				<Button asChild className="min-h-[44px]">
+				<Button asChild className="min-h-11">
 					<Link href="/strategies">Back to Strategies</Link>
 				</Button>
 			</div>
@@ -266,7 +266,7 @@ export default function StrategyDetailPage() {
 			>
 				<Button
 					asChild
-					className="min-h-[44px] gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0"
+					className="min-h-11 gap-2 font-mono text-xs uppercase tracking-wider sm:min-h-0"
 					data-testid="strategy-detail-action-back"
 					variant="ghost"
 				>
@@ -278,7 +278,7 @@ export default function StrategyDetailPage() {
 
 				<div className="flex shrink-0 items-center gap-1 sm:gap-2">
 					<Button
-						className="min-h-[36px] min-w-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
+						className="min-h-9 min-w-9 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
 						data-testid="strategy-detail-action-edit"
 						onClick={scrollToForm}
 						size={isMobile ? "icon" : "sm"}
@@ -290,7 +290,7 @@ export default function StrategyDetailPage() {
 					<AlertDialog onOpenChange={setDuplicateOpen} open={duplicateOpen}>
 						<AlertDialogTrigger asChild>
 							<Button
-								className="min-h-[36px] min-w-[36px] font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
+								className="min-h-9 min-w-9 font-mono text-xs uppercase tracking-wider sm:min-h-0 sm:min-w-0"
 								data-testid="strategy-detail-action-duplicate"
 								size={isMobile ? "icon" : "sm"}
 								variant="outline"
@@ -310,11 +310,11 @@ export default function StrategyDetailPage() {
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
-								<AlertDialogCancel className="min-h-[44px] font-mono text-xs sm:min-h-0">
+								<AlertDialogCancel className="min-h-11 font-mono text-xs sm:min-h-0">
 									Cancel
 								</AlertDialogCancel>
 								<AlertDialogAction
-									className="min-h-[44px] font-mono text-xs sm:min-h-0"
+									className="min-h-11 font-mono text-xs sm:min-h-0"
 									disabled={duplicateMutation.isPending}
 									onClick={(e) => {
 										e.preventDefault();
@@ -332,7 +332,7 @@ export default function StrategyDetailPage() {
 					<AlertDialog onOpenChange={setDeleteOpen} open={deleteOpen}>
 						<AlertDialogTrigger asChild>
 							<Button
-								className="min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0"
+								className="min-h-9 min-w-9 sm:min-h-0 sm:min-w-0"
 								data-testid="strategy-detail-action-delete"
 								size={isMobile ? "icon" : "sm"}
 								variant="ghost"
@@ -355,11 +355,11 @@ export default function StrategyDetailPage() {
 								</AlertDialogDescription>
 							</AlertDialogHeader>
 							<AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
-								<AlertDialogCancel className="min-h-[44px] font-mono text-xs sm:min-h-0">
+								<AlertDialogCancel className="min-h-11 font-mono text-xs sm:min-h-0">
 									Cancel
 								</AlertDialogCancel>
 								<AlertDialogAction
-									className="min-h-[44px] bg-loss font-mono text-xs hover:bg-loss/90 sm:min-h-0"
+									className="min-h-11 bg-loss font-mono text-xs hover:bg-loss/90 sm:min-h-0"
 									disabled={deleteMutation.isPending}
 									onClick={(e) => {
 										e.preventDefault();
@@ -455,7 +455,7 @@ export default function StrategyDetailPage() {
 
 					{/* Edit Strategy button */}
 					<Button
-						className="min-h-[44px] gap-2 bg-primary font-mono text-primary-foreground text-xs uppercase tracking-wider hover:bg-primary/90"
+						className="min-h-11 gap-2 bg-primary font-mono text-primary-foreground text-xs uppercase tracking-wider hover:bg-primary/90"
 						onClick={scrollToForm}
 					>
 						<Pencil className="h-4 w-4" />

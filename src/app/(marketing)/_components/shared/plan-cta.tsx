@@ -25,7 +25,7 @@ export function PlanCTA({ plan, billingPeriod }: PlanCTAProps) {
 	if (!isLoaded) {
 		return (
 			<Button
-				className="min-h-[48px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				className="min-h-12 w-full gap-2 font-mono text-xs uppercase tracking-wider"
 				data-testid={`pricing-cta-${plan.slug}`}
 				disabled
 				variant="outline"
@@ -58,7 +58,7 @@ export function PlanCTA({ plan, billingPeriod }: PlanCTAProps) {
 		return (
 			<SignUpButton forceRedirectUrl="/pricing" mode="modal">
 				<Button
-					className={`min-h-[48px] w-full gap-2 font-mono text-xs uppercase tracking-wider ${highlightedClass}`}
+					className={`min-h-12 w-full gap-2 font-mono text-xs uppercase tracking-wider ${highlightedClass}`}
 					data-testid={`pricing-cta-${plan.slug}`}
 					variant={plan.highlighted ? "default" : "outline"}
 				>
@@ -73,7 +73,7 @@ export function PlanCTA({ plan, billingPeriod }: PlanCTAProps) {
 		return (
 			<Button
 				asChild
-				className="min-h-[48px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				className="min-h-12 w-full gap-2 font-mono text-xs uppercase tracking-wider"
 				data-testid={`pricing-cta-${plan.slug}`}
 				variant="outline"
 			>
@@ -89,7 +89,7 @@ export function PlanCTA({ plan, billingPeriod }: PlanCTAProps) {
 		return (
 			<Button
 				asChild
-				className="min-h-[48px] w-full gap-2 font-mono text-xs uppercase tracking-wider"
+				className="min-h-12 w-full gap-2 font-mono text-xs uppercase tracking-wider"
 				data-testid={`pricing-cta-${plan.slug}`}
 				variant="outline"
 			>
@@ -107,7 +107,7 @@ export function PlanCTA({ plan, billingPeriod }: PlanCTAProps) {
 			planPeriod={clerkPlanPeriod}
 		>
 			<Button
-				className={`min-h-[48px] w-full gap-2 font-mono text-xs uppercase tracking-wider ${highlightedClass}`}
+				className={`min-h-12 w-full gap-2 font-mono text-xs uppercase tracking-wider ${highlightedClass}`}
 				data-testid={`pricing-cta-${plan.slug}`}
 				variant={plan.highlighted ? "default" : "outline"}
 			>

@@ -107,7 +107,7 @@ export function TagManager() {
 					</p>
 				</div>
 				<Button
-					className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+					className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 					onClick={() => setIsCreateOpen(true)}
 					size="sm"
 				>
@@ -148,7 +148,7 @@ export function TagManager() {
 							</div>
 							<div className="flex shrink-0 items-center gap-1">
 								<Button
-									className="min-h-[36px] min-w-[36px]"
+									className="min-h-9 min-w-9"
 									onClick={() => {
 										setEditingTag({
 											id: tag.id,
@@ -163,7 +163,7 @@ export function TagManager() {
 									<Pencil className="h-3.5 w-3.5" />
 								</Button>
 								<Button
-									className="min-h-[36px] min-w-[36px] text-destructive hover:text-destructive"
+									className="min-h-9 min-w-9 text-destructive hover:text-destructive"
 									onClick={() => handleDelete(tag.id, tag.name)}
 									size="icon"
 									variant="ghost"
@@ -231,14 +231,14 @@ export function TagManager() {
 					</div>
 					<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
 						<Button
-							className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+							className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 							onClick={() => setIsCreateOpen(false)}
 							variant="ghost"
 						>
 							Cancel
 						</Button>
 						<Button
-							className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+							className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 							disabled={!newTagName.trim() || createTag.isPending}
 							onClick={handleCreate}
 						>
@@ -307,14 +307,14 @@ export function TagManager() {
 					)}
 					<DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
 						<Button
-							className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+							className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 							onClick={() => setIsEditOpen(false)}
 							variant="ghost"
 						>
 							Cancel
 						</Button>
 						<Button
-							className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+							className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 							disabled={!editingTag?.name.trim() || updateTag.isPending}
 							onClick={handleUpdate}
 						>

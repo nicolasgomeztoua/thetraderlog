@@ -104,7 +104,7 @@ export function Navbar() {
 						) : (
 							<SignUpButton mode="modal">
 								<Button
-									className="min-h-[44px] font-mono text-xs uppercase tracking-wider"
+									className="min-h-11 font-mono text-xs uppercase tracking-wider"
 									size="sm"
 								>
 									Start

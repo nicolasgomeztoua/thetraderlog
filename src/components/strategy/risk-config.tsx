@@ -104,20 +104,20 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							}
 							value={riskParams.positionSizing?.method ?? ""}
 						>
-							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
+							<SelectTrigger className="min-h-11 font-mono text-sm sm:min-h-0">
 								<SelectValue placeholder="Select method..." />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem className="min-h-[44px] sm:min-h-0" value="fixed">
+								<SelectItem className="min-h-11 sm:min-h-0" value="fixed">
 									Fixed Size
 								</SelectItem>
 								<SelectItem
-									className="min-h-[44px] sm:min-h-0"
+									className="min-h-11 sm:min-h-0"
 									value="risk_percent"
 								>
 									Risk % of Account
 								</SelectItem>
-								<SelectItem className="min-h-[44px] sm:min-h-0" value="kelly">
+								<SelectItem className="min-h-11 sm:min-h-0" value="kelly">
 									Kelly Criterion
 								</SelectItem>
 							</SelectContent>
@@ -130,7 +130,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 								Size (lots/contracts)
 							</span>
 							<Input
-								className="min-h-[44px] font-mono sm:min-h-0"
+								className="min-h-11 font-mono sm:min-h-0"
 								inputMode="decimal"
 								onChange={(e) =>
 									updateField("positionSizing", {
@@ -153,7 +153,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 								Risk %
 							</span>
 							<Input
-								className="min-h-[44px] font-mono sm:min-h-0"
+								className="min-h-11 font-mono sm:min-h-0"
 								inputMode="decimal"
 								onChange={(e) =>
 									updateField("positionSizing", {
@@ -176,7 +176,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 								Kelly Fraction
 							</span>
 							<Input
-								className="min-h-[44px] font-mono sm:min-h-0"
+								className="min-h-11 font-mono sm:min-h-0"
 								inputMode="decimal"
 								onChange={(e) =>
 									updateField("positionSizing", {
@@ -233,14 +233,14 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							}
 							value={riskParams.maxRiskPerTrade?.type ?? ""}
 						>
-							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
+							<SelectTrigger className="min-h-11 font-mono text-sm sm:min-h-0">
 								<SelectValue placeholder="Select type..." />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem className="min-h-[44px] sm:min-h-0" value="dollars">
+								<SelectItem className="min-h-11 sm:min-h-0" value="dollars">
 									Dollars ($)
 								</SelectItem>
-								<SelectItem className="min-h-[44px] sm:min-h-0" value="percent">
+								<SelectItem className="min-h-11 sm:min-h-0" value="percent">
 									Percent (%)
 								</SelectItem>
 							</SelectContent>
@@ -251,7 +251,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							Value
 						</span>
 						<Input
-							className="min-h-[44px] font-mono sm:min-h-0"
+							className="min-h-11 font-mono sm:min-h-0"
 							data-testid="risk-config-max-risk-value"
 							inputMode="decimal"
 							onChange={(e) => {
@@ -312,14 +312,14 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							}
 							value={riskParams.dailyLossLimit?.type ?? ""}
 						>
-							<SelectTrigger className="min-h-[44px] font-mono text-sm sm:min-h-0">
+							<SelectTrigger className="min-h-11 font-mono text-sm sm:min-h-0">
 								<SelectValue placeholder="Select type..." />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem className="min-h-[44px] sm:min-h-0" value="dollars">
+								<SelectItem className="min-h-11 sm:min-h-0" value="dollars">
 									Dollars ($)
 								</SelectItem>
-								<SelectItem className="min-h-[44px] sm:min-h-0" value="percent">
+								<SelectItem className="min-h-11 sm:min-h-0" value="percent">
 									Percent (%)
 								</SelectItem>
 							</SelectContent>
@@ -330,7 +330,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 							Value
 						</span>
 						<Input
-							className="min-h-[44px] font-mono sm:min-h-0"
+							className="min-h-11 font-mono sm:min-h-0"
 							inputMode="decimal"
 							onChange={(e) => {
 								const parsed = parseNumberInput(e.target.value);
@@ -376,7 +376,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						Value
 					</span>
 					<Input
-						className="min-h-[44px] font-mono sm:min-h-0"
+						className="min-h-11 font-mono sm:min-h-0"
 						inputMode="numeric"
 						onChange={(e) =>
 							updateField(
@@ -415,7 +415,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 						Value
 					</span>
 					<Input
-						className="min-h-[44px] font-mono sm:min-h-0"
+						className="min-h-11 font-mono sm:min-h-0"
 						inputMode="decimal"
 						onChange={(e) =>
 							updateField("minRRRatio", parseNumberInput(e.target.value))
@@ -436,12 +436,12 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 				<div className="flex flex-wrap gap-2">
 					{(riskParams.targetRMultiples ?? []).map((r) => (
 						<div
-							className="flex min-h-[36px] items-center gap-1.5 rounded border border-primary/30 bg-primary/5 px-2.5 py-1 sm:min-h-0"
+							className="flex min-h-9 items-center gap-1.5 rounded border border-primary/30 bg-primary/5 px-2.5 py-1 sm:min-h-0"
 							key={r}
 						>
 							<span className="font-mono text-sm">{r}R</span>
 							<button
-								className="min-h-[24px] min-w-[24px] text-muted-foreground hover:text-loss sm:min-h-0 sm:min-w-0"
+								className="min-h-6 min-w-6 text-muted-foreground hover:text-loss sm:min-h-0 sm:min-w-0"
 								onClick={() => {
 									const newMultiples = (
 										riskParams.targetRMultiples ?? []
@@ -460,7 +460,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 					<Popover onOpenChange={setRMultipleOpen} open={rMultipleOpen}>
 						<PopoverTrigger asChild>
 							<Button
-								className="min-h-[36px] font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
+								className="min-h-9 font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
 								size="sm"
 								type="button"
 								variant="outline"
@@ -476,7 +476,7 @@ export function RiskConfig({ value, onChange }: RiskConfigProps) {
 								</span>
 								<Input
 									autoFocus
-									className="min-h-[44px] font-mono sm:min-h-0"
+									className="min-h-11 font-mono sm:min-h-0"
 									inputMode="decimal"
 									onChange={(e) => setRMultipleInput(e.target.value)}
 									onKeyDown={(e) => {

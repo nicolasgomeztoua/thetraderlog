@@ -449,7 +449,7 @@ export default function ImportPage() {
 				<div className="flex items-center gap-3 sm:gap-4">
 					<Button
 						asChild
-						className="min-h-[44px] min-w-[44px]"
+						className="min-h-11 min-w-11"
 						size="icon"
 						variant="ghost"
 					>
@@ -563,13 +563,13 @@ export default function ImportPage() {
 										onValueChange={(value) => setSelectedImportAccountId(value)}
 										value={selectedImportAccountId?.toString() || ""}
 									>
-										<SelectTrigger className="min-h-[44px] w-full">
+										<SelectTrigger className="min-h-11 w-full">
 											<SelectValue placeholder="Select an account" />
 										</SelectTrigger>
 										<SelectContent>
 											{accounts.map((account) => (
 												<SelectItem
-													className="min-h-[44px]"
+													className="min-h-11"
 													key={account.id}
 													value={account.id.toString()}
 												>
@@ -606,7 +606,7 @@ export default function ImportPage() {
 
 									<div className="flex justify-end">
 										<Button
-											className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+											className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 											disabled={!selectedImportAccountId}
 											onClick={() => setStep("upload")}
 										>
@@ -662,7 +662,7 @@ export default function ImportPage() {
 									onChange={handleFileUpload}
 									type="file"
 								/>
-								<Button asChild className="min-h-[44px]">
+								<Button asChild className="min-h-11">
 									<label className="cursor-pointer" htmlFor="csv-upload">
 										<Upload className="mr-2 h-4 w-4" />
 										Select File
@@ -672,7 +672,7 @@ export default function ImportPage() {
 
 							<div className="flex justify-start">
 								<Button
-									className="min-h-[44px] w-full sm:w-auto"
+									className="min-h-11 w-full sm:w-auto"
 									onClick={() => setStep("select-account")}
 									variant="outline"
 								>
@@ -723,16 +723,16 @@ export default function ImportPage() {
 											}
 											value={mapping[field.key] || ""}
 										>
-											<SelectTrigger className="min-h-[44px]">
+											<SelectTrigger className="min-h-11">
 												<SelectValue placeholder="Select column" />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem className="min-h-[44px]" value="__skip__">
+												<SelectItem className="min-h-11" value="__skip__">
 													-- Skip --
 												</SelectItem>
 												{headers.map((header) => (
 													<SelectItem
-														className="min-h-[44px]"
+														className="min-h-11"
 														key={header}
 														value={header}
 													>
@@ -747,7 +747,7 @@ export default function ImportPage() {
 
 							<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
 								<Button
-									className="min-h-[44px] w-full sm:w-auto"
+									className="min-h-11 w-full sm:w-auto"
 									onClick={() => setStep("upload")}
 									variant="outline"
 								>
@@ -755,7 +755,7 @@ export default function ImportPage() {
 									Back
 								</Button>
 								<Button
-									className="min-h-[44px] w-full sm:w-auto"
+									className="min-h-11 w-full sm:w-auto"
 									disabled={!isValidMapping()}
 									onClick={() => setStep("preview")}
 								>
@@ -927,7 +927,7 @@ export default function ImportPage() {
 
 							<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
 								<Button
-									className="min-h-[44px] w-full sm:w-auto"
+									className="min-h-11 w-full sm:w-auto"
 									onClick={() =>
 										setStep(parsedTrades.length > 0 ? "upload" : "mapping")
 									}
@@ -937,7 +937,7 @@ export default function ImportPage() {
 									Back
 								</Button>
 								<Button
-									className="min-h-[44px] w-full sm:w-auto"
+									className="min-h-11 w-full sm:w-auto"
 									disabled={importing}
 									onClick={handleImport}
 								>
@@ -981,7 +981,7 @@ export default function ImportPage() {
 							</p>
 							<div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-4">
 								<Button
-									className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+									className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 									onClick={() => {
 										setStep("upload");
 										setCsvData([]);
@@ -995,7 +995,7 @@ export default function ImportPage() {
 									Import More
 								</Button>
 								<Button
-									className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+									className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 									onClick={async () => {
 										await utils.trades.getAll.invalidate();
 										router.push("/journal");

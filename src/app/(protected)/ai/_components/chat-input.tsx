@@ -106,7 +106,7 @@ export function ChatInput({
 				}}
 			>
 				<textarea
-					className="max-h-[200px] min-h-[44px] flex-1 resize-none bg-transparent px-3 py-2.5 font-mono text-sm transition-[height] duration-150 placeholder:text-muted-foreground/40 focus:outline-none"
+					className="max-h-[200px] min-h-11 flex-1 resize-none bg-transparent px-3 py-2.5 font-mono text-sm transition-[height] duration-150 placeholder:text-muted-foreground/40 focus:outline-none"
 					data-testid="chat-input"
 					disabled={disabled}
 					onBlur={() => setIsFocused(false)}

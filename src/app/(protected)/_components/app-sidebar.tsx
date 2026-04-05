@@ -156,7 +156,7 @@ export function AppSidebar() {
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<button
-							className="flex min-h-[44px] w-full items-center gap-2 rounded border border-border bg-secondary/50 px-3 py-2.5 text-left font-mono text-xs transition-colors hover:border-border hover:bg-secondary"
+							className="flex min-h-11 w-full items-center gap-2 rounded border border-border bg-secondary/50 px-3 py-2.5 text-left font-mono text-xs transition-colors hover:border-border hover:bg-secondary"
 							type="button"
 						>
 							{isLoading ? (
@@ -202,7 +202,7 @@ export function AppSidebar() {
 						className="w-(--radix-dropdown-menu-trigger-width) min-w-[240px]"
 					>
 						{accounts.length === 0 ? (
-							<DropdownMenuItem asChild className="min-h-[44px] py-3">
+							<DropdownMenuItem asChild className="min-h-11 py-3">
 								<Link
 									className="flex items-center gap-2 font-mono text-xs"
 									href="/settings?tab=accounts"
@@ -226,7 +226,7 @@ export function AppSidebar() {
 											</DropdownMenuLabel>
 											{groupAccounts.map((account) => (
 												<DropdownMenuItem
-													className="flex min-h-[44px] items-center gap-2 py-2.5 pl-6 font-mono text-xs"
+													className="flex min-h-11 items-center gap-2 py-2.5 pl-6 font-mono text-xs"
 													key={account.id}
 													onClick={() => {
 														setSelectedAccountId(account.id);
@@ -280,7 +280,7 @@ export function AppSidebar() {
 											{groupedAccounts.ungrouped.map((account) => (
 												<DropdownMenuItem
 													className={cn(
-														"flex min-h-[44px] items-center gap-2 py-2.5 font-mono text-xs",
+														"flex min-h-11 items-center gap-2 py-2.5 font-mono text-xs",
 														groups.length > 0 && "pl-6",
 													)}
 													key={account.id}
@@ -323,7 +323,7 @@ export function AppSidebar() {
 									)}
 
 								<DropdownMenuSeparator />
-								<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
+								<DropdownMenuItem asChild className="min-h-11 py-2.5">
 									<Link
 										className="flex items-center gap-2 font-mono text-xs"
 										href="/settings?tab=accounts"
@@ -352,7 +352,7 @@ export function AppSidebar() {
 						align="start"
 						className="w-(--radix-dropdown-menu-trigger-width) min-w-[200px]"
 					>
-						<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
+						<DropdownMenuItem asChild className="min-h-11 py-2.5">
 							<Link
 								className="flex items-center gap-2 font-mono text-xs"
 								href="/trade/new"
@@ -361,7 +361,7 @@ export function AppSidebar() {
 								Log Trade
 							</Link>
 						</DropdownMenuItem>
-						<DropdownMenuItem asChild className="min-h-[44px] py-2.5">
+						<DropdownMenuItem asChild className="min-h-11 py-2.5">
 							<Link
 								className="flex items-center gap-2 font-mono text-xs"
 								href="/import"

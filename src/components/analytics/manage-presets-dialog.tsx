@@ -212,7 +212,7 @@ export function ManagePresetsDialog({
 														Description
 													</Label>
 													<Textarea
-														className="min-h-[60px] resize-none font-mono text-sm"
+														className="min-h-15 resize-none font-mono text-sm"
 														id={`edit-desc-${preset.id}`}
 														maxLength={500}
 														onChange={(e) =>

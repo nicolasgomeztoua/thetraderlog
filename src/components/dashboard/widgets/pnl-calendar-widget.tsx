@@ -328,7 +328,7 @@ export function PnLCalendarWidget() {
 												</div>
 											</div>
 										) : (
-											<div className="mt-2 h-[38px]" />
+											<div className="mt-2 h-9.5" />
 										)}
 									</Link>
 								);

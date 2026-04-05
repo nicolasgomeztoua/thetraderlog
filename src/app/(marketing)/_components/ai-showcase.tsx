@@ -174,7 +174,7 @@ export function AIShowcase() {
 								<div className="flex gap-2 sm:flex-wrap">
 									{queries.map((query, index) => (
 										<button
-											className={`flex min-h-[36px] shrink-0 items-center gap-1.5 rounded border px-2.5 py-1.5 font-mono text-[10px] transition-all sm:min-h-0 sm:gap-2 sm:px-3 sm:py-2 sm:text-xs ${
+											className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded border px-2.5 py-1.5 font-mono text-[10px] transition-all sm:min-h-0 sm:gap-2 sm:px-3 sm:py-2 sm:text-xs ${
 												activeIndex === index
 													? "border-primary/50 bg-primary/10 text-primary"
 													: "border-border bg-muted/50 text-muted-foreground hover:border-border hover:text-foreground"
@@ -222,7 +222,7 @@ export function AIShowcase() {
 							) : (
 								<div className="flex items-center justify-center py-12 sm:py-20">
 									<Button
-										className="min-h-[44px] gap-2 font-mono text-xs uppercase tracking-wider"
+										className="min-h-11 gap-2 font-mono text-xs uppercase tracking-wider"
 										onClick={() => {
 											setShowResponse(true);
 											setKey((prev) => prev + 1);

@@ -188,7 +188,7 @@ export function BugReportDialog({ open, onOpenChange }: BugReportDialogProps) {
 							Description *
 						</Label>
 						<Textarea
-							className="min-h-[80px] resize-none font-mono text-sm"
+							className="min-h-20 resize-none font-mono text-sm"
 							id="bug-description"
 							maxLength={5000}
 							onChange={(e) => setDescription(e.target.value)}

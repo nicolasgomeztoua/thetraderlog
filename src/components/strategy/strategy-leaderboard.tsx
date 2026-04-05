@@ -78,7 +78,7 @@ function LeaderboardRow({
 	return (
 		<Link
 			className={cn(
-				"group flex min-h-[56px] items-center gap-3 rounded border bg-card p-3 transition-all hover:bg-muted sm:min-h-0 sm:gap-4 sm:p-4",
+				"group flex min-h-14 items-center gap-3 rounded border bg-card p-3 transition-all hover:bg-muted sm:min-h-0 sm:gap-4 sm:p-4",
 				isTopPerformer
 					? "border-primary/30 shadow-[0_0_15px_hsl(var(--primary)/0.15)]"
 					: "border-border hover:border-primary/20",

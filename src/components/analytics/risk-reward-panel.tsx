@@ -175,7 +175,7 @@ export function RiskRewardPanel({
 					</div>
 				</div>
 			) : (
-				<div className="flex h-[100px] items-center justify-center rounded border border-border border-dashed bg-secondary/20">
+				<div className="flex h-25 items-center justify-center rounded border border-border border-dashed bg-secondary/20">
 					<div className="text-center">
 						<Crosshair className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
 						<p className="font-mono text-muted-foreground text-xs">

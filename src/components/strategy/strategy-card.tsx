@@ -96,14 +96,14 @@ export function StrategyCard({
 			)}
 
 			{/* Terminal window chrome header */}
-			<div className="relative flex min-h-[36px] items-center justify-between border-border/50 border-b bg-muted px-2 py-1.5 sm:min-h-0 sm:px-3 sm:py-2">
+			<div className="relative flex min-h-9 items-center justify-between border-border/50 border-b bg-muted px-2 py-1.5 sm:min-h-0 sm:px-3 sm:py-2">
 				<div className="flex items-center gap-1 sm:gap-1.5">
 					<div className="h-1.5 w-1.5 rounded-full bg-loss/60 sm:h-2 sm:w-2" />
 					<div className="h-1.5 w-1.5 rounded-full bg-breakeven/60 sm:h-2 sm:w-2" />
 					<div className="h-1.5 w-1.5 rounded-full bg-profit/60 sm:h-2 sm:w-2" />
 				</div>
 				<span
-					className="max-w-[120px] truncate font-mono text-[9px] uppercase tracking-wider sm:max-w-none sm:text-[10px]"
+					className="max-w-30 truncate font-mono text-[9px] uppercase tracking-wider sm:max-w-none sm:text-[10px]"
 					data-testid="strategy-card-title"
 					style={{ color }}
 				>
@@ -124,15 +124,12 @@ export function StrategyCard({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
-						<DropdownMenuItem
-							className="min-h-[44px] sm:min-h-0"
-							onClick={onEdit}
-						>
+						<DropdownMenuItem className="min-h-11 sm:min-h-0" onClick={onEdit}>
 							<Pencil className="mr-2 h-4 w-4" />
 							Edit
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							className="min-h-[44px] sm:min-h-0"
+							className="min-h-11 sm:min-h-0"
 							onClick={onDuplicate}
 						>
 							<Copy className="mr-2 h-4 w-4" />
@@ -140,7 +137,7 @@ export function StrategyCard({
 						</DropdownMenuItem>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
-							className="min-h-[44px] text-loss focus:text-loss sm:min-h-0"
+							className="min-h-11 text-loss focus:text-loss sm:min-h-0"
 							onClick={onDelete}
 						>
 							<Trash2 className="mr-2 h-4 w-4" />

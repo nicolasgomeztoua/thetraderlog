@@ -162,7 +162,7 @@ export default function NewTradePage() {
 				<div className="flex items-center gap-3 sm:gap-4">
 					<Button
 						asChild
-						className="min-h-[44px] min-w-[44px]"
+						className="min-h-11 min-w-11"
 						size="icon"
 						variant="ghost"
 					>
@@ -557,14 +557,14 @@ export default function NewTradePage() {
 					<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-4">
 						<Button
 							asChild
-							className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+							className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 							type="button"
 							variant="outline"
 						>
 							<Link href="/journal">Cancel</Link>
 						</Button>
 						<Button
-							className="min-h-[44px] w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
+							className="min-h-11 w-full font-mono text-xs uppercase tracking-wider sm:w-auto"
 							disabled={isPending}
 							type="submit"
 						>

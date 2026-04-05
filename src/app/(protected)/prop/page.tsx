@@ -356,7 +356,7 @@ function PropPageSkeleton() {
 				<div className="rounded border border-white/5 bg-white/1 p-4">
 					<Skeleton className="mb-3 h-3 w-28" />
 					<Skeleton className="mb-4 h-4 w-full" />
-					<Skeleton className="h-[160px] w-full" />
+					<Skeleton className="h-40 w-full" />
 				</div>
 			</div>
 

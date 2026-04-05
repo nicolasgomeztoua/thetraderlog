@@ -226,7 +226,7 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 							{DAYS.map((day, i) => (
 								<div
 									className={cn(
-										"h-[12px] font-mono text-[9px] text-muted-foreground",
+										"h-3 font-mono text-[9px] text-muted-foreground",
 										i % 2 === 0 ? "opacity-100" : "opacity-0",
 									)}
 									key={day}
@@ -261,7 +261,7 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 													<TooltipTrigger asChild>
 														<div
 															className={cn(
-																"h-[12px] w-[12px] rounded-sm transition-colors",
+																"h-3 w-3 rounded-sm transition-colors",
 																hasTrades
 																	? getPnLColor(dayData.pnl, maxAbsPnl)
 																	: "bg-secondary/50",
@@ -315,12 +315,12 @@ export function CalendarHeatmap({ data, className }: CalendarHeatmapProps) {
 						<span className="font-mono text-[10px] text-muted-foreground">
 							Less
 						</span>
-						<div className="flex gap-[2px]">
-							<div className="h-[10px] w-[10px] rounded-sm bg-loss/80" />
-							<div className="h-[10px] w-[10px] rounded-sm bg-loss/40" />
-							<div className="h-[10px] w-[10px] rounded-sm bg-secondary" />
-							<div className="h-[10px] w-[10px] rounded-sm bg-profit/40" />
-							<div className="h-[10px] w-[10px] rounded-sm bg-profit/80" />
+						<div className="flex gap-0.5">
+							<div className="h-2.5 w-2.5 rounded-sm bg-loss/80" />
+							<div className="h-2.5 w-2.5 rounded-sm bg-loss/40" />
+							<div className="h-2.5 w-2.5 rounded-sm bg-secondary" />
+							<div className="h-2.5 w-2.5 rounded-sm bg-profit/40" />
+							<div className="h-2.5 w-2.5 rounded-sm bg-profit/80" />
 						</div>
 						<span className="font-mono text-[10px] text-muted-foreground">
 							More
