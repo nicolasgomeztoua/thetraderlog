@@ -593,7 +593,7 @@ function LightweightChartInner({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [toggleTool]);
 
-	// Sub-hourly: fetch full day(s) of 1-min data, then aggregate client-side
+	// Sub-hourly: fetch extended range (±3 days) of 1-min data, then aggregate client-side
 	const { data: rawChartData, isLoading: isLoadingSubHourly } =
 		api.marketData.getFullDayChartData.useQuery(
 			{

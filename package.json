@@ -119,6 +119,9 @@
 		"typescript": "^5.8.2",
 		"vitest": "^4.0.16"
 	},
+	"overrides": {
+		"@opentelemetry/instrumentation": "0.214.0"
+	},
 	"ct3aMetadata": {
 		"initVersion": "7.40.0"
 	}
