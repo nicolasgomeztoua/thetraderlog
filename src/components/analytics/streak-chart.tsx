@@ -135,79 +135,72 @@ export function StreakChart({
 
 				<div className="space-y-2">
 					{activeStreakLengths.map((streakLength) => {
-							const winData = streakDistribution.wins.find(
-								(s) => s.streakLength === streakLength,
-							);
-							const lossData = streakDistribution.losses.find(
-								(s) => s.streakLength === streakLength,
-							);
+						const winData = streakDistribution.wins.find(
+							(s) => s.streakLength === streakLength,
+						);
+						const lossData = streakDistribution.losses.find(
+							(s) => s.streakLength === streakLength,
+						);
 
-							const winCount = winData?.count ?? 0;
-							const lossCount = lossData?.count ?? 0;
-							const winWidth = (winCount / maxCount) * 100;
-							const lossWidth = (lossCount / maxCount) * 100;
+						const winCount = winData?.count ?? 0;
+						const lossCount = lossData?.count ?? 0;
+						const winWidth = (winCount / maxCount) * 100;
+						const lossWidth = (lossCount / maxCount) * 100;
 
-							return (
-								<div
-									className="group flex items-center gap-3"
-									key={streakLength}
-								>
-									{/* Streak length label */}
-									<div className="w-8 font-mono text-muted-foreground text-xs">
-										{streakLength}x
+						return (
+							<div className="group flex items-center gap-3" key={streakLength}>
+								{/* Streak length label */}
+								<div className="w-8 font-mono text-muted-foreground text-xs">
+									{streakLength}x
+								</div>
+
+								{/* Bars container */}
+								<div className="flex flex-1 gap-2">
+									{/* Win bar */}
+									<div className="relative h-5 flex-1">
+										<div className="absolute inset-0 rounded bg-secondary/30" />
+										{winCount > 0 && (
+											<div
+												className="absolute inset-y-0 left-0 rounded bg-profit/60 transition-all group-hover:bg-profit/80"
+												style={{ width: `${winWidth}%` }}
+											/>
+										)}
 									</div>
 
-									{/* Bars container */}
-									<div className="flex flex-1 gap-2">
-										{/* Win bar */}
-										<div className="relative h-5 flex-1">
-											<div className="absolute inset-0 rounded bg-secondary/30" />
-											{winCount > 0 && (
-												<div
-													className="absolute inset-y-0 left-0 rounded bg-profit/60 transition-all group-hover:bg-profit/80"
-													style={{ width: `${winWidth}%` }}
-												/>
-											)}
-										</div>
-
-										{/* Loss bar */}
-										<div className="relative h-5 flex-1">
-											<div className="absolute inset-0 rounded bg-secondary/30" />
-											{lossCount > 0 && (
-												<div
-													className="absolute inset-y-0 left-0 rounded bg-loss/60 transition-all group-hover:bg-loss/80"
-													style={{ width: `${lossWidth}%` }}
-												/>
-											)}
-										</div>
-									</div>
-
-									{/* Counts */}
-									<div className="flex w-24 gap-3 font-mono text-xs">
-										<span
-											className={cn(
-												"w-10 text-right",
-												winCount > 0
-													? "text-profit"
-													: "text-muted-foreground/50",
-											)}
-										>
-											{winCount > 0 ? winCount : "-"}
-										</span>
-										<span
-											className={cn(
-												"w-10 text-right",
-												lossCount > 0
-													? "text-loss"
-													: "text-muted-foreground/50",
-											)}
-										>
-											{lossCount > 0 ? lossCount : "-"}
-										</span>
+									{/* Loss bar */}
+									<div className="relative h-5 flex-1">
+										<div className="absolute inset-0 rounded bg-secondary/30" />
+										{lossCount > 0 && (
+											<div
+												className="absolute inset-y-0 left-0 rounded bg-loss/60 transition-all group-hover:bg-loss/80"
+												style={{ width: `${lossWidth}%` }}
+											/>
+										)}
 									</div>
 								</div>
-							);
-						})}
+
+								{/* Counts */}
+								<div className="flex w-24 gap-3 font-mono text-xs">
+									<span
+										className={cn(
+											"w-10 text-right",
+											winCount > 0 ? "text-profit" : "text-muted-foreground/50",
+										)}
+									>
+										{winCount > 0 ? winCount : "-"}
+									</span>
+									<span
+										className={cn(
+											"w-10 text-right",
+											lossCount > 0 ? "text-loss" : "text-muted-foreground/50",
+										)}
+									>
+										{lossCount > 0 ? lossCount : "-"}
+									</span>
+								</div>
+							</div>
+						);
+					})}
 				</div>
 
 				{/* Legend */}
