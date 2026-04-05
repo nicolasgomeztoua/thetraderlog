@@ -12,6 +12,7 @@ import {
 	createTestTrade,
 	createTestUser,
 	createUnauthenticatedCaller,
+	FULL_ACCESS_AUTH,
 	getTestDb,
 	setupTrader,
 	type TestCaller,
@@ -26,7 +27,7 @@ describe("dailyJournal.search", () => {
 		await truncateAllTables();
 		const setup = await setupTrader();
 		user = setup.user;
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 
 		// Create journal entries with distinct content
 		const journal1 = await caller.dailyJournal.updateContent({
@@ -137,7 +138,11 @@ describe("dailyJournal.search", () => {
 			clerkId: "clerk_search_other",
 			email: "search-other@test.com",
 		});
-		const otherCaller = await createTestCaller(otherUser.clerkId, otherUser);
+		const otherCaller = await createTestCaller(
+			otherUser.clerkId,
+			otherUser,
+			FULL_ACCESS_AUTH,
+		);
 
 		// Create journal for the other user
 		const otherJournal = await otherCaller.dailyJournal.updateContent({
@@ -182,7 +187,7 @@ describe("dailyJournal.search", () => {
 	// TRADE NOTES, CHECKLIST, AND CAPTION INDEXING
 	// ============================================================================
 
-	it("should find journals by trade notes content", async () => {
+	it("should not find journals by trade notes content (trade notes indexed separately)", async () => {
 		const db = getTestDb();
 
 		// Create a journal for a specific date
@@ -202,7 +207,8 @@ describe("dailyJournal.search", () => {
 			status: "closed",
 		});
 
-		// Update search vector (includes trade notes)
+		// Update search vector — trade notes are indexed separately on the
+		// trades table, so they should NOT appear in journal search results.
 		await updateJournalSearchVector(db, {
 			journalId: journal?.id ?? "",
 			userId: user.id,
@@ -214,11 +220,11 @@ describe("dailyJournal.search", () => {
 		const results = await caller.dailyJournal.search({
 			query: "fibonacci retracement",
 		});
-		expect(results.length).toBeGreaterThanOrEqual(1);
-		expect(results.some((r) => r.journalId === journal?.id)).toBe(true);
+		// Trade notes are not indexed in journal search vectors
+		expect(results.length).toBe(0);
 	});
 
-	it("should scope trade notes using timezone-aware day bounds", async () => {
+	it("should not index trade notes into journal search vector even across timezones", async () => {
 		const db = getTestDb();
 
 		// Create a journal for Feb 1
@@ -239,7 +245,7 @@ describe("dailyJournal.search", () => {
 		});
 
 		// Update search vector with America/New_York timezone
-		// The trade at 01:30 UTC on Feb 2 is 20:30 ET on Feb 1 — should be included
+		// Trade notes are indexed separately on the trades table, not in journal search.
 		await updateJournalSearchVector(db, {
 			journalId: journal?.id ?? "",
 			userId: user.id,
@@ -251,8 +257,8 @@ describe("dailyJournal.search", () => {
 		const results = await caller.dailyJournal.search({
 			query: "vwap reclaim scalp",
 		});
-		expect(results.length).toBeGreaterThanOrEqual(1);
-		expect(results.some((r) => r.journalId === journal?.id)).toBe(true);
+		// Trade notes are not indexed in journal search vectors
+		expect(results.length).toBe(0);
 	});
 
 	it("should find journals by attachment caption", async () => {

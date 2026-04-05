@@ -10,6 +10,7 @@ import type { Account, User } from "@/server/db/schema";
 import {
 	createTestCaller,
 	createTestTrade,
+	FULL_ACCESS_AUTH,
 	setupTrader,
 	setupTraderWithMultipleAccounts,
 	type TestCaller,
@@ -26,7 +27,7 @@ describe("dailyJournal.getJournalAdjacency", () => {
 		const setup = await setupTrader();
 		user = setup.user;
 		account = setup.account;
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 	});
 
 	afterAll(async () => {
@@ -344,7 +345,7 @@ describe("dailyJournal.getJournalAdjacency", () => {
 			const setup = await setupTrader();
 			user3 = setup.user;
 			account3 = setup.account;
-			caller3 = await createTestCaller(user3.clerkId, user3);
+			caller3 = await createTestCaller(user3.clerkId, user3, FULL_ACCESS_AUTH);
 
 			// Day 1: Trades + Journal
 			await createTestTrade(user3.id, account3.id, {

@@ -26,6 +26,7 @@ import {
 	SEARCH_PLACEHOLDER,
 } from "@/lib/constants/search";
 import { formatDateString, getUTCDateString } from "@/lib/shared/timezone";
+import { parseHighlightedSnippet } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
 
 type SearchResult = {
@@ -287,13 +288,15 @@ export function GlobalSearch() {
 													: SEARCH_LABEL_JOURNAL}
 											</span>
 										</span>
-										<span
-											className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary"
-											// biome-ignore lint/security/noDangerouslySetInnerHtml: ts_headline generates safe HTML
-											dangerouslySetInnerHTML={{
-												__html: result.snippet,
-											}}
-										/>
+										<span className="line-clamp-2 font-mono text-muted-foreground text-xs [&>mark]:bg-primary/20 [&>mark]:text-primary">
+											{parseHighlightedSnippet(result.snippet).map((seg) =>
+												seg.highlighted ? (
+													<mark key={`h-${seg.text}`}>{seg.text}</mark>
+												) : (
+													seg.text
+												),
+											)}
+										</span>
 									</Link>
 								))}
 							</div>

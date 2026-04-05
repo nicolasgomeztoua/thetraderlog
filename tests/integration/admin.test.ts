@@ -105,7 +105,6 @@ describe("admin middleware & platform stats", () => {
 				userId: adminUser.id,
 				accountId: account?.id ?? "",
 				symbol: "ES",
-				instrumentType: "futures",
 				direction: "long",
 				status: "closed",
 				entryPrice: "5000.00",

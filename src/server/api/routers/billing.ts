@@ -1,7 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 import { getEffectivePlan, isBetaFromMetadata } from "@/lib/billing/utils";
-import { logger } from "@/lib/logger";
 import {
 	AI_CHAT_DAILY_LIMIT,
 	AI_REPORTS_MONTHLY_LIMIT,
@@ -14,6 +13,7 @@ import {
 	ERR_AI_CHAT_LIMIT_REACHED,
 	ERR_AI_REPORT_LIMIT_REACHED,
 } from "@/lib/constants/errors";
+import { logger } from "@/lib/logger";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import type { Database } from "@/server/db/create-db";
 import { aiUsage } from "@/server/db/schema";
@@ -74,7 +74,11 @@ export async function incrementAndCheckChatUsage(
 					and(eq(aiUsage.userId, userId), eq(aiUsage.chatMessagesDate, today)),
 				);
 		} catch (rollbackErr) {
-			logger.error("Failed to rollback chat usage counter", rollbackErr, { userId, date: today, staleCount: used });
+			logger.error("Failed to rollback chat usage counter", rollbackErr, {
+				userId,
+				date: today,
+				staleCount: used,
+			});
 		}
 
 		throw new TRPCError({
@@ -137,7 +141,12 @@ export async function incrementAndCheckReportUsage(
 					),
 				);
 		} catch (rollbackErr) {
-			logger.error("Failed to rollback report usage counter", rollbackErr, { userId, month, year, staleCount: used });
+			logger.error("Failed to rollback report usage counter", rollbackErr, {
+				userId,
+				month,
+				year,
+				staleCount: used,
+			});
 		}
 
 		throw new TRPCError({

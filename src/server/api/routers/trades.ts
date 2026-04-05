@@ -14,7 +14,6 @@ import {
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { calculateAggregateStats } from "@/lib/analytics";
-import { logger } from "@/lib/logger";
 import {
 	FEATURE_CSV_IMPORT_EXPORT,
 	FEATURE_TRADE_MANAGEMENT,
@@ -34,6 +33,7 @@ import {
 	SEARCH_MIN_QUERY_LENGTH,
 } from "@/lib/constants/search";
 import type { SortField } from "@/lib/constants/trade-log";
+import { logger } from "@/lib/logger";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 import {
 	directionEnum,
@@ -255,7 +255,10 @@ async function autoEvaluateTradeRules(
 		}
 	} catch (error) {
 		// Log but don't throw — trade close should not fail due to evaluation errors
-		logger.error("Failed to auto-evaluate trade rules", error, { tradeId, userId });
+		logger.error("Failed to auto-evaluate trade rules", error, {
+			tradeId,
+			userId,
+		});
 	}
 }
 
@@ -716,7 +719,9 @@ export const tradesRouter = createTRPCRouter({
 					tradeId: newTrade.id,
 					notes: newTrade.notes,
 				}).catch((err) =>
-					logger.error("Failed to update trade search vector", err, { tradeId: newTrade.id }),
+					logger.error("Failed to update trade search vector", err, {
+						tradeId: newTrade.id,
+					}),
 				);
 			}
 
@@ -929,7 +934,9 @@ export const tradesRouter = createTRPCRouter({
 					tradeId: id,
 					notes: updated.notes,
 				}).catch((err) =>
-					logger.error("Failed to update trade search vector", err, { tradeId: id }),
+					logger.error("Failed to update trade search vector", err, {
+						tradeId: id,
+					}),
 				);
 			}
 
@@ -1895,7 +1902,9 @@ export const tradesRouter = createTRPCRouter({
 				} catch {
 					// Log error but continue with database deletion
 					// The file may have already been deleted or not exist
-					logger.error("Failed to delete S3 object", undefined, { key: attachment.key });
+					logger.error("Failed to delete S3 object", undefined, {
+						key: attachment.key,
+					});
 				}
 			}
 

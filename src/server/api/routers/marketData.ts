@@ -192,7 +192,9 @@ export const marketDataRouter = createTRPCRouter({
 					},
 				};
 			} catch (error) {
-				logger.error("Market data analysis failed", error, { symbol: input.symbol });
+				logger.error("Market data analysis failed", error, {
+					symbol: input.symbol,
+				});
 				return { available: false, message: "Failed to analyze market data" };
 			}
 		}),

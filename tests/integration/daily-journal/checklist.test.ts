@@ -4,6 +4,7 @@ import type { User } from "@/server/db/schema";
 import {
 	createTestCaller,
 	createTestUser,
+	FULL_ACCESS_AUTH,
 	setupTrader,
 	type TestCaller,
 	truncateAllTables,
@@ -17,7 +18,7 @@ describe("dailyJournal router - checklist operations", () => {
 		await truncateAllTables();
 		const setup = await setupTrader();
 		user = setup.user;
-		caller = await createTestCaller(user.clerkId, user);
+		caller = await createTestCaller(user.clerkId, user, FULL_ACCESS_AUTH);
 	});
 
 	afterAll(async () => {
@@ -179,7 +180,11 @@ describe("dailyJournal router - checklist operations", () => {
 
 		it("should reject reorder with non-owned template", async () => {
 			const user2 = await createTestUser();
-			const caller2 = await createTestCaller(user2.clerkId, user2);
+			const caller2 = await createTestCaller(
+				user2.clerkId,
+				user2,
+				FULL_ACCESS_AUTH,
+			);
 
 			const user2Template = await caller2.dailyJournal.createTemplate({
 				text: "User 2 template",
@@ -299,7 +304,11 @@ describe("dailyJournal router - checklist operations", () => {
 
 		it("should reject toggle for non-owned template", async () => {
 			const user2 = await createTestUser();
-			const caller2 = await createTestCaller(user2.clerkId, user2);
+			const caller2 = await createTestCaller(
+				user2.clerkId,
+				user2,
+				FULL_ACCESS_AUTH,
+			);
 
 			await expect(
 				caller2.dailyJournal.toggleCheck({
@@ -311,7 +320,11 @@ describe("dailyJournal router - checklist operations", () => {
 
 		it("should reject bulk update with non-owned template", async () => {
 			const user2 = await createTestUser();
-			const caller2 = await createTestCaller(user2.clerkId, user2);
+			const caller2 = await createTestCaller(
+				user2.clerkId,
+				user2,
+				FULL_ACCESS_AUTH,
+			);
 
 			await expect(
 				caller2.dailyJournal.bulkUpdateChecks({
