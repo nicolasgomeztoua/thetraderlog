@@ -44,9 +44,7 @@ export function PricingPageContent() {
 						<span className="text-primary">Choose your plan.</span>
 					</h1>
 					<p className="mx-auto mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
-						Start with a 30-day free trial.
-						<br className="hidden sm:block" />
-						No credit card required.
+						Start with a 30-day free trial. Cancel anytime.
 					</p>
 
 					{/* Billing toggle */}
@@ -353,7 +351,7 @@ function BottomCTA() {
 						</Button>
 					</SignUpButton>
 					<p className="mt-3 font-mono text-[10px] text-muted-foreground sm:text-xs">
-						No credit card required · Cancel anytime
+						30-day free trial · Cancel anytime
 					</p>
 				</div>
 			)}

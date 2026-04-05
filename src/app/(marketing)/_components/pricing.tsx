@@ -40,7 +40,7 @@ export function Pricing() {
 						<span className="text-primary">Choose your plan.</span>
 					</h2>
 					<p className="mx-auto mt-4 max-w-xl font-mono text-muted-foreground text-sm sm:mt-6 sm:text-base">
-						Start with a 30-day free trial. No credit card required.
+						Start with a 30-day free trial. Cancel anytime.
 					</p>
 
 					{/* Billing toggle */}

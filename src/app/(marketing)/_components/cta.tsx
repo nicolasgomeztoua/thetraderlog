@@ -81,7 +81,6 @@ export function CTA() {
 
 						{/* Trust elements */}
 						<div className="mt-8 flex flex-col items-center justify-center gap-2 font-mono text-[10px] text-muted-foreground sm:mt-12 sm:flex-row sm:gap-x-8 sm:text-xs">
-							<span>✓ No credit card required</span>
 							<span>✓ 30-day free trial</span>
 							<span>✓ Cancel anytime</span>
 						</div>

@@ -2,6 +2,7 @@
 
 import { useAuth, useUser } from "@clerk/nextjs";
 import {
+	ArrowRight,
 	BarChart3,
 	BookOpen,
 	Lock,
@@ -213,10 +214,16 @@ export function UpgradeOverlay({ feature, children }: UpgradePromptProps) {
 
 	return (
 		<div className="relative">
-			<div aria-hidden className="pointer-events-none select-none blur-sm">
+			<div aria-hidden className="pointer-events-none select-none blur-[6px]">
 				{children}
 			</div>
-			<div className="absolute inset-0 flex items-center justify-center bg-background/60">
+			<div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-[1px]">
+				{/* Subtle gradient atmosphere */}
+				<div
+					className={`-left-20 pointer-events-none absolute top-1/4 size-[300px] rounded-full blur-[100px] ${
+						config.isAiFeature ? "bg-accent/5" : "bg-primary/5"
+					}`}
+				/>
 				<UpgradeCard config={config} />
 			</div>
 		</div>
@@ -244,20 +251,21 @@ export function UpgradeButtonCompact({
 }: UpgradeButtonCompactProps) {
 	const config = FEATURE_CONFIG[feature];
 	if (!config) return null;
-	const accentColor = config.isAiFeature ? "#00d4ff" : "#d4ff00";
+	const isAi = config.isAiFeature;
 
 	return (
 		<Link
-			className="flex items-center gap-1.5 rounded border px-3 py-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+			className={`group inline-flex items-center gap-1.5 rounded border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
+				isAi
+					? "border-accent/20 bg-accent/[0.05] text-accent/70 hover:border-accent/40 hover:text-accent"
+					: "border-primary/20 bg-primary/[0.05] text-primary/70 hover:border-primary/40 hover:text-primary"
+			}`}
 			data-testid={testId}
 			href="/pricing"
-			style={{
-				borderColor: `${accentColor}33`,
-				backgroundColor: `${accentColor}0d`,
-			}}
 		>
-			<Lock className="size-3" />
+			<Lock className="size-2.5" />
 			{config.title}
+			<ArrowRight className="size-2.5 transition-transform group-hover:translate-x-0.5" />
 		</Link>
 	);
 }
@@ -270,7 +278,7 @@ function UpgradeCard({
 	inline?: boolean;
 }) {
 	const Icon = config.icon;
-	const accentColor = config.isAiFeature ? "#00d4ff" : "#d4ff00";
+	const isAi = config.isAiFeature;
 	const planLabel = config.planRequired === PLAN_PRO ? "Pro" : "Starter";
 
 	return (
@@ -283,40 +291,92 @@ function UpgradeCard({
 			data-testid="upgrade-prompt"
 		>
 			<div
-				className="mx-auto w-full max-w-md rounded-lg border bg-card p-6"
-				style={{ borderColor: `${accentColor}33` }}
+				className={`relative mx-auto w-full max-w-md overflow-hidden rounded border ${
+					isAi
+						? "border-accent/20 bg-accent/[0.02]"
+						: "border-primary/20 bg-primary/[0.02]"
+				}`}
 			>
-				<div className="flex flex-col items-center gap-4 text-center">
+				{/* Grid background */}
+				<div
+					className="pointer-events-none absolute inset-0 opacity-30"
+					style={{
+						backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+						linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
+						backgroundSize: "40px 40px",
+					}}
+				/>
+
+				{/* Terminal chrome header */}
+				<div className="relative flex items-center gap-2 border-white/5 border-b bg-white/[0.02] px-4 py-2">
+					<div className="flex items-center gap-1.5">
+						<div className="size-2 rounded-full bg-loss/60" />
+						<div className="size-2 rounded-full bg-breakeven/60" />
+						<div className="size-2 rounded-full bg-profit/60" />
+					</div>
+					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+						upgrade required
+					</span>
+				</div>
+
+				{/* Content */}
+				<div className="relative flex flex-col items-center gap-5 p-6 text-center">
+					{/* Icon */}
 					<div
-						className="flex size-12 items-center justify-center rounded-full"
-						style={{ backgroundColor: `${accentColor}1a` }}
+						className={`flex size-10 items-center justify-center rounded border ${
+							isAi
+								? "border-accent/20 bg-accent/10"
+								: "border-primary/20 bg-primary/10"
+						}`}
 					>
-						<Icon className="size-6" style={{ color: accentColor }} />
+						<Icon
+							className={`size-5 ${isAi ? "text-accent" : "text-primary"}`}
+						/>
 					</div>
 
+					{/* Copy */}
 					<div className="space-y-2">
 						<h3
-							className="font-mono font-semibold text-lg"
-							style={{ color: accentColor }}
+							className={`font-mono font-semibold text-base ${
+								isAi ? "text-accent" : "text-primary"
+							}`}
 						>
 							{config.title}
 						</h3>
-						<p className="font-mono text-muted-foreground text-sm">
+						<p className="max-w-xs font-mono text-muted-foreground text-xs leading-relaxed">
 							{config.description}
 						</p>
 					</div>
 
-					<div className="flex items-center gap-2 font-mono text-muted-foreground text-xs">
-						<Lock className="size-3" />
+					{/* Plan badge */}
+					<div
+						className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 font-mono text-[10px] uppercase tracking-wider ${
+							isAi
+								? "border-accent/20 text-accent/70"
+								: "border-primary/20 text-primary/70"
+						}`}
+					>
+						<Lock className="size-2.5" />
 						<span>Requires {planLabel} plan</span>
 					</div>
 
-					<Button asChild className="w-full font-mono" size="sm">
-						<Link href="/pricing">
-							<Zap className="mr-2 size-4" />
-							Upgrade to {planLabel}
-						</Link>
-					</Button>
+					{/* CTA */}
+					<div className="w-full space-y-2">
+						<Button
+							asChild
+							className="w-full font-mono text-xs uppercase tracking-wider"
+							size="sm"
+						>
+							<Link href="/pricing">
+								<span className="mr-2 opacity-50">$</span>
+								Start 30-Day Free Trial
+								<ArrowRight className="ml-2 size-3.5 transition-transform group-hover:translate-x-1" />
+							</Link>
+						</Button>
+						<p className="font-mono text-[10px] text-muted-foreground">
+							30-day free trial &middot; {planLabel} plan
+						</p>
+					</div>
 				</div>
 			</div>
 		</div>
