@@ -1124,7 +1124,9 @@ export default function JournalPage() {
 
 					{/* Trades Table / Card List */}
 					<div className="overflow-hidden rounded border border-border bg-card">
-						{isLoading || isFetching || columnsLoading ? (
+						{isLoading ||
+						(isFetching && !isFetchingNextPage) ||
+						columnsLoading ? (
 							<div className="space-y-3 p-6">
 								{[...Array(5)].map((_, i) => (
 									<Skeleton
