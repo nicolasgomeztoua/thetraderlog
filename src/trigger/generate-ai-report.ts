@@ -4,7 +4,11 @@ import { buildUserContext } from "@/lib/ai/context-builder";
 import { getModel } from "@/lib/ai/provider";
 import { sendReportEmail } from "@/lib/ai/report-email";
 import { runGathererPhase } from "@/lib/ai/report-pipeline/gatherer";
-import { runPlannerPhase } from "@/lib/ai/report-pipeline/planner";
+import type { StructuredPlan } from "@/lib/ai/report-pipeline/plan-schema";
+import {
+	createFallbackPlan,
+	runPlannerPhase,
+} from "@/lib/ai/report-pipeline/planner";
 import { runValidatorPhase } from "@/lib/ai/report-pipeline/validator";
 import { runWriterPhase } from "@/lib/ai/report-pipeline/writer";
 import { buildWriterContext } from "@/lib/ai/report-pipeline/writer-context";
@@ -359,7 +363,8 @@ export const generateAiReport = task({
 				progressStage: "planning",
 			});
 
-			let plan: string;
+			let plan: StructuredPlan;
+			let planText: string;
 			try {
 				console.log(
 					`[report:${payload.reportId}] Phase 1: Planning${templateHint ? ` (template: ${payload.templateId})` : ""}`,
@@ -367,23 +372,27 @@ export const generateAiReport = task({
 				const plannerResult = await runPlannerPhase({
 					prompt: augmentedPrompt,
 					userContext,
+					schemaContext,
 					model,
 					templateHint,
+					accountId: payload.accountId,
 				});
 				plan = plannerResult.plan;
+				planText = plannerResult.planText;
 				totalTokensUsed += plannerResult.tokensUsed;
 				console.log(
 					`[report:${payload.reportId}] Planning complete — ${plannerResult.tokensUsed} tokens`,
 				);
 				console.log(
-					`[report:${payload.reportId}] Planner output (${plan.length} chars):\n${plan.slice(0, 1000)}`,
+					`[report:${payload.reportId}] Planner output (${planText.length} chars):\n${planText.slice(0, 1000)}`,
 				);
 			} catch (error) {
-				// Planner failure fallback: gatherer will use the raw user prompt
+				// Planner failure fallback: use a safe minimum plan
 				console.warn(
-					`[report:${payload.reportId}] Planner failed, falling back to raw prompt: ${error instanceof Error ? error.message : String(error)}`,
+					`[report:${payload.reportId}] Planner failed, falling back to default plan: ${error instanceof Error ? error.message : String(error)}`,
 				);
-				plan = augmentedPrompt;
+				plan = createFallbackPlan(payload.accountId);
+				planText = JSON.stringify(plan, null, 2);
 			}
 
 			// =====================================================================
@@ -398,15 +407,13 @@ export const generateAiReport = task({
 
 			const gathererResult = await runGathererPhase({
 				plan,
-				prompt: augmentedPrompt,
-				userContext,
-				schemaContext,
-				model,
 				userId: payload.userId,
 				db: dbReadOnly,
 				dataStore,
 				reportId: payload.reportId,
 				accountId: payload.accountId,
+				model,
+				schemaContext,
 			});
 
 			totalTokensUsed += gathererResult.tokensUsed;
@@ -426,11 +433,11 @@ export const generateAiReport = task({
 				progressStage: "writing",
 			});
 
-			const writerContext = buildWriterContext({ dataStore, plan });
+			const writerContext = buildWriterContext({ dataStore, plan: planText });
 			console.log(`[report:${payload.reportId}] Phase 3: Writing report`);
 
 			const writerResult = await runWriterPhase({
-				plan,
+				plan: planText,
 				writerContext,
 				prompt: augmentedPrompt,
 				model,

@@ -283,10 +283,10 @@ export async function runValidatorPhase(
 		}
 	}
 
-	// Repair failed after max attempts — graceful degradation
+	// Repair failed after max attempts — graceful degradation (use best attempt, not original)
 	return {
 		valid: false,
-		content,
+		content: currentContent,
 		errors: currentErrors,
 		tokensUsed: totalTokensUsed,
 	};

@@ -1,11 +1,11 @@
 import type { LanguageModel } from "ai";
 import { aiGenerateText } from "@/lib/ai/client";
-import { getReportTools } from "@/lib/ai/tools/definitions";
-import {
-	MAX_TOOL_ROUNDS_REPORT,
-	REPORT_REASONING_TOKENS,
-} from "@/lib/constants/ai";
+import { executeCallAnalytics } from "@/lib/ai/tools/call-analytics";
+import { executeGetMarketData } from "@/lib/ai/tools/get-market-data";
+import { executeRunPython } from "@/lib/ai/tools/run-python";
+import { executeRunQuery } from "@/lib/ai/tools/run-query";
 import type { db as DbInstance } from "@/server/db";
+import type { GatheringStep, StructuredPlan } from "./plan-schema";
 
 type Db = typeof DbInstance;
 
@@ -14,159 +14,233 @@ type Db = typeof DbInstance;
 // =============================================================================
 
 interface GathererOptions {
-	plan: string;
-	prompt: string;
-	userContext: string;
-	schemaContext: string;
-	model: LanguageModel;
+	plan: StructuredPlan;
 	userId: string;
 	db: Db;
 	dataStore: Map<string, unknown>;
 	reportId?: string;
 	accountId?: string;
+	/** Model for SQL retry — only used when a run_query step fails */
+	model?: LanguageModel;
+	/** Schema context for SQL retry — table/column docs */
+	schemaContext?: string;
+}
+
+interface StepError {
+	refId: string;
+	tool: string;
+	error: string;
 }
 
 interface GathererResult {
 	tokensUsed: number;
 	dataStoreKeys: string[];
 	totalToolCalls: number;
+	errors: StepError[];
 }
 
 // =============================================================================
-// GATHERER SYSTEM PROMPT
+// SQL RETRY — targeted AI fix for failed queries
 // =============================================================================
 
-const GATHERER_PERSONA = `You are the data gathering phase of TheTraderLog's report pipeline. Your ONLY job is to execute the analysis plan by calling tools to collect all required data.
+const SQL_FIX_PROMPT = `You are a SQL repair assistant. A SQL query failed with an error. Fix the query so it succeeds.
 
-CRITICAL RULES:
-- After EVERY successful tool call, IMMEDIATELY call store_report_data to save the result before making more tool calls
-- Do NOT wait to "process" or "analyze" data before storing — store raw results first
-- Do NOT try to run Python analysis — the writer phase handles all analysis and formatting
-- You have a limited number of tool calls — prioritize storing data over perfecting queries
+Rules:
+- Only output the corrected SQL query — no explanation, no markdown fences
+- Use the user-scoped CTE aliases: user_trades, user_accounts, user_tags, user_strategies, user_journals, user_executions, user_trade_tags
+- P&L columns (realized_pnl, net_pnl, fees) are decimal strings — use CAST(column AS NUMERIC) for aggregation
+- Soft-deleted trades and inactive accounts are auto-excluded at the CTE level
+- Keep the query as close to the original intent as possible`;
 
-You MUST:
-- Follow the analysis plan and call the tools listed in it
-- Use store_report_data to register each dataset with a unique refId IMMEDIATELY after getting results
-- Match the tool to the data need: call_analytics for aggregate stats, run_query for trade-level detail and custom analysis, get_market_data for price context and entry/exit quality
-- When the plan calls for price-related analysis (entry quality, market structure, trends), proactively use get_market_data combined with run_query
-
-You MUST NOT:
-- Write any report prose or markdown
-- Generate final report content
-- Skip data sources listed in the plan
-- Invent data — only use tool results
-- Use run_python — save raw data and let the writer handle analysis
-- Delay storing data to batch or process it first`;
-
-const DATA_HANDLING_NOTES = `## Data Handling Notes
-
-- P&L columns (realized_pnl, net_pnl, fees) are stored as decimal strings — use CAST(column AS NUMERIC) for SQL aggregation
-- Breakeven trades (net_pnl = 0) are counted as losses in win rate calculations
-- All timestamps are in UTC — the user's timezone is in their context
-- Dates in filter inputs use ISO 8601 format (e.g., "2026-01-15")
-- Soft-deleted trades and inactive accounts are automatically excluded at the CTE level — no need to add deleted_at IS NULL manually
-- Use the user-scoped CTE aliases (user_trades, user_accounts, etc.) — never raw table names`;
-
-function buildGathererSystemPrompt(
-	plan: string,
-	userContext: string,
+async function retrySqlQuery(
+	originalQuery: string,
+	errorMessage: string,
+	model: LanguageModel,
 	schemaContext: string,
+	userId: string,
+	db: Db,
 	accountId?: string,
-): string {
-	const sections = [
-		GATHERER_PERSONA,
-		userContext,
-		schemaContext,
-		DATA_HANDLING_NOTES,
-	];
+): Promise<{
+	success: boolean;
+	data?: unknown;
+	error?: string;
+	tokensUsed: number;
+}> {
+	try {
+		const result = await aiGenerateText({
+			model,
+			system: `${SQL_FIX_PROMPT}\n\n${schemaContext}`,
+			messages: [
+				{
+					role: "user",
+					content: `Original query:\n${originalQuery}\n\nError:\n${errorMessage}\n\nFixed query:`,
+				},
+			],
+		});
 
-	if (accountId) {
-		sections.push(
-			`## Account Scope\n\nAnalysis is scoped to account: ${accountId}. All queries and analytics calls are automatically filtered to this account.`,
+		const fixedQuery = result.text
+			.trim()
+			.replace(/^```sql?\n?/, "")
+			.replace(/\n?```$/, "");
+
+		if (!fixedQuery || fixedQuery.length < 10) {
+			return {
+				success: false,
+				error: "SQL fix produced empty query",
+				tokensUsed: result.totalTokens,
+			};
+		}
+
+		const retryResult = await executeRunQuery(
+			userId,
+			fixedQuery,
+			db,
+			accountId,
 		);
+		return { ...retryResult, tokensUsed: result.totalTokens };
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		return { success: false, error: `SQL retry failed: ${msg}`, tokensUsed: 0 };
 	}
-
-	sections.push(
-		`## Analysis Plan\n\nExecute this plan by calling the appropriate tools:\n\n${plan}`,
-		`## Instructions\n\n1. Work through the analysis plan section by section\n2. For each data source, call the tool AND immediately call store_report_data in the SAME step to save the result\n3. Never skip storing — a tool call without store_report_data is wasted\n4. If a query fails, fix it and retry once, then move on to the next data source\n5. Continue until all planned data sources have been gathered\n6. When all data is collected, output a brief summary of what was gathered`,
-	);
-
-	return sections.join("\n\n");
 }
 
 // =============================================================================
-// GATHERER PHASE
+// STEP EXECUTOR
+// =============================================================================
+
+async function executeStep(
+	step: GatheringStep,
+	userId: string,
+	db: Db,
+	accountId?: string,
+): Promise<{ success: boolean; data?: unknown; error?: string }> {
+	switch (step.tool) {
+		case "call_analytics": {
+			// Auto-inject accountId when present and not already specified
+			const mergedInput =
+				accountId && !step.input?.accountId
+					? { ...step.input, accountId }
+					: step.input;
+			return executeCallAnalytics(
+				userId,
+				step.router,
+				step.endpoint,
+				mergedInput,
+				db,
+			);
+		}
+		case "run_query":
+			return executeRunQuery(userId, step.query, db, accountId);
+		case "get_market_data":
+			return executeGetMarketData(
+				step.symbol,
+				step.interval,
+				step.startDate,
+				step.endDate,
+			);
+		case "run_python":
+			return executeRunPython(step.code, step.dataContext);
+	}
+}
+
+function describeData(data: unknown): string {
+	if (Array.isArray(data)) return `array[${data.length}]`;
+	if (typeof data === "object" && data !== null)
+		return `object{${Object.keys(data).length} keys}`;
+	return typeof data;
+}
+
+// =============================================================================
+// GATHERER PHASE — DETERMINISTIC EXECUTOR
 // =============================================================================
 
 export async function runGathererPhase(
 	options: GathererOptions,
 ): Promise<GathererResult> {
-	const systemPrompt = buildGathererSystemPrompt(
-		options.plan,
-		options.userContext,
-		options.schemaContext,
-		options.accountId,
-	);
-
-	const tools = getReportTools({
-		userId: options.userId,
-		db: options.db,
-		dataStore: options.dataStore,
-		accountId: options.accountId,
-	});
-
-	const tag = options.reportId ? `[report:${options.reportId}]` : "[report]";
-
-	const result = await aiGenerateText({
-		model: options.model,
-		system: systemPrompt,
-		messages: [{ role: "user", content: options.prompt }],
-		tools,
-		maxSteps: MAX_TOOL_ROUNDS_REPORT,
-		reasoning: { maxTokens: REPORT_REASONING_TOKENS },
-		onStepFinish: (step) => {
-			if (step.toolCalls?.length) {
-				for (const call of step.toolCalls) {
-					const argsPreview = JSON.stringify(call.input).slice(0, 200);
-					console.log(
-						`${tag} Gatherer tool call: ${call.toolName}(${argsPreview})`,
-					);
-				}
-			}
-			if (step.toolResults?.length) {
-				for (const toolResult of step.toolResults) {
-					const outputObj = toolResult.output as Record<string, unknown>;
-					const success = outputObj?.success;
-					const error = outputObj?.error;
-					const preview = JSON.stringify(toolResult.output).slice(0, 300);
-					console.log(
-						`${tag} Tool result [${toolResult.toolName}]: success=${success}${error ? ` error="${error}"` : ""} — ${preview}`,
-					);
-				}
-			}
-		},
-	});
-
-	// Log post-gathering diagnostics
-	console.log(`${tag} Gatherer finish reason: ${result.finishReason}`);
-	if (result.text) {
-		console.log(
-			`${tag} Gatherer final text (${result.text.length} chars): ${result.text.slice(0, 500)}`,
-		);
-	}
-	console.log(
-		`${tag} DataStore keys after gathering: [${[...options.dataStore.keys()].join(", ")}]`,
-	);
-
-	// Count total tool calls across all steps
+	const {
+		plan,
+		userId,
+		db,
+		dataStore,
+		reportId,
+		accountId,
+		model,
+		schemaContext,
+	} = options;
+	const tag = reportId ? `[report:${reportId}]` : "[report]";
+	const errors: StepError[] = [];
 	let totalToolCalls = 0;
-	for (const step of result.steps) {
-		totalToolCalls += step.toolCalls?.length ?? 0;
+	let tokensUsed = 0;
+
+	for (const step of plan.steps) {
+		totalToolCalls++;
+		console.log(
+			`${tag} Executing step ${totalToolCalls}/${plan.steps.length}: ${step.tool} -> ${step.refId}`,
+		);
+
+		try {
+			let result = await executeStep(step, userId, db, accountId);
+
+			// SQL retry: if a run_query step fails and we have a model, try to fix it
+			if (
+				!result.success &&
+				step.tool === "run_query" &&
+				model &&
+				schemaContext &&
+				result.error
+			) {
+				console.log(
+					`${tag} SQL failed for ${step.refId}, attempting AI-assisted retry...`,
+				);
+				const retryResult = await retrySqlQuery(
+					step.query,
+					result.error,
+					model,
+					schemaContext,
+					userId,
+					db,
+					accountId,
+				);
+				tokensUsed += retryResult.tokensUsed;
+				totalToolCalls++;
+
+				if (retryResult.success) {
+					console.log(`${tag} SQL retry succeeded for ${step.refId}`);
+					result = retryResult;
+				} else {
+					console.warn(
+						`${tag} SQL retry also failed for ${step.refId}: ${retryResult.error}`,
+					);
+				}
+			}
+
+			if (result.success && result.data !== undefined) {
+				// Automatic storage — the key innovation
+				dataStore.set(step.refId, result.data);
+				console.log(
+					`${tag} Stored: ${step.refId} (${describeData(result.data)})`,
+				);
+			} else {
+				const errorMsg = result.error ?? "Unknown error";
+				errors.push({
+					refId: step.refId,
+					tool: step.tool,
+					error: errorMsg,
+				});
+				console.warn(`${tag} Failed: ${step.refId} — ${errorMsg}`);
+			}
+		} catch (err) {
+			const errorMsg = err instanceof Error ? err.message : String(err);
+			errors.push({ refId: step.refId, tool: step.tool, error: errorMsg });
+			console.warn(`${tag} Exception on ${step.refId}: ${errorMsg}`);
+			// Continue to next step — don't abort the report
+		}
 	}
 
 	return {
-		tokensUsed: result.totalTokens,
-		dataStoreKeys: [...options.dataStore.keys()],
+		tokensUsed,
+		dataStoreKeys: [...dataStore.keys()],
 		totalToolCalls,
+		errors,
 	};
 }

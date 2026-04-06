@@ -1,4 +1,5 @@
 import {
+	generateObject,
 	generateText,
 	type LanguageModel,
 	type ModelMessage,
@@ -7,6 +8,7 @@ import {
 	streamText,
 	type ToolSet,
 } from "ai";
+import type { z } from "zod";
 
 // =============================================================================
 // ERROR CLASS
@@ -132,6 +134,63 @@ export function aiStreamText(options: AiStreamTextOptions) {
 				},
 			}),
 		});
+	} catch (error) {
+		throw mapToOpenRouterError(error);
+	}
+}
+
+// =============================================================================
+// GENERATE OBJECT (STRUCTURED OUTPUT)
+// =============================================================================
+
+interface AiGenerateObjectOptions<T extends z.ZodType> {
+	model: LanguageModel;
+	system?: string;
+	messages: ModelMessage[];
+	schema: T;
+	schemaName?: string;
+	schemaDescription?: string;
+	maxRetries?: number;
+	temperature?: number;
+	reasoning?: { maxTokens: number };
+}
+
+interface AiGenerateObjectResult<T> {
+	object: T;
+	totalTokens: number;
+}
+
+/**
+ * Wrapper around Vercel AI SDK generateObject().
+ * Forces the model to output a structured JSON object matching a Zod schema.
+ */
+export async function aiGenerateObject<T extends z.ZodType>(
+	options: AiGenerateObjectOptions<T>,
+): Promise<AiGenerateObjectResult<z.infer<T>>> {
+	try {
+		const result = await generateObject({
+			model: options.model,
+			system: options.system,
+			messages: options.messages,
+			schema: options.schema,
+			schemaName: options.schemaName,
+			schemaDescription: options.schemaDescription,
+			maxRetries: options.maxRetries ?? 3,
+			temperature: options.temperature,
+			...(options.reasoning && {
+				providerOptions: {
+					openrouter: {
+						reasoning: { max_tokens: options.reasoning.maxTokens },
+					},
+				},
+			}),
+		});
+
+		return {
+			object: result.object as z.infer<T>,
+			totalTokens:
+				(result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0),
+		};
 	} catch (error) {
 		throw mapToOpenRouterError(error);
 	}

@@ -1,6 +1,7 @@
 import type { LanguageModel } from "ai";
-import { aiGenerateText } from "@/lib/ai/client";
+import { aiGenerateObject } from "@/lib/ai/client";
 import { REPORT_REASONING_TOKENS } from "@/lib/constants/ai";
+import { type StructuredPlan, structuredPlanSchema } from "./plan-schema";
 
 // =============================================================================
 // TYPES
@@ -9,12 +10,15 @@ import { REPORT_REASONING_TOKENS } from "@/lib/constants/ai";
 interface PlannerOptions {
 	prompt: string;
 	userContext: string;
+	schemaContext: string;
 	model: LanguageModel;
 	templateHint?: string;
+	accountId?: string;
 }
 
 interface PlannerResult {
-	plan: string;
+	plan: StructuredPlan;
+	planText: string;
 	tokensUsed: number;
 }
 
@@ -96,50 +100,59 @@ The writer phase can use these components in the report. Plan which ones to incl
 
 const PLANNER_INSTRUCTIONS = `## Your Task
 
-Given the trader's report request and their context, produce a structured analysis plan in markdown format.
+Given the trader's report request and their context, produce a structured analysis plan.
 
-Your plan MUST include these sections:
+Your plan consists of **gathering steps** (tool calls) and **report sections** (presentation structure).
 
-### 1. Request Analysis
-- What is the trader asking for?
-- What time period is relevant?
-- What depth of analysis is expected?
+### Gathering Steps
 
-### 2. Data Sources Needed
-- List each analytics endpoint or SQL query to call, with a brief reason why
-- Order them by priority (most important first)
-- Estimate total tool calls needed (aim for efficiency — batch related calls)
+Each step is a single tool call that will be executed automatically. You specify:
+- **refId** — A unique key (e.g., "equity-data", "monthly-pnl") that the writer will use as a dataRef in MDX components
+- **tool** — Which tool to call
+- **Parameters** — Tool-specific parameters
 
-### 3. Report Sections
-For each section of the final report, specify:
-- **Section title** (e.g., "## Performance Overview")
-- **Data sources** — which endpoints/queries feed this section
-- **MDX components** — which components to use and what data they need
-- **Narrative focus** — what insights to highlight in the prose
+Available tools:
+1. **call_analytics** — Call a pre-computed analytics endpoint. Specify router, endpoint, and optional input parameters.
+2. **run_query** — Execute a read-only SQL query. You MUST provide the complete, valid SQL using user-scoped CTE aliases (user_trades, user_accounts, user_tags, user_strategies, user_journals, user_executions, user_trade_tags). P&L columns are decimal strings — use CAST(column AS NUMERIC) for aggregation. Soft-deleted trades and inactive accounts are auto-excluded.
+3. **get_market_data** — Fetch OHLC candle data. Specify symbol, interval, startDate, endDate in ISO 8601.
+4. **run_python** — Execute Python code for statistical analysis. Use sparingly — only when SQL and analytics endpoints cannot achieve the analysis.
 
-### 4. MDX Component Plan
-- List each MDX component to include with its planned dataRef key
-- Note any MetricGrid groups and their MetricCards
-- Note any Callout types to include (tip, warning, etc.)
+### Report Sections
 
-### 5. Estimated Complexity
-- Total tool calls estimate (aim for 8–15 for standard reports, 15–20 for comprehensive)
-- Number of report sections
-- Number of MDX components
+For each planned section of the report, specify:
+- **title** — Section heading
+- **dataRefs** — Which refIds from the steps this section will use
+- **components** — MDX component names to include
+- **narrativeFocus** — What insight the writer should highlight
 
-Be specific and actionable. The data gatherer will execute your plan step by step.`;
+### Guidelines
+- Aim for 8-15 steps for standard reports, 15-20 for comprehensive ones
+- Order steps by priority (most important first)
+- Use call_analytics for standard metrics; use run_query for custom analysis
+- Every refId must be unique across all steps
+- Match refIds to their intended MDX component (e.g., "equity-data" for EquityCurve, "monthly-data" for MonthlyChart)
+- Consider data sufficiency: MonteCarloChart needs 20+ trades, RMultipleChart needs stop-loss data, charts need 5+ data points`;
 
 function buildPlannerSystemPrompt(
 	userContext: string,
+	schemaContext: string,
 	templateHint?: string,
+	accountId?: string,
 ): string {
 	const sections = [
 		PLANNER_PERSONA,
 		userContext,
+		schemaContext,
 		AVAILABLE_ANALYTICS_ENDPOINTS,
 		AVAILABLE_MDX_COMPONENTS,
 		PLANNER_INSTRUCTIONS,
 	];
+
+	if (accountId) {
+		sections.push(
+			`## Account Scope\n\nAnalysis is scoped to account: ${accountId}. Include accountId in call_analytics input parameters and use it in SQL WHERE clauses.`,
+		);
+	}
 
 	if (templateHint) {
 		sections.push(`## Template Guidance\n\n${templateHint}`);
@@ -157,18 +170,93 @@ export async function runPlannerPhase(
 ): Promise<PlannerResult> {
 	const systemPrompt = buildPlannerSystemPrompt(
 		options.userContext,
+		options.schemaContext,
 		options.templateHint,
+		options.accountId,
 	);
 
-	const result = await aiGenerateText({
+	const result = await aiGenerateObject({
 		model: options.model,
 		system: systemPrompt,
 		messages: [{ role: "user", content: options.prompt }],
+		schema: structuredPlanSchema,
+		schemaName: "ReportPlan",
+		schemaDescription:
+			"A structured plan for gathering data and writing a trading performance report",
 		reasoning: { maxTokens: REPORT_REASONING_TOKENS },
 	});
 
 	return {
-		plan: result.text,
+		plan: result.object,
+		planText: JSON.stringify(result.object, null, 2),
 		tokensUsed: result.totalTokens,
+	};
+}
+
+/**
+ * Creates a safe minimum plan when the planner fails.
+ * Guarantees at least basic overview data for the report.
+ */
+export function createFallbackPlan(accountId?: string): StructuredPlan {
+	const input = accountId ? { accountId } : undefined;
+
+	return {
+		title: "Trading Performance Overview",
+		summary:
+			"A general overview of trading performance including key metrics, equity curve, and monthly breakdown.",
+		steps: [
+			{
+				tool: "call_analytics" as const,
+				refId: "overview-metrics",
+				description: "Overall trading statistics",
+				router: "analytics" as const,
+				endpoint: "getOverview",
+				input,
+			},
+			{
+				tool: "call_analytics" as const,
+				refId: "equity-data",
+				description: "Cumulative equity curve with drawdown",
+				router: "analytics" as const,
+				endpoint: "getEquityCurve",
+				input,
+			},
+			{
+				tool: "call_analytics" as const,
+				refId: "monthly-data",
+				description: "Monthly P&L breakdown",
+				router: "analytics" as const,
+				endpoint: "getPerformanceByMonth",
+				input,
+			},
+			{
+				tool: "call_analytics" as const,
+				refId: "risk-metrics",
+				description: "Risk metrics and drawdown analysis",
+				router: "analytics" as const,
+				endpoint: "getRiskMetrics",
+				input,
+			},
+		],
+		sections: [
+			{
+				title: "Performance Overview",
+				dataRefs: ["overview-metrics", "equity-data"],
+				components: ["MetricGrid", "EquityCurve"],
+				narrativeFocus: "Key performance metrics and equity trajectory",
+			},
+			{
+				title: "Monthly Breakdown",
+				dataRefs: ["monthly-data"],
+				components: ["MonthlyChart"],
+				narrativeFocus: "Monthly performance trends and consistency",
+			},
+			{
+				title: "Risk Analysis",
+				dataRefs: ["risk-metrics"],
+				components: ["MetricGrid"],
+				narrativeFocus: "Risk metrics and capital preservation",
+			},
+		],
 	};
 }
