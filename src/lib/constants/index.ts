@@ -21,6 +21,7 @@ export {
 export * from "./billing";
 export * from "./bug-report";
 export * from "./errors";
+export * from "./market-data";
 export * from "./prop";
 export * from "./sharing";
 export {

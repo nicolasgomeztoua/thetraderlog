@@ -658,6 +658,24 @@ function LightweightChartInner({
 	// Determine if we have real data
 	const hasRealData = chartData && chartData.bars.length > 0;
 
+	// Data quality survives even when there are zero bars (chartData is null),
+	// so the empty state can distinguish "not published yet" from "no data".
+	const dataQuality = isHourly
+		? extendedChartData?.dataQuality
+		: rawChartData?.dataQuality;
+
+	// A same-day trade is missing only TODAY's candles: the data provider
+	// publishes each session the next morning (UTC), so the chart shows prior
+	// sessions with a blank edge around today's markers until the backfill runs.
+	const effectiveEnd = exitTime ? new Date(exitTime) : new Date();
+	const now = new Date();
+	const tradeEndsToday =
+		effectiveEnd.getUTCFullYear() === now.getUTCFullYear() &&
+		effectiveEnd.getUTCMonth() === now.getUTCMonth() &&
+		effectiveEnd.getUTCDate() === now.getUTCDate();
+	const isAwaitingTodaysData =
+		tradeEndsToday && (dataQuality === "pending" || dataQuality === "partial");
+
 	// Build markers array - elegant entry/exit indicators
 	const markers = useMemo(() => {
 		const markerList: SeriesMarker<UTCTimestamp>[] = [];
@@ -1164,8 +1182,11 @@ function LightweightChartInner({
 		);
 	}
 
-	// Show empty state when no data available
+	// Show empty state when no data available. A "pending" quality means the
+	// session simply hasn't been published yet (same-day / pre-release), not
+	// that the symbol has no data — it will backfill after the session settles.
 	if (!hasRealData) {
+		const isPending = dataQuality === "pending";
 		return (
 			<div
 				className={cn(
@@ -1174,10 +1195,14 @@ function LightweightChartInner({
 				)}
 			>
 				<p className="font-mono text-muted-foreground text-sm">
-					No chart data available
+					{isPending
+						? "Chart data not available yet"
+						: "No chart data available"}
 				</p>
 				<p className="mt-1 font-mono text-[11px] text-muted-foreground/50">
-					Market data may not be available for this symbol
+					{isPending
+						? "Same-day candles publish after the session closes — check back tomorrow"
+						: "Market data may not be available for this symbol"}
 				</p>
 			</div>
 		);
@@ -1198,6 +1223,16 @@ function LightweightChartInner({
 		>
 			{/* Chart container */}
 			<div className="h-full w-full" ref={containerRef} />
+
+			{/* Same-day notice: today's candles publish after the session settles */}
+			{isAwaitingTodaysData && (
+				<div className="-translate-x-1/2 absolute bottom-3 left-1/2 z-10 rounded border border-border bg-background/80 px-2.5 py-1 backdrop-blur-sm">
+					<span className="font-mono text-[10px] text-muted-foreground sm:text-[11px]">
+						Today's candles publish after the session closes — check back
+						tomorrow
+					</span>
+				</div>
+			)}
 
 			{/* Top controls bar */}
 			<div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 sm:gap-2">

@@ -13,6 +13,10 @@
 
 import { and, eq } from "drizzle-orm";
 import { env } from "@/env";
+import {
+	DATABENTO_RELEASE_BUFFER_HOURS,
+	DATABENTO_RELEASE_HOUR_UTC,
+} from "@/lib/constants/market-data";
 import { db } from "@/server/db";
 import { candleCache } from "@/server/db/schema";
 import { getDatabentSymbol, isFuturesSymbol } from "./symbols";
@@ -80,6 +84,27 @@ export function isToday(date: Date): boolean {
 		date.getUTCMonth() === now.getUTCMonth() &&
 		date.getUTCDate() === now.getUTCDate()
 	);
+}
+
+/**
+ * Whether Databento has likely not yet published the session for `dateKey`.
+ *
+ * Databento releases each CME session's historical data at ~09:00 UTC the
+ * following day, so until then the Historical API returns empty for that date.
+ * An empty result for a not-yet-released date means "data is still coming"
+ * (pending), not "this symbol/date has no data" (unavailable). A buffer past
+ * the release hour absorbs pipeline variance before we give up on a date.
+ */
+export function isAwaitingRelease(dateKey: Date): boolean {
+	const releaseTime = new Date(dateKey);
+	releaseTime.setUTCDate(releaseTime.getUTCDate() + 1);
+	releaseTime.setUTCHours(
+		DATABENTO_RELEASE_HOUR_UTC + DATABENTO_RELEASE_BUFFER_HOURS,
+		0,
+		0,
+		0,
+	);
+	return Date.now() < releaseTime.getTime();
 }
 
 /**
@@ -195,7 +220,12 @@ export async function getOHLCBars(
 	const apiResult = await fetchFromProvider(symbol, baseInterval, dateKey);
 
 	if (!apiResult.success || apiResult.bars.length === 0) {
-		return { bars: [], source: "api", dataQuality: "unavailable" };
+		// A not-yet-released session (e.g. today, or yesterday before the ~09:00
+		// UTC release) is "pending" — data is coming — rather than "unavailable".
+		const dataQuality: DataQuality = isAwaitingRelease(dateKey)
+			? "pending"
+			: "unavailable";
+		return { bars: [], source: "api", dataQuality };
 	}
 
 	// 3. Store base interval in cache (insert or update on conflict)
@@ -316,17 +346,9 @@ export async function getOHLCForTimeRange(
 	// Sort by timestamp (parallel fetches might return out of order)
 	filteredBars.sort((a, b) => a.timestamp - b.timestamp);
 
-	// Determine overall data quality
+	// Determine overall data quality across all days in the range
 	const anyFromApi = results.some((r) => r.source === "api");
-	const anyUnavailable = results.some((r) => r.dataQuality === "unavailable");
-	const allUnavailable = results.every((r) => r.dataQuality === "unavailable");
-
-	let dataQuality: DataQuality = "full";
-	if (allUnavailable) {
-		dataQuality = "unavailable";
-	} else if (anyUnavailable) {
-		dataQuality = "partial";
-	}
+	const dataQuality = combineDayQuality(results.map((r) => r.dataQuality));
 
 	return {
 		bars: filteredBars,
@@ -606,6 +628,22 @@ async function fetchFromDatabento(
 // =============================================================================
 
 /**
+ * Combine per-day data qualities into one overall quality for a multi-day range.
+ * Per-day results from getOHLCBars are only "full" | "pending" | "unavailable".
+ * - every day full → "full"
+ * - some real data + some missing/pending → "partial" (render what we have)
+ * - no real data yet, but a day is still awaiting release → "pending"
+ * - nothing, and nothing pending → "unavailable"
+ */
+function combineDayQuality(qualities: DataQuality[]): DataQuality {
+	if (qualities.length === 0) return "unavailable";
+	if (qualities.every((q) => q === "full")) return "full";
+	if (qualities.some((q) => q === "full")) return "partial";
+	if (qualities.some((q) => q === "pending")) return "pending";
+	return "unavailable";
+}
+
+/**
  * Get extended range of 1-minute bars for a trade.
  * Fetches 3 calendar days before entry through 3 calendar days after exit
  * (capped at today), giving ~7 trading sessions of context.
@@ -661,18 +699,8 @@ export async function getFullDayBars(
 	// Sort by timestamp
 	allBars.sort((a, b) => a.timestamp - b.timestamp);
 
-	// Determine data quality
-	const allUnavailable = results.every((r) => r.dataQuality === "unavailable");
-	const anyUnavailable = results.some((r) => r.dataQuality === "unavailable");
-
-	let dataQuality: DataQuality;
-	if (allUnavailable) {
-		dataQuality = "unavailable";
-	} else if (anyUnavailable) {
-		dataQuality = "partial";
-	} else {
-		dataQuality = "full";
-	}
+	// Determine data quality across all days in the range
+	const dataQuality = combineDayQuality(results.map((r) => r.dataQuality));
 
 	// Determine source (cache if all from cache)
 	const allFromCache = results.every((r) => r.source === "cache");
@@ -742,18 +770,8 @@ export async function getExtendedDayBars(
 	// Sort by timestamp
 	allBars.sort((a, b) => a.timestamp - b.timestamp);
 
-	// Determine data quality
-	const allUnavailable = results.every((r) => r.dataQuality === "unavailable");
-	const anyUnavailable = results.some((r) => r.dataQuality === "unavailable");
-
-	let dataQuality: DataQuality;
-	if (allUnavailable) {
-		dataQuality = "unavailable";
-	} else if (anyUnavailable) {
-		dataQuality = "partial";
-	} else {
-		dataQuality = "full";
-	}
+	// Determine data quality across all days in the range
+	const dataQuality = combineDayQuality(results.map((r) => r.dataQuality));
 
 	// Determine source
 	const allFromCache = results.every((r) => r.source === "cache");
