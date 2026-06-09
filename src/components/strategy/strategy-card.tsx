@@ -95,6 +95,15 @@ export function StrategyCard({
 				/>
 			)}
 
+			{/* Whole-card click target → strategy detail. Interactive controls
+			    (the dropdown menu) sit above this via a higher z-index. */}
+			<Link
+				aria-label={`View ${strategy.name}`}
+				className="absolute inset-0 z-10 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+				data-testid="strategy-card-link"
+				href={`/strategies/${strategy.id}`}
+			/>
+
 			{/* Terminal window chrome header */}
 			<div className="relative flex min-h-9 items-center justify-between border-border/50 border-b bg-muted px-2 py-1.5 sm:min-h-0 sm:px-3 sm:py-2">
 				<div className="flex items-center gap-1 sm:gap-1.5">
@@ -113,7 +122,7 @@ export function StrategyCard({
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"h-8 w-8 shrink-0 transition-opacity sm:h-6 sm:w-6",
+								"relative z-20 h-8 w-8 shrink-0 transition-opacity sm:h-6 sm:w-6",
 								isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100",
 							)}
 							data-testid="strategy-card-menu-trigger"
@@ -212,14 +221,13 @@ export function StrategyCard({
 
 			{/* Card content */}
 			<div className="relative bg-card p-4">
-				{/* Clickable strategy name */}
-				<Link
-					className="mb-3 block font-mono font-semibold text-lg transition-colors hover:text-primary"
-					data-testid="strategy-card-link"
-					href={`/strategies/${strategy.id}`}
+				{/* Strategy name — the whole card is the click target */}
+				<h3
+					className="mb-3 block font-mono font-semibold text-lg transition-colors group-hover:text-primary"
+					data-testid="strategy-card-name"
 				>
 					{strategy.name}
-				</Link>
+				</h3>
 
 				{/* Stats grid */}
 				<div
