@@ -71,6 +71,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Deploy Trigger.dev tasks
-        run: bunx trigger.dev@latest deploy
+        # Pin the CLI to the installed @trigger.dev/sdk version. The deploy
+        # aborts if the CLI and installed packages differ, so `@latest` breaks
+        # whenever Trigger.dev publishes a CLI newer than our pinned SDK.
+        run: bunx trigger.dev@$(node -p "require('@trigger.dev/sdk/package.json').version") deploy
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
