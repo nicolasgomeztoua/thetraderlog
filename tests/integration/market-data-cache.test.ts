@@ -228,6 +228,43 @@ describe("market-data-cache integration", () => {
 		fetchSpy.mockRestore();
 	});
 
+	it("returns pending (not unavailable) for a not-yet-released same-day result", async () => {
+		// Today's session is not published by Databento until ~09:00 UTC the next
+		// day, so the Historical API returns an empty body for it.
+		const today = new Date();
+		today.setUTCHours(0, 0, 0, 0);
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", today);
+
+		expect(result.bars).toHaveLength(0);
+		expect(result.dataQuality).toBe("pending");
+
+		fetchSpy.mockRestore();
+	});
+
+	it("returns unavailable for an empty already-released historical date", async () => {
+		// A long-past date with no bars is genuinely unavailable (bad symbol,
+		// holiday, etc.) — not pending.
+		const oldDate = new Date("2024-01-15T00:00:00Z");
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", oldDate);
+
+		expect(result.bars).toHaveLength(0);
+		expect(result.dataQuality).toBe("unavailable");
+
+		fetchSpy.mockRestore();
+	});
+
 	it("should only write 1min and 1h intervals to candle_cache", async () => {
 		const historicalDate = new Date("2024-09-05T00:00:00Z");
 		const mockBars = generateMockBars(historicalDate, 60);
