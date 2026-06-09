@@ -433,6 +433,68 @@ describe("generateRulesFromConfig - Trailing Rules", () => {
 		const rules = generateRulesFromConfig(null, null, trailingRules);
 		expect(rules).toHaveLength(0);
 	});
+
+	it("should generate manual rule for custom text rule when enabled", () => {
+		const trailingRules: TrailingRules = {
+			textRules: [
+				{
+					text: "Aggressive participants in our direction — trail below the candle",
+					enabled: true,
+				},
+			],
+		};
+
+		const rules = generateRulesFromConfig(null, null, trailingRules);
+
+		expect(rules).toHaveLength(1);
+		expect(rules[0]?.ruleType).toBe("manual");
+		expect(rules[0]?.category).toBe("management");
+		expect(rules[0]?.text).toBe(
+			"Aggressive participants in our direction — trail below the candle",
+		);
+		expect(rules[0]?.configSource).toBe("trailingRules.textRules[0]");
+		expect(rules[0]?.autoCondition).toBeNull();
+	});
+
+	it("should trim whitespace from custom text rules", () => {
+		const trailingRules: TrailingRules = {
+			textRules: [{ text: "  trail below the candle  ", enabled: true }],
+		};
+
+		const rules = generateRulesFromConfig(null, null, trailingRules);
+		expect(rules[0]?.text).toBe("trail below the candle");
+	});
+
+	it("should not generate custom text rules when disabled or empty", () => {
+		const trailingRules: TrailingRules = {
+			textRules: [
+				{ text: "Disabled rule", enabled: false },
+				{ text: "", enabled: true },
+				{ text: "   ", enabled: true },
+			],
+		};
+
+		const rules = generateRulesFromConfig(null, null, trailingRules);
+		expect(rules).toHaveLength(0);
+	});
+
+	it("should keep stable configSource indexes across mixed trailing rules", () => {
+		const trailingRules: TrailingRules = {
+			trailStops: [
+				{ triggerR: 1, method: "fixed_ticks", value: 8, enabled: true },
+			],
+			textRules: [
+				{ text: "First discretionary rule", enabled: true },
+				{ text: "Second discretionary rule", enabled: true },
+			],
+		};
+
+		const rules = generateRulesFromConfig(null, null, trailingRules);
+
+		expect(rules).toHaveLength(3);
+		expect(rules[1]?.configSource).toBe("trailingRules.textRules[0]");
+		expect(rules[2]?.configSource).toBe("trailingRules.textRules[1]");
+	});
 });
 
 describe("generateRulesFromConfig - Combined Configurations", () => {

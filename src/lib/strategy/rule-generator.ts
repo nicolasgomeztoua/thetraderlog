@@ -292,6 +292,26 @@ function generateTrailingRules(
 		}
 	}
 
+	// Custom free-text trailing rules - always manual (can't auto-evaluate
+	// discretionary instructions like "trail below the candle")
+	// Only generate if enabled and text is non-empty
+	if (trailingRules.textRules) {
+		for (let i = 0; i < trailingRules.textRules.length; i++) {
+			const textRule = trailingRules.textRules[i];
+			const trimmed = textRule?.text.trim();
+			if (!trimmed || !textRule?.enabled) continue;
+
+			rules.push({
+				text: trimmed,
+				category: "management",
+				ruleType: "manual",
+				configSource: `trailingRules.textRules[${i}]`,
+				autoCondition: null,
+				sourceConfigHash: hashConfig(textRule),
+			});
+		}
+	}
+
 	return rules;
 }
 

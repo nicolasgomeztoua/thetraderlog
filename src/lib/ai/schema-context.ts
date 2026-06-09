@@ -199,7 +199,7 @@ const SCHEMA_CONTEXT = `
 | exit_rules | text | yes | Rich text for exit rules |
 | risk_parameters | text | yes | JSON: positionSizing, maxRiskPerTrade, dailyLossLimit, etc. |
 | scaling_rules | text | yes | JSON: scaleIn/scaleOut triggers |
-| trailing_rules | text | yes | JSON: moveToBreakeven, trailStops |
+| trailing_rules | text | yes | JSON: moveToBreakeven, trailStops, textRules (free-text discretionary rules) |
 | is_active | boolean | yes | Default: true |
 | created_at | timestamp with tz | no | |
 | updated_at | timestamp with tz | yes | Auto-updated |

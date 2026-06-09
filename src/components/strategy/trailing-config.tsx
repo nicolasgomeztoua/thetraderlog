@@ -12,6 +12,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { parseIntInput, parseNumberInput } from "@/lib/utils/number-input";
 
 export interface TrailingRules {
@@ -24,6 +25,15 @@ export interface TrailingRules {
 		triggerR: number;
 		method: "fixed_ticks" | "atr_multiple" | "swing_low";
 		value: number;
+		enabled?: boolean;
+	}>;
+	/**
+	 * Free-text, discretionary trailing rules (e.g. "aggressive participants in
+	 * our direction, trail below the candle"). These can't be auto-evaluated, so
+	 * they surface as manual management checklist items.
+	 */
+	textRules?: Array<{
+		text: string;
 		enabled?: boolean;
 	}>;
 }
@@ -98,6 +108,33 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 		handleChange({
 			...trailingRules,
 			trailStops: newTrailStops.length > 0 ? newTrailStops : undefined,
+		});
+	};
+
+	const addTextRule = () => {
+		handleChange({
+			...trailingRules,
+			textRules: [...(trailingRules.textRules ?? []), { text: "" }],
+		});
+	};
+
+	const updateTextRule = (
+		idx: number,
+		field: "text" | "enabled",
+		fieldValue: string | boolean | undefined,
+	) => {
+		const newTextRules = [...(trailingRules.textRules ?? [])];
+		const existing = newTextRules[idx] ?? { text: "" };
+		newTextRules[idx] = { ...existing, [field]: fieldValue };
+		handleChange({ ...trailingRules, textRules: newTextRules });
+	};
+
+	const removeTextRule = (idx: number) => {
+		const newTextRules = [...(trailingRules.textRules ?? [])];
+		newTextRules.splice(idx, 1);
+		handleChange({
+			...trailingRules,
+			textRules: newTextRules.length > 0 ? newTextRules : undefined,
 		});
 	};
 
@@ -299,6 +336,80 @@ export function TrailingConfig({ value, onChange }: TrailingConfigProps) {
 											<Trash2 className="h-4 w-4" />
 										</Button>
 									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+			</div>
+
+			{/* Custom (free-text) Trailing Rules */}
+			<div className="space-y-3">
+				<div className="flex items-center justify-between">
+					<h4 className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider sm:text-[11px]">
+						→ Custom Trailing Rules
+					</h4>
+					<Button
+						className="min-h-9 font-mono text-xs uppercase tracking-wider sm:h-7 sm:min-h-0"
+						onClick={addTextRule}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						<Plus className="mr-1 h-3 w-3" />
+						Add Rule
+					</Button>
+				</div>
+
+				{(trailingRules.textRules ?? []).length === 0 ? (
+					<p className="font-mono text-muted-foreground text-xs sm:text-sm">
+						No custom trailing rules defined
+					</p>
+				) : (
+					<div className="space-y-2">
+						{(trailingRules.textRules ?? []).map((rule, idx) => (
+							<div
+								className="flex flex-col gap-2 rounded border border-border bg-muted p-3 sm:flex-row sm:items-start sm:gap-3"
+								// biome-ignore lint/suspicious/noArrayIndexKey: free-text rules have no stable id; index key keeps textarea focus on edit
+								key={`text-rule-${idx}`}
+							>
+								<div className="flex-1 space-y-1">
+									<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+										Rule
+									</span>
+									<Textarea
+										className="min-h-11 font-mono text-sm"
+										onChange={(e) =>
+											updateTextRule(idx, "text", e.target.value)
+										}
+										placeholder="e.g., Aggressive participants in our direction — trail below the candle"
+										rows={2}
+										value={rule.text}
+									/>
+								</div>
+								<div className="flex items-end justify-end gap-2 sm:items-start sm:pt-5">
+									<div className="flex flex-col items-center gap-1">
+										<span className="font-mono text-[9px] text-muted-foreground uppercase sm:text-[10px]">
+											Track
+										</span>
+										<div className="flex h-11 items-center justify-center sm:h-9">
+											<Switch
+												checked={rule.enabled ?? false}
+												onCheckedChange={(checked) =>
+													updateTextRule(idx, "enabled", checked)
+												}
+											/>
+										</div>
+									</div>
+									<Button
+										className="h-11 w-11 shrink-0 text-muted-foreground hover:text-loss sm:h-9 sm:w-9"
+										onClick={() => removeTextRule(idx)}
+										size="icon"
+										type="button"
+										variant="ghost"
+									>
+										<Trash2 className="h-4 w-4" />
+									</Button>
 								</div>
 							</div>
 						))}

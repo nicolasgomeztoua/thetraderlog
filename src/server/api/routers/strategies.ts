@@ -210,6 +210,14 @@ const trailingRulesSchema = z.object({
 			}),
 		)
 		.optional(),
+	textRules: z
+		.array(
+			z.object({
+				text: z.string(),
+				enabled: z.boolean().optional(),
+			}),
+		)
+		.optional(),
 });
 
 const strategyRuleSchema = z.object({

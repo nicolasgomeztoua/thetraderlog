@@ -667,7 +667,7 @@ export const strategies = createTable(
 		scalingRules: text("scaling_rules"), // JSON string
 
 		// Trailing stop rules (JSON)
-		// { moveToBreakeven: { triggerR, offsetTicks }, trailStops: [{ triggerR, method, value }] }
+		// { moveToBreakeven: { triggerR, offsetTicks }, trailStops: [{ triggerR, method, value }], textRules: [{ text, enabled }] }
 		trailingRules: text("trailing_rules"), // JSON string
 
 		// Status
