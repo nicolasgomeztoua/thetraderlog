@@ -1,3 +1,4 @@
+import { formatInTimeZone } from "date-fns-tz";
 import {
 	type CandlestickData,
 	CandlestickSeries,
@@ -15,6 +16,7 @@ import {
 	type SeriesAttachedParameter,
 	type SeriesMarker,
 	type SeriesType,
+	TickMarkType,
 	type Time,
 	type UTCTimestamp,
 } from "lightweight-charts";
@@ -37,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { useTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTimezone } from "@/hooks/use-timezone";
 import {
 	DEFAULT_ANNOTATION_COLOR,
 	DRAWING_COLORS,
@@ -411,6 +414,7 @@ function LightweightChartInner({
 
 	// Mobile detection
 	const isMobile = useIsMobile();
+	const { timezone } = useTimezone();
 
 	// Chart preferences from persistent store
 	const interval = useChartPreferencesStore((s) => s.interval);
@@ -673,8 +677,18 @@ function LightweightChartInner({
 		effectiveEnd.getUTCFullYear() === now.getUTCFullYear() &&
 		effectiveEnd.getUTCMonth() === now.getUTCMonth() &&
 		effectiveEnd.getUTCDate() === now.getUTCDate();
+	// Only flag "awaiting" when the chart shows prior sessions but the trade's
+	// own candles aren't loaded yet (last bar is before the trade) — avoids
+	// firing on weekend/holiday gaps where today's data is actually present.
+	const entryMs = entryTime ? new Date(entryTime).getTime() : 0;
+	const loadedBars = chartData?.bars;
+	const lastBarMs =
+		loadedBars && loadedBars.length > 0
+			? ((loadedBars[loadedBars.length - 1]?.time as number) ?? 0) * 1000
+			: 0;
+	const tradeCandlesLoaded = entryMs > 0 && lastBarMs >= entryMs;
 	const isAwaitingTodaysData =
-		tradeEndsToday && (dataQuality === "pending" || dataQuality === "partial");
+		Boolean(hasRealData) && tradeEndsToday && !tradeCandlesLoaded;
 
 	// Build markers array - elegant entry/exit indicators
 	const markers = useMemo(() => {
@@ -776,10 +790,35 @@ function LightweightChartInner({
 			rightPriceScale: {
 				borderColor: colors.border,
 			},
+			localization: {
+				timeFormatter: (time: Time) =>
+					formatInTimeZone(
+						new Date((time as number) * 1000),
+						timezone,
+						"MMM d, HH:mm",
+					),
+			},
 			timeScale: {
 				borderColor: colors.border,
 				timeVisible: true,
 				secondsVisible: false,
+				// Render axis labels in the user's selected timezone (lightweight-charts
+				// is UTC by default, which mismatched the rest of the trade page).
+				tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => {
+					const d = new Date((time as number) * 1000);
+					switch (tickMarkType) {
+						case TickMarkType.Year:
+							return formatInTimeZone(d, timezone, "yyyy");
+						case TickMarkType.Month:
+							return formatInTimeZone(d, timezone, "MMM");
+						case TickMarkType.DayOfMonth:
+							return formatInTimeZone(d, timezone, "MMM d");
+						case TickMarkType.TimeWithSeconds:
+							return formatInTimeZone(d, timezone, "HH:mm:ss");
+						default:
+							return formatInTimeZone(d, timezone, "HH:mm");
+					}
+				},
 			},
 		});
 
@@ -1124,6 +1163,7 @@ function LightweightChartInner({
 		mfePrice,
 		tradeId,
 		createAnnotation.mutate,
+		timezone,
 	]);
 
 	// Render persisted annotations separately to avoid full chart recreation on annotation changes
