@@ -668,28 +668,6 @@ function LightweightChartInner({
 		? extendedChartData?.dataQuality
 		: rawChartData?.dataQuality;
 
-	// A same-day trade is missing only TODAY's candles: the data provider
-	// publishes each session the next morning (UTC), so the chart shows prior
-	// sessions with a blank edge around today's markers until the backfill runs.
-	const effectiveEnd = exitTime ? new Date(exitTime) : new Date();
-	const now = new Date();
-	const tradeEndsToday =
-		effectiveEnd.getUTCFullYear() === now.getUTCFullYear() &&
-		effectiveEnd.getUTCMonth() === now.getUTCMonth() &&
-		effectiveEnd.getUTCDate() === now.getUTCDate();
-	// Only flag "awaiting" when the chart shows prior sessions but the trade's
-	// own candles aren't loaded yet (last bar is before the trade) — avoids
-	// firing on weekend/holiday gaps where today's data is actually present.
-	const entryMs = entryTime ? new Date(entryTime).getTime() : 0;
-	const loadedBars = chartData?.bars;
-	const lastBarMs =
-		loadedBars && loadedBars.length > 0
-			? ((loadedBars[loadedBars.length - 1]?.time as number) ?? 0) * 1000
-			: 0;
-	const tradeCandlesLoaded = entryMs > 0 && lastBarMs >= entryMs;
-	const isAwaitingTodaysData =
-		Boolean(hasRealData) && tradeEndsToday && !tradeCandlesLoaded;
-
 	// Build markers array - elegant entry/exit indicators
 	const markers = useMemo(() => {
 		const markerList: SeriesMarker<UTCTimestamp>[] = [];
@@ -1263,16 +1241,6 @@ function LightweightChartInner({
 		>
 			{/* Chart container */}
 			<div className="h-full w-full" ref={containerRef} />
-
-			{/* Same-day notice: today's candles publish after the session settles */}
-			{isAwaitingTodaysData && (
-				<div className="-translate-x-1/2 absolute bottom-3 left-1/2 z-10 rounded border border-border bg-background/80 px-2.5 py-1 backdrop-blur-sm">
-					<span className="font-mono text-[10px] text-muted-foreground sm:text-[11px]">
-						Today's candles publish after the session closes — check back
-						tomorrow
-					</span>
-				</div>
-			)}
 
 			{/* Top controls bar */}
 			<div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 sm:gap-2">
