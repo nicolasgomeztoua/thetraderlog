@@ -11,7 +11,7 @@
  * we only fetch that data once.
  */
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { env } from "@/env";
 import {
 	DATABENTO_RELEASE_BUFFER_HOURS,
@@ -783,6 +783,37 @@ export async function getExtendedDayBars(
 // =============================================================================
 // CACHE MANAGEMENT
 // =============================================================================
+
+/**
+ * Clear cached candles for a trade's chart window (entry-3 … exit+3, capped at
+ * today) so the next fetch pulls fresh data from the provider. Used by the
+ * manual "re-fetch market data" action once newer (delayed) bars have published.
+ */
+export async function clearCandleCacheForTrade(
+	symbol: string,
+	entryTime: Date,
+	exitTime: Date | null,
+): Promise<void> {
+	const effectiveExit = exitTime ?? new Date();
+
+	const rangeStart = new Date(entryTime);
+	rangeStart.setUTCDate(rangeStart.getUTCDate() - 3);
+
+	const rangeEnd = new Date(effectiveExit);
+	rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 3);
+	const today = new Date();
+	if (rangeEnd > today) rangeEnd.setTime(today.getTime());
+
+	await db
+		.delete(candleCache)
+		.where(
+			and(
+				eq(candleCache.symbol, symbol),
+				gte(candleCache.date, normalizeDateToUTC(rangeStart)),
+				lte(candleCache.date, normalizeDateToUTC(rangeEnd)),
+			),
+		);
+}
 
 /**
  * Check if we have cached data for a specific symbol/interval/date

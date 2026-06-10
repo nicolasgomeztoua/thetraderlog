@@ -35,6 +35,7 @@ import {
 import type { SortField } from "@/lib/constants/trade-log";
 import { logger } from "@/lib/logger";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
+import { clearCandleCacheForTrade } from "@/lib/market-data/service";
 import {
 	directionEnum,
 	emotionalStateEnum,
@@ -1630,6 +1631,49 @@ export const tradesRouter = createTRPCRouter({
 							mfePoints: result.metrics.mfePoints,
 						}
 					: undefined,
+				trade: result.trade,
+			};
+		}),
+
+	/**
+	 * Re-fetch market data for a single trade on demand: clears its cached
+	 * candle window so the next chart load pulls fresh data from the provider,
+	 * then recomputes MAE/MFE. Use once the provider's delayed bars publish.
+	 */
+	refreshMarketData: requireFeature(FEATURE_TRADE_MANAGEMENT)
+		.input(z.object({ tradeId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(
+					eq(trades.id, input.tradeId),
+					eq(trades.userId, ctx.user.id),
+				),
+				columns: { id: true, symbol: true, entryTime: true, exitTime: true },
+			});
+
+			if (!trade) {
+				throw new Error(ERR_TRADE_NOT_FOUND);
+			}
+
+			// Drop cached candles for this trade's window so the chart + MAE/MFE
+			// re-pull fresh data from the provider on the next read.
+			await clearCandleCacheForTrade(
+				trade.symbol,
+				trade.entryTime,
+				trade.exitTime,
+			);
+
+			const result = await calculateAndStoreMAEMFE(input.tradeId, {
+				skipAlreadyProcessed: false,
+			});
+
+			if (!result.success && result.message !== "Already processed") {
+				throw new Error(result.message ?? ERR_MAEMFE_CALCULATE_FAILED);
+			}
+
+			return {
+				success: result.success,
+				dataQuality: result.dataQuality,
 				trade: result.trade,
 			};
 		}),
