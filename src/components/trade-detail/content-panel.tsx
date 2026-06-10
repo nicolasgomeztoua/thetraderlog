@@ -1,7 +1,8 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { Lock, RefreshCw } from "lucide-react";
 import dynamic from "next/dynamic";
+import { toast } from "sonner";
 import {
 	UpgradePrompt,
 	useHasFeature,
@@ -10,7 +11,10 @@ import { DailyJournalPreview } from "@/components/daily-journal/daily-journal-pr
 import { TradeTags } from "@/components/tags/tag-selector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FEATURE_TRADE_REPLAY } from "@/lib/constants/billing";
+import { ERR_MARKET_DATA_REFRESH_FAILED } from "@/lib/constants/errors";
 import { cn } from "@/lib/shared";
+import { getErrorMessage } from "@/lib/shared/utils";
+import { api } from "@/trpc/react";
 import type { TradeForContentPanel } from "@/types";
 import { TradeReplay } from "./replay";
 import { RunningPnlTab } from "./running-pnl-tab";
@@ -121,6 +125,21 @@ export function ContentPanel({
 }: ContentPanelProps) {
 	const { hasAccess: hasReplay } = useHasFeature(FEATURE_TRADE_REPLAY);
 
+	const utils = api.useUtils();
+	const refreshMarketData = api.trades.refreshMarketData.useMutation({
+		onSuccess: () => {
+			// Cache was cleared server-side — refetch chart candles + the trade
+			// (MAE/MFE + stats) so the latest provider data shows immediately.
+			utils.marketData.getFullDayChartData.invalidate();
+			utils.marketData.getExtendedChartData.invalidate();
+			utils.trades.getById.invalidate({ id: trade.id });
+			toast.success("Market data refreshed");
+		},
+		onError: (error) => {
+			toast.error(getErrorMessage(error, ERR_MARKET_DATA_REFRESH_FAILED));
+		},
+	});
+
 	return (
 		<div
 			className={cn("flex h-full min-w-0 flex-col overflow-hidden", className)}
@@ -157,6 +176,23 @@ export function ContentPanel({
 					>
 						Running P&L
 					</TabsTrigger>
+
+					{/* Re-fetch market data for this trade (candles + MAE/MFE) on demand */}
+					<button
+						className="ml-auto flex items-center gap-1.5 self-center px-2 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:text-foreground disabled:opacity-50"
+						disabled={refreshMarketData.isPending}
+						onClick={() => refreshMarketData.mutate({ tradeId: trade.id })}
+						title="Re-fetch market data and recompute MAE/MFE"
+						type="button"
+					>
+						<RefreshCw
+							className={cn(
+								"size-3",
+								refreshMarketData.isPending && "animate-spin",
+							)}
+						/>
+						<span className="hidden sm:inline">Re-fetch data</span>
+					</button>
 				</TabsList>
 
 				{/* CHART TAB */}

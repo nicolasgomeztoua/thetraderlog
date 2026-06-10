@@ -42,6 +42,7 @@ export const ERR_ATTACHMENT_CREATE_FAILED = "Failed to create attachment";
 export const ERR_MESSAGE_SAVE_FAILED = "Failed to save user message";
 export const ERR_STRATEGY_DUPLICATE_FAILED = "Failed to duplicate strategy";
 export const ERR_MAEMFE_CALCULATE_FAILED = "Failed to calculate MAE/MFE";
+export const ERR_MARKET_DATA_REFRESH_FAILED = "Failed to refresh market data";
 
 // =============================================================================
 // BULK OPERATIONS
