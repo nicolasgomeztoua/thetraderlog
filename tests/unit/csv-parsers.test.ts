@@ -61,6 +61,29 @@ describe("futures CSV parsers", () => {
 		).toBe(true);
 	});
 
+	it("should parse Tradovate Position History with broker-reported P&L", async () => {
+		const csv = loadFixture("tradovate-position-history.csv");
+		const result = await tradovateParser.parse(csv);
+
+		expect(result.success).toBe(true);
+		expect(result.trades).toHaveLength(1);
+
+		const trade = result.trades[0];
+		expect(trade?.symbol).toBe("MNQ");
+		expect(trade?.direction).toBe("long"); // bought before sold
+		expect(trade?.entryPrice).toBe("29402.5");
+		expect(trade?.exitPrice).toBe("29501.75");
+		expect(trade?.quantity).toBe("1");
+		// The whole point: realized P&L flows through from the P/L column.
+		expect(trade?.profit).toBe("198.5");
+	});
+
+	it("auto-detects Tradovate from Position History headers", async () => {
+		const csv = loadFixture("tradovate-position-history.csv");
+		const headers = csv.split("\n")[0]?.split(",") ?? [];
+		expect(detectPlatform(headers)).toBe("tradovate");
+	});
+
 	it("should parse Rithmic mixed exports using Completed Orders section", async () => {
 		const csv = loadFixture("rithmic-rtrader-full.csv");
 		const result = await rithmicParser.parse(csv);

@@ -63,7 +63,7 @@ export function getSupportedPlatforms(): {
 		{
 			value: "tradovate",
 			label: "Tradovate",
-			description: "Tradovate order report export",
+			description: "Tradovate order report or position history export",
 		},
 		{
 			value: "rithmic",

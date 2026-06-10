@@ -100,7 +100,8 @@ const PLATFORM_INFO: Record<
 		status: "ready",
 	},
 	tradovate: {
-		description: "Auto-import from Tradovate order report export",
+		description:
+			"Auto-import from Tradovate — Orders report or Position History (for P&L)",
 		status: "ready",
 	},
 	rithmic: {
@@ -632,6 +633,12 @@ export default function ImportPage() {
 								{accountPlatform === "projectx" && (
 									<span className="mt-1 block text-primary">
 										Export your Trades CSV from ProjectX
+									</span>
+								)}
+								{accountPlatform === "tradovate" && (
+									<span className="mt-1 block text-primary">
+										Tip: export <strong>Position History</strong> (not Orders) —
+										it includes realized P&amp;L
 									</span>
 								)}
 							</CardDescription>
