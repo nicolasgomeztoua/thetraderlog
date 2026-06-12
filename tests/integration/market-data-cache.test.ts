@@ -265,6 +265,88 @@ describe("market-data-cache integration", () => {
 		fetchSpy.mockRestore();
 	});
 
+	it("caches a confirmed-empty released day and serves later reads from cache", async () => {
+		// A weekend/holiday session with no bars should only be bought from the
+		// provider once — subsequent reads hit the empty cache entry.
+		const saturday = new Date("2024-01-13T00:00:00Z");
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+
+		const first = await getOHLCBars("ES", "1min", saturday);
+		expect(first.dataQuality).toBe("unavailable");
+		expect(first.source).toBe("api");
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+		// Empty day persisted with 0 bars
+		const cacheRow = await db.query.candleCache.findFirst({
+			where: and(
+				eq(schema.candleCache.symbol, "ES"),
+				eq(schema.candleCache.interval, "1min"),
+				eq(schema.candleCache.date, saturday),
+			),
+		});
+		expect(cacheRow?.barCount).toBe(0);
+
+		const second = await getOHLCBars("ES", "1min", saturday);
+		expect(second.dataQuality).toBe("unavailable");
+		expect(second.source).toBe("cache");
+		expect(fetchSpy).toHaveBeenCalledTimes(1); // no second provider call
+
+		fetchSpy.mockRestore();
+	});
+
+	it("does not cache an empty result for a failed provider request", async () => {
+		// A 429/5xx is transient — caching it would freeze a recoverable gap.
+		const oldDate = new Date("2024-01-16T00:00:00Z");
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("rate limited", { status: 429 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", oldDate);
+
+		expect(result.bars).toHaveLength(0);
+		const cacheRow = await db.query.candleCache.findFirst({
+			where: and(
+				eq(schema.candleCache.symbol, "ES"),
+				eq(schema.candleCache.date, oldDate),
+			),
+		});
+		expect(cacheRow).toBeUndefined();
+
+		fetchSpy.mockRestore();
+	});
+
+	it("does not cache an empty result for a not-yet-released day", async () => {
+		// Today's session is still pending — it will publish later, so an empty
+		// response must not be persisted.
+		const today = new Date();
+		today.setUTCHours(0, 0, 0, 0);
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", today);
+
+		expect(result.dataQuality).toBe("pending");
+		const cacheRow = await db.query.candleCache.findFirst({
+			where: and(
+				eq(schema.candleCache.symbol, "ES"),
+				eq(schema.candleCache.date, today),
+			),
+		});
+		expect(cacheRow).toBeUndefined();
+
+		fetchSpy.mockRestore();
+	});
+
 	it("should only write 1min and 1h intervals to candle_cache", async () => {
 		const historicalDate = new Date("2024-09-05T00:00:00Z");
 		const mockBars = generateMockBars(historicalDate, 60);

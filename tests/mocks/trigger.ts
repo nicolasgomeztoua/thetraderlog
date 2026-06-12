@@ -1,62 +1,47 @@
 /**
  * Mock for Trigger.dev tasks used in tests.
  *
- * This mock tracks all batchTrigger calls so tests can verify
+ * This mock tracks all trigger calls so tests can verify
  * that the correct trades are queued for background processing.
  */
 
-// Track all batchTrigger calls for test assertions
+// Track all processImportMAEMFE.trigger calls for test assertions
 export const triggerMock = {
-	batchTriggerCalls: [] as Array<
-		{ payload: { tradeId: string; userId: string } }[]
-	>,
+	triggerCalls: [] as Array<{ tradeIds: string[]; userId: string }>,
 
 	/**
 	 * Reset mock state between tests
 	 */
 	reset() {
-		this.batchTriggerCalls = [];
+		this.triggerCalls = [];
 	},
 
 	/**
-	 * Get the most recent batchTrigger call
+	 * Get the most recent trigger call
 	 */
 	getLastCall() {
-		return this.batchTriggerCalls[this.batchTriggerCalls.length - 1];
+		return this.triggerCalls[this.triggerCalls.length - 1];
 	},
 
 	/**
-	 * Get total count of items triggered across all calls
-	 */
-	getTotalTriggeredCount() {
-		return this.batchTriggerCalls.reduce((sum, call) => sum + call.length, 0);
-	},
-
-	/**
-	 * Get all trade IDs that were triggered
+	 * Get all trade IDs that were queued across all calls
 	 */
 	getAllTriggeredTradeIds() {
-		return this.batchTriggerCalls.flatMap((call) =>
-			call.map((item) => item.payload.tradeId),
-		);
+		return this.triggerCalls.flatMap((call) => call.tradeIds);
 	},
 };
 
 /**
- * Mock processTradeMAEMFE task matching Trigger.dev SDK interface.
- * Tracks calls and returns mock BatchTriggerResult responses.
+ * Mock processImportMAEMFE task matching Trigger.dev SDK interface.
+ * Tracks calls and returns a mock RunHandle response.
  */
-export const processTradeMAEMFE = {
-	batchTrigger: async (
-		items: Array<{ payload: { tradeId: string; userId: string } }>,
-	) => {
-		triggerMock.batchTriggerCalls.push(items);
+export const processImportMAEMFE = {
+	trigger: async (payload: { tradeIds: string[]; userId: string }) => {
+		triggerMock.triggerCalls.push(payload);
 
-		// Return mock BatchTriggerResult array matching Trigger.dev SDK
-		return items.map((_item, index) => ({
-			id: `mock-run-${Date.now()}-${index}`,
-			taskIdentifier: "process-trade-maemfe",
-			ok: true as const,
-		}));
+		return {
+			id: `mock-run-${Date.now()}`,
+			taskIdentifier: "process-import-maemfe",
+		};
 	},
 };

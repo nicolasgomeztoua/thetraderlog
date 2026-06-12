@@ -313,6 +313,12 @@ describe("trades router - batchImport", () => {
 			// Both are closed trades, so processingCount should equal imported count
 			expect(result.processingCount).toBe(2);
 			expect(result.processingCount).toBe(result.imported);
+
+			// A single orchestrator run is triggered with all imported trade IDs
+			expect(triggerMock.triggerCalls).toHaveLength(1);
+			expect(triggerMock.getAllTriggeredTradeIds().sort()).toEqual(
+				[...result.tradeIds].sort(),
+			);
 		});
 
 		it("should generate trade hashes for closed trades", async () => {

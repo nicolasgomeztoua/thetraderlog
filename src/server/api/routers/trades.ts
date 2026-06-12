@@ -82,7 +82,7 @@ import {
 	trades,
 	tradeTags,
 } from "@/server/db/schema";
-import { processTradeMAEMFE } from "@/trigger/process-trade-maemfe";
+import { processImportMAEMFE } from "@/trigger/process-import-maemfe";
 
 // Database type for helper function
 type Db = typeof DbType;
@@ -868,18 +868,14 @@ export const tradesRouter = createTRPCRouter({
 				.filter((t) => t.status === "closed")
 				.map((t) => t.id);
 
-			// Trigger background jobs to calculate MAE/MFE via Trigger.dev
-			// batchTrigger supports up to 1000 payloads per call
+			// One orchestrator run per import: it dedupes symbol-days, warms the
+			// candle cache at Databento's effective concurrency, then computes
+			// MAE/MFE per trade from cache (see src/trigger/process-import-maemfe.ts)
 			if (closedTradeIds.length > 0) {
-				const BATCH_SIZE = 1000;
-				for (let i = 0; i < closedTradeIds.length; i += BATCH_SIZE) {
-					const batch = closedTradeIds.slice(i, i + BATCH_SIZE);
-					await processTradeMAEMFE.batchTrigger(
-						batch.map((tradeId) => ({
-							payload: { tradeId, userId: ctx.user.id },
-						})),
-					);
-				}
+				await processImportMAEMFE.trigger({
+					tradeIds: closedTradeIds,
+					userId: ctx.user.id,
+				});
 			}
 
 			return {

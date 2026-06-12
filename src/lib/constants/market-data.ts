@@ -21,3 +21,21 @@ export const DATABENTO_RELEASE_HOUR_UTC = 9;
  * session from "pending" to "unavailable".
  */
 export const DATABENTO_RELEASE_BUFFER_HOURS = 2;
+
+/**
+ * Maximum in-flight Databento Historical API requests.
+ *
+ * Measured (June 2026): the API effectively serves ~2 requests per key
+ * concurrently and queues the rest server-side — 4 parallel day-requests
+ * completed in 2.5s / 3.8s / 20.6s / 57s. Fanning out wider than the
+ * effective concurrency only inflates wall-clock time, so fetches should be
+ * funneled through a pool of this size.
+ */
+export const DATABENTO_MAX_CONCURRENT_FETCHES = 2;
+
+/**
+ * Concurrency for per-trade MAE/MFE computation once the candle cache is
+ * warm. These are cache reads + row updates (no provider calls), so this
+ * only bounds database load.
+ */
+export const MAEMFE_COMPUTE_CONCURRENCY = 4;

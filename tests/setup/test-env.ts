@@ -6,17 +6,14 @@ import { triggerMock } from "../mocks/trigger";
 
 // Mock Trigger.dev tasks BEFORE any imports resolve
 // This prevents tests from trying to connect to Trigger.dev
-vi.mock("@/trigger/process-trade-maemfe", () => ({
-	processTradeMAEMFE: {
-		batchTrigger: async (
-			items: Array<{ payload: { tradeId: string; userId: string } }>,
-		) => {
-			triggerMock.batchTriggerCalls.push(items);
-			return items.map((_, i) => ({
-				id: `mock-run-${Date.now()}-${i}`,
-				taskIdentifier: "process-trade-maemfe",
-				ok: true as const,
-			}));
+vi.mock("@/trigger/process-import-maemfe", () => ({
+	processImportMAEMFE: {
+		trigger: async (payload: { tradeIds: string[]; userId: string }) => {
+			triggerMock.triggerCalls.push(payload);
+			return {
+				id: `mock-run-${Date.now()}`,
+				taskIdentifier: "process-import-maemfe",
+			};
 		},
 	},
 }));

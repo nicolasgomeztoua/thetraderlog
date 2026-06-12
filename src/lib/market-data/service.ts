@@ -184,6 +184,14 @@ export async function getOHLCBars(
 			// For today's date, check staleness
 			if (!isCacheStale(dateKey, lastBarAt, cached.fetchedAt)) {
 				const dateStr = dateKey.toISOString().split("T")[0];
+				// Confirmed-empty day (weekend/holiday session cached with 0 bars):
+				// serve the empty result instead of re-querying the provider.
+				if (bars.length === 0) {
+					console.info(
+						`[market-data] cache hit (empty day): ${symbol} ${baseInterval} ${dateStr}`,
+					);
+					return { bars: [], source: "cache", dataQuality: "unavailable" };
+				}
 				console.info(
 					`[market-data] cache hit: ${symbol} ${baseInterval} ${dateStr} (${bars.length} bars)`,
 				);
@@ -225,6 +233,40 @@ export async function getOHLCBars(
 		const dataQuality: DataQuality = isAwaitingRelease(dateKey)
 			? "pending"
 			: "unavailable";
+		// Cache a confirmed-empty released day (weekend/holiday session) so later
+		// reads don't re-buy it from the provider. Failed requests and
+		// not-yet-released days are NOT cached — they may succeed later.
+		if (apiResult.success && dataQuality === "unavailable") {
+			try {
+				await db
+					.insert(candleCache)
+					.values({
+						symbol,
+						interval: baseInterval,
+						date: dateKey,
+						bars: "[]",
+						barCount: 0,
+						source: apiResult.provider ?? "databento",
+						fetchedAt: new Date(),
+						lastBarAt: null,
+					})
+					.onConflictDoUpdate({
+						target: [
+							candleCache.symbol,
+							candleCache.interval,
+							candleCache.date,
+						],
+						set: {
+							bars: "[]",
+							barCount: 0,
+							lastBarAt: null,
+							fetchedAt: new Date(),
+						},
+					});
+			} catch {
+				// Cache write failed - continue with API result
+			}
+		}
 		return { bars: [], source: "api", dataQuality };
 	}
 
@@ -542,6 +584,7 @@ async function fetchFromDatabento(
 	});
 
 	const url = `https://hist.databento.com/v0/timeseries.get_range?${params.toString()}`;
+	const fetchStartedAt = Date.now();
 
 	try {
 		const response = await fetch(url, {
@@ -565,6 +608,9 @@ async function fetchFromDatabento(
 		const text = await response.text();
 
 		if (!text.trim()) {
+			console.info(
+				`[market-data] databento fetch: ${databentoSymbol} ${schema} ${startTime.toISOString().split("T")[0]} → 0 bars in ${Date.now() - fetchStartedAt}ms`,
+			);
 			return { success: true, bars: [], provider: "databento" };
 		}
 
@@ -611,6 +657,10 @@ async function fetchFromDatabento(
 
 		// Sort by timestamp ascending
 		bars.sort((a, b) => a.timestamp - b.timestamp);
+
+		console.info(
+			`[market-data] databento fetch: ${databentoSymbol} ${schema} ${startTime.toISOString().split("T")[0]} → ${bars.length} bars in ${Date.now() - fetchStartedAt}ms`,
+		);
 
 		return { success: true, bars, provider: "databento" };
 	} catch (error) {
