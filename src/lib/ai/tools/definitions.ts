@@ -299,24 +299,34 @@ function createProposeTradeTool() {
 // =============================================================================
 
 /**
- * Get Vercel AI SDK tools for chat mode (no store_report_data).
+ * Data-access tools shared by chat and report modes.
  */
-export function getChatTools(context: ToolContext) {
+function getBaseTools(context: ToolContext) {
 	return {
 		run_query: createRunQueryTool(context),
 		call_analytics: createCallAnalyticsTool(context),
 		get_market_data: createGetMarketDataTool(),
 		run_python: createRunPythonTool(),
+	};
+}
+
+/**
+ * Get Vercel AI SDK tools for chat mode (adds propose_trade, no store_report_data).
+ */
+export function getChatTools(context: ToolContext) {
+	return {
+		...getBaseTools(context),
 		propose_trade: createProposeTradeTool(),
 	};
 }
 
 /**
- * Get Vercel AI SDK tools for report mode (includes store_report_data).
+ * Get Vercel AI SDK tools for report mode (adds store_report_data; no propose_trade —
+ * the confirmation card is chat-only).
  */
 export function getReportTools(context: ToolContext) {
 	return {
-		...getChatTools(context),
+		...getBaseTools(context),
 		store_report_data: createStoreReportDataTool(context),
 	};
 }

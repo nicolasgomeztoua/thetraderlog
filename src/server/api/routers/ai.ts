@@ -206,11 +206,20 @@ export const aiRouter = createTRPCRouter({
 
 				const messages: ModelMessage[] = allMessages.map((msg) => {
 					const atts = msg.attachments ?? [];
-					// Build a multimodal user message when this turn carries images.
+					// Attach images ONLY for the current turn's user message. Historical
+					// image messages become text-only so later text turns aren't routed
+					// image content (which would hit the text model) and old charts aren't
+					// re-downloaded/re-tokenized every turn. The re-present loop still works:
+					// the model's prior propose_trade tool call carries the extracted values.
 					// Presigned URLs are regenerated here (never persisted); the AI SDK
-					// downloads the bytes server-side and forwards them to OpenRouter,
-					// so 1h expiry only needs to outlive this single request.
-					if (msg.role === "user" && atts.length > 0 && isS3Configured()) {
+					// downloads the bytes server-side and forwards them to OpenRouter, so 1h
+					// expiry only needs to outlive this single request.
+					if (
+						msg.id === userMessage.id &&
+						msg.role === "user" &&
+						atts.length > 0 &&
+						isS3Configured()
+					) {
 						return {
 							role: "user",
 							content: [
@@ -233,9 +242,13 @@ export const aiRouter = createTRPCRouter({
 
 				// Route image-bearing turns to the vision model; text-only turns keep the
 				// conversation default (Kimi). conversation.model is left untouched so later
-				// text turns revert automatically. (Image attachments only exist when S3
-				// was configured at upload time; the message build re-checks S3 anyway.)
-				const hasImageThisTurn = (input.imageAttachments?.length ?? 0) > 0;
+				// text turns revert automatically. Derive this from the message actually
+				// built so it can never disagree with what's sent to the model.
+				const hasImageThisTurn = messages.some(
+					(m) =>
+						Array.isArray(m.content) &&
+						m.content.some((part) => part.type === "image"),
+				);
 				const modelId = hasImageThisTurn
 					? DEFAULT_VISION_MODEL
 					: (conversation.model ?? DEFAULT_CHAT_MODEL);

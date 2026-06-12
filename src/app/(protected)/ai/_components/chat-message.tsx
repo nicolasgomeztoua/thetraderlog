@@ -182,9 +182,12 @@ export function ChatMessage({
 	const toolNames = getUniqueToolNames(toolCalls).filter(
 		(n) => n !== PROPOSE_TRADE_TOOL,
 	);
-	const proposeCall = toolCalls.find(
+	// If the model emitted several proposals in one message, the last is the most
+	// refined — render that one.
+	const proposeCalls = toolCalls.filter(
 		(tc) => tc.function?.name === PROPOSE_TRADE_TOOL,
 	);
+	const proposeCall = proposeCalls[proposeCalls.length - 1];
 	const proposal = proposeCall
 		? parseProposal(proposeCall.function.arguments)
 		: null;

@@ -84,6 +84,15 @@ vi.mock("@/trigger/generate-ai-report", () => ({
 	},
 }));
 
+// Mock S3 so the multimodal message-build path runs under vitest (the real
+// isS3Configured() returns false outside the Bun runtime, which would otherwise
+// skip image assembly entirely and leave the vision path untested).
+vi.mock("@/lib/storage/s3", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/storage/s3")>()),
+	isS3Configured: () => true,
+	getPresignedDownloadUrl: (key: string) => `https://s3.test/${key}`,
+}));
+
 // =============================================================================
 // TEST SUITE
 // =============================================================================
@@ -257,12 +266,51 @@ describe("ai router", () => {
 			// Image-bearing turn uses the vision model, not the chat default.
 			expect(response?.model).toBe(DEFAULT_VISION_MODEL);
 
+			// The model actually receives a multimodal message with an image part.
+			const callArgs = vi.mocked(aiGenerateText).mock.lastCall?.[0];
+			const sentUser = callArgs?.messages.find((m) => m.role === "user");
+			expect(Array.isArray(sentUser?.content)).toBe(true);
+			const parts = Array.isArray(sentUser?.content) ? sentUser.content : [];
+			expect(parts.some((p) => p.type === "image")).toBe(true);
+
 			const updated = await caller.ai.getConversation({
 				conversationId: conversation.id,
 			});
 			const userMessage = updated.messages.find((m) => m.role === "user");
 			expect(userMessage?.attachments).toHaveLength(1);
 			expect(userMessage?.attachments?.[0]?.key).toBe(key);
+		});
+
+		it("should NOT re-send a prior chart on a later text-only turn (routes to chat model)", async () => {
+			const conversation = await caller.ai.createConversation({ mode: "chat" });
+
+			// Turn 1: paste a chart → vision model.
+			await caller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "Log this",
+				imageAttachments: [
+					{
+						key: `images/${testUserId}/ai-chat/turn1.png`,
+						mimeType: "image/png",
+						size: 3000,
+					},
+				],
+			});
+
+			// Turn 2: text-only follow-up → must use the chat (text) model and carry
+			// no image parts (the old chart is not re-sent).
+			const followUp = await caller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "Actually entry was 5012.50",
+			});
+
+			expect(followUp?.model).toBe(DEFAULT_CHAT_MODEL);
+			const callArgs = vi.mocked(aiGenerateText).mock.lastCall?.[0];
+			const hasAnyImage = (callArgs?.messages ?? []).some(
+				(m) =>
+					Array.isArray(m.content) && m.content.some((p) => p.type === "image"),
+			);
+			expect(hasAnyImage).toBe(false);
 		});
 
 		it("should allow an image-only message (no text)", async () => {

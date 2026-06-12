@@ -97,6 +97,11 @@ type ChatAttachment = NonNullable<
 	RouterOutputs["ai"]["getConversation"]["messages"][number]["attachments"]
 >[number];
 
+/** Free an object URL preview — guarded so it never revokes presigned https URLs. */
+function revokeBlob(url: string) {
+	if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+}
+
 interface ChatInterfaceProps {
 	mode: "chat" | "report";
 	onModeChange: (mode: "chat" | "report") => void;
@@ -115,6 +120,9 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const [pendingAttachments, setPendingAttachments] = useState<
 		PendingAttachment[]
 	>([]);
+	// Mirrors pendingAttachments.length for synchronous cap checks across a rapid
+	// batch of paste/drop calls (state length is stale until the next render).
+	const pendingCountRef = useRef(0);
 	// messageId -> logged tradeId, for instant non-interactive card state this session.
 	const [loggedByMessageId, setLoggedByMessageId] = useState<
 		Record<string, string>
@@ -184,9 +192,9 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	// Upload pasted/dropped/picked chart images, with instant blob preview.
 	const handleAddFiles = useCallback(
 		async (files: File[]) => {
-			const room = MAX_AI_CHAT_IMAGES - pendingAttachments.length;
-			if (room <= 0) return;
-			for (const file of files.slice(0, room)) {
+			for (const file of files) {
+				// Cap via the ref so a rapid batch can't overshoot before re-render.
+				if (pendingCountRef.current >= MAX_AI_CHAT_IMAGES) break;
 				if (
 					!AI_CHAT_ALLOWED_IMAGE_MIME_TYPES.includes(
 						file.type as (typeof AI_CHAT_ALLOWED_IMAGE_MIME_TYPES)[number],
@@ -199,6 +207,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 					toast.error(errImageTooLarge(AI_CHAT_MAX_IMAGE_SIZE / (1024 * 1024)));
 					continue;
 				}
+				pendingCountRef.current += 1; // reserve a slot
 				const id = crypto.randomUUID();
 				const previewUrl = URL.createObjectURL(file);
 				setPendingAttachments((prev) => [
@@ -214,27 +223,38 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				]);
 				const uploaded = await uploadImage(file);
 				setPendingAttachments((prev) =>
-					prev.map((a) =>
-						a.id === id
-							? uploaded
-								? {
-										...a,
-										status: "done",
-										key: uploaded.key,
-										previewUrl: uploaded.url,
-									}
-								: { ...a, status: "error" }
-							: a,
-					),
+					prev.map((a) => {
+						if (a.id !== id) return a;
+						if (uploaded) {
+							// Free the blob preview before swapping to the presigned URL.
+							revokeBlob(a.previewUrl);
+							return {
+								...a,
+								status: "done",
+								key: uploaded.key,
+								previewUrl: uploaded.url,
+							};
+						}
+						return { ...a, status: "error" };
+					}),
 				);
 			}
 		},
-		[pendingAttachments.length, uploadImage],
+		[uploadImage],
 	);
 
 	const removeAttachment = useCallback((id: string) => {
-		setPendingAttachments((prev) => prev.filter((a) => a.id !== id));
+		setPendingAttachments((prev) => {
+			const target = prev.find((a) => a.id === id);
+			if (target) revokeBlob(target.previewUrl);
+			return prev.filter((a) => a.id !== id);
+		});
 	}, []);
+
+	// Keep the synchronous count ref in sync with actual pending attachments.
+	useEffect(() => {
+		pendingCountRef.current = pendingAttachments.length;
+	}, [pendingAttachments]);
 
 	// Confirm & Log: create the trade, attach the source chart(s), mark logged.
 	const handleConfirmTrade = useCallback(
@@ -343,6 +363,8 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			if (!text && readyAttachments.length === 0) return;
 
 			setInput("");
+			// Free any remaining blob previews (error-state chips) before clearing.
+			for (const a of pendingAttachments) revokeBlob(a.previewUrl);
 			setPendingAttachments([]);
 			setPendingMessage(text || "📎 Chart attached");
 			setLastSentAt(Date.now());

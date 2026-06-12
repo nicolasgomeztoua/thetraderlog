@@ -255,8 +255,11 @@ export function TradeConfirmationCard({
 		};
 
 		setIsSubmitting(true);
-		await onConfirmTrade(messageId, input, chartAttachments);
-		setIsSubmitting(false);
+		try {
+			await onConfirmTrade(messageId, input, chartAttachments);
+		} finally {
+			setIsSubmitting(false);
+		}
 	}
 
 	// ---- Logged success state -------------------------------------------------
