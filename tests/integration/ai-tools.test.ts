@@ -11,6 +11,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { executeCallAnalytics } from "@/lib/ai/tools/call-analytics";
+import { getChatTools } from "@/lib/ai/tools/definitions";
 import { executeTool } from "@/lib/ai/tools/index";
 import { executeRunQuery } from "@/lib/ai/tools/run-query";
 import type { User } from "@/server/db/schema";
@@ -668,5 +669,35 @@ describe("executeTool", () => {
 			expect(result.success).toBe(false);
 			expect(result.error).toContain("Missing required parameters");
 		});
+	});
+});
+
+// =============================================================================
+// propose_trade — Trade Proposal Tool
+// =============================================================================
+
+describe("propose_trade tool", () => {
+	it("is registered in the chat tool set", () => {
+		const tools = getChatTools({ userId: userA.id, db });
+		expect(tools.propose_trade).toBeDefined();
+	});
+
+	it("echoes the proposal back without writing to the database", async () => {
+		const tools = getChatTools({ userId: userA.id, db });
+		const proposal = {
+			symbol: "ES",
+			direction: "long" as const,
+			entryPrice: "5000.25",
+			isClosed: false,
+			lowConfidenceFields: ["entryPrice"],
+		};
+
+		// execute is a no-op pass-through; it must not touch the DB.
+		const result = await tools.propose_trade.execute?.(proposal, {
+			toolCallId: "tc_test",
+			messages: [],
+		} as never);
+
+		expect(result).toEqual(proposal);
 	});
 });

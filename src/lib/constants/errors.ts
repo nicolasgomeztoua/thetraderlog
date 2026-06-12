@@ -40,6 +40,7 @@ export const ERR_JOURNAL_FIND_OR_CREATE_FAILED =
 export const ERR_TEMPLATE_CREATE_FAILED = "Failed to create template";
 export const ERR_ATTACHMENT_CREATE_FAILED = "Failed to create attachment";
 export const ERR_MESSAGE_SAVE_FAILED = "Failed to save user message";
+export const ERR_MESSAGE_NOT_FOUND = "Message not found";
 export const ERR_STRATEGY_DUPLICATE_FAILED = "Failed to duplicate strategy";
 export const ERR_MAEMFE_CALCULATE_FAILED = "Failed to calculate MAE/MFE";
 export const ERR_MARKET_DATA_REFRESH_FAILED = "Failed to refresh market data";
@@ -95,6 +96,10 @@ export const ERR_VALIDATION_CSV_UPLOAD = "Please upload a CSV file";
 export const ERR_VALIDATION_SELECT_ACCOUNT = "Please select an account";
 export const ERR_VALIDATION_IMAGES_ONLY = "Only image files are allowed";
 export const ERR_VALIDATION_DATE_RANGE = "End date must be after start date";
+export const ERR_IMAGE_TYPE_UNSUPPORTED =
+	"Only PNG, JPEG, and WebP images are allowed";
+export const errImageTooLarge = (maxMb: number) =>
+	`Image must be under ${maxMb}MB`;
 
 // =============================================================================
 // CSV IMPORT

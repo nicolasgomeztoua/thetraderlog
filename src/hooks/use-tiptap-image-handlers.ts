@@ -2,12 +2,17 @@
 
 import type { Editor } from "@tiptap/react";
 import { useCallback, useEffect } from "react";
+import type { UploadedImage } from "./use-image-upload";
 
 interface UseTiptapImageHandlersOptions {
 	/** Tiptap editor instance */
 	editor: Editor | null;
-	/** Function to upload a file and return the public URL */
-	uploadImage: (file: File) => Promise<string | null>;
+	/**
+	 * Function to upload a file. May return the full {@link UploadedImage} (from
+	 * useImageUpload) or just the URL string (custom journal uploader) — the
+	 * handler only needs the display URL.
+	 */
+	uploadImage: (file: File) => Promise<UploadedImage | string | null>;
 }
 
 /**
@@ -41,7 +46,9 @@ export function useTiptapImageHandlers({
 			editor.chain().focus().setImage({ src: blobUrl }).run();
 
 			// Upload in background
-			const finalUrl = await uploadImage(file);
+			const uploaded = await uploadImage(file);
+			const finalUrl =
+				typeof uploaded === "string" ? uploaded : (uploaded?.url ?? null);
 
 			if (finalUrl) {
 				// Preload the final image before swapping

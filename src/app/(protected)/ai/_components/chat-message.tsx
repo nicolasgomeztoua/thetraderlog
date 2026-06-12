@@ -2,8 +2,35 @@
 
 import { BarChart3, Check, Code2, Copy, Database, Zap } from "lucide-react";
 import { useCallback, useState } from "react";
+import type { RouterInputs, RouterOutputs } from "@/trpc/react";
 import { useTypewriter } from "../_hooks/use-typewriter";
 import { MessageRenderer } from "./message-renderer";
+import {
+	TradeConfirmationCard,
+	type TradeProposal,
+} from "./trade-confirmation-card";
+
+type CreateTradeInput = RouterInputs["trades"]["create"];
+type ChatAttachment = NonNullable<
+	RouterOutputs["ai"]["getConversation"]["messages"][number]["attachments"]
+>[number];
+type ConfirmTradeFn = (
+	messageId: string,
+	input: CreateTradeInput,
+	chartAttachments: ChatAttachment[],
+) => Promise<string | null>;
+
+const PROPOSE_TRADE_TOOL = "propose_trade";
+
+function parseProposal(args: string): TradeProposal | null {
+	try {
+		const parsed = JSON.parse(args);
+		if (parsed && typeof parsed === "object") return parsed as TradeProposal;
+	} catch {
+		// Invalid JSON
+	}
+	return null;
+}
 
 // =============================================================================
 // TOOL CALL DISPLAY HELPERS
@@ -97,23 +124,45 @@ function ToolBadges({ toolNames }: { toolNames: string[] }) {
 // CHAT MESSAGE
 // =============================================================================
 
+interface ChatMessageAttachment {
+	key: string;
+	mimeType: string;
+	filename?: string;
+	size?: number;
+	url?: string;
+}
+
 interface ChatMessageProps {
 	message: {
 		id: string;
 		role: string;
 		content: string;
 		toolCalls?: string | null;
+		attachments?: ChatMessageAttachment[] | null;
+		loggedTradeId?: string | null;
 	};
 	/** Whether this is the latest AI message in the conversation */
 	isLatest?: boolean;
 	/** Whether messages were loaded from history (skip typewriter) */
 	isFromHistory?: boolean;
+	/** Chart attachment(s) from the preceding user message (for the proposal card). */
+	chartAttachments?: ChatAttachment[];
+	/** Default account for a logged trade. */
+	defaultAccountId?: string | null;
+	/** Logged tradeId for this message's proposal, if already confirmed. */
+	loggedTradeId?: string | null;
+	/** Confirm-and-log handler, lifted to the chat interface. */
+	onConfirmTrade?: ConfirmTradeFn;
 }
 
 export function ChatMessage({
 	message,
 	isLatest = false,
 	isFromHistory = false,
+	chartAttachments = [],
+	defaultAccountId = null,
+	loggedTradeId = null,
+	onConfirmTrade,
 }: ChatMessageProps) {
 	const [copied, setCopied] = useState(false);
 
@@ -129,7 +178,19 @@ export function ChatMessage({
 		message.role === "assistant"
 			? parseToolCalls(message.toolCalls ?? null)
 			: [];
-	const toolNames = getUniqueToolNames(toolCalls);
+	// propose_trade renders as an inline card, not a tool badge.
+	const toolNames = getUniqueToolNames(toolCalls).filter(
+		(n) => n !== PROPOSE_TRADE_TOOL,
+	);
+	// If the model emitted several proposals in one message, the last is the most
+	// refined — render that one.
+	const proposeCalls = toolCalls.filter(
+		(tc) => tc.function?.name === PROPOSE_TRADE_TOOL,
+	);
+	const proposeCall = proposeCalls[proposeCalls.length - 1];
+	const proposal = proposeCall
+		? parseProposal(proposeCall.function.arguments)
+		: null;
 
 	const handleCopy = useCallback(async () => {
 		await navigator.clipboard.writeText(message.content);
@@ -138,6 +199,7 @@ export function ChatMessage({
 	}, [message.content]);
 
 	if (message.role === "user") {
+		const userAttachments = (message.attachments ?? []).filter((a) => a.url);
 		return (
 			<div className="animate-fade-in-up">
 				<div className="flex gap-2 sm:gap-3">
@@ -145,9 +207,31 @@ export function ChatMessage({
 						$
 					</span>
 					<div className="min-w-0 flex-1 border-primary/30 border-l-2 pl-3">
-						<p className="break-words font-mono text-foreground text-sm">
-							{message.content}
-						</p>
+						{message.content && (
+							<p className="break-words font-mono text-foreground text-sm">
+								{message.content}
+							</p>
+						)}
+						{userAttachments.length > 0 && (
+							<div className="mt-2 flex flex-wrap gap-2">
+								{userAttachments.map((att) => (
+									<a
+										className="block h-20 w-28 overflow-hidden rounded border border-primary/20 transition-colors hover:border-primary/40"
+										href={att.url}
+										key={att.key}
+										rel="noreferrer"
+										target="_blank"
+									>
+										{/* biome-ignore lint/performance/noImgElement: transient presigned preview */}
+										<img
+											alt={att.filename ?? "chart"}
+											className="h-full w-full object-cover"
+											src={att.url}
+										/>
+									</a>
+								))}
+							</div>
+						)}
 					</div>
 				</div>
 			</div>
@@ -176,6 +260,17 @@ export function ChatMessage({
 							<span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 cursor-blink bg-accent" />
 						)}
 					</div>
+					{proposal && onConfirmTrade && (
+						<TradeConfirmationCard
+							chartAttachments={chartAttachments}
+							defaultAccountId={defaultAccountId}
+							interactive={isLatest && !loggedTradeId}
+							loggedTradeId={loggedTradeId}
+							messageId={message.id}
+							onConfirmTrade={onConfirmTrade}
+							proposal={proposal}
+						/>
+					)}
 					{/* Copy button in card footer — only show when typing is complete */}
 					{(!enableTypewriter || isComplete) && (
 						<div className="mt-3 flex justify-end border-white/5 border-t pt-2 opacity-0 transition-opacity group-hover:opacity-100">

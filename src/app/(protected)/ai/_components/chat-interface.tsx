@@ -10,6 +10,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import {
 	UsageLimitBanner,
@@ -18,9 +19,21 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
-import { SUGGESTED_CHAT_QUERIES } from "@/lib/constants/ai";
-import { api } from "@/trpc/react";
-import { ChatInput } from "./chat-input";
+import { useImageUpload } from "@/hooks/use-image-upload";
+import {
+	AI_CHAT_ALLOWED_IMAGE_MIME_TYPES,
+	AI_CHAT_MAX_IMAGE_SIZE,
+	MAX_AI_CHAT_IMAGES,
+	SUGGESTED_CHAT_QUERIES,
+} from "@/lib/constants/ai";
+import {
+	ERR_IMAGE_TYPE_UNSUPPORTED,
+	ERR_TRADE_CREATE_FAILED,
+	errImageTooLarge,
+} from "@/lib/constants/errors";
+import { getErrorMessage } from "@/lib/shared/utils";
+import { api, type RouterInputs, type RouterOutputs } from "@/trpc/react";
+import { ChatInput, type PendingAttachment } from "./chat-input";
 import {
 	ChatLoadingIndicator,
 	ChatMessage,
@@ -79,6 +92,16 @@ function getTimeGreeting(): string {
 	return "Good evening";
 }
 
+type CreateTradeInput = RouterInputs["trades"]["create"];
+type ChatAttachment = NonNullable<
+	RouterOutputs["ai"]["getConversation"]["messages"][number]["attachments"]
+>[number];
+
+/** Free an object URL preview — guarded so it never revokes presigned https URLs. */
+function revokeBlob(url: string) {
+	if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+}
+
 interface ChatInterfaceProps {
 	mode: "chat" | "report";
 	onModeChange: (mode: "chat" | "report") => void;
@@ -94,8 +117,19 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 	const [lastSentAt, setLastSentAt] = useState<number>(0);
 	const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+	const [pendingAttachments, setPendingAttachments] = useState<
+		PendingAttachment[]
+	>([]);
+	// Mirrors pendingAttachments.length for synchronous cap checks across a rapid
+	// batch of paste/drop calls (state length is stale until the next render).
+	const pendingCountRef = useRef(0);
+	// messageId -> logged tradeId, for instant non-interactive card state this session.
+	const [loggedByMessageId, setLoggedByMessageId] = useState<
+		Record<string, string>
+	>({});
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const chatLimitReached = useChatLimitReached();
+	const { uploadImage } = useImageUpload({ context: "ai-chat" });
 
 	const greeting = useMemo(() => {
 		const timeGreeting = getTimeGreeting();
@@ -150,6 +184,135 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 		},
 	});
 
+	// Trade logging from a proposal card (confirm flow).
+	const createTrade = api.trades.create.useMutation();
+	const confirmUpload = api.trades.confirmUpload.useMutation();
+	const markProposalLogged = api.ai.markProposalLogged.useMutation();
+
+	// Upload pasted/dropped/picked chart images, with instant blob preview.
+	const handleAddFiles = useCallback(
+		async (files: File[]) => {
+			for (const file of files) {
+				// Cap via the ref so a rapid batch can't overshoot before re-render.
+				if (pendingCountRef.current >= MAX_AI_CHAT_IMAGES) break;
+				if (
+					!AI_CHAT_ALLOWED_IMAGE_MIME_TYPES.includes(
+						file.type as (typeof AI_CHAT_ALLOWED_IMAGE_MIME_TYPES)[number],
+					)
+				) {
+					toast.error(ERR_IMAGE_TYPE_UNSUPPORTED);
+					continue;
+				}
+				if (file.size > AI_CHAT_MAX_IMAGE_SIZE) {
+					toast.error(errImageTooLarge(AI_CHAT_MAX_IMAGE_SIZE / (1024 * 1024)));
+					continue;
+				}
+				pendingCountRef.current += 1; // reserve a slot
+				const id = crypto.randomUUID();
+				const previewUrl = URL.createObjectURL(file);
+				setPendingAttachments((prev) => [
+					...prev,
+					{
+						id,
+						previewUrl,
+						status: "uploading",
+						mimeType: file.type,
+						filename: file.name,
+						size: file.size,
+					},
+				]);
+				const uploaded = await uploadImage(file);
+				setPendingAttachments((prev) =>
+					prev.map((a) => {
+						if (a.id !== id) return a;
+						if (uploaded) {
+							// Free the blob preview before swapping to the presigned URL.
+							revokeBlob(a.previewUrl);
+							return {
+								...a,
+								status: "done",
+								key: uploaded.key,
+								previewUrl: uploaded.url,
+							};
+						}
+						return { ...a, status: "error" };
+					}),
+				);
+			}
+		},
+		[uploadImage],
+	);
+
+	const removeAttachment = useCallback((id: string) => {
+		setPendingAttachments((prev) => {
+			const target = prev.find((a) => a.id === id);
+			if (target) revokeBlob(target.previewUrl);
+			return prev.filter((a) => a.id !== id);
+		});
+	}, []);
+
+	// Keep the synchronous count ref in sync with actual pending attachments.
+	useEffect(() => {
+		pendingCountRef.current = pendingAttachments.length;
+	}, [pendingAttachments]);
+
+	// Confirm & Log: create the trade, attach the source chart(s), mark logged.
+	const handleConfirmTrade = useCallback(
+		async (
+			messageId: string,
+			tradeInput: CreateTradeInput,
+			chartAttachments: ChatAttachment[],
+		): Promise<string | null> => {
+			try {
+				const trade = await createTrade.mutateAsync(tradeInput);
+				if (!trade) {
+					toast.error(ERR_TRADE_CREATE_FAILED);
+					return null;
+				}
+				// Attach the source chart(s) to the new trade (non-fatal on failure).
+				for (const att of chartAttachments) {
+					if (!att.size || att.size <= 0) continue;
+					try {
+						await confirmUpload.mutateAsync({
+							tradeId: trade.id,
+							key: att.key,
+							filename: att.filename ?? "chart.png",
+							mimeType: att.mimeType,
+							size: att.size,
+							caption: "Chart from AI chat",
+						});
+					} catch {
+						// Trade is logged; a failed attachment shouldn't block success.
+					}
+				}
+				try {
+					await markProposalLogged.mutateAsync({
+						messageId,
+						tradeId: trade.id,
+					});
+				} catch {
+					// Durable flag is best-effort; session state still guards double-log.
+				}
+				setLoggedByMessageId((prev) => ({ ...prev, [messageId]: trade.id }));
+				void utils.ai.getConversation.invalidate({
+					conversationId: activeConversationId ?? "",
+				});
+				toast.success("Trade logged");
+				return trade.id;
+			} catch (error) {
+				toast.error(getErrorMessage(error, ERR_TRADE_CREATE_FAILED));
+				return null;
+			}
+		},
+		[
+			createTrade,
+			confirmUpload,
+			markProposalLogged,
+			utils,
+			activeConversationId,
+		],
+	);
+
 	const messageCount = conversation?.messages?.length ?? 0;
 
 	// Auto-scroll as content grows (typewriter animation, new messages, loading indicator)
@@ -185,10 +348,25 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const handleSend = useCallback(
 		async (content?: string) => {
 			const text = (content ?? input).trim();
-			if (!text) return;
+			const readyAttachments = pendingAttachments.flatMap((a) =>
+				a.status === "done" && a.key
+					? [
+							{
+								key: a.key,
+								mimeType: a.mimeType,
+								filename: a.filename,
+								size: a.size,
+							},
+						]
+					: [],
+			);
+			if (!text && readyAttachments.length === 0) return;
 
 			setInput("");
-			setPendingMessage(text);
+			// Free any remaining blob previews (error-state chips) before clearing.
+			for (const a of pendingAttachments) revokeBlob(a.previewUrl);
+			setPendingAttachments([]);
+			setPendingMessage(text || "📎 Chart attached");
 			setLastSentAt(Date.now());
 
 			// Create conversation if needed
@@ -204,10 +382,14 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				conversationId,
 				content: text,
 				...(selectedAccountId && { accountId: selectedAccountId }),
+				...(readyAttachments.length > 0 && {
+					imageAttachments: readyAttachments,
+				}),
 			});
 		},
 		[
 			input,
+			pendingAttachments,
 			activeConversationId,
 			createConversation,
 			sendMessage,
@@ -223,6 +405,25 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 
 	const messages = conversation?.messages ?? [];
 	const isLoading = sendMessage.isPending || createConversation.isPending;
+
+	// For each assistant message, the chart attachment(s) of the user message
+	// directly before it — the source the proposal was extracted from.
+	const chartAttachmentsByMessageId = useMemo(() => {
+		const list = conversation?.messages ?? [];
+		const map: Record<string, ChatAttachment[]> = {};
+		for (let i = 0; i < list.length; i++) {
+			const msg = list[i];
+			if (msg?.role !== "assistant") continue;
+			for (let j = i - 1; j >= 0; j--) {
+				const prev = list[j];
+				if (prev?.role === "user") {
+					if (prev.attachments?.length) map[msg.id] = prev.attachments;
+					break;
+				}
+			}
+		}
+		return map;
+	}, [conversation?.messages]);
 
 	return (
 		<div className="flex h-full gap-0 sm:gap-3" data-testid="ai-chat-interface">
@@ -404,10 +605,20 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 									const isFromHistory = lastSentAt === 0;
 									return (
 										<ChatMessage
+											chartAttachments={
+												chartAttachmentsByMessageId[message.id] ?? []
+											}
+											defaultAccountId={selectedAccountId}
 											isFromHistory={isFromHistory}
 											isLatest={isLastAssistant}
 											key={message.id}
+											loggedTradeId={
+												loggedByMessageId[message.id] ??
+												message.loggedTradeId ??
+												null
+											}
 											message={message}
+											onConfirmTrade={handleConfirmTrade}
 										/>
 									);
 								})}
@@ -429,9 +640,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 							</div>
 						)}
 						<ChatInput
+							attachments={pendingAttachments}
+							canAttach={pendingAttachments.length < MAX_AI_CHAT_IMAGES}
 							disabled={chatLimitReached}
 							isLoading={isLoading}
+							onAddFiles={(files) => void handleAddFiles(files)}
 							onChange={setInput}
+							onRemoveAttachment={removeAttachment}
 							onSubmit={() => void handleSend()}
 							value={input}
 						/>

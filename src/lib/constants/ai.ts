@@ -15,6 +15,20 @@ export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
  */
 export const DEFAULT_REPORT_MODEL = "xiaomi/mimo-v2-pro";
 
+/**
+ * Vision model used ONLY for chat turns that carry an image (e.g. a pasted chart
+ * screenshot). Text-only turns keep using DEFAULT_CHAT_MODEL (Kimi is reasoning-first
+ * and weak on small-text OCR). Qwen3-VL-8B leads the cheap-open tier on chart/number
+ * OCR (OCRBench 896, DocVQA 96.1, ChartQA 90.3) at $0.08/$0.50 per 1M tokens.
+ */
+export const DEFAULT_VISION_MODEL = "qwen/qwen3-vl-8b-instruct";
+
+/**
+ * Accuracy escalation for vision turns when the 8B fumbles a decimal.
+ * ~3B-active MoE, $0.13/$0.52 per 1M tokens. Documented fallback; not auto-routed yet.
+ */
+export const VISION_FALLBACK_MODEL = "qwen/qwen3-vl-30b-a3b-instruct";
+
 // =============================================================================
 // AI MODE OPTIONS
 // =============================================================================
@@ -78,6 +92,31 @@ export const MAX_SQL_QUERY_ROWS = 500;
  * Maximum OHLC bars returned from market data tool
  */
 export const MAX_MARKET_DATA_BARS = 1000;
+
+// =============================================================================
+// CHAT IMAGE ATTACHMENTS (paste-a-chart-to-log)
+// =============================================================================
+
+/**
+ * Max size for an image pasted/dropped into AI chat. Larger than bug-report
+ * screenshots (5MB) because trading charts are often high-resolution.
+ */
+export const AI_CHAT_MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
+/**
+ * Allowed mime types for chat image attachments. GIF is excluded — charts are
+ * static and animation only wastes vision tokens. All are accepted by Qwen3-VL.
+ */
+export const AI_CHAT_ALLOWED_IMAGE_MIME_TYPES = [
+	"image/png",
+	"image/jpeg",
+	"image/webp",
+] as const;
+
+/**
+ * Maximum images attached to a single chat message.
+ */
+export const MAX_AI_CHAT_IMAGES = 4;
 
 // =============================================================================
 // SUGGESTED QUERIES & PROMPTS

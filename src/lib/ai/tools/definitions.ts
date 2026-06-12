@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { directionEnum } from "@/lib/shared/schemas";
 import type { db as DbInstance } from "@/server/db";
 import { executeCallAnalytics } from "./call-analytics";
 import { executeGetMarketData } from "./get-market-data";
@@ -229,14 +230,78 @@ function createStoreReportDataTool(context: ToolContext) {
 	});
 }
 
+function createProposeTradeTool() {
+	return tool({
+		description:
+			"Emit a structured trade proposal extracted from a chart screenshot or the user's description. " +
+			"Call this ONCE you have enough to propose a trade — even if some fields are still uncertain. " +
+			"Transcribe prices VERBATIM from the chart; do not round or 'clean up' numbers. " +
+			"Put the names of any fields you GUESSED or could not read precisely into lowConfidenceFields so the UI flags them for review. " +
+			"For CLOSED trades, compute realizedPnl as an educated guess from (exit − entry) for long / (entry − exit) for short, times the contract point value times quantity, and ALWAYS include 'realizedPnl' in lowConfidenceFields. " +
+			"This does NOT save anything — it renders an editable card the user must confirm. NEVER claim the trade is logged.",
+		inputSchema: z.object({
+			symbol: z
+				.string()
+				.describe('Futures root symbol, e.g. "ES", "NQ", "MNQ", "GC".'),
+			direction: directionEnum.describe('"long" or "short".'),
+			entryPrice: z.string().describe("Entry price as read off the chart."),
+			entryTime: z
+				.string()
+				.optional()
+				.describe("ISO 8601 datetime if visible; omit if unknown."),
+			quantity: z
+				.string()
+				.optional()
+				.describe("Number of contracts; omit if unknown (ask the user)."),
+			exitPrice: z.string().optional(),
+			exitTime: z.string().optional(),
+			stopLoss: z.string().optional(),
+			takeProfit: z.string().optional(),
+			fees: z.string().optional(),
+			realizedPnl: z
+				.string()
+				.optional()
+				.describe(
+					"Educated-guess P&L for CLOSED trades. Always flag in lowConfidenceFields.",
+				),
+			riskRewardRatio: z
+				.string()
+				.optional()
+				.describe(
+					"R:R if derivable (e.g. '2.0'). Display-only — not stored on the trade.",
+				),
+			setupType: z
+				.string()
+				.optional()
+				.describe("Setup/strategy name only if clearly indicated."),
+			notes: z
+				.string()
+				.optional()
+				.describe("Short rationale or what was read from the chart."),
+			isClosed: z
+				.boolean()
+				.describe("True if the chart shows a completed trade (has an exit)."),
+			lowConfidenceFields: z
+				.array(z.string())
+				.default([])
+				.describe(
+					"Names of fields you guessed or read with low confidence, e.g. ['entryPrice','realizedPnl'].",
+				),
+		}),
+		// No DB write — the proposal is echoed back so it lands in the message's
+		// toolCalls JSON, which the chat UI parses to render the confirmation card.
+		execute: async (proposal) => proposal,
+	});
+}
+
 // =============================================================================
 // TOOL SET FACTORIES
 // =============================================================================
 
 /**
- * Get Vercel AI SDK tools for chat mode (no store_report_data).
+ * Data-access tools shared by chat and report modes.
  */
-export function getChatTools(context: ToolContext) {
+function getBaseTools(context: ToolContext) {
 	return {
 		run_query: createRunQueryTool(context),
 		call_analytics: createCallAnalyticsTool(context),
@@ -246,11 +311,22 @@ export function getChatTools(context: ToolContext) {
 }
 
 /**
- * Get Vercel AI SDK tools for report mode (includes store_report_data).
+ * Get Vercel AI SDK tools for chat mode (adds propose_trade, no store_report_data).
+ */
+export function getChatTools(context: ToolContext) {
+	return {
+		...getBaseTools(context),
+		propose_trade: createProposeTradeTool(),
+	};
+}
+
+/**
+ * Get Vercel AI SDK tools for report mode (adds store_report_data; no propose_trade —
+ * the confirmation card is chat-only).
  */
 export function getReportTools(context: ToolContext) {
 	return {
-		...getChatTools(context),
+		...getBaseTools(context),
 		store_report_data: createStoreReportDataTool(context),
 	};
 }
