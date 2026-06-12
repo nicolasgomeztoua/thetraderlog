@@ -195,6 +195,9 @@ export function BehavioralMetrics({
 											)}
 										>
 											{formatCurrency(emotion.avgPnl)}
+											<span className="ml-1 text-[10px] text-muted-foreground/60 uppercase">
+												avg
+											</span>
 										</div>
 										<div className="font-mono text-muted-foreground/60 text-xs">
 											{emotion.trades}t / {emotion.winRate.toFixed(0)}% WR
