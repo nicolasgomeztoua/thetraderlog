@@ -50,6 +50,20 @@ const EDITOR_EXTENSIONS = [
 ];
 
 // =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Normalize HTML to its saved form (S3 keys instead of presigned URLs).
+ * Presigned URLs get a fresh signature on every fetch, so comparisons must
+ * happen in key-space or identical content always looks "changed".
+ */
+function canonicalize(html: string | null): string | null {
+	if (!html) return html;
+	return transformHtmlToS3Keys(html) ?? html;
+}
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
@@ -145,10 +159,10 @@ export function TradeNoteEditor({
 	useEffect(() => {
 		if (!editor || isInitializedRef.current) return;
 
-		// Set initial content
+		// Set initial content (emitUpdate: false so loading doesn't trigger auto-save)
 		const content = value ?? "";
-		editor.commands.setContent(content);
-		lastSavedContentRef.current = content || "<p></p>";
+		editor.commands.setContent(content, { emitUpdate: false });
+		lastSavedContentRef.current = canonicalize(content) || "<p></p>";
 		isInitializedRef.current = true;
 	}, [editor, value]);
 
@@ -157,16 +171,20 @@ export function TradeNoteEditor({
 		(newValue: string | null) => {
 			if (!editor) return;
 
-			const currentContent = editor.getHTML();
+			// Compare in S3-key space: refetches re-sign image URLs, and reloading
+			// the editor for a signature-only change remounts <img> (visible flicker)
+			const currentCanonical = canonicalize(editor.getHTML());
 			const normalizedCurrent =
-				currentContent === "<p></p>" ? null : currentContent;
-			const normalizedNew = newValue ?? null;
+				currentCanonical === "<p></p>" ? null : currentCanonical;
+			const newCanonical = canonicalize(newValue);
+			const normalizedNew = newCanonical ?? null;
 
 			// Only update if the external value is different from current editor content
 			// This prevents cursor jumping when the user is typing
 			if (normalizedCurrent !== normalizedNew) {
-				editor.commands.setContent(newValue ?? "");
-				lastSavedContentRef.current = newValue ?? "<p></p>";
+				// emitUpdate: false so an external load doesn't trigger auto-save
+				editor.commands.setContent(newValue ?? "", { emitUpdate: false });
+				lastSavedContentRef.current = newCanonical ?? "<p></p>";
 			}
 		},
 		[editor],
@@ -175,8 +193,10 @@ export function TradeNoteEditor({
 	// Watch for external value changes (but not from our own updates)
 	useEffect(() => {
 		// Skip if this is from our own update
-		if (lastSavedContentRef.current === value) return;
-		if (lastSavedContentRef.current === "<p></p>" && value === null) return;
+		const canonicalValue = canonicalize(value);
+		if (lastSavedContentRef.current === canonicalValue) return;
+		if (lastSavedContentRef.current === "<p></p>" && canonicalValue === null)
+			return;
 
 		handleExternalValueChange(value);
 	}, [value, handleExternalValueChange]);
