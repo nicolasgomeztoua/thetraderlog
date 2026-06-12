@@ -16,6 +16,8 @@ import {
 	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
+	DEFAULT_VISION_MODEL,
+	MAX_AI_CHAT_IMAGES,
 	MAX_CHAT_MESSAGES_PER_CONVERSATION,
 	MAX_TOOL_ROUNDS_CHAT,
 } from "@/lib/constants/ai";
@@ -25,9 +27,11 @@ import {
 	FEATURE_PDF_EXPORT,
 } from "@/lib/constants/billing";
 import {
+	ERR_ACCESS_DENIED,
 	ERR_CONVERSATION_CREATE_FAILED,
 	ERR_CONVERSATION_NOT_FOUND,
 	ERR_MESSAGE_LIMIT_REACHED,
+	ERR_MESSAGE_NOT_FOUND,
 	ERR_MESSAGE_SAVE_FAILED,
 	ERR_REPORT_CONVERSATION_CREATE_FAILED,
 	ERR_REPORT_CONVERSATION_NOT_FOUND,
@@ -37,6 +41,7 @@ import {
 	ERR_REPORT_ONLY_FAILED_RETRY,
 } from "@/lib/constants/errors";
 import { logger } from "@/lib/logger";
+import { getPresignedDownloadUrl, isS3Configured } from "@/lib/storage/s3";
 import {
 	createTRPCRouter,
 	protectedProcedure,
@@ -92,11 +97,34 @@ export const aiRouter = createTRPCRouter({
 	 */
 	sendMessage: requireFeature(FEATURE_AI_CHAT)
 		.input(
-			z.object({
-				conversationId: z.string(),
-				content: z.string().min(1).max(10_000),
-				accountId: z.string().optional(),
-			}),
+			z
+				.object({
+					conversationId: z.string(),
+					content: z.string().max(10_000),
+					accountId: z.string().optional(),
+					// Image attachments (e.g. a pasted chart screenshot). Keys must live
+					// under the caller's images/{userId}/ prefix — enforced server-side.
+					imageAttachments: z
+						.array(
+							z.object({
+								key: z.string(),
+								mimeType: z.string(),
+								filename: z.string().optional(),
+								size: z.number().int().positive().optional(),
+							}),
+						)
+						.max(MAX_AI_CHAT_IMAGES)
+						.optional(),
+				})
+				.refine(
+					(v) =>
+						v.content.trim().length > 0 ||
+						(v.imageAttachments?.length ?? 0) > 0,
+					{
+						message: "Message must include text or an image",
+						path: ["content"],
+					},
+				),
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Validate inputs BEFORE incrementing usage so validation-only failures
@@ -110,6 +138,14 @@ export const aiRouter = createTRPCRouter({
 
 			if (!conversation) {
 				throw new Error(ERR_CONVERSATION_NOT_FOUND);
+			}
+
+			// Reject any image key not owned by this user before it reaches the model.
+			const ownedKeyPrefix = `images/${ctx.user.id}/`;
+			for (const att of input.imageAttachments ?? []) {
+				if (!att.key.startsWith(ownedKeyPrefix)) {
+					throw new Error(ERR_ACCESS_DENIED);
+				}
 			}
 
 			const existingMessages = await ctx.db.query.aiMessages.findMany({
@@ -140,6 +176,9 @@ export const aiRouter = createTRPCRouter({
 						conversationId: input.conversationId,
 						role: "user",
 						content: input.content,
+						attachments: input.imageAttachments?.length
+							? input.imageAttachments
+							: null,
 					})
 					.returning();
 
@@ -165,12 +204,41 @@ export const aiRouter = createTRPCRouter({
 					orderBy: [aiMessages.createdAt],
 				});
 
-				const messages: ModelMessage[] = allMessages.map((msg) => ({
-					role: msg.role as "user" | "assistant",
-					content: msg.content ?? "",
-				}));
+				const messages: ModelMessage[] = allMessages.map((msg) => {
+					const atts = msg.attachments ?? [];
+					// Build a multimodal user message when this turn carries images.
+					// Presigned URLs are regenerated here (never persisted); the AI SDK
+					// downloads the bytes server-side and forwards them to OpenRouter,
+					// so 1h expiry only needs to outlive this single request.
+					if (msg.role === "user" && atts.length > 0 && isS3Configured()) {
+						return {
+							role: "user",
+							content: [
+								...(msg.content
+									? [{ type: "text" as const, text: msg.content }]
+									: []),
+								...atts.map((a) => ({
+									type: "image" as const,
+									image: new URL(getPresignedDownloadUrl(a.key, 3600)),
+									mediaType: a.mimeType,
+								})),
+							],
+						};
+					}
+					return {
+						role: msg.role as "user" | "assistant",
+						content: msg.content ?? "",
+					};
+				});
 
-				const modelId = conversation.model ?? DEFAULT_CHAT_MODEL;
+				// Route image-bearing turns to the vision model; text-only turns keep the
+				// conversation default (Kimi). conversation.model is left untouched so later
+				// text turns revert automatically. (Image attachments only exist when S3
+				// was configured at upload time; the message build re-checks S3 anyway.)
+				const hasImageThisTurn = (input.imageAttachments?.length ?? 0) > 0;
+				const modelId = hasImageThisTurn
+					? DEFAULT_VISION_MODEL
+					: (conversation.model ?? DEFAULT_CHAT_MODEL);
 
 				// Vercel AI SDK handles the tool-calling loop via maxSteps
 				const tools = getChatTools({
@@ -219,15 +287,19 @@ export const aiRouter = createTRPCRouter({
 					.returning();
 
 				// Update conversation title from first user message if not set
-				if (!conversation.title && input.content.length > 0) {
-					const title =
-						input.content.length > 100
-							? `${input.content.slice(0, 97)}...`
-							: input.content;
-					await ctx.db
-						.update(aiConversations)
-						.set({ title })
-						.where(eq(aiConversations.id, input.conversationId));
+				if (!conversation.title) {
+					const base = input.content.trim()
+						? input.content
+						: input.imageAttachments?.length
+							? "Chart analysis"
+							: "";
+					if (base) {
+						const title = base.length > 100 ? `${base.slice(0, 97)}...` : base;
+						await ctx.db
+							.update(aiConversations)
+							.set({ title })
+							.where(eq(aiConversations.id, input.conversationId));
+					}
 				}
 
 				if (!savedMessage) {
@@ -272,7 +344,52 @@ export const aiRouter = createTRPCRouter({
 				throw new Error(ERR_CONVERSATION_NOT_FOUND);
 			}
 
-			return conversation;
+			// Regenerate a presigned URL per stored attachment key so the client can
+			// render thumbnails. URLs are transient (never persisted).
+			const messages = conversation.messages.map((m) => ({
+				...m,
+				attachments:
+					m.attachments?.map((a) => ({
+						...a,
+						url: isS3Configured()
+							? getPresignedDownloadUrl(a.key, 3600)
+							: a.key,
+					})) ?? null,
+			}));
+
+			return { ...conversation, messages };
+		}),
+
+	/**
+	 * Mark an assistant message's trade proposal as logged. Durable double-log
+	 * guard — once set, the confirmation card renders read-only on reload/in other tabs.
+	 */
+	markProposalLogged: protectedProcedure
+		.input(z.object({ messageId: z.string(), tradeId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			// Verify the message belongs to a conversation owned by this user.
+			const message = await ctx.db.query.aiMessages.findFirst({
+				where: eq(aiMessages.id, input.messageId),
+			});
+			if (!message) {
+				throw new Error(ERR_MESSAGE_NOT_FOUND);
+			}
+			const owner = await ctx.db.query.aiConversations.findFirst({
+				where: and(
+					eq(aiConversations.id, message.conversationId),
+					eq(aiConversations.userId, ctx.user.id),
+				),
+			});
+			if (!owner) {
+				throw new Error(ERR_ACCESS_DENIED);
+			}
+
+			await ctx.db
+				.update(aiMessages)
+				.set({ loggedTradeId: input.tradeId })
+				.where(eq(aiMessages.id, input.messageId));
+
+			return { success: true };
 		}),
 
 	/**

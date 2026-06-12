@@ -569,6 +569,14 @@ export const aiConversations = createTable(
 // AI MESSAGES TABLE
 // ============================================================================
 
+/** Image attachment stored on a chat message (e.g. a pasted chart screenshot). */
+export type AiMessageAttachment = {
+	key: string; // S3 key (images/{userId}/ai-chat/...)
+	mimeType: string;
+	filename?: string;
+	size?: number;
+};
+
 export const aiMessages = createTable(
 	"ai_message",
 	{
@@ -583,6 +591,12 @@ export const aiMessages = createTable(
 		model: text("model"), // Model used for this message (assistant messages)
 		tokensUsed: integer("tokens_used"), // Token count for this message
 		toolCalls: text("tool_calls"), // JSON string of tool calls made
+		// Image attachments (S3 keys) carried by this message — used for vision
+		// analysis and re-rendered as thumbnails on history reload.
+		attachments: jsonb("attachments").$type<AiMessageAttachment[]>(),
+		// Set when a propose_trade card in this message is confirmed & logged —
+		// durable double-log guard across reloads/tabs.
+		loggedTradeId: text("logged_trade_id"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),

@@ -6,9 +6,16 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { DEFAULT_CHAT_MODEL, DEFAULT_REPORT_MODEL } from "@/lib/constants/ai";
+import { aiGenerateText } from "@/lib/ai/client";
 import {
+	DEFAULT_CHAT_MODEL,
+	DEFAULT_REPORT_MODEL,
+	DEFAULT_VISION_MODEL,
+} from "@/lib/constants/ai";
+import {
+	ERR_ACCESS_DENIED,
 	ERR_CONVERSATION_NOT_FOUND,
+	ERR_MESSAGE_NOT_FOUND,
 	ERR_REPORT_NOT_FOUND,
 } from "@/lib/constants/errors";
 import type { User } from "@/server/db/schema";
@@ -19,6 +26,18 @@ import {
 	type TestCaller,
 	truncateAllTables,
 } from "../utils";
+
+/** Build a mocked aiGenerateText result that emits a propose_trade tool call. */
+function mockProposeTradeResult(input: Record<string, unknown>) {
+	return {
+		text: "Here's what I read off the chart — review and confirm.",
+		totalTokens: 200,
+		steps: [
+			{ toolCalls: [{ toolCallId: "tc_1", toolName: "propose_trade", input }] },
+		],
+		finishReason: "stop",
+	} as unknown as Awaited<ReturnType<typeof aiGenerateText>>;
+}
 
 // =============================================================================
 // MOCKS — Must be declared before any module imports that use them
@@ -72,6 +91,7 @@ vi.mock("@/trigger/generate-ai-report", () => ({
 describe("ai router", () => {
 	let caller: TestCaller;
 	let otherCaller: TestCaller;
+	let testUserId: string;
 
 	beforeAll(async () => {
 		await truncateAllTables();
@@ -79,6 +99,7 @@ describe("ai router", () => {
 		// Create two users to test ownership isolation
 		// Beta metadata bypasses usage limits (these tests test AI CRUD, not billing)
 		const user = await createTestUser({ name: "AI Test User" });
+		testUserId = user.id;
 		const userWithBeta = {
 			...user,
 			publicMetadata: { beta: true },
@@ -213,6 +234,149 @@ describe("ai router", () => {
 					content: "Trying to access someone else's chat",
 				}),
 			).rejects.toThrow(ERR_CONVERSATION_NOT_FOUND);
+		});
+	});
+
+	// =========================================================================
+	// sendMessage — chart image attachments (vision)
+	// =========================================================================
+
+	describe("sendMessage with chart images", () => {
+		it("should persist attachments and route to the vision model", async () => {
+			const conversation = await caller.ai.createConversation({ mode: "chat" });
+			const key = `images/${testUserId}/ai-chat/chart.png`;
+
+			const response = await caller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "Log this trade",
+				imageAttachments: [
+					{ key, mimeType: "image/png", filename: "chart.png", size: 4242 },
+				],
+			});
+
+			// Image-bearing turn uses the vision model, not the chat default.
+			expect(response?.model).toBe(DEFAULT_VISION_MODEL);
+
+			const updated = await caller.ai.getConversation({
+				conversationId: conversation.id,
+			});
+			const userMessage = updated.messages.find((m) => m.role === "user");
+			expect(userMessage?.attachments).toHaveLength(1);
+			expect(userMessage?.attachments?.[0]?.key).toBe(key);
+		});
+
+		it("should allow an image-only message (no text)", async () => {
+			const conversation = await caller.ai.createConversation({ mode: "chat" });
+			const key = `images/${testUserId}/ai-chat/only.png`;
+
+			const response = await caller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "",
+				imageAttachments: [{ key, mimeType: "image/png", size: 1000 }],
+			});
+
+			expect(response?.role).toBe("assistant");
+			expect(response?.model).toBe(DEFAULT_VISION_MODEL);
+		});
+
+		it("should reject image keys not owned by the user", async () => {
+			const conversation = await caller.ai.createConversation({ mode: "chat" });
+
+			await expect(
+				caller.ai.sendMessage({
+					conversationId: conversation.id,
+					content: "sneaky",
+					imageAttachments: [
+						{ key: "images/someone-else/ai-chat/x.png", mimeType: "image/png" },
+					],
+				}),
+			).rejects.toThrow(ERR_ACCESS_DENIED);
+		});
+
+		it("should store a propose_trade proposal in the assistant toolCalls", async () => {
+			vi.mocked(aiGenerateText).mockResolvedValueOnce(
+				mockProposeTradeResult({
+					symbol: "NQ",
+					direction: "short",
+					entryPrice: "29555.25",
+					isClosed: false,
+					lowConfidenceFields: ["entryPrice"],
+				}),
+			);
+
+			const conversation = await caller.ai.createConversation({ mode: "chat" });
+			const response = await caller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "Log this",
+				imageAttachments: [
+					{
+						key: `images/${testUserId}/ai-chat/p.png`,
+						mimeType: "image/png",
+						size: 2000,
+					},
+				],
+			});
+
+			expect(response?.toolCalls).toBeTruthy();
+			const toolCalls = JSON.parse(response?.toolCalls ?? "[]") as {
+				function: { name: string; arguments: string };
+			}[];
+			const propose = toolCalls.find(
+				(tc) => tc.function.name === "propose_trade",
+			);
+			expect(propose).toBeDefined();
+			const args = JSON.parse(propose?.function.arguments ?? "{}");
+			expect(args.symbol).toBe("NQ");
+			expect(args.direction).toBe("short");
+		});
+	});
+
+	// =========================================================================
+	// markProposalLogged
+	// =========================================================================
+
+	describe("markProposalLogged", () => {
+		it("should record the logged tradeId on the message", async () => {
+			const conversation = await caller.ai.createConversation({ mode: "chat" });
+			const assistant = await caller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "Log this trade",
+			});
+
+			await caller.ai.markProposalLogged({
+				messageId: assistant?.id ?? "",
+				tradeId: "trade_test_123",
+			});
+
+			const updated = await caller.ai.getConversation({
+				conversationId: conversation.id,
+			});
+			const marked = updated.messages.find((m) => m.id === assistant?.id);
+			expect(marked?.loggedTradeId).toBe("trade_test_123");
+		});
+
+		it("should reject marking a message in another user's conversation", async () => {
+			const conversation = await caller.ai.createConversation({ mode: "chat" });
+			const assistant = await caller.ai.sendMessage({
+				conversationId: conversation.id,
+				content: "My private trade",
+			});
+
+			await expect(
+				otherCaller.ai.markProposalLogged({
+					messageId: assistant?.id ?? "",
+					tradeId: "trade_hijack",
+				}),
+			).rejects.toThrow(ERR_ACCESS_DENIED);
+		});
+
+		it("should throw for a non-existent message", async () => {
+			await expect(
+				caller.ai.markProposalLogged({
+					messageId: "nonexistent_message_id",
+					tradeId: "trade_x",
+				}),
+			).rejects.toThrow(ERR_MESSAGE_NOT_FOUND);
 		});
 	});
 

@@ -98,6 +98,21 @@ You are in **chat mode**. Be concise and conversational:
 - Use markdown formatting: **bold** for key metrics, \`code\` for SQL snippets, tables for comparisons
 - When referencing hours, sessions, or times of day, always label them in the user's timezone (e.g., "9:00 AM EST"), never "UTC"`;
 
+const VISION_TRADE_LOGGING_INSTRUCTIONS = `## Logging a Trade from a Chart Screenshot
+
+When the user pastes or attaches a chart screenshot, your job is to help them log the trade. Use the \`propose_trade\` tool for this — it renders an editable confirmation card the user reviews before anything is saved.
+
+### Workflow
+1. **Read the chart.** Identify the symbol, direction (long/short), and any visible price levels — entry, exit, stop-loss, take-profit — plus an approximate risk:reward if shown. Many charting tools draw the entry/stop/target as horizontal lines or a shaded risk/reward box.
+2. **Ask for what you cannot read.** A chart rarely shows the exact fill price, contract quantity, fees, or which account was used. Ask concise, specific plain-text questions for these (e.g. "What was your exact entry and how many contracts?"). Ask only for what you genuinely need.
+3. **Propose.** Once you have enough — even with some uncertainty — call \`propose_trade\`. You do NOT need every field; omit what's truly unknown and let the user fill it on the card.
+
+### Rules
+- **Transcribe numbers VERBATIM.** Read prices exactly off the axis/labels (e.g. \`29555.25\`). Never round or "clean up" a price. If a digit is ambiguous or partially obscured, give your best guess AND add that field's name to \`lowConfidenceFields\` so the card flags it for the user to verify.
+- **direction** must be exactly \`long\` or \`short\`. Leave \`setupType\` empty unless the setup is clearly indicated.
+- **P&L is an educated guess.** For a CLOSED trade, compute \`realizedPnl\` from the prices: (exit − entry) for long, (entry − exit) for short, times the contract point value times quantity. The app knows futures point values (ES=$50/pt, NQ=$20/pt, MNQ=$2/pt, MES=$5/pt, YM=$5/pt, GC=$100/pt, CL=$1000/pt, …). ALWAYS include \`realizedPnl\` in \`lowConfidenceFields\` — the user confirms it against their broker.
+- **Never claim the trade is logged.** You cannot save trades — only the user confirms via the card. After calling \`propose_trade\`, say something brief like "Here's what I read off the chart — review and edit the fields, then hit Confirm & Log." If the user replies with corrections, call \`propose_trade\` again with the updated values.`;
+
 const REPORT_MODE_INSTRUCTIONS = `## Mode: Report
 
 You are in **report mode**. Provide thorough, comprehensive analysis using MDX components for rich, interactive output.
@@ -450,7 +465,9 @@ export function buildSystemPrompt(params: BuildSystemPromptParams): string {
 		TOOL_INSTRUCTIONS,
 		DATA_HANDLING_NOTES,
 		modeInstructions,
-		...(mode === "report" ? [MDX_COMPONENT_CATALOG] : []),
+		...(mode === "report"
+			? [MDX_COMPONENT_CATALOG]
+			: [VISION_TRADE_LOGGING_INSTRUCTIONS]),
 		`## Database Schema Reference\n\n${schemaContext}`,
 		userContext,
 	];

@@ -8,9 +8,20 @@ interface UseImageUploadOptions {
 	context: string;
 }
 
+/** Result of a successful image upload. */
+export interface UploadedImage {
+	/** Presigned download URL for immediate display (expires; regenerated on read). */
+	url: string;
+	/** Durable S3 key — persist this, not the presigned URL. */
+	key: string;
+	mimeType: string;
+	filename: string;
+	size: number;
+}
+
 interface UseImageUploadReturn {
-	/** Upload an image file and return the presigned download URL for display */
-	uploadImage: (file: File) => Promise<string | null>;
+	/** Upload an image file and return its presigned URL + durable S3 key. */
+	uploadImage: (file: File) => Promise<UploadedImage | null>;
 }
 
 /**
@@ -36,7 +47,7 @@ export function useImageUpload({
 	const getDownloadUrl = api.storage.getDownloadUrl.useMutation();
 
 	const uploadImage = useCallback(
-		async (file: File): Promise<string | null> => {
+		async (file: File): Promise<UploadedImage | null> => {
 			// Validate file is an image
 			if (!file.type.startsWith("image/")) {
 				toast.error(ERR_VALIDATION_IMAGES_ONLY);
@@ -111,8 +122,14 @@ export function useImageUpload({
 				const { url } = await getDownloadUrl.mutateAsync({ key });
 
 				toast.success("Image uploaded", { id: toastId });
-				// Return presigned URL for display (will be converted to S3 key on save)
-				return url;
+				// Return presigned URL for display + durable key for persistence
+				return {
+					url,
+					key,
+					mimeType: file.type,
+					filename: file.name,
+					size: file.size,
+				};
 			} catch (error) {
 				console.error("Image upload failed:", error);
 				const errorMessage =
