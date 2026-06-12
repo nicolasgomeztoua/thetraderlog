@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	ERR_SHARE_LINK_LIMIT_REACHED,
@@ -8,13 +8,56 @@ import {
 	ERR_SHARE_RESOURCE_NOT_FOUND,
 	MAX_SHARE_LINKS_PER_RESOURCE,
 } from "@/lib/constants";
+import { getExtendedDayBars, getFullDayBars } from "@/lib/market-data/service";
 import { generateShareToken } from "@/lib/shared/id";
+import { getSharedTradePayload } from "@/server/api/helpers/trade-share";
 import {
 	createTRPCRouter,
 	protectedProcedure,
 	publicProcedure,
 } from "@/server/api/trpc";
-import { aiReports, shareLinks } from "@/server/db/schema";
+import type { db } from "@/server/db";
+import {
+	aiReports,
+	shareLinks,
+	shareResourceTypeEnum,
+	trades,
+} from "@/server/db/schema";
+
+const shareResourceTypeSchema = z.enum(shareResourceTypeEnum.enumValues);
+
+/**
+ * Find a share link by token and assert it is usable (active, not expired).
+ * Throws the same error shapes the share page relies on ("revoked"/"expired").
+ */
+async function resolveActiveLink(database: typeof db, token: string) {
+	const link = await database.query.shareLinks.findFirst({
+		where: eq(shareLinks.token, token),
+	});
+
+	if (!link) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: ERR_SHARE_LINK_NOT_FOUND,
+		});
+	}
+
+	if (!link.isActive) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "revoked",
+		});
+	}
+
+	if (link.expiresAt && link.expiresAt < new Date()) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "expired",
+		});
+	}
+
+	return link;
+}
 
 export const sharingRouter = createTRPCRouter({
 	// =========================================================================
@@ -23,30 +66,7 @@ export const sharingRouter = createTRPCRouter({
 	resolveToken: publicProcedure
 		.input(z.object({ token: z.string().min(1) }))
 		.query(async ({ ctx, input }) => {
-			const link = await ctx.db.query.shareLinks.findFirst({
-				where: eq(shareLinks.token, input.token),
-			});
-
-			if (!link) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: ERR_SHARE_LINK_NOT_FOUND,
-				});
-			}
-
-			if (!link.isActive) {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "revoked",
-				});
-			}
-
-			if (link.expiresAt && link.expiresAt < new Date()) {
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "expired",
-				});
-			}
+			const link = await resolveActiveLink(ctx.db, input.token);
 
 			// Increment view count
 			await ctx.db
@@ -84,10 +104,83 @@ export const sharingRouter = createTRPCRouter({
 				};
 			}
 
+			if (link.resourceType === "trade") {
+				const payload = await getSharedTradePayload(ctx.db, link.resourceId);
+
+				if (!payload) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_SHARE_RESOURCE_NOT_FOUND,
+					});
+				}
+
+				return {
+					resourceType: link.resourceType,
+					...payload,
+				};
+			}
+
 			throw new TRPCError({
 				code: "NOT_FOUND",
 				message: ERR_SHARE_RESOURCE_NOT_FOUND,
 			});
+		}),
+
+	// =========================================================================
+	// PUBLIC: Chart data for a shared trade (token-gated, no auth)
+	// =========================================================================
+	getTradeChartData: publicProcedure
+		.input(
+			z.object({
+				token: z.string().min(1),
+				mode: z.enum(["day", "extended"]),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const link = await resolveActiveLink(ctx.db, input.token);
+
+			if (link.resourceType !== "trade") {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: ERR_SHARE_RESOURCE_NOT_FOUND,
+				});
+			}
+
+			const trade = await ctx.db.query.trades.findFirst({
+				where: and(eq(trades.id, link.resourceId), isNull(trades.deletedAt)),
+				columns: { symbol: true, entryTime: true, exitTime: true },
+			});
+
+			if (!trade) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: ERR_SHARE_RESOURCE_NOT_FOUND,
+				});
+			}
+
+			const fetchBars =
+				input.mode === "day" ? getFullDayBars : getExtendedDayBars;
+			const { bars, source, dataQuality } = await fetchBars(
+				trade.symbol,
+				trade.entryTime,
+				trade.exitTime,
+			);
+
+			// Convert timestamps to lightweight-charts format (seconds, not ms)
+			const chartBars = bars.map((bar) => ({
+				time: Math.floor(bar.timestamp / 1000),
+				open: bar.open,
+				high: bar.high,
+				low: bar.low,
+				close: bar.close,
+			}));
+
+			return {
+				bars: chartBars,
+				source,
+				dataQuality,
+				barCount: chartBars.length,
+			};
 		}),
 
 	// =========================================================================
@@ -96,7 +189,7 @@ export const sharingRouter = createTRPCRouter({
 	createLink: protectedProcedure
 		.input(
 			z.object({
-				resourceType: z.enum(["report"]),
+				resourceType: shareResourceTypeSchema,
 				resourceId: z.string().min(1),
 				expiryDays: z.number().int().positive().nullish(),
 				label: z.string().max(100).nullish(),
@@ -124,6 +217,24 @@ export const sharingRouter = createTRPCRouter({
 					throw new TRPCError({
 						code: "BAD_REQUEST",
 						message: ERR_SHARE_RESOURCE_NOT_COMPLETE,
+					});
+				}
+			}
+
+			if (input.resourceType === "trade") {
+				const trade = await ctx.db.query.trades.findFirst({
+					where: and(
+						eq(trades.id, input.resourceId),
+						eq(trades.userId, ctx.user.id),
+						isNull(trades.deletedAt),
+					),
+					columns: { id: true },
+				});
+
+				if (!trade) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_SHARE_RESOURCE_NOT_FOUND,
 					});
 				}
 			}
@@ -174,7 +285,7 @@ export const sharingRouter = createTRPCRouter({
 	getLinksForResource: protectedProcedure
 		.input(
 			z.object({
-				resourceType: z.enum(["report"]),
+				resourceType: shareResourceTypeSchema,
 				resourceId: z.string().min(1),
 			}),
 		)

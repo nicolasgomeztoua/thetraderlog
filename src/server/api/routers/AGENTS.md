@@ -136,6 +136,11 @@ const trades = await ctx.db.query.trades.findMany({
 **When:** Creating or updating usage counters (daily chat, monthly reports)
 **How:** Use Drizzle's `.insert().values().onConflictDoUpdate({ target: [uniqueColumns], set: { ... } }).returning()`. For atomic increment: `set: { column: sql\`${table.column} + 1\` }`. For read-only upsert (just ensure row exists): `set: { updatedAt: new Date() }`.
 
+### Public Procedures Need a Clerk Middleware Allowlist
+**When:** Adding a `publicProcedure` meant to be called by anonymous visitors (e.g. share pages)
+**Problem:** `src/middleware.ts` protects `/api/trpc/*` by default — anonymous client-side tRPC calls get redirected to sign-in (HTML response) even though the procedure itself is public
+**Solution:** Add the procedure path to the `isPublicRoute` matcher in `src/middleware.ts` (see the `sharing.resolveToken|getTradeChartData` regex, which also covers tRPC batch URLs). Token-gate the procedure itself — being public at the middleware layer means the router must do its own access checks.
+
 ## Decisions
 
 ### AI SDK v6 Type Names

@@ -120,7 +120,10 @@ export const aiReportStatusEnum = pgEnum("ai_report_status", [
 	"complete",
 	"failed",
 ]);
-export const shareResourceTypeEnum = pgEnum("share_resource_type", ["report"]);
+export const shareResourceTypeEnum = pgEnum("share_resource_type", [
+	"report",
+	"trade",
+]);
 export const bugSeverityEnum = pgEnum("bug_severity", [
 	"low",
 	"medium",
