@@ -10,6 +10,9 @@ const isPublicRoute = createRouteMatcher([
 	"/print/(.*)", // PDF print pages (token auth, not Clerk)
 	"/share/(.*)", // Public share pages (token-based access)
 	"/monitoring(.*)", // Sentry tunnel route (ad-blocker bypass)
+	// Public tRPC procedures used by /share pages (token-gated in the router).
+	// Matches single calls and batches composed only of these procedures.
+	/^\/api\/trpc\/sharing\.(resolveToken|getTradeChartData)(,sharing\.(resolveToken|getTradeChartData))*$/,
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

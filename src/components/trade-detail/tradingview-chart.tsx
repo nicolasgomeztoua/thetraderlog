@@ -37,7 +37,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useTheme } from "@/contexts/theme-context";
+import { useOptionalTheme } from "@/contexts/theme-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTimezone } from "@/hooks/use-timezone";
 import {
@@ -114,6 +114,11 @@ interface ChartProps {
 	maePrice?: string | null;
 	mfePrice?: string | null;
 	className?: string;
+	/**
+	 * Public share mode: fetch candles through the token-gated sharing
+	 * endpoints (no auth) and hide annotation/drawing tools.
+	 */
+	shareToken?: string;
 }
 
 type CandleDataPoint = CandlestickData<UTCTimestamp>;
@@ -373,7 +378,9 @@ function LightweightChartInner({
 	maePrice,
 	mfePrice,
 	className,
+	shareToken,
 }: ChartProps) {
+	const isShareMode = !!shareToken;
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chartRef = useRef<IChartApi | null>(null);
 	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -446,7 +453,8 @@ function LightweightChartInner({
 	}, []);
 
 	// Get theme colors from the actual theme configuration
-	const { theme } = useTheme();
+	// (optional: share pages render the chart without a ThemeProvider)
+	const { theme } = useOptionalTheme();
 	const themeConfig = getThemeById(theme);
 	const colors = getChartColors(themeConfig);
 
@@ -466,7 +474,7 @@ function LightweightChartInner({
 
 	const { data: annotations } = api.chartAnnotations.list.useQuery(
 		{ tradeId },
-		{ staleTime: STALE_TIME_MEDIUM },
+		{ staleTime: STALE_TIME_MEDIUM, enabled: !isShareMode },
 	);
 
 	const createAnnotation = api.chartAnnotations.create.useMutation({
@@ -537,9 +545,14 @@ function LightweightChartInner({
 	// DRAWING TOOL HANDLERS
 	// =========================================================================
 
-	const toggleTool = useCallback((tool: DrawingTool) => {
-		setActiveTool((prev) => (prev === tool ? null : tool));
-	}, []);
+	const toggleTool = useCallback(
+		(tool: DrawingTool) => {
+			// Drawing/annotations are disabled on public share pages
+			if (isShareMode) return;
+			setActiveTool((prev) => (prev === tool ? null : tool));
+		},
+		[isShareMode],
+	);
 
 	const cycleLineStyle = useCallback(() => {
 		setDrawingLineStyle((prev) => (prev === "solid" ? "dashed" : "solid"));
@@ -598,7 +611,7 @@ function LightweightChartInner({
 	}, [toggleTool]);
 
 	// Sub-hourly: fetch extended range (±3 days) of 1-min data, then aggregate client-side
-	const { data: rawChartData, isLoading: isLoadingSubHourly } =
+	const { data: authedDayData, isLoading: isLoadingAuthedDay } =
 		api.marketData.getFullDayChartData.useQuery(
 			{
 				symbol,
@@ -608,13 +621,13 @@ function LightweightChartInner({
 				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
 			},
 			{
-				enabled: canFetchRealData && !isHourly,
+				enabled: canFetchRealData && !isHourly && !isShareMode,
 				staleTime: STALE_TIME_MEDIUM,
 			},
 		);
 
 	// 1h: fetch extended date range (~7 trading sessions) of 1h bars server-side
-	const { data: extendedChartData, isLoading: isLoadingHourly } =
+	const { data: authedExtendedData, isLoading: isLoadingAuthedExtended } =
 		api.marketData.getExtendedChartData.useQuery(
 			{
 				symbol,
@@ -624,10 +637,40 @@ function LightweightChartInner({
 				exitTime: exitTime ? new Date(exitTime).toISOString() : undefined,
 			},
 			{
-				enabled: canFetchRealData && isHourly,
+				enabled: canFetchRealData && isHourly && !isShareMode,
 				staleTime: STALE_TIME_MEDIUM,
 			},
 		);
+
+	// Public share pages fetch the same data through the token-gated endpoint
+	const { data: sharedDayData, isLoading: isLoadingSharedDay } =
+		api.sharing.getTradeChartData.useQuery(
+			{ token: shareToken ?? "", mode: "day" },
+			{
+				enabled: canFetchRealData && !isHourly && isShareMode,
+				staleTime: STALE_TIME_MEDIUM,
+			},
+		);
+
+	const { data: sharedExtendedData, isLoading: isLoadingSharedExtended } =
+		api.sharing.getTradeChartData.useQuery(
+			{ token: shareToken ?? "", mode: "extended" },
+			{
+				enabled: canFetchRealData && isHourly && isShareMode,
+				staleTime: STALE_TIME_MEDIUM,
+			},
+		);
+
+	const rawChartData = isShareMode ? sharedDayData : authedDayData;
+	const extendedChartData = isShareMode
+		? sharedExtendedData
+		: authedExtendedData;
+	const isLoadingSubHourly = isShareMode
+		? isLoadingSharedDay
+		: isLoadingAuthedDay;
+	const isLoadingHourly = isShareMode
+		? isLoadingSharedExtended
+		: isLoadingAuthedExtended;
 
 	const isLoading = isHourly ? isLoadingHourly : isLoadingSubHourly;
 
@@ -1271,80 +1314,85 @@ function LightweightChartInner({
 					<span className="hidden sm:inline">Fit</span>
 				</button>
 
-				{/* Drawing toolbar separator */}
-				<div className="mx-0.5 h-5 w-px bg-border" />
+				{/* Drawing tools are hidden on public share pages */}
+				{!isShareMode && (
+					<>
+						{/* Drawing toolbar separator */}
+						<div className="mx-0.5 h-5 w-px bg-border" />
 
-				{/* Horizontal line tool */}
-				<button
-					className={cn(
-						"flex min-h-9 min-w-9 items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
-						activeTool === "horizontal"
-							? "bg-primary text-primary-foreground"
-							: "bg-muted text-muted-foreground hover:bg-muted/80",
-					)}
-					data-testid="chart-button-horizontal-line"
-					onClick={() => toggleTool("horizontal")}
-					title="Horizontal line (H)"
-					type="button"
-				>
-					<Minus className="h-3 w-3" />
-				</button>
+						{/* Horizontal line tool */}
+						<button
+							className={cn(
+								"flex min-h-9 min-w-9 items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+								activeTool === "horizontal"
+									? "bg-primary text-primary-foreground"
+									: "bg-muted text-muted-foreground hover:bg-muted/80",
+							)}
+							data-testid="chart-button-horizontal-line"
+							onClick={() => toggleTool("horizontal")}
+							title="Horizontal line (H)"
+							type="button"
+						>
+							<Minus className="h-3 w-3" />
+						</button>
 
-				{/* Vertical line tool */}
-				<button
-					className={cn(
-						"flex min-h-9 min-w-9 items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
-						activeTool === "vertical"
-							? "bg-primary text-primary-foreground"
-							: "bg-muted text-muted-foreground hover:bg-muted/80",
-					)}
-					data-testid="chart-button-vertical-line"
-					onClick={() => toggleTool("vertical")}
-					title="Vertical line (V)"
-					type="button"
-				>
-					<SeparatorVertical className="h-3 w-3" />
-				</button>
+						{/* Vertical line tool */}
+						<button
+							className={cn(
+								"flex min-h-9 min-w-9 items-center justify-center rounded px-2 py-1 font-mono text-[10px] transition-colors sm:min-h-0 sm:min-w-0",
+								activeTool === "vertical"
+									? "bg-primary text-primary-foreground"
+									: "bg-muted text-muted-foreground hover:bg-muted/80",
+							)}
+							data-testid="chart-button-vertical-line"
+							onClick={() => toggleTool("vertical")}
+							title="Vertical line (V)"
+							type="button"
+						>
+							<SeparatorVertical className="h-3 w-3" />
+						</button>
 
-				{/* Line style toggle */}
-				<button
-					className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
-					data-testid="chart-button-line-style"
-					onClick={cycleLineStyle}
-					title={`Line style: ${drawingLineStyle}`}
-					type="button"
-				>
-					{drawingLineStyle === "solid" ? (
-						<span className="block h-0.5 w-3 bg-current" />
-					) : (
-						<span className="block h-0.5 w-3 border-current border-t-2 border-dashed" />
-					)}
-				</button>
+						{/* Line style toggle */}
+						<button
+							className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+							data-testid="chart-button-line-style"
+							onClick={cycleLineStyle}
+							title={`Line style: ${drawingLineStyle}`}
+							type="button"
+						>
+							{drawingLineStyle === "solid" ? (
+								<span className="block h-0.5 w-3 bg-current" />
+							) : (
+								<span className="block h-0.5 w-3 border-current border-t-2 border-dashed" />
+							)}
+						</button>
 
-				{/* Color picker cycling button */}
-				<button
-					className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
-					data-testid="chart-button-color"
-					onClick={cycleColor}
-					title="Drawing color"
-					type="button"
-				>
-					<span
-						className="block h-3 w-3 rounded-full"
-						style={{ backgroundColor: drawingColor }}
-					/>
-				</button>
+						{/* Color picker cycling button */}
+						<button
+							className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 sm:min-h-0 sm:min-w-0"
+							data-testid="chart-button-color"
+							onClick={cycleColor}
+							title="Drawing color"
+							type="button"
+						>
+							<span
+								className="block h-3 w-3 rounded-full"
+								style={{ backgroundColor: drawingColor }}
+							/>
+						</button>
 
-				{/* Clear all button */}
-				<button
-					className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-destructive sm:min-h-0 sm:min-w-0"
-					data-testid="chart-button-clear-all"
-					onClick={handleClearAll}
-					title="Clear all drawings"
-					type="button"
-				>
-					<Trash2 className="h-3 w-3" />
-				</button>
+						{/* Clear all button */}
+						<button
+							className="flex min-h-9 min-w-9 items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/80 hover:text-destructive sm:min-h-0 sm:min-w-0"
+							data-testid="chart-button-clear-all"
+							onClick={handleClearAll}
+							title="Clear all drawings"
+							type="button"
+						>
+							<Trash2 className="h-3 w-3" />
+						</button>
+					</>
+				)}
 			</div>
 
 			{/* Data source notice overlay */}

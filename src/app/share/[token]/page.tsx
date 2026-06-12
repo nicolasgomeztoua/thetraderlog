@@ -4,14 +4,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
+import { cache } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { mdxComponents } from "@/components/mdx/components";
 import { markdownComponents } from "@/components/mdx/markdown-components";
 import { ReportDataProvider } from "@/components/mdx/provider";
 import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
+import { formatCurrency } from "@/lib/shared";
+import { getSharedTradePayload } from "@/server/api/helpers/trade-share";
 import { db } from "@/server/db";
 import { aiReports, shareLinks } from "@/server/db/schema";
+import { SharedTradeView } from "./_components/shared-trade-view";
+
+// Dedupe the trade lookup between generateMetadata and the page render
+const getCachedTradePayload = cache(getSharedTradePayload);
 
 // =============================================================================
 // METADATA
@@ -49,6 +56,37 @@ export async function generateMetadata({
 				title: `${title} — TheTraderLog`,
 				description:
 					"AI-powered trading analysis report shared via TheTraderLog.",
+				type: "article",
+			},
+		};
+	}
+
+	if (link.resourceType === "trade") {
+		const payload = await getCachedTradePayload(db, link.resourceId);
+		if (!payload) {
+			return { title: "Shared Trade — TheTraderLog" };
+		}
+
+		const { trade, trader } = payload;
+		const pnl = trade.netPnl ? parseFloat(trade.netPnl) : null;
+		const pnlText =
+			pnl !== null ? `${pnl >= 0 ? "+" : ""}${formatCurrency(pnl)}` : null;
+		const title = [
+			trade.symbol,
+			trade.direction.toUpperCase(),
+			pnlText,
+			trader.name ? `· Shared by ${trader.name}` : null,
+		]
+			.filter(Boolean)
+			.join(" ");
+		const description = `${trader.name ?? "A trader"} shared a ${trade.symbol} ${trade.direction} trade from their TheTraderLog journal. View the chart, executions, and stats.`;
+
+		return {
+			title,
+			description,
+			openGraph: {
+				title: `${title} | TheTraderLog`,
+				description,
 				type: "article",
 			},
 		};
@@ -106,6 +144,20 @@ export default async function SharePage({ params }: SharePageProps) {
 		if (!report || !report.content) notFound();
 
 		return <SharedReport report={{ ...report, content: report.content }} />;
+	}
+
+	if (link.resourceType === "trade") {
+		const payload = await getCachedTradePayload(db, link.resourceId);
+
+		if (!payload) notFound();
+
+		return (
+			<SharedTradeView
+				token={token}
+				trade={payload.trade}
+				trader={payload.trader}
+			/>
+		);
 	}
 
 	notFound();

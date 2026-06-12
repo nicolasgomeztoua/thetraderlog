@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ShareLinkPopover } from "@/components/sharing/share-link-popover";
 import { ContentPanel, StatsPanel } from "@/components/trade-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -482,15 +483,22 @@ function TradeDetailPageContent() {
 						</span>
 					</button>
 
-					{/* Share button (placeholder) - hidden on mobile */}
-					<Button
-						className="hidden h-8 w-8 sm:flex"
-						disabled
-						size="icon"
-						variant="ghost"
+					{/* Share button - hidden on mobile */}
+					<ShareLinkPopover
+						description="Anyone with the link can view this trade"
+						emptyHint="Create a public link to this trade. Viewers see the chart, stats, executions, and notes — your account details stay private."
+						resourceId={tradeId}
+						resourceType="trade"
+						title="Share Trade"
 					>
-						<Share2 className="h-4 w-4" />
-					</Button>
+						<Button
+							className="hidden h-8 w-8 sm:flex"
+							size="icon"
+							variant="ghost"
+						>
+							<Share2 className="h-4 w-4" />
+						</Button>
+					</ShareLinkPopover>
 
 					{/* Settings/Actions menu */}
 					<Button

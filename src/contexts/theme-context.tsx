@@ -109,6 +109,23 @@ export function useTheme() {
 	return context;
 }
 
+const FALLBACK_THEME_CONTEXT: ThemeContextValue = {
+	theme: DEFAULT_THEME,
+	setTheme: () => {},
+	isLoading: false,
+	pendingTheme: null,
+	clearPending: () => {},
+};
+
+/**
+ * Like useTheme, but safe to call outside a ThemeProvider — falls back to the
+ * default theme with no-op setters. Used by components that also render on
+ * public pages (e.g. the trade chart on /share/[token]).
+ */
+export function useOptionalTheme() {
+	return useContext(ThemeContext) ?? FALLBACK_THEME_CONTEXT;
+}
+
 // Script to prevent flash of unstyled content (FOUC)
 // This runs before React hydrates to set the initial theme class
 export const themeScript = `
