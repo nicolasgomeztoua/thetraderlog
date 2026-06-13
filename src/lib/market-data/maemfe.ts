@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import {
 	type DataQuality,
 	getOHLCForTimeRange,
+	isAwaitingRelease,
 } from "@/lib/market-data/service";
 import { calculateMAEMFE, type MAEMFEResult } from "@/lib/trades";
 import { db } from "@/server/db";
@@ -110,17 +111,29 @@ export async function calculateAndStoreMAEMFE(
 			trade.exitTime,
 		);
 
-		// 6. Handle no data case
+		// 6. Handle no data case. If the trade's session simply hasn't been
+		// published by the provider yet (same-day / pre-release), this is
+		// "pending" — data is still coming — not "unavailable". Marking it
+		// "pending" (rather than "unavailable") matters because the
+		// skip-already-processed guard reprocesses pending trades, so they
+		// self-heal once the session settles; "unavailable" would stick forever.
 		if (bars.length === 0) {
+			const awaitingRelease = isAwaitingRelease(
+				trade.exitTime ?? trade.entryTime,
+			);
+			const quality: DataQuality = awaitingRelease ? "pending" : "unavailable";
+
 			await db
 				.update(trades)
-				.set({ marketDataQuality: "unavailable" })
+				.set({ marketDataQuality: quality })
 				.where(eq(trades.id, tradeId));
 
 			return {
 				success: false,
-				dataQuality: "unavailable",
-				message: "No market data available for this trade period",
+				dataQuality: quality,
+				message: awaitingRelease
+					? "Market data for this session hasn't published yet — it'll appear once the session settles."
+					: "No market data available for this trade period",
 			};
 		}
 

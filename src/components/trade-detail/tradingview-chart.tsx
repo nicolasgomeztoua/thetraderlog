@@ -50,6 +50,7 @@ import {
 	ERR_ANNOTATION_CREATE_FAILED,
 } from "@/lib/constants/errors";
 import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
+import { barsCoverTradeEntry } from "@/lib/market-data/chart-coverage";
 import {
 	type ChartInterval,
 	cn,
@@ -662,6 +663,13 @@ function LightweightChartInner({
 	// Determine if we have real data
 	const hasRealData = chartData && chartData.bars.length > 0;
 
+	// Whether the dataset actually covers the trade itself. The chart fetches
+	// ±3 days of context, so for a recent trade whose session the provider
+	// hasn't published yet we can still receive context candles from prior days
+	// while the trade window has none — see barsCoverTradeEntry.
+	const hasTradeData =
+		!!hasRealData && barsCoverTradeEntry(chartData?.bars ?? [], entryTime);
+
 	// Data quality survives even when there are zero bars (chartData is null),
 	// so the empty state can distinguish "not published yet" from "no data".
 	const dataQuality = isHourly
@@ -1203,8 +1211,12 @@ function LightweightChartInner({
 	// Show empty state when no data available. A "pending" quality means the
 	// session simply hasn't been published yet (same-day / pre-release), not
 	// that the symbol has no data — it will backfill after the session settles.
-	if (!hasRealData) {
-		const isPending = dataQuality === "pending";
+	if (!hasRealData || !hasTradeData) {
+		// Pending when the provider flagged it, or when we have surrounding
+		// context candles but none for the trade's own session yet (recent
+		// trade awaiting the next-day release).
+		const isPending =
+			dataQuality === "pending" || (hasRealData && !hasTradeData);
 		return (
 			<div
 				className={cn(

@@ -141,6 +141,25 @@ function TradeDetailPageContent() {
 		{ enabled: !!tradeId },
 	);
 
+	// Self-heal MAE/MFE for trades whose session wasn't published when they were
+	// imported (same-day trades). Those are stored as "pending"; once the
+	// provider releases the session, simply opening the trade recomputes them.
+	// Stays silent — it's a background nicety, not a user action.
+	const recomputeMaeMfe = api.trades.calculateMAEMFE.useMutation({
+		onSuccess: (data) => {
+			if (data.dataQuality !== "pending") {
+				utils.trades.getById.invalidate({ id: tradeId });
+			}
+		},
+	});
+	const marketDataQuality = trade?.marketDataQuality;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: fire once per trade/quality change, not on mutation identity
+	useEffect(() => {
+		if (marketDataQuality === "pending") {
+			recomputeMaeMfe.mutate({ tradeId });
+		}
+	}, [tradeId, marketDataQuality]);
+
 	// Adjacent trades for navigation (filtered by same account)
 	const { data: adjacentTrades } = api.trades.getAll.useQuery(
 		{ limit: 100, accountId: trade?.accountId },

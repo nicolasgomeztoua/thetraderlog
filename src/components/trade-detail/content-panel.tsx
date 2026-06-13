@@ -127,13 +127,26 @@ export function ContentPanel({
 
 	const utils = api.useUtils();
 	const refreshMarketData = api.trades.refreshMarketData.useMutation({
-		onSuccess: () => {
+		onSuccess: (data) => {
 			// Cache was cleared server-side — refetch chart candles + the trade
 			// (MAE/MFE + stats) so the latest provider data shows immediately.
 			utils.marketData.getFullDayChartData.invalidate();
 			utils.marketData.getExtendedChartData.invalidate();
 			utils.trades.getById.invalidate({ id: trade.id });
-			toast.success("Market data refreshed");
+
+			// A no-data outcome isn't an error: "pending" means the session
+			// hasn't published yet (try again after it settles), "unavailable"
+			// means the provider has no data for this window.
+			if (data.dataQuality === "pending") {
+				toast(
+					data.message ??
+						"This session hasn't published yet — check back after it settles.",
+				);
+			} else if (data.dataQuality === "unavailable") {
+				toast.error(data.message ?? ERR_MARKET_DATA_REFRESH_FAILED);
+			} else {
+				toast.success("Market data refreshed");
+			}
 		},
 		onError: (error) => {
 			toast.error(getErrorMessage(error, ERR_MARKET_DATA_REFRESH_FAILED));

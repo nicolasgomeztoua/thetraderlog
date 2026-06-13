@@ -1663,13 +1663,13 @@ export const tradesRouter = createTRPCRouter({
 				skipAlreadyProcessed: false,
 			});
 
-			if (!result.success && result.message !== "Already processed") {
-				throw new Error(result.message ?? ERR_MAEMFE_CALCULATE_FAILED);
-			}
-
+			// A no-data outcome (session not published yet → "pending", or a
+			// genuinely empty/failed window → "unavailable") is a normal result
+			// the UI distinguishes by dataQuality — not an error to throw on.
 			return {
 				success: result.success,
 				dataQuality: result.dataQuality,
+				message: result.message,
 				trade: result.trade,
 			};
 		}),
