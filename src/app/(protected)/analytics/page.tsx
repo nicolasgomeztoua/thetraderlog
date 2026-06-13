@@ -111,6 +111,8 @@ import {
 	formatDate,
 	formatPercent,
 	getPnLColorClass,
+	STALE_TIME_LONG,
+	STALE_TIME_MEDIUM,
 } from "@/lib/shared";
 import { useAnalyticsFilterStore } from "@/stores/analytics-filter-store";
 import { api } from "@/trpc/react";
@@ -165,10 +167,13 @@ function useApiFilters() {
 function StatsOverview() {
 	const { selectedAccountId } = useAccount();
 	const apiFilters = useApiFilters();
-	const { data: overview, isLoading } = api.analytics.getOverview.useQuery({
-		accountId: selectedAccountId,
-		filters: apiFilters,
-	});
+	const { data: overview, isLoading } = api.analytics.getOverview.useQuery(
+		{
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		},
+		{ staleTime: STALE_TIME_MEDIUM },
+	);
 
 	if (isLoading) {
 		return (
@@ -291,10 +296,13 @@ function StatsOverview() {
 function WinLossChart() {
 	const { selectedAccountId } = useAccount();
 	const apiFilters = useApiFilters();
-	const { data: overview, isLoading } = api.analytics.getOverview.useQuery({
-		accountId: selectedAccountId,
-		filters: apiFilters,
-	});
+	const { data: overview, isLoading } = api.analytics.getOverview.useQuery(
+		{
+			accountId: selectedAccountId,
+			filters: apiFilters,
+		},
+		{ staleTime: STALE_TIME_MEDIUM },
+	);
 
 	const chartOptions: AgPolarChartOptions<WinLossChartData> = useMemo(() => {
 		if (!overview) return { data: [] };
@@ -346,11 +354,14 @@ function WinLossChart() {
 
 function PnLDistributionChart() {
 	const { selectedAccountId } = useAccount();
-	const { data, isLoading } = api.trades.getAll.useQuery({
-		status: "closed",
-		accountId: selectedAccountId ?? undefined,
-		limit: 100,
-	});
+	const { data, isLoading } = api.trades.getAll.useQuery(
+		{
+			status: "closed",
+			accountId: selectedAccountId ?? undefined,
+			limit: 100,
+		},
+		{ staleTime: STALE_TIME_MEDIUM },
+	);
 
 	const chartOptions: AgCartesianChartOptions<PnLDistributionChartData> =
 		useMemo(() => {
@@ -423,11 +434,14 @@ function PnLDistributionChart() {
 
 function CumulativePnLChart() {
 	const { selectedAccountId } = useAccount();
-	const { data, isLoading } = api.trades.getAll.useQuery({
-		status: "closed",
-		accountId: selectedAccountId ?? undefined,
-		limit: 100,
-	});
+	const { data, isLoading } = api.trades.getAll.useQuery(
+		{
+			status: "closed",
+			accountId: selectedAccountId ?? undefined,
+			limit: 100,
+		},
+		{ staleTime: STALE_TIME_MEDIUM },
+	);
 
 	const chartOptions: AgCartesianChartOptions<CumulativePnLChartData> =
 		useMemo(() => {
@@ -554,30 +568,45 @@ function TimeTab() {
 	const apiFilters = useApiFilters();
 
 	const { data: calendarData, isLoading: calendarLoading } =
-		api.analytics.getCalendarData.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getCalendarData.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: dayOfWeekData, isLoading: dowLoading } =
-		api.analytics.getPerformanceByDayOfWeek.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getPerformanceByDayOfWeek.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: hourData, isLoading: hourLoading } =
-		api.analytics.getPerformanceByHour.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getPerformanceByHour.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: sessionData, isLoading: sessionLoading } =
-		api.analytics.getPerformanceBySession.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getPerformanceBySession.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: monthlyData, isLoading: monthlyLoading } =
-		api.analytics.getPerformanceByMonth.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getPerformanceByMonth.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 
 	const isLoading =
 		calendarLoading ||
@@ -654,35 +683,53 @@ function RiskTab() {
 	const apiFilters = useApiFilters();
 
 	const { data: riskMetrics, isLoading: riskLoading } =
-		api.analytics.getRiskMetrics.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getRiskMetrics.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: equityCurve, isLoading: equityLoading } =
-		api.analytics.getEquityCurve.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getEquityCurve.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: drawdowns, isLoading: drawdownsLoading } =
-		api.analytics.getDrawdownHistory.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getDrawdownHistory.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: rMultipleData, isLoading: rMultipleLoading } =
-		api.analytics.getRMultipleDistribution.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getRMultipleDistribution.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: riskRewardData, isLoading: riskRewardLoading } =
-		api.analytics.getRiskRewardAnalysis.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getRiskRewardAnalysis.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: positionSizeData, isLoading: positionSizeLoading } =
-		api.analytics.getPositionSizeAnalysis.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getPositionSizeAnalysis.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 
 	const isLoading =
 		riskLoading ||
@@ -963,15 +1010,21 @@ function SymbolsTab() {
 	const apiFilters = useApiFilters();
 
 	const { data: symbolData, isLoading: symbolLoading } =
-		api.analytics.getPerformanceBySymbol.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getPerformanceBySymbol.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: trendData, isLoading: trendLoading } =
-		api.analytics.getSymbolTrend.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getSymbolTrend.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 
 	const isLoading = symbolLoading || trendLoading;
 
@@ -1029,30 +1082,45 @@ function BehaviorTab() {
 	const apiFilters = useApiFilters();
 
 	const { data: streakData, isLoading: streakLoading } =
-		api.analytics.getStreakAnalysis.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getStreakAnalysis.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: revengeData, isLoading: revengeLoading } =
-		api.analytics.getRevengeTrading.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getRevengeTrading.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: overtradingData, isLoading: overtradingLoading } =
-		api.analytics.getOvertradingAnalysis.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getOvertradingAnalysis.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: holdingTimeData, isLoading: holdingTimeLoading } =
-		api.analytics.getHoldingTimeAnalysis.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getHoldingTimeAnalysis.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 	const { data: behavioralData, isLoading: behavioralLoading } =
-		api.analytics.getBehavioralPatterns.useQuery({
-			accountId: selectedAccountId,
-			filters: apiFilters,
-		});
+		api.analytics.getBehavioralPatterns.useQuery(
+			{
+				accountId: selectedAccountId,
+				filters: apiFilters,
+			},
+			{ staleTime: STALE_TIME_MEDIUM },
+		);
 
 	const isLoading =
 		streakLoading ||
@@ -1250,7 +1318,10 @@ export default function AnalyticsPage() {
 	const setFilters = useAnalyticsFilterStore((s) => s.setFilters);
 
 	// Fetch default preset for auto-load
-	const { data: defaultPreset } = api.analytics.getDefaultPreset.useQuery();
+	const { data: defaultPreset } = api.analytics.getDefaultPreset.useQuery(
+		undefined,
+		{ staleTime: STALE_TIME_LONG },
+	);
 
 	// Auto-load default preset on mount (only once)
 	useEffect(() => {
@@ -1276,19 +1347,21 @@ export default function AnalyticsPage() {
 		[activePresetId, setActivePresetId],
 	);
 
-	// Fetch filter options data
+	// Fetch filter options data (rarely changes — cache aggressively)
 	const { data: strategies, isLoading: strategiesLoading } =
-		api.strategies.getSimpleList.useQuery();
-	const { data: tags, isLoading: tagsLoading } = api.tags.getAll.useQuery();
-	const { data: symbolData } = api.analytics.getPerformanceBySymbol.useQuery({
-		accountId: null,
-	});
-
-	// Extract unique symbols from symbol performance data
-	const uniqueSymbols = useMemo(() => {
-		if (!symbolData) return [];
-		return symbolData.map((s) => s.symbol);
-	}, [symbolData]);
+		api.strategies.getSimpleList.useQuery(undefined, {
+			staleTime: STALE_TIME_LONG,
+		});
+	const { data: tags, isLoading: tagsLoading } = api.tags.getAll.useQuery(
+		undefined,
+		{ staleTime: STALE_TIME_LONG },
+	);
+	// Lightweight distinct-symbol list for the filter dropdown (instead of the
+	// full per-symbol performance aggregation).
+	const { data: uniqueSymbols = [] } = api.analytics.getSymbolList.useQuery(
+		undefined,
+		{ staleTime: STALE_TIME_LONG },
+	);
 
 	// Transform data for filter panel
 	const strategyOptions = useMemo(() => {

@@ -8,7 +8,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import("next").NextConfig} */
 const config = {
 	experimental: {
-		optimizePackageImports: ["lucide-react"],
+		optimizePackageImports: ["lucide-react", "date-fns", "date-fns-tz"],
 	},
 };
 

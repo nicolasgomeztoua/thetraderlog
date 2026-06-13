@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAccount } from "@/contexts/account-context";
 import { isPropAccountType } from "@/lib/constants/prop";
-import { ACCOUNT_TYPE_COLORS, cn } from "@/lib/shared";
+import { ACCOUNT_TYPE_COLORS, cn, STALE_TIME_LONG } from "@/lib/shared";
 import { api } from "@/trpc/react";
 
 const mainNavItems = [
@@ -96,7 +96,9 @@ export function AppSidebar() {
 	const { accounts, selectedAccount, setSelectedAccountId, isLoading } =
 		useAccount();
 	const [mounted, setMounted] = useState(false);
-	const { data: me } = api.settings.me.useQuery();
+	const { data: me } = api.settings.me.useQuery(undefined, {
+		staleTime: STALE_TIME_LONG,
+	});
 
 	// Prevent hydration mismatch with Clerk UserButton
 	useEffect(() => {

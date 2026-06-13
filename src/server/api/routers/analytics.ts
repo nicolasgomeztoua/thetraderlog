@@ -1861,6 +1861,20 @@ export const analyticsRouter = createTRPCRouter({
 	// =========================================================================
 
 	/**
+	 * Lightweight distinct list of the symbols a user has traded.
+	 * Used to populate filter dropdowns without running the full
+	 * per-symbol performance aggregation.
+	 */
+	getSymbolList: protectedProcedure.query(async ({ ctx }) => {
+		const rows = await ctx.db
+			.selectDistinct({ symbol: trades.symbol })
+			.from(trades)
+			.where(and(eq(trades.userId, ctx.user.id), isNull(trades.deletedAt)))
+			.orderBy(trades.symbol);
+		return rows.map((r) => r.symbol);
+	}),
+
+	/**
 	 * Get performance breakdown by symbol
 	 * Returns P&L, trade count, win rate, profit factor, and avg trade per symbol
 	 */
