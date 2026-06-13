@@ -56,7 +56,12 @@ function fetchUserSettingsRow(
 				tradingSessions: true,
 			},
 		}),
-	);
+	).catch((err: unknown) => {
+		// Evict on failure so a transient error doesn't poison later calls in the
+		// same request (matches the auth-user cache behavior in trpc.ts).
+		cache?.delete(userId);
+		throw err;
+	});
 	// Set synchronously (before any await) so concurrently-awaited helpers in the
 	// same Promise.all share one query instead of racing into three.
 	cache?.set(userId, promise);

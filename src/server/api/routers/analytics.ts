@@ -1866,10 +1866,22 @@ export const analyticsRouter = createTRPCRouter({
 	 * per-symbol performance aggregation.
 	 */
 	getSymbolList: protectedProcedure.query(async ({ ctx }) => {
+		// Match the symbol set the filter dropdown previously derived from
+		// getPerformanceBySymbol: closed, non-deleted trades with P&L, in active
+		// accounts — just distinct symbols instead of the full aggregation.
+		const activeAccountIds = getActiveAccountsSubquery(ctx.db, ctx.user.id);
 		const rows = await ctx.db
 			.selectDistinct({ symbol: trades.symbol })
 			.from(trades)
-			.where(and(eq(trades.userId, ctx.user.id), isNull(trades.deletedAt)))
+			.where(
+				and(
+					eq(trades.userId, ctx.user.id),
+					eq(trades.status, "closed"),
+					isNull(trades.deletedAt),
+					isNotNull(trades.netPnl),
+					sql`${trades.accountId} IN (${activeAccountIds})`,
+				),
+			)
 			.orderBy(trades.symbol);
 		return rows.map((r) => r.symbol);
 	}),
