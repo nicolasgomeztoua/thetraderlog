@@ -442,9 +442,10 @@ export function StatsPanel({
 							<Section title="Performance">
 								<div className="divide-y divide-border">
 									<StatRow
-										label="Planned R:R"
-										suffix="R"
-										value={stats.plannedRR?.toFixed(2)}
+										label="Risk"
+										value={
+											stats.risk !== null ? formatCurrency(stats.risk) : null
+										}
 									/>
 									<StatRow
 										label="Realized R"

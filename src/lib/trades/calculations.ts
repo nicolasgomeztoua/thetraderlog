@@ -91,6 +91,28 @@ export function calculatePlannedRR(
 }
 
 /**
+ * Calculate the dollar amount risked on a trade (1R in dollars).
+ * Formula: |entry - stopLoss| * pointValue * quantity
+ *
+ * This is the natural complement to the realized R-Multiple, which is measured
+ * in multiples of this risk.
+ */
+export function calculateRisk(
+	entryPrice: number,
+	stopLoss: number | null,
+	quantity: number,
+	symbol: string,
+): number | null {
+	if (stopLoss === null || quantity === 0) return null;
+
+	const riskPerUnit = Math.abs(entryPrice - stopLoss);
+	if (riskPerUnit === 0) return null;
+
+	const risk = riskPerUnit * getPointValue(symbol) * quantity;
+	return risk === 0 ? null : risk;
+}
+
+/**
  * Calculate trade duration as human-readable string
  */
 export function calculateDuration(
@@ -153,7 +175,7 @@ export interface TradeStats {
 	roi: number | null;
 	duration: string | null;
 	rMultiple: number | null;
-	plannedRR: number | null;
+	risk: number | null;
 }
 
 /**
@@ -178,7 +200,6 @@ export function calculateAllStats(trade: {
 	const netPnl = trade.netPnl ? parseFloat(trade.netPnl) : null;
 	const fees = trade.fees ? parseFloat(trade.fees) : null;
 	const sl = trade.stopLoss ? parseFloat(trade.stopLoss) : null;
-	const tp = trade.takeProfit ? parseFloat(trade.takeProfit) : null;
 
 	const points = calculatePoints(entry, exit, trade.direction);
 	const ticks = calculateTicks(points, trade.symbol);
@@ -191,7 +212,7 @@ export function calculateAllStats(trade: {
 		roi: calculateROI(netPnl, entry, qty, trade.symbol),
 		duration: calculateDuration(trade.entryTime, trade.exitTime),
 		rMultiple: calculateActualRMultiple(netPnl, entry, sl, qty, trade.symbol),
-		plannedRR: calculatePlannedRR(entry, sl, tp),
+		risk: calculateRisk(entry, sl, qty, trade.symbol),
 	};
 }
 

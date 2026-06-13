@@ -8,7 +8,8 @@ interface TradeSummaryCardProps {
 	netPnl: string | null | undefined;
 	rMultiple: number | null;
 	targetHitPercent: number | null;
-	rrRatio: number | null;
+	/** Dollar amount risked (1R in dollars). Complements the realized R-Multiple. */
+	risk: number | null;
 	status: "open" | "closed";
 	className?: string;
 }
@@ -21,7 +22,7 @@ export function TradeSummaryCard({
 	netPnl,
 	rMultiple,
 	targetHitPercent,
-	rrRatio,
+	risk,
 	status,
 	className,
 }: TradeSummaryCardProps) {
@@ -56,10 +57,10 @@ export function TradeSummaryCard({
 					</div>
 					<div>
 						<p className="font-mono text-3xl">
-							{rrRatio ? `1:${rrRatio.toFixed(1)}` : "—"}
+							{risk !== null ? formatCurrency(risk) : "—"}
 						</p>
 						<p className="mt-2 font-mono text-[10px] text-muted-foreground/70 uppercase tracking-widest">
-							R:R Ratio
+							Risk
 						</p>
 					</div>
 				</div>
@@ -142,7 +143,7 @@ export function TradeSummaryCard({
 					</p>
 				</div>
 
-				{/* Target Hit or R:R Ratio */}
+				{/* Target Hit or Risk */}
 				<div>
 					{targetHitPercent !== null ? (
 						<>
@@ -153,18 +154,18 @@ export function TradeSummaryCard({
 								Target Hit
 							</p>
 						</>
-					) : rrRatio !== null ? (
+					) : risk !== null ? (
 						<>
-							<p className="font-mono text-3xl">1:{rrRatio.toFixed(1)}</p>
+							<p className="font-mono text-3xl">{formatCurrency(risk)}</p>
 							<p className="mt-2 font-mono text-[10px] text-muted-foreground/70 uppercase tracking-widest">
-								R:R Ratio
+								Risk
 							</p>
 						</>
 					) : (
 						<>
 							<p className="font-mono text-3xl text-muted-foreground">—</p>
 							<p className="mt-2 font-mono text-[10px] text-muted-foreground/70 uppercase tracking-widest">
-								R:R Ratio
+								Risk
 							</p>
 						</>
 					)}

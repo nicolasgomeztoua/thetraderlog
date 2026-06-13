@@ -590,7 +590,7 @@ function TradeDetailPageContent() {
 											roi: null,
 											duration: null,
 											rMultiple: null,
-											plannedRR: null,
+											risk: null,
 										}
 									}
 									trade={{
@@ -668,7 +668,7 @@ function TradeDetailPageContent() {
 									roi: null,
 									duration: null,
 									rMultiple: null,
-									plannedRR: null,
+									risk: null,
 								}
 							}
 							trade={{

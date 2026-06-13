@@ -61,13 +61,17 @@ export function SharedTradeView({
 				    BRANDED TOP BAR
 				    ============================================================ */}
 				<div className="flex items-center justify-between gap-3 border-white/10 border-b pb-4">
-					<div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
-						<span className="font-bold text-primary">TRADERLOG</span>
-						<span className="text-muted-foreground">{"// "}</span>
-						<span className="text-muted-foreground">SHARED TRADE</span>
+					<div className="flex min-w-0 items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
+						<span className="shrink-0 font-bold text-primary">TRADERLOG</span>
+						<span className="hidden text-muted-foreground sm:inline">
+							{"// "}
+						</span>
+						<span className="hidden truncate text-muted-foreground sm:inline">
+							SHARED TRADE
+						</span>
 					</div>
 					<Link
-						className="shrink-0 rounded border border-primary/30 bg-primary/5 px-3 py-1.5 font-mono text-[10px] text-primary uppercase tracking-wider transition-colors hover:bg-primary/10"
+						className="shrink-0 whitespace-nowrap rounded border border-primary/30 bg-primary/5 px-3 py-1.5 font-mono text-[10px] text-primary uppercase tracking-wider transition-colors hover:bg-primary/10"
 						href="/sign-up"
 					>
 						Start your journal
@@ -142,8 +146,8 @@ export function SharedTradeView({
 				<TradeSummaryCard
 					className="mt-4"
 					netPnl={trade.netPnl}
+					risk={stats?.risk ?? null}
 					rMultiple={stats?.rMultiple ?? null}
-					rrRatio={stats?.plannedRR ?? null}
 					status={trade.status}
 					targetHitPercent={null}
 				/>
