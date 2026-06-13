@@ -184,9 +184,12 @@ describe("market-data-cache integration", () => {
 		today.setUTCHours(0, 0, 0, 0);
 
 		const oldBars = generateMockBars(today, 30);
-		const oldLastBar = oldBars[oldBars.length - 1];
 
-		// Pre-populate cache with stale data (fetchedAt and lastBarAt > 5min ago)
+		// Pre-populate cache with stale data (fetchedAt and lastBarAt > 5min ago).
+		// lastBarAt must be a fixed time in the past, not derived from the mock
+		// bars: those are anchored at a fixed UTC hour, so a run whose wall clock
+		// lands within ~5min of that hour would read them as "fresh" and skip the
+		// re-fetch this test exercises.
 		const staleTime = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
 		await db.insert(schema.candleCache).values({
 			symbol: "NQ",
@@ -196,7 +199,7 @@ describe("market-data-cache integration", () => {
 			barCount: 30,
 			source: "databento",
 			fetchedAt: staleTime,
-			lastBarAt: oldLastBar ? new Date(oldLastBar.timestamp) : staleTime,
+			lastBarAt: staleTime,
 		});
 
 		// Mock fetch to return a larger bar set (simulating updated market data)
