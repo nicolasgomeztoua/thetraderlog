@@ -28,6 +28,7 @@ import {
 	ERR_TRADE_NOT_FOUND,
 	ERR_TRADES_BULK_NOT_FOUND,
 } from "@/lib/constants/errors";
+import { MAEMFE_BATCH_CONCURRENCY } from "@/lib/constants/market-data";
 import {
 	SEARCH_DEFAULT_LIMIT,
 	SEARCH_MIN_QUERY_LENGTH,
@@ -552,6 +553,7 @@ export const tradesRouter = createTRPCRouter({
 				const beThreshold = await getUserBreakevenThreshold(
 					ctx.db,
 					ctx.user.id,
+					ctx.userSettingsCache,
 				);
 				items = items.filter((trade) => {
 					const pnl = trade.netPnl ? parseFloat(trade.netPnl) : 0;
@@ -1169,7 +1171,11 @@ export const tradesRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			// Get user's breakeven threshold setting
-			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			const beThreshold = await getUserBreakevenThreshold(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
 
 			const conditions = [
 				eq(trades.userId, ctx.user.id),
@@ -1195,8 +1201,17 @@ export const tradesRouter = createTRPCRouter({
 				conditions.push(lte(trades.entryTime, endOfDay));
 			}
 
+			// Select only the columns calculateAggregateStats reads (TradeForStats)
+			// to avoid fetching wide text columns (notes, etc.) for every trade.
 			const closedTrades = await ctx.db.query.trades.findMany({
 				where: and(...conditions),
+				columns: {
+					netPnl: true,
+					stopLoss: true,
+					entryPrice: true,
+					quantity: true,
+					symbol: true,
+				},
 			});
 
 			// Use shared stats calculator
@@ -1706,27 +1721,40 @@ export const tradesRouter = createTRPCRouter({
 				skipped: 0,
 			};
 
-			// Process trades sequentially to avoid rate limiting
+			// Tally ownership up front and collect the trades we'll actually process.
+			const eligibleIds: string[] = [];
 			for (const tradeId of input.tradeIds) {
 				results.processed++;
-
-				// Skip if user doesn't own this trade
 				if (!validTradeIds.has(tradeId)) {
-					results.skipped++;
-					continue;
-				}
-
-				// Use the shared service for calculation
-				const result = await calculateAndStoreMAEMFE(tradeId, {
-					skipAlreadyProcessed: true,
-				});
-
-				if (result.success) {
-					results.success++;
-				} else if (result.message === "Already processed") {
+					// Skip if user doesn't own this trade
 					results.skipped++;
 				} else {
-					results.failed++;
+					eligibleIds.push(tradeId);
+				}
+			}
+
+			// Each calculateAndStoreMAEMFE makes a Databento fetch (network), so
+			// process in small concurrent batches instead of fully sequentially.
+			// Capped at MAEMFE_BATCH_CONCURRENCY to respect Databento's effective
+			// per-key concurrency rather than fanning out across all trades.
+			for (let i = 0; i < eligibleIds.length; i += MAEMFE_BATCH_CONCURRENCY) {
+				const batch = eligibleIds.slice(i, i + MAEMFE_BATCH_CONCURRENCY);
+				const batchResults = await Promise.all(
+					batch.map((tradeId) =>
+						calculateAndStoreMAEMFE(tradeId, {
+							skipAlreadyProcessed: true,
+						}),
+					),
+				);
+
+				for (const result of batchResults) {
+					if (result.success) {
+						results.success++;
+					} else if (result.message === "Already processed") {
+						results.skipped++;
+					} else {
+						results.failed++;
+					}
 				}
 			}
 

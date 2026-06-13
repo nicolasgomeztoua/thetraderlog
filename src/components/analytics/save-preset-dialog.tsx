@@ -40,7 +40,7 @@ export function SavePresetDialog({
 	onOpenChange,
 	onSaved,
 }: SavePresetDialogProps) {
-	const { filters } = useAnalyticsFilterStore();
+	const filters = useAnalyticsFilterStore((s) => s.filters);
 	const utils = api.useUtils();
 
 	// Form state

@@ -33,7 +33,7 @@ interface ExportButtonProps {
 // =============================================================================
 
 function useApiFilters() {
-	const { filters } = useAnalyticsFilterStore();
+	const filters = useAnalyticsFilterStore((s) => s.filters);
 
 	return {
 		symbols: filters.symbols.length > 0 ? filters.symbols : undefined,
@@ -71,7 +71,7 @@ export function ExportButton({ className }: ExportButtonProps) {
 	const [isExporting, setIsExporting] = useState(false);
 	const { hasAccess: hasExport } = useHasFeature(FEATURE_CSV_IMPORT_EXPORT);
 	const { selectedAccountId } = useAccount();
-	const { hasActiveFilters } = useAnalyticsFilterStore();
+	const hasActiveFilters = useAnalyticsFilterStore((s) => s.hasActiveFilters());
 	const apiFilters = useApiFilters();
 
 	const utils = api.useUtils();
@@ -114,7 +114,7 @@ export function ExportButton({ className }: ExportButtonProps) {
 			}));
 
 			// Export to CSV
-			exportTradesToCSV(exportableData, hasActiveFilters());
+			exportTradesToCSV(exportableData, hasActiveFilters);
 		} catch (error) {
 			console.error("Failed to export trades:", error);
 		} finally {

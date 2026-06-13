@@ -135,8 +135,21 @@ export function generateRunningPnlSeries(
 	const exitTime = exitExec ? toUnixTimestamp(exitExec.executedAt) : null;
 	const exitPrice = exitExec ? parseFloat(exitExec.price) : null;
 
+	// Precompute execution timestamps once and sort ascending so we can advance a
+	// pointer across the (also ascending) bar loop instead of re-filtering every
+	// execution for every bar — O(bars + executions) instead of O(bars * executions).
+	const execsWithTs = executions
+		.map((exec) => ({ exec, ts: toUnixTimestamp(exec.executedAt) }))
+		.sort((a, b) => a.ts - b.ts);
+
 	// Generate P&L for each bar at or after entry
 	const pnlSeries: RunningPnlPoint[] = [];
+
+	// Executions visible at the current bar's time. Bars are ascending, so
+	// executions only ever become visible (never hidden); we grow this array via
+	// a forward-only pointer rather than rebuilding it per bar.
+	const visibleExecutions: Execution[] = [];
+	let nextExecIdx = 0;
 
 	for (const bar of bars) {
 		// Skip bars before entry
@@ -149,11 +162,15 @@ export function generateRunningPnlSeries(
 			break;
 		}
 
-		// Get executions visible at this bar's time
-		const visibleExecutions = executions.filter((exec) => {
-			const execTs = toUnixTimestamp(exec.executedAt);
-			return execTs <= bar.time;
-		});
+		// Advance the pointer to include every execution at or before this bar's time.
+		while (nextExecIdx < execsWithTs.length) {
+			const item = execsWithTs[nextExecIdx];
+			if (!item || item.ts > bar.time) {
+				break;
+			}
+			visibleExecutions.push(item.exec);
+			nextExecIdx++;
+		}
 
 		// Determine price to use for P&L calculation:
 		// - At or after exit: use exit price for accuracy

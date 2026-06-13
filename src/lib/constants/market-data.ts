@@ -39,3 +39,10 @@ export const DATABENTO_MAX_CONCURRENT_FETCHES = 2;
  * only bounds database load.
  */
 export const MAEMFE_COMPUTE_CONCURRENCY = 4;
+
+/**
+ * Max concurrent MAE/MFE fetches in the user-triggered bulk mutation
+ * (trades.bulkCalculateMAEMFE). Each call hits Databento, so cap fan-out at 2
+ * to match the provider's effective per-key concurrency.
+ */
+export const MAEMFE_BATCH_CONCURRENCY = 2;

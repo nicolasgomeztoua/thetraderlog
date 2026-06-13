@@ -13,6 +13,61 @@ type Db = typeof DbType;
 // USER SETTINGS HELPERS
 // =============================================================================
 
+/** The user_settings columns shared by all three settings helpers. */
+type UserSettingsRow = Pick<
+	typeof userSettings.$inferSelect,
+	"breakevenThreshold" | "timezone" | "tradingSessions"
+>;
+
+/**
+ * Per-request cache for the user_settings row, keyed by userId.
+ *
+ * Lives on the tRPC context (one per HTTP request, shared across all batched
+ * procedures). Passing it to the settings helpers collapses what used to be one
+ * `findFirst` per helper per procedure (the analytics page issued ~60) into a
+ * single DB round-trip per request.
+ */
+export type UserSettingsCache = Map<
+	string,
+	Promise<UserSettingsRow | undefined>
+>;
+
+/**
+ * Fetch the user_settings row (the three columns the helpers need), deduplicated
+ * via an optional per-request cache.
+ */
+function fetchUserSettingsRow(
+	db: Db,
+	userId: string,
+	cache?: UserSettingsCache,
+): Promise<UserSettingsRow | undefined> {
+	const hit = cache?.get(userId);
+	if (hit) {
+		return hit;
+	}
+	// Wrap in Promise.resolve: Drizzle query builders are lazy thenables, so
+	// caching the raw builder would re-execute the query on every await.
+	const promise = Promise.resolve(
+		db.query.userSettings.findFirst({
+			where: eq(userSettings.userId, userId),
+			columns: {
+				breakevenThreshold: true,
+				timezone: true,
+				tradingSessions: true,
+			},
+		}),
+	).catch((err: unknown) => {
+		// Evict on failure so a transient error doesn't poison later calls in the
+		// same request (matches the auth-user cache behavior in trpc.ts).
+		cache?.delete(userId);
+		throw err;
+	});
+	// Set synchronously (before any await) so concurrently-awaited helpers in the
+	// same Promise.all share one query instead of racing into three.
+	cache?.set(userId, promise);
+	return promise;
+}
+
 /**
  * Get user's breakeven threshold setting
  * Default is $3.00 if not set
@@ -20,11 +75,9 @@ type Db = typeof DbType;
 export async function getUserBreakevenThreshold(
 	db: Db,
 	userId: string,
+	cache?: UserSettingsCache,
 ): Promise<number> {
-	const result = await db.query.userSettings.findFirst({
-		where: eq(userSettings.userId, userId),
-		columns: { breakevenThreshold: true },
-	});
+	const result = await fetchUserSettingsRow(db, userId, cache);
 	return parseFloat(result?.breakevenThreshold ?? "3.00");
 }
 
@@ -32,11 +85,12 @@ export async function getUserBreakevenThreshold(
  * Get user's timezone setting
  * Default is UTC if not set
  */
-export async function getUserTimezone(db: Db, userId: string): Promise<string> {
-	const result = await db.query.userSettings.findFirst({
-		where: eq(userSettings.userId, userId),
-		columns: { timezone: true },
-	});
+export async function getUserTimezone(
+	db: Db,
+	userId: string,
+	cache?: UserSettingsCache,
+): Promise<string> {
+	const result = await fetchUserSettingsRow(db, userId, cache);
 	return result?.timezone ?? "UTC";
 }
 
@@ -66,11 +120,9 @@ export const DEFAULT_TRADING_SESSIONS: TradingSession[] = [
 export async function getUserTradingSessions(
 	db: Db,
 	userId: string,
+	cache?: UserSettingsCache,
 ): Promise<TradingSession[]> {
-	const result = await db.query.userSettings.findFirst({
-		where: eq(userSettings.userId, userId),
-		columns: { tradingSessions: true },
-	});
+	const result = await fetchUserSettingsRow(db, userId, cache);
 
 	if (result?.tradingSessions) {
 		try {

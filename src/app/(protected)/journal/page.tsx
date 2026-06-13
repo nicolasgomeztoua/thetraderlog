@@ -2,21 +2,18 @@
 
 import {
 	CheckCircle2,
-	Circle,
 	FileSpreadsheet,
 	Filter,
 	Loader2,
 	Lock,
-	MoreHorizontal,
 	Plus,
 	RotateCcw,
-	Search,
 	Star,
 	Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useHasFeature } from "@/components/billing/upgrade-prompt";
 import { ColumnConfig } from "@/components/trade-log/column-config";
@@ -36,7 +33,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -46,14 +42,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import {
 	Sheet,
 	SheetContent,
@@ -94,8 +82,10 @@ import {
 } from "@/lib/constants/errors";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { getErrorMessage } from "@/lib/shared/utils";
-import { calculateActualRMultiple } from "@/lib/trades/calculations";
 import { api } from "@/trpc/react";
+import { TradeCard } from "./_components/trade-card";
+import { TradeRow } from "./_components/trade-row";
+import { TradeSearchInput } from "./_components/trade-search-input";
 
 export default function JournalPage() {
 	const { hasAccess: hasTradeManagement } = useHasFeature(
@@ -109,8 +99,9 @@ export default function JournalPage() {
 
 	// Filters
 	const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
+	// Bumped to remount (and clear) the search input on "clear filters".
+	const [searchResetKey, setSearchResetKey] = useState(0);
 
 	// Column configuration
 	const {
@@ -129,14 +120,6 @@ export default function JournalPage() {
 	const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set());
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [tradeToDelete, setTradeToDelete] = useState<string | null>(null);
-
-	// Debounce search input
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedSearch(search);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [search]);
 
 	// Build query params from filters
 	const queryParams = useMemo(() => {
@@ -385,15 +368,31 @@ export default function JournalPage() {
 		}
 	};
 
-	const handleSelectTrade = (id: string, checked: boolean) => {
-		const newSelected = new Set(selectedTrades);
-		if (checked) {
-			newSelected.add(id);
-		} else {
-			newSelected.delete(id);
-		}
-		setSelectedTrades(newSelected);
-	};
+	// Stable handlers (functional updates / refs) so memoized rows and cards only
+	// re-render when their own trade or selection changes.
+	const handleSelectTrade = useCallback((id: string, checked: boolean) => {
+		setSelectedTrades((prev) => {
+			const newSelected = new Set(prev);
+			if (checked) {
+				newSelected.add(id);
+			} else {
+				newSelected.delete(id);
+			}
+			return newSelected;
+		});
+	}, []);
+
+	const handleNavigate = useCallback(
+		(id: string) => {
+			router.push(`/journal/${id}`);
+		},
+		[router],
+	);
+
+	const handleRequestDelete = useCallback((id: string) => {
+		setTradeToDelete(id);
+		setDeleteDialogOpen(true);
+	}, []);
 
 	const handleBulkDelete = () => {
 		if (selectedTrades.size === 0) return;
@@ -410,455 +409,8 @@ export default function JournalPage() {
 
 	const clearFilters = () => {
 		setFilters(DEFAULT_FILTERS);
-		setSearch("");
-	};
-
-	// Render a table cell based on column id
-	const renderCell = (
-		columnId: string,
-		trade: (typeof allTrades)[0],
-	): React.ReactNode => {
-		switch (columnId) {
-			case "checkbox":
-				return (
-					<Checkbox
-						checked={selectedTrades.has(trade.id)}
-						onCheckedChange={(checked) =>
-							handleSelectTrade(trade.id, !!checked)
-						}
-					/>
-				);
-			case "symbol":
-				return <span className="font-bold font-mono">{trade.symbol}</span>;
-			case "side":
-				return (
-					<span
-						className={cn(
-							"font-mono text-xs uppercase",
-							trade.direction === "long" ? "text-profit" : "text-loss",
-						)}
-					>
-						{trade.direction === "long" ? "Long" : "Short"}
-					</span>
-				);
-			case "entry":
-				return (
-					<div>
-						<div className="font-mono text-sm">
-							{parseFloat(trade.entryPrice).toFixed(2)}
-						</div>
-						<div className="font-mono text-[10px] text-muted-foreground">
-							{formatDateTime(trade.entryTime)}
-						</div>
-					</div>
-				);
-			case "exit":
-				return trade.exitPrice ? (
-					<div>
-						<div className="font-mono text-sm">
-							{parseFloat(trade.exitPrice).toFixed(2)}
-						</div>
-						<div className="font-mono text-[10px] text-muted-foreground">
-							{formatDateTime(trade.exitTime)}
-						</div>
-					</div>
-				) : (
-					<span className="font-mono text-muted-foreground text-xs">—</span>
-				);
-			case "size":
-				return (
-					<span className="font-mono text-sm">
-						{parseFloat(trade.quantity).toFixed(2)}
-					</span>
-				);
-			case "pnl":
-				return (
-					<span
-						className={cn(
-							"font-bold font-mono",
-							trade.netPnl
-								? getPnLColorClass(trade.netPnl)
-								: "text-muted-foreground",
-						)}
-					>
-						{trade.netPnl ? formatCurrency(parseFloat(trade.netPnl)) : "—"}
-					</span>
-				);
-			case "result":
-				return trade.status === "open" ? (
-					<span className="font-mono text-muted-foreground text-xs">Open</span>
-				) : trade.exitReason === "take_profit" || trade.takeProfitHit ? (
-					<span className="font-mono text-profit text-xs">TP</span>
-				) : trade.exitReason === "stop_loss" || trade.stopLossHit ? (
-					<span className="font-mono text-loss text-xs">SL</span>
-				) : trade.exitReason === "trailing_stop" ? (
-					<span className="font-mono text-accent text-xs">Trail</span>
-				) : trade.exitReason === "breakeven" ? (
-					<span className="font-mono text-breakeven text-xs">BE</span>
-				) : (
-					<span className="font-mono text-muted-foreground text-xs">
-						Manual
-					</span>
-				);
-			case "rating":
-				return (
-					<StarRating
-						onChange={(rating) =>
-							updateRating({ id: trade.id, rating: rating ?? 0 })
-						}
-						size="sm"
-						value={trade.rating ?? 0}
-					/>
-				);
-			case "reviewed":
-				return (
-					<button
-						className="flex items-center justify-center"
-						onClick={(e) => {
-							e.stopPropagation();
-							markReviewed.mutate({
-								id: trade.id,
-								isReviewed: !trade.isReviewed,
-							});
-						}}
-						type="button"
-					>
-						{trade.isReviewed ? (
-							<CheckCircle2 className="h-4 w-4 text-profit" />
-						) : (
-							<Circle className="h-4 w-4 text-muted-foreground/30" />
-						)}
-					</button>
-				);
-			case "setup":
-				return (
-					<span className="font-mono text-muted-foreground text-xs">
-						{trade.setupType || "—"}
-					</span>
-				);
-			case "fees":
-				return (
-					<span className="font-mono text-muted-foreground text-xs">
-						{trade.fees ? formatCurrency(parseFloat(trade.fees)) : "—"}
-					</span>
-				);
-			case "duration": {
-				if (!trade.exitTime)
-					return (
-						<span className="font-mono text-muted-foreground text-xs">—</span>
-					);
-				const duration =
-					new Date(trade.exitTime).getTime() -
-					new Date(trade.entryTime).getTime();
-				const minutes = Math.floor(duration / 60000);
-				const hours = Math.floor(minutes / 60);
-				const days = Math.floor(hours / 24);
-				if (days > 0)
-					return (
-						<span className="font-mono text-xs">
-							{days}d {hours % 24}h
-						</span>
-					);
-				if (hours > 0)
-					return (
-						<span className="font-mono text-xs">
-							{hours}h {minutes % 60}m
-						</span>
-					);
-				return <span className="font-mono text-xs">{minutes}m</span>;
-			}
-			case "rMultiple": {
-				// Calculate R-Multiple using actual P&L and proper risk calculation
-				const rMultiple = calculateActualRMultiple(
-					trade.netPnl ? parseFloat(trade.netPnl) : null,
-					parseFloat(trade.entryPrice),
-					trade.stopLoss ? parseFloat(trade.stopLoss) : null,
-					parseFloat(trade.quantity),
-					trade.symbol,
-				);
-				if (rMultiple === null) {
-					return (
-						<span className="font-mono text-muted-foreground text-xs">—</span>
-					);
-				}
-				return (
-					<span
-						className={cn(
-							"font-mono text-xs",
-							rMultiple > 0
-								? "text-profit"
-								: rMultiple < 0
-									? "text-loss"
-									: "text-muted-foreground",
-						)}
-					>
-						{rMultiple.toFixed(2)}R
-					</span>
-				);
-			}
-			case "tags":
-				return (
-					<div className="flex flex-wrap gap-1">
-						{trade.tradeTags?.slice(0, 2).map((tt) => (
-							<Badge
-								className="px-1 py-0 text-[10px]"
-								key={tt.tagId}
-								style={{
-									borderColor: tt.tag.color ?? undefined,
-									color: tt.tag.color ?? undefined,
-								}}
-								variant="outline"
-							>
-								{tt.tag.name}
-							</Badge>
-						))}
-						{trade.tradeTags && trade.tradeTags.length > 2 && (
-							<Badge className="px-1 py-0 text-[10px]" variant="secondary">
-								+{trade.tradeTags.length - 2}
-							</Badge>
-						)}
-					</div>
-				);
-			case "account":
-				return (
-					<span className="font-mono text-muted-foreground text-xs">
-						{trade.account?.name || "—"}
-					</span>
-				);
-			case "strategy":
-				return (
-					<Select
-						onValueChange={(value) => {
-							const strategyId = value === "none" ? null : value;
-							updateStrategyMutation.mutate({ id: trade.id, strategyId });
-						}}
-						value={trade.strategyId?.toString() ?? "none"}
-					>
-						<SelectTrigger className="h-7 w-[130px] border-transparent bg-transparent px-2 font-mono text-xs hover:border-border focus:ring-0 focus:ring-offset-0">
-							<SelectValue>
-								{trade.strategy ? (
-									<div className="flex items-center gap-1.5">
-										<div
-											className="h-1.5 w-1.5 shrink-0 rounded-full"
-											style={{
-												backgroundColor: trade.strategy.color ?? "#d4ff00",
-											}}
-										/>
-										<span className="truncate">{trade.strategy.name}</span>
-									</div>
-								) : (
-									<span className="text-muted-foreground/50">None</span>
-								)}
-							</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="none">
-								<span className="text-muted-foreground">None</span>
-							</SelectItem>
-							{strategiesList?.map((s) => (
-								<SelectItem key={s.id} value={s.id.toString()}>
-									<div className="flex items-center gap-1.5">
-										<div
-											className="h-1.5 w-1.5 shrink-0 rounded-full"
-											style={{ backgroundColor: s.color ?? "#d4ff00" }}
-										/>
-										{s.name}
-									</div>
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				);
-			case "actions":
-				return (
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button className="h-8 w-8" size="icon" variant="ghost">
-								<MoreHorizontal className="h-4 w-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem asChild className="font-mono text-xs">
-								<Link href={`/journal/${trade.id}`}>View Details</Link>
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="font-mono text-destructive text-xs focus:text-destructive"
-								onClick={() => {
-									setTradeToDelete(trade.id);
-									setDeleteDialogOpen(true);
-								}}
-							>
-								<Trash2 className="mr-2 h-4 w-4" />
-								Delete
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				);
-			default:
-				return null;
-		}
-	};
-
-	// Mobile trade card component
-	const TradeCard = ({ trade }: { trade: (typeof allTrades)[0] }) => {
-		const rMultiple = calculateActualRMultiple(
-			trade.netPnl ? parseFloat(trade.netPnl) : null,
-			parseFloat(trade.entryPrice),
-			trade.stopLoss ? parseFloat(trade.stopLoss) : null,
-			parseFloat(trade.quantity),
-			trade.symbol,
-		);
-
-		return (
-			<button
-				className={cn(
-					"flex w-full cursor-pointer flex-col gap-3 border-border border-b bg-transparent p-4 text-left transition-colors active:bg-secondary",
-					selectedTrades.has(trade.id) && "bg-accent",
-				)}
-				onClick={() => router.push(`/journal/${trade.id}`)}
-				type="button"
-			>
-				{/* Top row: checkbox, symbol, direction, P&L */}
-				<div className="flex w-full items-center justify-between">
-					<div className="flex items-center gap-3">
-						<Checkbox
-							checked={selectedTrades.has(trade.id)}
-							onCheckedChange={(checked) => {
-								handleSelectTrade(trade.id, !!checked);
-							}}
-							onClick={(e) => e.stopPropagation()}
-						/>
-						<div className="flex items-center gap-2">
-							<span className="font-bold font-mono text-sm">
-								{trade.symbol}
-							</span>
-							<span
-								className={cn(
-									"font-mono text-xs uppercase",
-									trade.direction === "long" ? "text-profit" : "text-loss",
-								)}
-							>
-								{trade.direction === "long" ? "L" : "S"}
-							</span>
-						</div>
-					</div>
-					<span
-						className={cn(
-							"font-bold font-mono text-sm",
-							trade.netPnl
-								? getPnLColorClass(trade.netPnl)
-								: "text-muted-foreground",
-						)}
-					>
-						{trade.netPnl ? formatCurrency(parseFloat(trade.netPnl)) : "—"}
-					</span>
-				</div>
-
-				{/* Middle row: entry/exit info */}
-				<div className="flex w-full items-center justify-between font-mono text-muted-foreground text-xs">
-					<span>{formatDateTime(trade.entryTime)}</span>
-					<div className="flex items-center gap-2">
-						{rMultiple !== null && (
-							<span
-								className={cn(
-									rMultiple > 0
-										? "text-profit"
-										: rMultiple < 0
-											? "text-loss"
-											: "text-muted-foreground",
-								)}
-							>
-								{rMultiple.toFixed(2)}R
-							</span>
-						)}
-						{trade.status === "open" ? (
-							<span className="text-muted-foreground">Open</span>
-						) : trade.exitReason === "take_profit" || trade.takeProfitHit ? (
-							<span className="text-profit">TP</span>
-						) : trade.exitReason === "stop_loss" || trade.stopLossHit ? (
-							<span className="text-loss">SL</span>
-						) : trade.exitReason === "trailing_stop" ? (
-							<span className="text-accent">Trail</span>
-						) : trade.exitReason === "breakeven" ? (
-							<span className="text-breakeven">BE</span>
-						) : (
-							<span className="text-muted-foreground">Manual</span>
-						)}
-					</div>
-				</div>
-
-				{/* Bottom row: rating, reviewed, actions */}
-				<div className="flex w-full items-center justify-between">
-					<div className="flex items-center gap-3">
-						{/* biome-ignore lint/a11y/noStaticElementInteractions: stop propagation wrapper */}
-						{/* biome-ignore lint/a11y/useKeyWithClickEvents: stop propagation wrapper */}
-						<span onClick={(e) => e.stopPropagation()}>
-							<StarRating
-								onChange={(rating) =>
-									updateRating({ id: trade.id, rating: rating ?? 0 })
-								}
-								size="sm"
-								value={trade.rating ?? 0}
-							/>
-						</span>
-						{/* biome-ignore lint/a11y/useSemanticElements: nested interactive element inside button */}
-						<span
-							className="flex items-center justify-center"
-							onClick={(e) => {
-								e.stopPropagation();
-								markReviewed.mutate({
-									id: trade.id,
-									isReviewed: !trade.isReviewed,
-								});
-							}}
-							onKeyDown={(e) => {
-								if (e.key === "Enter" || e.key === " ") {
-									e.stopPropagation();
-									e.preventDefault();
-									markReviewed.mutate({
-										id: trade.id,
-										isReviewed: !trade.isReviewed,
-									});
-								}
-							}}
-							role="button"
-							tabIndex={0}
-						>
-							{trade.isReviewed ? (
-								<CheckCircle2 className="h-4 w-4 text-profit" />
-							) : (
-								<Circle className="h-4 w-4 text-muted-foreground/30" />
-							)}
-						</span>
-					</div>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-							<Button className="h-8 w-8" size="icon" variant="ghost">
-								<MoreHorizontal className="h-4 w-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem asChild className="font-mono text-xs">
-								<Link href={`/journal/${trade.id}`}>View Details</Link>
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								className="font-mono text-destructive text-xs focus:text-destructive"
-								onClick={(e) => {
-									e.stopPropagation();
-									setTradeToDelete(trade.id);
-									setDeleteDialogOpen(true);
-								}}
-							>
-								<Trash2 className="mr-2 h-4 w-4" />
-								Delete
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-			</button>
-		);
+		setDebouncedSearch("");
+		setSearchResetKey((k) => k + 1);
 	};
 
 	// Mobile trash card component
@@ -987,15 +539,10 @@ export default function JournalPage() {
 				<TabsContent className="space-y-4" value="trades">
 					{/* Search + Filter button on mobile */}
 					<div className="flex gap-2">
-						<div className="relative flex-1">
-							<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
-							<Input
-								className="pl-9 font-mono text-xs"
-								onChange={(e) => setSearch(e.target.value)}
-								placeholder="Search symbol, setup, notes..."
-								value={search}
-							/>
-						</div>
+						<TradeSearchInput
+							key={searchResetKey}
+							onDebouncedChange={setDebouncedSearch}
+						/>
 						{/* Mobile filter button */}
 						{isMobile && (
 							<Sheet onOpenChange={setFilterSheetOpen} open={filterSheetOpen}>
@@ -1205,7 +752,17 @@ export default function JournalPage() {
 									</span>
 								</div>
 								{allTrades.map((trade) => (
-									<TradeCard key={trade.id} trade={trade} />
+									<TradeCard
+										formatDateTime={formatDateTime}
+										isSelected={selectedTrades.has(trade.id)}
+										key={trade.id}
+										onNavigate={handleNavigate}
+										onRate={updateRating}
+										onRequestDelete={handleRequestDelete}
+										onSelectTrade={handleSelectTrade}
+										onToggleReviewed={markReviewed.mutate}
+										trade={trade}
+									/>
 								))}
 								{/* Infinite scroll sentinel */}
 								<div className="h-1" ref={sentinelRef} />
@@ -1261,33 +818,20 @@ export default function JournalPage() {
 									</TableHeader>
 									<TableBody>
 										{allTrades.map((trade) => (
-											<TableRow
-												className={cn(
-													"cursor-pointer border-border transition-colors hover:bg-secondary",
-													selectedTrades.has(trade.id) && "bg-accent",
-												)}
+											<TradeRow
+												formatDateTime={formatDateTime}
+												isSelected={selectedTrades.has(trade.id)}
 												key={trade.id}
-												onClick={() => router.push(`/journal/${trade.id}`)}
-											>
-												{visibleColumns.map((col) => (
-													<TableCell
-														key={col.id}
-														onClick={(e) => {
-															if (
-																col.id === "checkbox" ||
-																col.id === "actions" ||
-																col.id === "rating" ||
-																col.id === "reviewed" ||
-																col.id === "strategy"
-															) {
-																e.stopPropagation();
-															}
-														}}
-													>
-														{renderCell(col.id, trade)}
-													</TableCell>
-												))}
-											</TableRow>
+												onChangeStrategy={updateStrategyMutation.mutate}
+												onNavigate={handleNavigate}
+												onRate={updateRating}
+												onRequestDelete={handleRequestDelete}
+												onSelectTrade={handleSelectTrade}
+												onToggleReviewed={markReviewed.mutate}
+												strategiesList={strategiesList}
+												trade={trade}
+												visibleColumns={visibleColumns}
+											/>
 										))}
 									</TableBody>
 								</Table>

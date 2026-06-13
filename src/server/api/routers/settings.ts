@@ -51,6 +51,9 @@ export const settingsRouter = createTRPCRouter({
 					.set(input)
 					.where(eq(userSettings.userId, ctx.user.id))
 					.returning();
+				// Invalidate the per-request settings cache so any later read in
+				// this request reflects the write.
+				ctx.userSettingsCache.delete(ctx.user.id);
 				return updated;
 			} else {
 				// Create new
@@ -61,6 +64,9 @@ export const settingsRouter = createTRPCRouter({
 						...input,
 					})
 					.returning();
+				// Invalidate the per-request settings cache so any later read in
+				// this request reflects the write.
+				ctx.userSettingsCache.delete(ctx.user.id);
 				return created;
 			}
 		}),

@@ -63,7 +63,8 @@ export function TradeCountBadge({
 	className,
 	usePreviewFilters = false,
 }: TradeCountBadgeProps) {
-	const { filters, previewFilters } = useAnalyticsFilterStore();
+	const filters = useAnalyticsFilterStore((s) => s.filters);
+	const previewFilters = useAnalyticsFilterStore((s) => s.previewFilters);
 	const activeFilters = usePreviewFilters ? previewFilters : filters;
 
 	// Debounce the filters to avoid excessive API calls

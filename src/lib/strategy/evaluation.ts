@@ -5,11 +5,11 @@
  * Each evaluator checks a specific condition and returns a standardized result.
  */
 
-import { and, eq, gte, isNull, lt, lte, ne } from "drizzle-orm";
+import { and, eq, gt, gte, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { getPointValue } from "@/lib/market-data";
 import { getDateStringInTimezone, getDayBoundsInTimezone } from "@/lib/shared";
 import { calculatePlannedRR } from "@/lib/trades/calculations";
-import { getUserTimezone } from "@/server/api/helpers";
+import { getUserTimezone, type UserSettingsCache } from "@/server/api/helpers";
 import type { db as DbType } from "@/server/db";
 import type { TradeExecution } from "@/server/db/schema";
 import { accounts, tradeExecutions, trades } from "@/server/db/schema";
@@ -642,9 +642,10 @@ export async function buildEvaluationContext(
 	db: Db,
 	trade: TradeWithAccount,
 	userId: string,
+	cache?: UserSettingsCache,
 ): Promise<EvaluationContext> {
 	// Get user timezone for date comparisons
-	const userTimezone = await getUserTimezone(db, userId);
+	const userTimezone = await getUserTimezone(db, userId, cache);
 
 	// Run queries in parallel for efficiency
 	const [executionsResult, dayTradesResult, concurrentCount, accountBalance] =
@@ -755,36 +756,29 @@ async function countConcurrentTrades(
 ): Promise<number> {
 	const entryTime = trade.entryTime;
 
-	// Find trades that:
-	// 1. Were entered before or at this trade's entry time
-	// 2. Were either still open OR exited after this trade's entry time
-	// 3. Are not this trade itself
-	// 4. Are not soft-deleted
-	const concurrentTrades = await db.query.trades.findMany({
-		where: and(
-			eq(trades.userId, userId),
-			ne(trades.id, trade.id),
-			isNull(trades.deletedAt),
-			// Entered before or at this trade's entry
-			lte(trades.entryTime, entryTime),
-		),
-		columns: {
-			id: true,
-			exitTime: true,
-			status: true,
-		},
-	});
+	// Count trades that were open at this trade's entry time:
+	// 1. Entered before or at this trade's entry time
+	// 2. Either still open OR exited after this trade's entry time
+	// 3. Not this trade itself
+	// 4. Not soft-deleted
+	// The open-at-entry predicate is pushed into SQL so we COUNT rather than
+	// fetching every prior trade and filtering in memory. (gt is NULL-false, so
+	// open trades with a null exitTime are matched by the status="open" branch.)
+	const [row] = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(trades)
+		.where(
+			and(
+				eq(trades.userId, userId),
+				ne(trades.id, trade.id),
+				isNull(trades.deletedAt),
+				lte(trades.entryTime, entryTime),
+				or(eq(trades.status, "open"), gt(trades.exitTime, entryTime)),
+			),
+		);
 
-	// Filter to trades that were still open at entry time
-	// A trade was open if: status is 'open' OR exitTime is after entry time
-	const openAtEntry = concurrentTrades.filter((t) => {
-		if (t.status === "open") return true;
-		if (t.exitTime && t.exitTime > entryTime) return true;
-		return false;
-	});
-
-	// Return count + 1 to include this trade itself
-	return openAtEntry.length + 1;
+	// +1 to include this trade itself
+	return (row?.count ?? 0) + 1;
 }
 
 /**

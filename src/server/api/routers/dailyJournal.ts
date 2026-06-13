@@ -183,7 +183,7 @@ export const dailyJournalRouter = createTRPCRouter({
 
 				// Update search vector asynchronously (non-blocking)
 				// Fetch timezone lazily to avoid extra DB round-trip on the hot path
-				void getUserTimezone(ctx.db, ctx.user.id)
+				void getUserTimezone(ctx.db, ctx.user.id, ctx.userSettingsCache)
 					.then((timezone) =>
 						updateJournalSearchVector(ctx.db, {
 							journalId: existing.id,
@@ -219,7 +219,7 @@ export const dailyJournalRouter = createTRPCRouter({
 
 			// Update search vector asynchronously (non-blocking)
 			// Fetch timezone lazily to avoid extra DB round-trip on the hot path
-			void getUserTimezone(ctx.db, ctx.user.id)
+			void getUserTimezone(ctx.db, ctx.user.id, ctx.userSettingsCache)
 				.then((timezone) =>
 					updateJournalSearchVector(ctx.db, {
 						journalId: created.id,
@@ -462,7 +462,11 @@ export const dailyJournalRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			// Get user's timezone for trade filtering
-			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+			const userTimezone = await getUserTimezone(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
 
 			// Journal uses UTC midnight for storage (date only, no time component)
 			const normalizedDate = normalizeDate(new Date(input.date));
@@ -1123,7 +1127,11 @@ export const dailyJournalRouter = createTRPCRouter({
 			const endNormalized = normalizeDate(new Date(input.endDate));
 
 			// Get user timezone for trade filtering
-			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+			const userTimezone = await getUserTimezone(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
 
 			// Get all active templates for this user
 			const templates = await ctx.db.query.dailyChecklistTemplates.findMany({
@@ -1327,7 +1335,11 @@ export const dailyJournalRouter = createTRPCRouter({
 			const endNormalized = normalizeDate(new Date(input.endDate));
 
 			// Get user timezone for trade filtering
-			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+			const userTimezone = await getUserTimezone(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
 
 			// Get all active templates for this user (for checklist completion)
 			const templates = await ctx.db.query.dailyChecklistTemplates.findMany({

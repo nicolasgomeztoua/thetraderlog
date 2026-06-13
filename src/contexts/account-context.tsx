@@ -5,6 +5,7 @@ import {
 	type ReactNode,
 	useContext,
 	useEffect,
+	useMemo,
 	useState,
 } from "react";
 import { api } from "@/trpc/react";
@@ -87,22 +88,23 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 		}
 	}, [accounts]);
 
-	const selectedAccount =
-		accounts.find((a) => a.id === selectedAccountId) ?? null;
+	// Memoize the context value so consumers don't re-render on every provider
+	// render — only when the underlying data actually changes. (setSelectedAccountId
+	// and refetch are stable references.)
+	const value = useMemo<AccountContextType>(
+		() => ({
+			accounts,
+			selectedAccount: accounts.find((a) => a.id === selectedAccountId) ?? null,
+			selectedAccountId,
+			setSelectedAccountId,
+			isLoading,
+			refetchAccounts: refetch,
+		}),
+		[accounts, selectedAccountId, isLoading, refetch],
+	);
 
 	return (
-		<AccountContext.Provider
-			value={{
-				accounts,
-				selectedAccount,
-				selectedAccountId,
-				setSelectedAccountId,
-				isLoading,
-				refetchAccounts: refetch,
-			}}
-		>
-			{children}
-		</AccountContext.Provider>
+		<AccountContext.Provider value={value}>{children}</AccountContext.Provider>
 	);
 }
 

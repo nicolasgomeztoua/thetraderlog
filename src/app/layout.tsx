@@ -6,7 +6,6 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Manrope } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { CLERK_THEME } from "@/lib/shared";
-import { TRPCReactProvider } from "@/trpc/react";
 
 const siteTitle = "TheTraderLog - AI Trading Analytics for Serious Traders";
 const siteDescription =
@@ -68,7 +67,10 @@ export default function RootLayout({
 				lang="en"
 			>
 				<body>
-					<TRPCReactProvider>{children}</TRPCReactProvider>
+					{/* tRPC's React Query provider lives in the (protected)/(admin)
+					    group layouts so public marketing/share/print pages don't ship
+					    the client. */}
+					{children}
 					<Toaster position="top-right" richColors />
 				</body>
 			</html>

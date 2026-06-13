@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	calculateConsistencyMetric,
@@ -464,23 +464,25 @@ export const accountsRouter = createTRPCRouter({
 				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
-			// Get all closed trades for this account
-			const accountTrades = await ctx.db.query.trades.findMany({
-				where: and(eq(trades.accountId, input.id), eq(trades.status, "closed")),
-			});
+			// Aggregate stats in SQL instead of fetching every closed trade row.
+			// NOTE: intentionally does NOT filter deletedAt — this preserves the
+			// prior behavior of this endpoint (getPropCompliance does filter it).
+			const [agg] = await ctx.db
+				.select({
+					totalTrades: sql<number>`count(*)::int`,
+					wins: sql<number>`count(*) filter (where ${trades.netPnl} > 0)::int`,
+					losses: sql<number>`count(*) filter (where ${trades.netPnl} < 0)::int`,
+					totalPnl: sql<string>`coalesce(sum(${trades.netPnl}), '0')`,
+				})
+				.from(trades)
+				.where(
+					and(eq(trades.accountId, input.id), eq(trades.status, "closed")),
+				);
 
-			const totalTrades = accountTrades.length;
-			const wins = accountTrades.filter(
-				(t) => t.netPnl && parseFloat(t.netPnl) > 0,
-			).length;
-			const losses = accountTrades.filter(
-				(t) => t.netPnl && parseFloat(t.netPnl) < 0,
-			).length;
-
-			const totalPnl = accountTrades.reduce(
-				(sum, t) => sum + (t.netPnl ? parseFloat(t.netPnl) : 0),
-				0,
-			);
+			const totalTrades = agg?.totalTrades ?? 0;
+			const wins = agg?.wins ?? 0;
+			const losses = agg?.losses ?? 0;
+			const totalPnl = parseFloat(agg?.totalPnl ?? "0");
 
 			const currentBalance =
 				parseFloat(account.initialBalance ?? "0") + totalPnl;
@@ -517,18 +519,30 @@ export const accountsRouter = createTRPCRouter({
 				throw new Error(ERR_ACCOUNT_NOT_PROP);
 			}
 
-			// Fetch all closed trades for the account, sorted by exitTime
+			// Fetch all closed trades for the account, sorted by exitTime.
+			// Only the columns the compliance math reads — downstream helpers
+			// (buildEquityCurve, calculateDailyPnl, calculateTradingDays, etc.)
+			// use only netPnl and exitTime.
 			const accountTrades = await ctx.db.query.trades.findMany({
 				where: and(
 					eq(trades.accountId, input.accountId),
 					eq(trades.status, "closed"),
 					isNull(trades.deletedAt),
 				),
+				columns: {
+					id: true,
+					netPnl: true,
+					exitTime: true,
+				},
 				orderBy: [asc(trades.exitTime)],
 			});
 
 			// Get user timezone for date grouping
-			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+			const userTimezone = await getUserTimezone(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
 
 			const initialBalance = parseFloat(account.initialBalance ?? "0");
 			const maxDrawdownPercent = parseFloat(account.maxDrawdown ?? "0");

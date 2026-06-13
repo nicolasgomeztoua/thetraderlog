@@ -20,6 +20,7 @@ import {
 	ERR_PLAN_REQUIRED,
 } from "@/lib/constants/errors";
 import { logger } from "@/lib/logger";
+import type { UserSettingsCache } from "@/server/api/helpers";
 import { db } from "@/server/db";
 import type { Database } from "@/server/db/create-db";
 import type { User } from "@/server/db/schema";
@@ -87,6 +88,11 @@ export const createTRPCContext = async (
 		clerkAuth: clerkAuthSession ? (clerkAuthSession as ClerkAuthLike) : null,
 		// Pass along the pre-created user for tests (if provided)
 		_testUser: overrides?.user,
+		// Per-request caches shared across every procedure in a batched HTTP
+		// request. createTRPCContext runs once per request, so these dedupe the
+		// auth-user lookup and the user_settings fetch across the whole batch.
+		userSettingsCache: new Map() as UserSettingsCache,
+		authUserCache: {} as { promise?: Promise<User | undefined> },
 		...opts,
 	};
 };
@@ -191,37 +197,27 @@ const sentryMiddleware = t.middleware(async ({ ctx, next, path, type }) => {
 });
 
 /**
- * Auth middleware - ensures user is authenticated and syncs user to DB if needed
+ * Find the DB user for a Clerk user id, auto-creating it on first login.
+ * Extracted so authMiddleware can memoize it per request (see authUserCache).
  */
-const authMiddleware = t.middleware(async ({ ctx, next }) => {
-	if (!ctx.userId) {
-		throw new TRPCError({ code: "UNAUTHORIZED" });
-	}
-
-	// If a test user was pre-created and passed in, use it directly
-	if (ctx._testUser) {
-		return next({
-			ctx: {
-				...ctx,
-				user: ctx._testUser,
-			},
-		});
-	}
-
+async function resolveAuthUser(
+	database: Database,
+	userId: string,
+): Promise<User | undefined> {
 	// Try to find user in database
-	let user = await ctx.db.query.users.findFirst({
-		where: eq(users.clerkId, ctx.userId),
+	let user = await database.query.users.findFirst({
+		where: eq(users.clerkId, userId),
 	});
 
 	// If user doesn't exist, create them (auto-sync on first login)
 	if (!user) {
 		// In test environment, create a simple test user without Clerk
 		if (process.env.NODE_ENV === "test") {
-			const [newUser] = await ctx.db
+			const [newUser] = await database
 				.insert(users)
 				.values({
-					clerkId: ctx.userId,
-					email: `test-${ctx.userId}@test.local`,
+					clerkId: userId,
+					email: `test-${userId}@test.local`,
 					name: "Test User",
 					role: "user",
 				})
@@ -244,10 +240,10 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
 				[clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
 				null;
 
-			const [newUser] = await ctx.db
+			const [newUser] = await database
 				.insert(users)
 				.values({
-					clerkId: ctx.userId,
+					clerkId: userId,
 					email,
 					name,
 					imageUrl: clerkUser.imageUrl,
@@ -257,6 +253,44 @@ const authMiddleware = t.middleware(async ({ ctx, next }) => {
 
 			user = newUser;
 		}
+	}
+
+	return user;
+}
+
+/**
+ * Auth middleware - ensures user is authenticated and syncs user to DB if needed
+ */
+const authMiddleware = t.middleware(async ({ ctx, next }) => {
+	if (!ctx.userId) {
+		throw new TRPCError({ code: "UNAUTHORIZED" });
+	}
+
+	// If a test user was pre-created and passed in, use it directly
+	if (ctx._testUser) {
+		return next({
+			ctx: {
+				...ctx,
+				user: ctx._testUser,
+			},
+		});
+	}
+
+	const userId = ctx.userId;
+
+	// Memoize the find-or-create per request so a batch of procedures performs it
+	// once instead of once per procedure. On failure, clear the cache so a
+	// transient error doesn't poison the rest of the batch.
+	if (!ctx.authUserCache.promise) {
+		ctx.authUserCache.promise = resolveAuthUser(ctx.db, userId);
+	}
+
+	let user: User | undefined;
+	try {
+		user = await ctx.authUserCache.promise;
+	} catch (error) {
+		ctx.authUserCache.promise = undefined;
+		throw error;
 	}
 
 	if (!user) {
