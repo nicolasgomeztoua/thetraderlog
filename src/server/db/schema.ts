@@ -389,6 +389,11 @@ export const trades = createTable(
 		index("trade_deleted_at_idx").on(t.deletedAt),
 		index("trade_hash_idx").on(t.tradeHash),
 		index("trade_search_vector_idx").using("gin", t.searchVector),
+		// Composite: serves analytics + prop-compliance queries that filter by
+		// (userId, status="closed") and order by exitTime.
+		index("trade_user_status_exit_idx").on(t.userId, t.status, t.exitTime),
+		// Composite: serves journal cursor pagination (filter userId, order entryTime).
+		index("trade_user_entry_idx").on(t.userId, t.entryTime),
 	],
 );
 

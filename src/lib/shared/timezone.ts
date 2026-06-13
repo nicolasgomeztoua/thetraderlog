@@ -114,6 +114,31 @@ export function getDayOfWeekInTimezone(
 }
 
 /**
+ * Cache of Intl.DateTimeFormat instances keyed by timezone.
+ *
+ * Constructing an Intl.DateTimeFormat is expensive (~1ms each). These formatters
+ * are called once per trade in hot analytics/prop-compliance loops, so we cache
+ * one formatter per timezone. We assemble the YYYY-MM-DD string from formatToParts
+ * rather than relying on a locale's output format (ICU-stable across environments).
+ */
+const dateStringFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function getDateStringFormatter(timezone: string): Intl.DateTimeFormat {
+	let formatter = dateStringFormatters.get(timezone);
+	if (!formatter) {
+		// Throws RangeError on an invalid timezone, matching prior behavior.
+		formatter = new Intl.DateTimeFormat("en-CA", {
+			timeZone: timezone,
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		});
+		dateStringFormatters.set(timezone, formatter);
+	}
+	return formatter;
+}
+
+/**
  * Get a date string (YYYY-MM-DD) in the specified timezone
  * Useful for grouping trades by day in user's local time
  */
@@ -121,11 +146,17 @@ export function getDateStringInTimezone(
 	date: Date | string,
 	timezone: string,
 ): string {
-	return formatInTimeZone(
-		typeof date === "string" ? new Date(date) : date,
-		timezone,
-		"yyyy-MM-dd",
-	);
+	const d = typeof date === "string" ? new Date(date) : date;
+	const parts = getDateStringFormatter(timezone).formatToParts(d);
+	let year = "";
+	let month = "";
+	let day = "";
+	for (const part of parts) {
+		if (part.type === "year") year = part.value;
+		else if (part.type === "month") month = part.value;
+		else if (part.type === "day") day = part.value;
+	}
+	return `${year}-${month}-${day}`;
 }
 
 /**
@@ -245,14 +276,32 @@ export function getTimezoneAbbreviation(timezone: string, date?: Date): string {
 }
 
 /**
+ * Memoized timezone offsets. The offset only changes at DST transitions, so we
+ * cache per (timezone, hour-bucket). This avoids the two relatively expensive
+ * toLocaleString round-trips on every call in hot hour-conversion paths.
+ */
+const timezoneOffsetCache = new Map<string, number>();
+
+/**
  * Get the UTC offset in hours for a timezone at a given date
  * e.g., "America/New_York" -> -5 or -4 depending on DST
  */
 export function getTimezoneOffset(timezone: string, date?: Date): number {
 	const d = date ?? new Date();
+	const cacheKey = `${timezone}:${Math.floor(d.getTime() / 3_600_000)}`;
+	const cached = timezoneOffsetCache.get(cacheKey);
+	if (cached !== undefined) {
+		return cached;
+	}
 	const utcDate = new Date(d.toLocaleString("en-US", { timeZone: "UTC" }));
 	const tzDate = new Date(d.toLocaleString("en-US", { timeZone: timezone }));
-	return (tzDate.getTime() - utcDate.getTime()) / (1000 * 60 * 60);
+	const offset = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60 * 60);
+	// Bound memory growth; offsets are cheap to recompute after a flush.
+	if (timezoneOffsetCache.size > 1000) {
+		timezoneOffsetCache.clear();
+	}
+	timezoneOffsetCache.set(cacheKey, offset);
+	return offset;
 }
 
 /**
