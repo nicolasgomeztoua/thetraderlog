@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import type { RiskParameters } from "@/components/strategy/risk-config";
@@ -21,7 +21,10 @@ import {
 	isRuleRelevant,
 } from "@/lib/strategy";
 import type { AutoCondition, AutoEvaluationResult } from "@/lib/strategy/types";
-import { getUserBreakevenThreshold } from "@/server/api/helpers";
+import {
+	getUserBreakevenThreshold,
+	getUserTimezone,
+} from "@/server/api/helpers";
 import {
 	createTRPCRouter,
 	protectedProcedure,
@@ -289,43 +292,43 @@ export const strategiesRouter = createTRPCRouter({
 				},
 			});
 
-			// Get trade counts and stats for each strategy
-			const strategiesWithStats = await Promise.all(
-				results.map(async (strategy) => {
-					// Get trade count for this strategy
-					const tradeCountResult = await ctx.db
-						.select({ count: sql<number>`count(*)` })
-						.from(trades)
-						.where(
-							and(
-								eq(trades.strategyId, strategy.id),
-								eq(trades.userId, ctx.user.id),
-								isNull(trades.deletedAt),
-							),
-						);
+			// Get trade counts for all strategies in a single grouped query rather
+			// than one COUNT(*) per strategy (previously O(n) round-trips).
+			const tradeCounts = await ctx.db
+				.select({
+					strategyId: trades.strategyId,
+					count: sql<number>`count(*)`,
+				})
+				.from(trades)
+				.where(
+					and(
+						eq(trades.userId, ctx.user.id),
+						isNull(trades.deletedAt),
+						isNotNull(trades.strategyId),
+					),
+				)
+				.groupBy(trades.strategyId);
 
-					const tradeCount = tradeCountResult[0]?.count ?? 0;
-
-					return {
-						...strategy,
-						riskParameters: strategy.riskParameters
-							? JSON.parse(strategy.riskParameters)
-							: null,
-						scalingRules: strategy.scalingRules
-							? JSON.parse(strategy.scalingRules)
-							: null,
-						trailingRules: strategy.trailingRules
-							? JSON.parse(strategy.trailingRules)
-							: null,
-						_count: {
-							rules: strategy.rules.length,
-							trades: tradeCount,
-						},
-					};
-				}),
+			const tradeCountByStrategy = new Map(
+				tradeCounts.map((row) => [row.strategyId, row.count]),
 			);
 
-			return strategiesWithStats;
+			return results.map((strategy) => ({
+				...strategy,
+				riskParameters: strategy.riskParameters
+					? JSON.parse(strategy.riskParameters)
+					: null,
+				scalingRules: strategy.scalingRules
+					? JSON.parse(strategy.scalingRules)
+					: null,
+				trailingRules: strategy.trailingRules
+					? JSON.parse(strategy.trailingRules)
+					: null,
+				_count: {
+					rules: strategy.rules.length,
+					trades: tradeCountByStrategy.get(strategy.id) ?? 0,
+				},
+			}));
 		}),
 
 	// Get a single strategy by ID
@@ -646,7 +649,11 @@ export const strategiesRouter = createTRPCRouter({
 			}
 
 			// Get user's breakeven threshold
-			const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+			const beThreshold = await getUserBreakevenThreshold(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
 
 			// Get all closed trades for this strategy
 			const strategyTrades = await ctx.db.query.trades.findMany({
@@ -976,7 +983,11 @@ export const strategiesRouter = createTRPCRouter({
 	// Get stats for all strategies at once (batch)
 	getAllStats: protectedProcedure.query(async ({ ctx }) => {
 		// Get user's breakeven threshold
-		const beThreshold = await getUserBreakevenThreshold(ctx.db, ctx.user.id);
+		const beThreshold = await getUserBreakevenThreshold(
+			ctx.db,
+			ctx.user.id,
+			ctx.userSettingsCache,
+		);
 
 		// Get all active strategies
 		const allStrategies = await ctx.db.query.strategies.findMany({
@@ -1438,6 +1449,7 @@ export const strategiesRouter = createTRPCRouter({
 					status: trade.status,
 				},
 				ctx.user.id,
+				ctx.userSettingsCache,
 			);
 
 			// Evaluate each rule and collect results
@@ -1532,10 +1544,13 @@ export const strategiesRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			// Get user timezone for trade filtering
-			const { getUserTimezone } = await import("@/server/api/helpers");
 			const { getDayBoundsInTimezone } = await import("@/lib/shared");
 
-			const userTimezone = await getUserTimezone(ctx.db, ctx.user.id);
+			const userTimezone = await getUserTimezone(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
 
 			// Get date bounds in user's timezone
 			const startDateStr = input.startDate.split("T")[0] ?? input.startDate;
