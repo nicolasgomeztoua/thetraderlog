@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "bun run --bun next build",
+		"build": "bun run --bun next build --turbopack",
 		"check": "biome check .",
 		"check:unsafe": "biome check --write --unsafe .",
 		"check:write": "biome check --write .",
@@ -14,7 +14,7 @@
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"dev": "bun run --bun next dev --turbo",
-		"preview": "bun run --bun next build && bun run --bun next start",
+		"preview": "bun run --bun next build --turbopack && bun run --bun next start",
 		"start": "bun run --bun next start",
 		"ralph": "./scripts/ralph/ralph.sh",
 		"test": "vitest run",
