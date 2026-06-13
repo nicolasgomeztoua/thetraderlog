@@ -21,10 +21,8 @@ interface FilterToggleProps {
 // =============================================================================
 
 export function FilterToggle({ onClick, className }: FilterToggleProps) {
-	const { hasActiveFilters, getActiveFilterCount } = useAnalyticsFilterStore();
-
-	const activeFilters = hasActiveFilters();
-	const filterCount = getActiveFilterCount();
+	const activeFilters = useAnalyticsFilterStore((s) => s.hasActiveFilters());
+	const filterCount = useAnalyticsFilterStore((s) => s.getActiveFilterCount());
 
 	return (
 		<Button

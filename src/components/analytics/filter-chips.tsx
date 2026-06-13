@@ -121,13 +121,13 @@ export function FilterChips({
 	tagNames = new Map(),
 	sessionNames = new Map(),
 }: FilterChipsProps) {
-	const {
-		filters,
-		clearFilter,
-		clearFilters,
-		hasActiveFilters,
-		getActiveFilterCount,
-	} = useAnalyticsFilterStore();
+	const filters = useAnalyticsFilterStore((s) => s.filters);
+	const clearFilter = useAnalyticsFilterStore((s) => s.clearFilter);
+	const clearFilters = useAnalyticsFilterStore((s) => s.clearFilters);
+	// Invoke the computed selectors so the component subscribes to the derived
+	// value (selecting the bare function would never re-render on filter changes).
+	const hasActiveFilters = useAnalyticsFilterStore((s) => s.hasActiveFilters());
+	const filterCount = useAnalyticsFilterStore((s) => s.getActiveFilterCount());
 
 	// Build list of active filter chips
 	const chips: FilterChip[] = [];
@@ -256,11 +256,9 @@ export function FilterChips({
 	}
 
 	// Don't render if no active filters
-	if (!hasActiveFilters()) {
+	if (!hasActiveFilters) {
 		return null;
 	}
-
-	const filterCount = getActiveFilterCount();
 
 	return (
 		<div className="flex flex-wrap items-center gap-2">

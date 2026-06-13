@@ -67,7 +67,8 @@ export function PresetSelector({
 	onPresetSelect,
 	onManageClick,
 }: PresetSelectorProps) {
-	const { setFilters, clearFilters } = useAnalyticsFilterStore();
+	const setFilters = useAnalyticsFilterStore((s) => s.setFilters);
+	const clearFilters = useAnalyticsFilterStore((s) => s.clearFilters);
 
 	// Fetch presets
 	const { data: presets, isLoading } =

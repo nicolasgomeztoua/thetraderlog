@@ -122,7 +122,7 @@ import type { AnalyticsFilters } from "@/types/analytics-filters";
 // =============================================================================
 
 function useApiFilters() {
-	const { filters } = useAnalyticsFilterStore();
+	const filters = useAnalyticsFilterStore((s) => s.filters);
 
 	return useMemo(() => {
 		// Convert store filters to API format
@@ -1245,8 +1245,9 @@ export default function AnalyticsPage() {
 	const hasAutoLoadedPreset = useRef(false);
 
 	// Get store functions
-	const { activePresetId, setActivePresetId, setFilters } =
-		useAnalyticsFilterStore();
+	const activePresetId = useAnalyticsFilterStore((s) => s.activePresetId);
+	const setActivePresetId = useAnalyticsFilterStore((s) => s.setActivePresetId);
+	const setFilters = useAnalyticsFilterStore((s) => s.setFilters);
 
 	// Fetch default preset for auto-load
 	const { data: defaultPreset } = api.analytics.getDefaultPreset.useQuery();

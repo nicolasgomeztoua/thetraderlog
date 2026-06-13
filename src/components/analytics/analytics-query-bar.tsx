@@ -59,20 +59,25 @@ export function AnalyticsQueryBar({
 	accountId,
 	isLoading = false,
 }: AnalyticsQueryBarProps) {
-	const {
-		filters,
-		previewFilters,
-		isPreviewMode,
-		enterPreviewMode,
-		setPreviewFilter,
-		applyPreviewFilters,
-		discardPreviewFilters,
-		resetPreviewFilters,
-		hasActiveFilters,
-		clearFilters,
-		activePresetId,
-		setActivePresetId,
-	} = useAnalyticsFilterStore();
+	const filters = useAnalyticsFilterStore((s) => s.filters);
+	const previewFilters = useAnalyticsFilterStore((s) => s.previewFilters);
+	const isPreviewMode = useAnalyticsFilterStore((s) => s.isPreviewMode);
+	const enterPreviewMode = useAnalyticsFilterStore((s) => s.enterPreviewMode);
+	const setPreviewFilter = useAnalyticsFilterStore((s) => s.setPreviewFilter);
+	const applyPreviewFilters = useAnalyticsFilterStore(
+		(s) => s.applyPreviewFilters,
+	);
+	const discardPreviewFilters = useAnalyticsFilterStore(
+		(s) => s.discardPreviewFilters,
+	);
+	const resetPreviewFilters = useAnalyticsFilterStore(
+		(s) => s.resetPreviewFilters,
+	);
+	// Invoke the computed selector so it subscribes to the derived value.
+	const hasActiveFilters = useAnalyticsFilterStore((s) => s.hasActiveFilters());
+	const clearFilters = useAnalyticsFilterStore((s) => s.clearFilters);
+	const activePresetId = useAnalyticsFilterStore((s) => s.activePresetId);
+	const setActivePresetId = useAnalyticsFilterStore((s) => s.setActivePresetId);
 
 	// Mobile detection
 	const isMobile = useIsMobile();
@@ -214,14 +219,12 @@ export function AnalyticsQueryBar({
 						</span>
 						<div className="h-4 w-px bg-border" />
 						<span className="truncate font-mono text-muted-foreground text-xs">
-							{hasMounted && hasActiveFilters()
-								? "Filters active"
-								: "All trades"}
+							{hasMounted && hasActiveFilters ? "Filters active" : "All trades"}
 						</span>
 					</div>
 
 					{/* Clear button (if filters active) */}
-					{hasMounted && hasActiveFilters() && (
+					{hasMounted && hasActiveFilters && (
 						<button
 							className="flex min-h-11 min-w-11 items-center justify-center rounded border border-border font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-border hover:text-foreground"
 							onClick={handleClearAll}
@@ -293,7 +296,7 @@ export function AnalyticsQueryBar({
 				<>
 					<QuickFilters
 						filters={filters}
-						hasActiveFilters={hasMounted && hasActiveFilters()}
+						hasActiveFilters={hasMounted && hasActiveFilters}
 						isExpanded={isExpanded}
 						onClearAll={handleClearAll}
 						onToggleExpand={handleToggleExpand}

@@ -306,7 +306,9 @@ export function FilterPanel({
 	sessions = [],
 	isLoading = false,
 }: FilterPanelProps) {
-	const { filters, setFilters, setActivePresetId } = useAnalyticsFilterStore();
+	const filters = useAnalyticsFilterStore((s) => s.filters);
+	const setFilters = useAnalyticsFilterStore((s) => s.setFilters);
+	const setActivePresetId = useAnalyticsFilterStore((s) => s.setActivePresetId);
 
 	// Local state for editing (so changes aren't applied until "Apply" is clicked)
 	const [localFilters, setLocalFilters] = useState<AnalyticsFilters>(filters);
