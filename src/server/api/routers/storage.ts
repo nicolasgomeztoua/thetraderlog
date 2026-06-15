@@ -9,6 +9,7 @@ import {
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
+	sanitizeFilenameForKey,
 } from "@/lib/storage/s3";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
@@ -34,8 +35,12 @@ export const storageRouter = createTRPCRouter({
 
 			// Generate a unique key for the file
 			// Format: images/{userId}/{context}/{uuid}-{filename}
+			// Sanitize the filename so the key never contains characters that get
+			// percent-encoded in the presigned URL (spaces, parens, unicode) — those
+			// round-trip into double-encoded keys and 404 as broken images.
 			const uuid = nanoid();
-			const key = `images/${ctx.user.id}/${input.context}/${uuid}-${input.filename}`;
+			const safeFilename = sanitizeFilenameForKey(input.filename);
+			const key = `images/${ctx.user.id}/${input.context}/${uuid}-${safeFilename}`;
 
 			// Generate presigned PUT URL (valid for 1 hour)
 			const presignedUrl = getPresignedUploadUrl(key, 3600);
