@@ -5,6 +5,40 @@
  */
 
 /**
+ * Decode a percent-encoded S3 key back to its canonical (literal) form.
+ *
+ * Keys are sliced out of presigned URLs whose path is already percent-encoded,
+ * so a key with a space arrives here as "...%20...". If it is re-signed without
+ * decoding, the "%" gets encoded again ("%2520") and the URL points at a
+ * non-existent object. Always store/sign keys in decoded form. Malformed input
+ * (a stray "%") is returned untouched rather than throwing.
+ */
+export function safeDecodeKey(key: string): string {
+	try {
+		return decodeURIComponent(key);
+	} catch {
+		return key;
+	}
+}
+
+/**
+ * Sanitize an uploaded filename so the resulting S3 key never contains
+ * characters that get percent-encoded in a presigned URL (spaces, parens,
+ * unicode, etc.). Without this, keys round-trip through encoded presigned URLs
+ * and end up double-encoded on the next read, producing broken images.
+ *
+ * Keeps the extension readable: "Screenshot 2026 (1).png" -> "Screenshot_2026_1_.png".
+ */
+export function sanitizeFilenameForKey(filename: string): string {
+	const cleaned = filename
+		.replace(/[^a-zA-Z0-9._-]+/g, "_")
+		.replace(/_{2,}/g, "_")
+		.replace(/^[._]+/, "")
+		.slice(0, 128);
+	return cleaned.length > 0 ? cleaned : "image";
+}
+
+/**
  * Extract S3 keys from HTML content for orphan tracking.
  * Finds all img src attributes that contain S3 object keys.
  *
@@ -50,8 +84,10 @@ export function transformHtmlToS3Keys(html: string | null): string | null {
 				/((?:images|attachments|journals|trades)\/[^?]+)/,
 			);
 			if (keyMatch?.[1]) {
-				// Extract just the S3 key (path without query params)
-				return `<img${before} src="${keyMatch[1]}"${after}>`;
+				// Extract the S3 key (path without query params) and decode it —
+				// the presigned URL path is percent-encoded, and storing the
+				// encoded form would double-encode it on the next read.
+				return `<img${before} src="${safeDecodeKey(keyMatch[1])}"${after}>`;
 			}
 			// Not a presigned URL with our patterns, leave unchanged
 			return match;

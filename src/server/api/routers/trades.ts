@@ -49,6 +49,7 @@ import {
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
+	sanitizeFilenameForKey,
 	transformHtmlWithPresignedUrls,
 } from "@/lib/storage/s3";
 import { buildEvaluationContext, evaluateAutoCondition } from "@/lib/strategy";
@@ -1869,8 +1870,10 @@ export const tradesRouter = createTRPCRouter({
 
 			// Generate a unique key for the file
 			// Format: trades/{userId}/{tradeId}/{uuid}-{filename}
+			// Sanitize the filename so the key needs no URL-encoding — otherwise
+			// spaces/special chars round-trip into double-encoded keys (broken images).
 			const uuid = nanoid();
-			const key = `trades/${ctx.user.id}/${input.tradeId}/${uuid}-${input.filename}`;
+			const key = `trades/${ctx.user.id}/${input.tradeId}/${uuid}-${sanitizeFilenameForKey(input.filename)}`;
 
 			// Generate presigned PUT URL (valid for 1 hour)
 			const presignedUrl = getPresignedUploadUrl(key, 3600);

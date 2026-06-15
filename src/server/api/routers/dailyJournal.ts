@@ -46,6 +46,7 @@ import {
 	getPresignedDownloadUrl,
 	getPresignedUploadUrl,
 	isS3Configured,
+	sanitizeFilenameForKey,
 	transformHtmlWithPresignedUrls,
 } from "@/lib/storage/s3";
 import { getUserTimezone } from "@/server/api/helpers";
@@ -1042,8 +1043,10 @@ export const dailyJournalRouter = createTRPCRouter({
 
 			// Generate a unique key for the file
 			// Format: journals/{userId}/{date}/{uuid}-{filename}
+			// Sanitize the filename so the key needs no URL-encoding — otherwise
+			// spaces/special chars round-trip into double-encoded keys (broken images).
 			const uuid = nanoid();
-			const key = `journals/${ctx.user.id}/${dateStr}/${uuid}-${input.filename}`;
+			const key = `journals/${ctx.user.id}/${dateStr}/${uuid}-${sanitizeFilenameForKey(input.filename)}`;
 
 			// Generate presigned PUT URL (valid for 1 hour)
 			const presignedUrl = getPresignedUploadUrl(key, 3600);

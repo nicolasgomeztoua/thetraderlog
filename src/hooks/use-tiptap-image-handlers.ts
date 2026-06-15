@@ -120,6 +120,20 @@ export function useTiptapImageHandlers({
 		[handleImageInsert],
 	);
 
+	// A browser element only becomes a valid drop target if dragover/dragenter
+	// call preventDefault. ProseMirror only does this for its own internal
+	// drag-and-drop, so without this handler the drop event never fires for
+	// external files and drag-to-upload silently does nothing. Guard on "Files"
+	// so we don't interfere with ProseMirror's drag-to-move-text behavior.
+	const handleDragOver = useCallback((event: DragEvent) => {
+		const { dataTransfer } = event;
+		if (!dataTransfer || !Array.from(dataTransfer.types).includes("Files")) {
+			return;
+		}
+		event.preventDefault();
+		dataTransfer.dropEffect = "copy";
+	}, []);
+
 	// Handle drop event to catch dropped images
 	const handleDrop = useCallback(
 		(event: DragEvent) => {
@@ -129,9 +143,12 @@ export function useTiptapImageHandlers({
 			const files = event.dataTransfer?.files;
 			if (!files || files.length === 0) return;
 
+			// We are taking over this file drop — stop the browser from navigating
+			// away to the dropped file, even if none of the files are images.
+			event.preventDefault();
+
 			for (const file of files) {
 				if (file.type.startsWith("image/")) {
-					event.preventDefault();
 					handleImageInsert(file);
 					return;
 				}
@@ -140,17 +157,30 @@ export function useTiptapImageHandlers({
 		[editor, handleImageInsert],
 	);
 
-	// Attach paste and drop event listeners to editor DOM
+	// Attach paste and drag/drop event listeners to editor DOM
 	useEffect(() => {
 		if (!editor) return;
 
 		const editorElement = editor.view.dom;
 		editorElement.addEventListener("paste", handlePaste as EventListener);
+		editorElement.addEventListener("dragover", handleDragOver as EventListener);
+		editorElement.addEventListener(
+			"dragenter",
+			handleDragOver as EventListener,
+		);
 		editorElement.addEventListener("drop", handleDrop as EventListener);
 
 		return () => {
 			editorElement.removeEventListener("paste", handlePaste as EventListener);
+			editorElement.removeEventListener(
+				"dragover",
+				handleDragOver as EventListener,
+			);
+			editorElement.removeEventListener(
+				"dragenter",
+				handleDragOver as EventListener,
+			);
 			editorElement.removeEventListener("drop", handleDrop as EventListener);
 		};
-	}, [editor, handlePaste, handleDrop]);
+	}, [editor, handlePaste, handleDragOver, handleDrop]);
 }

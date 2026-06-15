@@ -1,7 +1,14 @@
 import { env } from "@/env";
 
 // Re-export pure utility functions that don't require Bun
-export { extractS3KeysFromHtml, transformHtmlToS3Keys } from "./s3-utils";
+import { safeDecodeKey } from "./s3-utils";
+
+export {
+	extractS3KeysFromHtml,
+	safeDecodeKey,
+	sanitizeFilenameForKey,
+	transformHtmlToS3Keys,
+} from "./s3-utils";
 
 // Bun global is accessed via globalThis.Bun at runtime — no import needed
 declare global {
@@ -172,7 +179,10 @@ export function transformHtmlWithPresignedUrls(
 	return html.replace(
 		/(<img[^>]*\ssrc=")((?:images|attachments|journals|trades)\/[^"]+)("[^>]*>)/gi,
 		(_, before: string, key: string, after: string) => {
-			const url = getPresignedDownloadUrl(key, 3600);
+			// Decode first: legacy notes may hold percent-encoded keys, and
+			// presigning re-encodes, so signing an encoded key 404s. Decoding
+			// recovers the real object key and heals those rows on read.
+			const url = getPresignedDownloadUrl(safeDecodeKey(key), 3600);
 			return `${before}${url}${after}`;
 		},
 	);
