@@ -25,7 +25,7 @@ interface CumulativePnLChartData {
 }
 
 import { AgCharts } from "ag-charts-react";
-import { Lock } from "lucide-react";
+import { Lock, Share2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -54,6 +54,8 @@ import {
 	UpgradeOverlay,
 	useHasFeature,
 } from "@/components/billing/upgrade-prompt";
+import { ShareLinkPopover } from "@/components/sharing/share-link-popover";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FEATURE_ANALYTICS } from "@/lib/constants/billing";
@@ -1299,6 +1301,49 @@ const DEFAULT_SESSIONS = [
 	{ id: "new_york", name: "New York" },
 ];
 
+// =============================================================================
+// SHARE ANALYTICS BUTTON
+// Public, read-only share of a single account's analytics. Sharing targets one
+// account, so it is only available when a specific account is selected (the
+// dashboard can otherwise aggregate across all active accounts).
+// =============================================================================
+
+function ShareAnalyticsButton({ accountId }: { accountId: string | null }) {
+	if (!accountId) {
+		return (
+			<Button
+				className="h-8 gap-1.5 font-mono text-xs"
+				disabled
+				size="sm"
+				title="Select a specific account to share its analytics"
+				variant="outline"
+			>
+				<Share2 className="size-3.5" />
+				<span className="hidden sm:inline">Share</span>
+			</Button>
+		);
+	}
+
+	return (
+		<ShareLinkPopover
+			description="Anyone with the link can view this account's analytics"
+			emptyHint="Create a public, read-only link to this account's analytics. Viewers see your performance, risk, and behavior metrics — nothing else."
+			resourceId={accountId}
+			resourceType="account_analytics"
+			title="Share Analytics"
+		>
+			<Button
+				className="h-8 gap-1.5 font-mono text-xs"
+				size="sm"
+				variant="outline"
+			>
+				<Share2 className="size-3.5" />
+				<span className="hidden sm:inline">Share</span>
+			</Button>
+		</ShareLinkPopover>
+	);
+}
+
 export default function AnalyticsPage() {
 	// Manage presets dialog state
 	const [managePresetsOpen, setManagePresetsOpen] = useState(false);
@@ -1399,7 +1444,10 @@ export default function AnalyticsPage() {
 						Analyze your trading performance with professional metrics
 					</p>
 				</div>
-				<ExportButton />
+				<div className="flex items-center gap-2">
+					<ShareAnalyticsButton accountId={selectedAccountId} />
+					<ExportButton />
+				</div>
 			</div>
 
 			{/* Analytics Query Terminal */}

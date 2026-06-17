@@ -12,9 +12,11 @@ import { markdownComponents } from "@/components/mdx/markdown-components";
 import { ReportDataProvider } from "@/components/mdx/provider";
 import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
 import { formatCurrency } from "@/lib/shared";
+import { getSharedAnalyticsPayload } from "@/server/api/helpers/analytics-share";
 import { getSharedTradePayload } from "@/server/api/helpers/trade-share";
 import { db } from "@/server/db";
-import { aiReports, shareLinks } from "@/server/db/schema";
+import { accounts, aiReports, shareLinks, users } from "@/server/db/schema";
+import { SharedAnalyticsView } from "./_components/shared-analytics-view";
 import { SharedTradeView } from "./_components/shared-trade-view";
 
 // Dedupe the trade lookup between generateMetadata and the page render
@@ -37,7 +39,11 @@ export async function generateMetadata({
 		where: eq(shareLinks.token, token),
 	});
 
-	if (!link || !link.isActive) {
+	if (
+		!link ||
+		!link.isActive ||
+		(link.expiresAt && link.expiresAt < new Date())
+	) {
 		return { title: "Shared Report — TheTraderLog" };
 	}
 
@@ -83,6 +89,34 @@ export async function generateMetadata({
 
 		return {
 			title,
+			description,
+			openGraph: {
+				title: `${title} | TheTraderLog`,
+				description,
+				type: "article",
+			},
+		};
+	}
+
+	if (link.resourceType === "account_analytics") {
+		const [account, owner] = await Promise.all([
+			db.query.accounts.findFirst({
+				where: eq(accounts.id, link.resourceId),
+				columns: { name: true },
+			}),
+			db.query.users.findFirst({
+				where: eq(users.id, link.userId),
+				columns: { name: true },
+			}),
+		]);
+
+		const accountName = account?.name ?? "Account";
+		const sharedBy = owner?.name ? ` · Shared by ${owner.name}` : "";
+		const title = `${accountName} Analytics${sharedBy}`;
+		const description = `${owner?.name ?? "A trader"} shared their ${accountName} analytics from TheTraderLog — performance, risk, and behavior metrics.`;
+
+		return {
+			title: `${title} — TheTraderLog`,
 			description,
 			openGraph: {
 				title: `${title} | TheTraderLog`,
@@ -158,6 +192,18 @@ export default async function SharePage({ params }: SharePageProps) {
 				trader={payload.trader}
 			/>
 		);
+	}
+
+	if (link.resourceType === "account_analytics") {
+		const payload = await getSharedAnalyticsPayload(
+			db,
+			link.resourceId,
+			link.userId,
+		);
+
+		if (!payload) notFound();
+
+		return <SharedAnalyticsView payload={payload} />;
 	}
 
 	notFound();

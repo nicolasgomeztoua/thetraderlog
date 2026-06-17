@@ -18,6 +18,7 @@ import {
 } from "@/server/api/trpc";
 import type { db } from "@/server/db";
 import {
+	accounts,
 	aiReports,
 	shareLinks,
 	shareResourceTypeEnum,
@@ -232,6 +233,23 @@ export const sharingRouter = createTRPCRouter({
 				});
 
 				if (!trade) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_SHARE_RESOURCE_NOT_FOUND,
+					});
+				}
+			}
+
+			if (input.resourceType === "account_analytics") {
+				const account = await ctx.db.query.accounts.findFirst({
+					where: and(
+						eq(accounts.id, input.resourceId),
+						eq(accounts.userId, ctx.user.id),
+					),
+					columns: { id: true },
+				});
+
+				if (!account) {
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: ERR_SHARE_RESOURCE_NOT_FOUND,

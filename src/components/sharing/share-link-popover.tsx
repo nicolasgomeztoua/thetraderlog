@@ -28,7 +28,7 @@ import { api } from "@/trpc/react";
 // =============================================================================
 
 interface ShareLinkPopoverProps {
-	resourceType: "report" | "trade";
+	resourceType: "report" | "trade" | "account_analytics";
 	resourceId: string;
 	/** Popover heading, e.g. "Share Trade" */
 	title: string;

@@ -1029,6 +1029,11 @@ export const analyticsRouter = createTRPCRouter({
 				.object({
 					accountId: z.string().nullish(),
 					filters: analyticsFilterInput.optional(),
+					// When true, Risk of Ruin is computed from a standardized default
+					// risk-per-trade instead of the account's initial balance. Used by
+					// public analytics shares so the raw balance cannot be recovered by
+					// inverting riskPerTradePercent against avgLoss.
+					publicSafe: z.boolean().optional(),
 				})
 				.optional(),
 		)
@@ -1049,14 +1054,20 @@ export const analyticsRouter = createTRPCRouter({
 			if (input?.accountId) {
 				conditions.push(eq(trades.accountId, input.accountId));
 
-				// Fetch the specific account's maxDrawdown and initialBalance
+				// Fetch the specific account's maxDrawdown and initialBalance.
+				// Scope by userId so a caller can never read another user's account.
 				const account = await ctx.db
 					.select({
 						maxDrawdown: accounts.maxDrawdown,
 						initialBalance: accounts.initialBalance,
 					})
 					.from(accounts)
-					.where(eq(accounts.id, input.accountId))
+					.where(
+						and(
+							eq(accounts.id, input.accountId),
+							eq(accounts.userId, ctx.user.id),
+						),
+					)
 					.limit(1);
 
 				if (account[0]?.maxDrawdown) {
@@ -1065,7 +1076,9 @@ export const analyticsRouter = createTRPCRouter({
 					ruinThresholdSource = "account";
 				}
 
-				if (account[0]?.initialBalance) {
+				// In public-safe mode the initial balance is intentionally ignored so
+				// Risk of Ruin is balance-independent (see input.publicSafe).
+				if (account[0]?.initialBalance && !input.publicSafe) {
 					accountInitialBalance = parseFloat(account[0].initialBalance);
 				}
 			} else {
