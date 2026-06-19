@@ -1,0 +1,1230 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================
+   EDGE JOURNAL - "THE TERMINAL" DESIGN SYSTEM
+   ============================================ */
+
+@theme {
+	/* Primary Font: Manrope for body, JetBrains Mono for code/data */
+	--font-sans:
+		var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-mono:
+		var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+		Consolas, "Liberation Mono", monospace;
+	/* Display uses same as sans (Manrope) - clean, modern, readable */
+	--font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+	--radius-sm: 2px;
+	--radius-md: 4px;
+	--radius-lg: 6px;
+	--radius-xl: 8px;
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-profit: var(--profit);
+	--color-loss: var(--loss);
+	--color-breakeven: var(--breakeven);
+}
+
+/* ============================================
+   THEME SYSTEM - Base & Defaults
+   ============================================ */
+:root {
+	--radius: 4px;
+}
+
+/* ============================================
+   DARK THEMES - Top Rated IDE Themes
+   ============================================ */
+
+/* TRADERLOG (Default) - Signature Dark Theme
+   Obsidian Black + Electric Chartreuse + Ice Blue */
+:root,
+.theme-traderlog {
+	--background: #121212;
+	--foreground: #fafafa;
+	--card: #0a0a0a;
+	--card-foreground: #fafafa;
+	--popover: #0a0a0a;
+	--popover-foreground: #fafafa;
+	--primary: #d4ff00;
+	--primary-foreground: #050505;
+	--secondary: #141414;
+	--secondary-foreground: #e5e5e5;
+	--muted: #1a1a1a;
+	--muted-foreground: #e5e5e5;
+	--accent: #00d4ff;
+	--accent-foreground: #050505;
+	--destructive: #ff3b3b;
+	--border: #1f1f1f;
+	--input: #141414;
+	--ring: #d4ff00;
+	--chart-1: #d4ff00;
+	--chart-2: #00d4ff;
+	--chart-3: #ff6b00;
+	--chart-4: #a855f7;
+	--chart-5: #ff3b3b;
+	--sidebar: #0a0a0a;
+	--sidebar-foreground: #e5e5e5;
+	--sidebar-primary: #d4ff00;
+	--sidebar-primary-foreground: #050505;
+	--sidebar-accent: #141414;
+	--sidebar-accent-foreground: #e5e5e5;
+	--sidebar-border: #1f1f1f;
+	--sidebar-ring: #d4ff00;
+	--profit: #00ff88;
+	--loss: #ff3b3b;
+	--breakeven: #ffd700;
+}
+
+/* ONE DARK PRO - #1 Most Popular VS Code Theme
+   Inspired by Atom's iconic One Dark theme */
+.theme-one-dark {
+	--background: #282c34;
+	--foreground: #abb2bf;
+	--card: #21252b;
+	--card-foreground: #abb2bf;
+	--popover: #21252b;
+	--popover-foreground: #abb2bf;
+	--primary: #61afef;
+	--primary-foreground: #282c34;
+	--secondary: #3e4451;
+	--secondary-foreground: #abb2bf;
+	--muted: #3e4451;
+	--muted-foreground: #abb2bf;
+	--accent: #98c379;
+	--accent-foreground: #282c34;
+	--destructive: #e06c75;
+	--border: #3e4451;
+	--input: #3e4451;
+	--ring: #61afef;
+	--chart-1: #61afef;
+	--chart-2: #98c379;
+	--chart-3: #e5c07b;
+	--chart-4: #c678dd;
+	--chart-5: #e06c75;
+	--sidebar: #21252b;
+	--sidebar-foreground: #abb2bf;
+	--sidebar-primary: #61afef;
+	--sidebar-primary-foreground: #282c34;
+	--sidebar-accent: #3e4451;
+	--sidebar-accent-foreground: #abb2bf;
+	--sidebar-border: #3e4451;
+	--sidebar-ring: #61afef;
+	--profit: #98c379;
+	--loss: #e06c75;
+	--breakeven: #e5c07b;
+}
+
+/* DRACULA - Iconic Purple/Pink Vampire Theme
+   One of the most beloved themes across all platforms */
+.theme-dracula {
+	--background: #282a36;
+	--foreground: #f8f8f2;
+	--card: #21222c;
+	--card-foreground: #f8f8f2;
+	--popover: #21222c;
+	--popover-foreground: #f8f8f2;
+	--primary: #bd93f9;
+	--primary-foreground: #282a36;
+	--secondary: #44475a;
+	--secondary-foreground: #f8f8f2;
+	--muted: #44475a;
+	--muted-foreground: #f8f8f2;
+	--accent: #ff79c6;
+	--accent-foreground: #282a36;
+	--destructive: #ff5555;
+	--border: #44475a;
+	--input: #44475a;
+	--ring: #bd93f9;
+	--chart-1: #bd93f9;
+	--chart-2: #ff79c6;
+	--chart-3: #ffb86c;
+	--chart-4: #8be9fd;
+	--chart-5: #ff5555;
+	--sidebar: #21222c;
+	--sidebar-foreground: #f8f8f2;
+	--sidebar-primary: #bd93f9;
+	--sidebar-primary-foreground: #282a36;
+	--sidebar-accent: #44475a;
+	--sidebar-accent-foreground: #f8f8f2;
+	--sidebar-border: #44475a;
+	--sidebar-ring: #bd93f9;
+	--profit: #50fa7b;
+	--loss: #ff5555;
+	--breakeven: #f1fa8c;
+}
+
+/* NIGHT OWL - Sarah Drasner's Accessibility-Focused Theme
+   Designed for night-time coding with reduced eye strain */
+.theme-night-owl {
+	--background: #011627;
+	--foreground: #d6deeb;
+	--card: #0b2942;
+	--card-foreground: #d6deeb;
+	--popover: #0b2942;
+	--popover-foreground: #d6deeb;
+	--primary: #7fdbca;
+	--primary-foreground: #011627;
+	--secondary: #1d3b53;
+	--secondary-foreground: #d6deeb;
+	--muted: #1d3b53;
+	--muted-foreground: #d6deeb;
+	--accent: #c792ea;
+	--accent-foreground: #011627;
+	--destructive: #ef5350;
+	--border: #1d3b53;
+	--input: #1d3b53;
+	--ring: #7fdbca;
+	--chart-1: #7fdbca;
+	--chart-2: #c792ea;
+	--chart-3: #f78c6c;
+	--chart-4: #82aaff;
+	--chart-5: #ef5350;
+	--sidebar: #011627;
+	--sidebar-foreground: #d6deeb;
+	--sidebar-primary: #7fdbca;
+	--sidebar-primary-foreground: #011627;
+	--sidebar-accent: #1d3b53;
+	--sidebar-accent-foreground: #d6deeb;
+	--sidebar-border: #1d3b53;
+	--sidebar-ring: #7fdbca;
+	--profit: #addb67;
+	--loss: #ef5350;
+	--breakeven: #f78c6c;
+}
+
+/* MONOKAI PRO - The Legendary Classic Theme
+   Evolution of the beloved Monokai with modern refinements */
+.theme-monokai {
+	--background: #2d2a2e;
+	--foreground: #fcfcfa;
+	--card: #221f22;
+	--card-foreground: #fcfcfa;
+	--popover: #221f22;
+	--popover-foreground: #fcfcfa;
+	--primary: #ffd866;
+	--primary-foreground: #2d2a2e;
+	--secondary: #403e41;
+	--secondary-foreground: #fcfcfa;
+	--muted: #403e41;
+	--muted-foreground: #fcfcfa;
+	--accent: #78dce8;
+	--accent-foreground: #2d2a2e;
+	--destructive: #ff6188;
+	--border: #403e41;
+	--input: #403e41;
+	--ring: #ffd866;
+	--chart-1: #ffd866;
+	--chart-2: #78dce8;
+	--chart-3: #fc9867;
+	--chart-4: #ab9df2;
+	--chart-5: #ff6188;
+	--sidebar: #221f22;
+	--sidebar-foreground: #fcfcfa;
+	--sidebar-primary: #ffd866;
+	--sidebar-primary-foreground: #2d2a2e;
+	--sidebar-accent: #403e41;
+	--sidebar-accent-foreground: #fcfcfa;
+	--sidebar-border: #403e41;
+	--sidebar-ring: #ffd866;
+	--profit: #a9dc76;
+	--loss: #ff6188;
+	--breakeven: #ffd866;
+}
+
+/* ============================================
+   LIGHT THEMES - Top Rated Light Themes
+   ============================================ */
+
+/* TRADERLOG LIGHT - Signature Theme for Daytime Trading
+   TheTraderLog aesthetic adapted for light mode with rich lime-green accents */
+.theme-traderlog-light {
+	--background: #fafafa;
+	--foreground: #171717;
+	--card: #ffffff;
+	--card-foreground: #171717;
+	--popover: #ffffff;
+	--popover-foreground: #171717;
+	--primary: #4d7c0f;
+	--primary-foreground: #ffffff;
+	--secondary: #f5f5f5;
+	--secondary-foreground: #171717;
+	--muted: #f0f0f0;
+	--muted-foreground: #171717;
+	--accent: #ecfccb;
+	--accent-foreground: #3f6212;
+	--destructive: #dc2626;
+	--border: #e5e5e5;
+	--input: #f5f5f5;
+	--ring: #4d7c0f;
+	--chart-1: #4d7c0f;
+	--chart-2: #0891b2;
+	--chart-3: #ea580c;
+	--chart-4: #7c3aed;
+	--chart-5: #dc2626;
+	--sidebar: #f5f5f5;
+	--sidebar-foreground: #171717;
+	--sidebar-primary: #4d7c0f;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #ecfccb;
+	--sidebar-accent-foreground: #3f6212;
+	--sidebar-border: #e5e5e5;
+	--sidebar-ring: #4d7c0f;
+	--profit: #15803d;
+	--loss: #dc2626;
+	--breakeven: #ca8a04;
+}
+
+/* GITHUB LIGHT - Clean GitHub Interface Theme
+   Familiar, professional, and highly readable */
+.theme-github-light {
+	--background: #ffffff;
+	--foreground: #1f2328;
+	--card: #ffffff;
+	--card-foreground: #1f2328;
+	--popover: #ffffff;
+	--popover-foreground: #1f2328;
+	--primary: #0969da;
+	--primary-foreground: #ffffff;
+	--secondary: #f6f8fa;
+	--secondary-foreground: #1f2328;
+	--muted: #f6f8fa;
+	--muted-foreground: #1f2328;
+	--accent: #ddf4ff;
+	--accent-foreground: #0969da;
+	--destructive: #cf222e;
+	--border: #d0d7de;
+	--input: #f6f8fa;
+	--ring: #0969da;
+	--chart-1: #0969da;
+	--chart-2: #8250df;
+	--chart-3: #bf8700;
+	--chart-4: #1a7f37;
+	--chart-5: #cf222e;
+	--sidebar: #f6f8fa;
+	--sidebar-foreground: #1f2328;
+	--sidebar-primary: #0969da;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #ddf4ff;
+	--sidebar-accent-foreground: #0969da;
+	--sidebar-border: #d0d7de;
+	--sidebar-ring: #0969da;
+	--profit: #1a7f37;
+	--loss: #cf222e;
+	--breakeven: #bf8700;
+}
+
+/* AYU LIGHT - Minimalist Warmth Theme
+   Clean, elegant with soft balanced colors */
+.theme-ayu-light {
+	--background: #fcfcfc;
+	--foreground: #5c6166;
+	--card: #ffffff;
+	--card-foreground: #5c6166;
+	--popover: #ffffff;
+	--popover-foreground: #5c6166;
+	--primary: #ff9940;
+	--primary-foreground: #ffffff;
+	--secondary: #f8f8f8;
+	--secondary-foreground: #5c6166;
+	--muted: #f3f4f5;
+	--muted-foreground: #5c6166;
+	--accent: #fff4e6;
+	--accent-foreground: #e67e22;
+	--destructive: #f51818;
+	--border: #e8e8e8;
+	--input: #f3f4f5;
+	--ring: #ff9940;
+	--chart-1: #ff9940;
+	--chart-2: #a37acc;
+	--chart-3: #55b4d4;
+	--chart-4: #86b300;
+	--chart-5: #f51818;
+	--sidebar: #f8f8f8;
+	--sidebar-foreground: #5c6166;
+	--sidebar-primary: #ff9940;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #fff4e6;
+	--sidebar-accent-foreground: #e67e22;
+	--sidebar-border: #e8e8e8;
+	--sidebar-ring: #ff9940;
+	--profit: #86b300;
+	--loss: #f51818;
+	--breakeven: #ff9940;
+}
+
+/* SOLARIZED LIGHT - The Legendary Low-Contrast Theme
+   Precision colors designed for long coding sessions */
+.theme-solarized-light {
+	--background: #fdf6e3;
+	--foreground: #657b83;
+	--card: #fdf6e3;
+	--card-foreground: #657b83;
+	--popover: #fdf6e3;
+	--popover-foreground: #657b83;
+	--primary: #268bd2;
+	--primary-foreground: #fdf6e3;
+	--secondary: #eee8d5;
+	--secondary-foreground: #586e75;
+	--muted: #eee8d5;
+	--muted-foreground: #586e75;
+	--accent: #eee8d5;
+	--accent-foreground: #268bd2;
+	--destructive: #dc322f;
+	--border: #eee8d5;
+	--input: #eee8d5;
+	--ring: #268bd2;
+	--chart-1: #268bd2;
+	--chart-2: #859900;
+	--chart-3: #cb4b16;
+	--chart-4: #6c71c4;
+	--chart-5: #dc322f;
+	--sidebar: #eee8d5;
+	--sidebar-foreground: #586e75;
+	--sidebar-primary: #268bd2;
+	--sidebar-primary-foreground: #fdf6e3;
+	--sidebar-accent: #fdf6e3;
+	--sidebar-accent-foreground: #268bd2;
+	--sidebar-border: #d3cbb7;
+	--sidebar-ring: #268bd2;
+	--profit: #859900;
+	--loss: #dc322f;
+	--breakeven: #b58900;
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground antialiased;
+	}
+
+	/* Fix for font descenders (g, j, p, q, y) - prevent clipping */
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		line-height: 1.15;
+		padding-bottom: 0.15em;
+		overflow: visible;
+	}
+
+	/* Ensure inline text elements have proper line-height for descenders */
+	p {
+		line-height: 1.6;
+	}
+
+	/* Fix descender clipping in buttons and small text */
+	button,
+	a,
+	span {
+		line-height: 1.5;
+		overflow: visible;
+	}
+
+	/* Ensure monospace text has room for descenders */
+	.font-mono,
+	code,
+	pre {
+		line-height: 1.6;
+	}
+
+	/* Selection color */
+	::selection {
+		background-color: var(--primary);
+		color: var(--primary-foreground);
+	}
+}
+
+/* Custom utilities for trading */
+@layer utilities {
+	.text-profit {
+		color: var(--profit);
+	}
+	.text-loss {
+		color: var(--loss);
+	}
+	.text-breakeven {
+		color: var(--breakeven);
+	}
+	.bg-profit {
+		background-color: var(--profit);
+	}
+	.bg-loss {
+		background-color: var(--loss);
+	}
+	.bg-breakeven {
+		background-color: var(--breakeven);
+	}
+	.font-mono {
+		font-family: var(--font-mono);
+	}
+	.font-display {
+		font-family: var(--font-display);
+	}
+}
+
+/* ============================================
+   LANDING PAGE SPECIFIC STYLES
+   ============================================ */
+
+/* Noise texture overlay */
+.noise-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 9999;
+	opacity: 0.03;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Grid background */
+.grid-bg {
+	background-image:
+		linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+	background-size: 80px 80px;
+}
+
+/* Scan lines effect */
+.scanlines {
+	background: repeating-linear-gradient(
+		0deg,
+		transparent,
+		transparent 2px,
+		rgba(0, 0, 0, 0.03) 2px,
+		rgba(0, 0, 0, 0.03) 4px
+	);
+}
+
+/* Glow effects */
+.glow-primary {
+	box-shadow: 0 0 60px rgba(212, 255, 0, 0.15);
+}
+
+.glow-accent {
+	box-shadow: 0 0 60px rgba(0, 212, 255, 0.15);
+}
+
+.text-glow-primary {
+	text-shadow: 0 0 40px rgba(212, 255, 0, 0.5);
+}
+
+.text-glow-accent {
+	text-shadow: 0 0 40px rgba(0, 212, 255, 0.5);
+}
+
+/* Gradient text */
+.gradient-text {
+	background: linear-gradient(135deg, #d4ff00 0%, #00d4ff 100%);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+/* Animated gradient border */
+@property --angle {
+	syntax: "<angle>";
+	initial-value: 0deg;
+	inherits: false;
+}
+
+.animated-border {
+	--angle: 0deg;
+	border: 1px solid transparent;
+	background:
+		linear-gradient(var(--background), var(--background)) padding-box,
+		conic-gradient(from var(--angle), #d4ff00, #00d4ff, #d4ff00) border-box;
+	animation: rotate-border 4s linear infinite;
+}
+
+@keyframes rotate-border {
+	to {
+		--angle: 360deg;
+	}
+}
+
+/* Ticker animation */
+@keyframes ticker {
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-50%);
+	}
+}
+
+.ticker-scroll {
+	animation: ticker 30s linear infinite;
+}
+
+/* Pulse dot */
+@keyframes pulse-dot {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.5;
+		transform: scale(1.2);
+	}
+}
+
+.pulse-dot {
+	animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Fade in up animation */
+@keyframes fade-in-up {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Subtle fade in up animation (for page sections) */
+@keyframes fade-in-up-subtle {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.animate-fade-in-up {
+	animation: fade-in-up 0.3s ease-out forwards;
+}
+
+/* Stagger children */
+.stagger-children > * {
+	opacity: 0;
+	animation: fade-in-up 0.3s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) {
+	animation-delay: 0.05s;
+}
+.stagger-children > *:nth-child(2) {
+	animation-delay: 0.1s;
+}
+.stagger-children > *:nth-child(3) {
+	animation-delay: 0.15s;
+}
+.stagger-children > *:nth-child(4) {
+	animation-delay: 0.2s;
+}
+.stagger-children > *:nth-child(5) {
+	animation-delay: 0.25s;
+}
+.stagger-children > *:nth-child(6) {
+	animation-delay: 0.3s;
+}
+.stagger-children > *:nth-child(7) {
+	animation-delay: 0.35s;
+}
+.stagger-children > *:nth-child(8) {
+	animation-delay: 0.4s;
+}
+.stagger-children > *:nth-child(9) {
+	animation-delay: 0.45s;
+}
+.stagger-children > *:nth-child(10) {
+	animation-delay: 0.5s;
+}
+.stagger-children > *:nth-child(11) {
+	animation-delay: 0.55s;
+}
+.stagger-children > *:nth-child(12) {
+	animation-delay: 0.6s;
+}
+
+/* Stagger sections for page-level content (subtle animation) */
+.stagger-sections > * {
+	opacity: 0;
+	animation: fade-in-up-subtle 0.25s ease-out forwards;
+}
+
+.stagger-sections > *:nth-child(1) {
+	animation-delay: 0.05s;
+}
+.stagger-sections > *:nth-child(2) {
+	animation-delay: 0.1s;
+}
+.stagger-sections > *:nth-child(3) {
+	animation-delay: 0.15s;
+}
+.stagger-sections > *:nth-child(4) {
+	animation-delay: 0.2s;
+}
+.stagger-sections > *:nth-child(5) {
+	animation-delay: 0.25s;
+}
+.stagger-sections > *:nth-child(6) {
+	animation-delay: 0.3s;
+}
+.stagger-sections > *:nth-child(7) {
+	animation-delay: 0.35s;
+}
+.stagger-sections > *:nth-child(8) {
+	animation-delay: 0.4s;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+	.stagger-children > *,
+	.stagger-sections > * {
+		animation: none;
+		opacity: 1;
+	}
+	.animate-fade-in-up,
+	.animate-shimmer,
+	.animate-fade-out,
+	.animate-slide-out-left,
+	.animate-shake {
+		animation: none;
+		opacity: 1;
+	}
+}
+
+/* Typing cursor */
+@keyframes blink {
+	0%,
+	50% {
+		opacity: 1;
+	}
+	51%,
+	100% {
+		opacity: 0;
+	}
+}
+
+.cursor-blink::after {
+	content: "▌";
+	animation: blink 1s step-end infinite;
+	color: var(--primary);
+}
+
+/* Shimmer animation (loading skeletons, progress bars) */
+@keyframes shimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+.animate-shimmer {
+	animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Fade out animation */
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+.animate-fade-out {
+	animation: fade-out 100ms ease-in forwards;
+}
+
+/* Slide out left animation (delete, dismiss) */
+@keyframes slide-out-left {
+	to {
+		transform: translateX(-20px);
+		opacity: 0;
+	}
+}
+
+.animate-slide-out-left {
+	animation: slide-out-left 200ms ease-in forwards;
+}
+
+/* Shake animation (validation error) */
+@keyframes shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	25% {
+		transform: translateX(-4px);
+	}
+	75% {
+		transform: translateX(4px);
+	}
+}
+
+.animate-shake {
+	animation: shake 200ms ease-in-out;
+}
+
+/* Glitch effect on hover */
+.glitch-hover {
+	position: relative;
+}
+
+.glitch-hover:hover {
+	animation: glitch 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes glitch {
+	0% {
+		transform: translate(0);
+	}
+	20% {
+		transform: translate(-2px, 2px);
+	}
+	40% {
+		transform: translate(-2px, -2px);
+	}
+	60% {
+		transform: translate(2px, 2px);
+	}
+	80% {
+		transform: translate(2px, -2px);
+	}
+	100% {
+		transform: translate(0);
+	}
+}
+
+/* Terminal card style */
+.terminal-card {
+	background: linear-gradient(
+		180deg,
+		rgba(20, 20, 20, 0.8) 0%,
+		rgba(10, 10, 10, 0.9) 100%
+	);
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	backdrop-filter: blur(20px);
+}
+
+.terminal-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(212, 255, 0, 0.3),
+		transparent
+	);
+}
+
+/* Scrollbar styling */
+@layer base {
+	::-webkit-scrollbar {
+		width: 6px;
+		height: 6px;
+	}
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 3px;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--muted-foreground);
+	}
+}
+
+/* AI section thin scrollbar */
+[data-testid="ai-page"] ::-webkit-scrollbar {
+	width: 4px;
+}
+
+[data-testid="ai-page"] ::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.05);
+}
+
+[data-testid="ai-page"] ::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+/* Number input spinners - make visible on dark theme */
+@layer base {
+	input[type="number"]::-webkit-inner-spin-button,
+	input[type="number"]::-webkit-outer-spin-button {
+		opacity: 1;
+		background: transparent;
+		cursor: pointer;
+	}
+}
+
+/* Counter animation - for stats */
+@keyframes count-up {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Marquee for partners/logos */
+@keyframes marquee {
+	0% {
+		transform: translateX(0%);
+	}
+	100% {
+		transform: translateX(-100%);
+	}
+}
+
+.animate-marquee {
+	animation: marquee 25s linear infinite;
+}
+
+/* Focus visible styles */
+.focus-ring:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
+}
+
+/* ============================================
+   TIPTAP EDITOR STYLES
+   ============================================ */
+
+/* Base editor styling */
+.ProseMirror {
+	outline: none;
+}
+
+.ProseMirror > * + * {
+	margin-top: 0.75em;
+}
+
+/* Headings */
+.ProseMirror h1 {
+	font-size: 1.875rem;
+	font-weight: 700;
+	line-height: 1.2;
+	margin-top: 1.5rem;
+	margin-bottom: 0.5rem;
+	color: var(--foreground);
+}
+
+.ProseMirror h2 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	line-height: 1.25;
+	margin-top: 1.25rem;
+	margin-bottom: 0.5rem;
+	color: var(--foreground);
+}
+
+.ProseMirror h3 {
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.3;
+	margin-top: 1rem;
+	margin-bottom: 0.5rem;
+	color: var(--foreground);
+}
+
+/* First element should not have top margin */
+.ProseMirror > :first-child {
+	margin-top: 0;
+}
+
+/* Paragraphs */
+.ProseMirror p {
+	line-height: 1.625;
+	color: var(--foreground);
+}
+
+/* Lists */
+.ProseMirror ul,
+.ProseMirror ol {
+	padding-left: 1.5rem;
+	margin: 0.75rem 0;
+}
+
+.ProseMirror ul {
+	list-style-type: disc;
+}
+
+.ProseMirror ol {
+	list-style-type: decimal;
+}
+
+.ProseMirror li {
+	line-height: 1.625;
+	margin: 0.25rem 0;
+}
+
+.ProseMirror li > p {
+	margin: 0;
+}
+
+/* Nested lists */
+.ProseMirror ul ul,
+.ProseMirror ol ol,
+.ProseMirror ul ol,
+.ProseMirror ol ul {
+	margin: 0.25rem 0;
+}
+
+/* Blockquotes */
+.ProseMirror blockquote {
+	border-left: 3px solid var(--primary);
+	padding-left: 1rem;
+	margin: 1rem 0;
+	color: var(--muted-foreground);
+	font-style: italic;
+}
+
+/* Code blocks */
+.ProseMirror pre {
+	background: var(--muted);
+	border-radius: var(--radius-md);
+	padding: 0.75rem 1rem;
+	font-family: var(--font-mono);
+	font-size: 0.875rem;
+	overflow-x: auto;
+	margin: 0.75rem 0;
+}
+
+.ProseMirror code {
+	background: var(--muted);
+	border-radius: var(--radius-sm);
+	padding: 0.125rem 0.25rem;
+	font-family: var(--font-mono);
+	font-size: 0.875em;
+}
+
+/* Don't double-style code inside pre */
+.ProseMirror pre code {
+	background: none;
+	padding: 0;
+	border-radius: 0;
+}
+
+/* Horizontal rule */
+.ProseMirror hr {
+	border: none;
+	border-top: 1px solid var(--border);
+	margin: 1.5rem 0;
+}
+
+/* Links */
+.ProseMirror a {
+	color: var(--primary);
+	text-decoration: underline;
+	text-underline-offset: 4px;
+	cursor: pointer;
+}
+
+.ProseMirror a:hover {
+	color: var(--primary);
+	opacity: 0.8;
+}
+
+/* Images with entrance animation */
+@keyframes image-enter {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+		filter: blur(4px);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+		filter: blur(0);
+	}
+}
+
+.ProseMirror img {
+	max-width: 100%;
+	height: auto;
+	border-radius: var(--radius-md);
+	margin: 1rem 0;
+	animation: image-enter 0.3s ease-out forwards;
+}
+
+/* Bold and italic */
+.ProseMirror strong {
+	font-weight: 600;
+}
+
+.ProseMirror em {
+	font-style: italic;
+}
+
+/* Strikethrough */
+.ProseMirror s {
+	text-decoration: line-through;
+}
+
+/* Placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+	content: attr(data-placeholder);
+	float: left;
+	color: var(--muted-foreground);
+	opacity: 0.5;
+	pointer-events: none;
+	height: 0;
+}
+
+/* Selection */
+.ProseMirror ::selection {
+	background: var(--primary);
+	color: var(--primary-foreground);
+}
+
+/* Task list (checkboxes) */
+.ProseMirror ul[data-type="taskList"] {
+	list-style: none;
+	padding-left: 0;
+	margin: 0.75rem 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0.25rem 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+	appearance: none;
+	width: 1rem;
+	height: 1rem;
+	border: 1.5px solid var(--muted-foreground);
+	border-radius: 3px;
+	background: transparent;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:hover {
+	border-color: var(--primary);
+}
+
+.ProseMirror
+	ul[data-type="taskList"]
+	li
+	> label
+	input[type="checkbox"]:checked {
+	background: var(--primary);
+	border-color: var(--primary);
+}
+
+.ProseMirror
+	ul[data-type="taskList"]
+	li
+	> label
+	input[type="checkbox"]:checked::after {
+	content: "";
+	display: block;
+	width: 4px;
+	height: 8px;
+	border: solid var(--primary-foreground);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg) translate(-1px, -1px);
+	margin-left: 4px;
+}
+
+.ProseMirror ul[data-type="taskList"] li > div {
+	flex: 1;
+	min-width: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+	text-decoration: line-through;
+	color: var(--muted-foreground);
+}
+
+/* Nested task lists */
+.ProseMirror ul[data-type="taskList"] ul[data-type="taskList"] {
+	margin-left: 1.5rem;
+	margin-top: 0.25rem;
+	margin-bottom: 0.25rem;
+}
+
+/* ============================================
+   PRINT STYLES — Report Viewer PDF/Print
+   ============================================ */
+@media print {
+	[data-testid="report-viewer-toc"],
+	[data-testid="report-viewer-actions"],
+	[data-testid="report-viewer-back"] {
+		display: none;
+	}
+
+	[data-testid="report-viewer-content"] {
+		max-width: 100%;
+		padding: 0;
+	}
+
+	body {
+		background: white;
+		color: black;
+	}
+}

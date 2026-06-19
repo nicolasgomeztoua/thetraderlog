@@ -1,0 +1,478 @@
+import { and, eq } from "drizzle-orm";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
+import { getTestDb, schema, truncateAllTables } from "../utils";
+
+// Mock @/server/db to use test database
+vi.mock("@/server/db", () => {
+	// Lazy-load so the mock resolves after global setup sets TEST_DATABASE_URL
+	return {
+		get db() {
+			return getTestDb();
+		},
+	};
+});
+
+// Mock @/env to provide required env vars
+vi.mock("@/env", () => ({
+	env: {
+		DATABENTO_API_KEY: "test-api-key",
+	},
+}));
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/** Generate mock 1min OHLC bars for a given date */
+function generateMockBars(
+	date: Date,
+	count: number,
+	startHourUTC = 14,
+): Array<{
+	timestamp: number;
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	volume: number;
+}> {
+	const bars = [];
+	const baseTimestamp = new Date(date);
+	baseTimestamp.setUTCHours(startHourUTC, 0, 0, 0);
+
+	for (let i = 0; i < count; i++) {
+		const ts = baseTimestamp.getTime() + i * 60_000; // 1 minute apart
+		const price = 5000 + i * 0.5;
+		bars.push({
+			timestamp: ts,
+			open: price,
+			high: price + 1,
+			low: price - 0.5,
+			close: price + 0.25,
+			volume: 100 + i,
+		});
+	}
+	return bars;
+}
+
+/** Create a Databento NDJSON response from bars */
+function createDabentoNDJSON(
+	bars: Array<{
+		timestamp: number;
+		open: number;
+		high: number;
+		low: number;
+		close: number;
+		volume: number;
+	}>,
+): string {
+	return bars
+		.map((bar) =>
+			JSON.stringify({
+				hd: { ts_event: bar.timestamp * 1_000_000 }, // Convert ms to ns
+				open: bar.open * 1_000_000_000, // Convert to fixed-point
+				high: bar.high * 1_000_000_000,
+				low: bar.low * 1_000_000_000,
+				close: bar.close * 1_000_000_000,
+				volume: bar.volume,
+			}),
+		)
+		.join("\n");
+}
+
+// ============================================================================
+// TESTS
+// ============================================================================
+
+describe("market-data-cache integration", () => {
+	let db: ReturnType<typeof getTestDb>;
+
+	beforeAll(async () => {
+		await truncateAllTables();
+		db = getTestDb();
+	});
+
+	afterAll(async () => {
+		await truncateAllTables();
+		vi.restoreAllMocks();
+	});
+
+	beforeEach(async () => {
+		// Clear candle_cache between tests
+		await db.delete(schema.candleCache);
+		vi.restoreAllMocks();
+	});
+
+	it("should create cache entry with correct lastBarAt on first insert", async () => {
+		const historicalDate = new Date("2024-12-15T00:00:00Z");
+		const mockBars = generateMockBars(historicalDate, 100);
+		const ndjson = createDabentoNDJSON(mockBars);
+
+		// Mock global fetch to return our bars
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response(ndjson, { status: 200 }));
+
+		// Import and call getOHLCBars (lazy import after mocks)
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", historicalDate);
+
+		expect(result.bars).toHaveLength(100);
+		expect(result.source).toBe("api");
+		expect(result.dataQuality).toBe("full");
+
+		// Verify cache entry was created
+		const cacheRow = await db.query.candleCache.findFirst({
+			where: and(
+				eq(schema.candleCache.symbol, "ES"),
+				eq(schema.candleCache.interval, "1min"),
+			),
+		});
+
+		expect(cacheRow).toBeDefined();
+		expect(cacheRow?.barCount).toBe(100);
+		expect(cacheRow?.lastBarAt).toBeDefined();
+
+		// lastBarAt should match the last bar's timestamp
+		const lastBar = mockBars[mockBars.length - 1];
+		expect(cacheRow?.lastBarAt?.getTime()).toBe(lastBar?.timestamp);
+
+		fetchSpy.mockRestore();
+	});
+
+	it("should return cached data for historical date without re-fetching", async () => {
+		const historicalDate = new Date("2024-11-20T00:00:00Z");
+		const mockBars = generateMockBars(historicalDate, 50);
+
+		// Pre-populate cache
+		const lastBarTs = mockBars[mockBars.length - 1];
+		await db.insert(schema.candleCache).values({
+			symbol: "ES",
+			interval: "1min",
+			date: new Date("2024-11-20T00:00:00Z"),
+			bars: JSON.stringify(mockBars),
+			barCount: 50,
+			source: "databento",
+			fetchedAt: new Date(),
+			lastBarAt: lastBarTs ? new Date(lastBarTs.timestamp) : null,
+		});
+
+		// Spy on fetch — it should NOT be called
+		const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", historicalDate);
+
+		expect(result.bars).toHaveLength(50);
+		expect(result.source).toBe("cache");
+		expect(fetchSpy).not.toHaveBeenCalled();
+
+		fetchSpy.mockRestore();
+	});
+
+	it("should update cache via onConflictDoUpdate when re-fetching stale entry", async () => {
+		// Use today's date so isCacheStale can trigger a re-fetch
+		const today = new Date();
+		today.setUTCHours(0, 0, 0, 0);
+
+		const oldBars = generateMockBars(today, 30);
+
+		// Pre-populate cache with stale data (fetchedAt and lastBarAt > 5min ago).
+		// lastBarAt must be a fixed time in the past, not derived from the mock
+		// bars: those are anchored at a fixed UTC hour, so a run whose wall clock
+		// lands within ~5min of that hour would read them as "fresh" and skip the
+		// re-fetch this test exercises.
+		const staleTime = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+		await db.insert(schema.candleCache).values({
+			symbol: "NQ",
+			interval: "1min",
+			date: today,
+			bars: JSON.stringify(oldBars),
+			barCount: 30,
+			source: "databento",
+			fetchedAt: staleTime,
+			lastBarAt: staleTime,
+		});
+
+		// Mock fetch to return a larger bar set (simulating updated market data)
+		const newBars = generateMockBars(today, 60);
+		const ndjson = createDabentoNDJSON(newBars);
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response(ndjson, { status: 200 }));
+
+		// Call the actual service — this exercises the onConflictDoUpdate path
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("NQ", "1min", today);
+
+		expect(result.bars).toHaveLength(60);
+		expect(result.source).toBe("api");
+
+		// Verify the row was updated, not duplicated
+		const rows = await db.query.candleCache.findMany({
+			where: and(
+				eq(schema.candleCache.symbol, "NQ"),
+				eq(schema.candleCache.interval, "1min"),
+				eq(schema.candleCache.date, today),
+			),
+		});
+
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.barCount).toBe(60);
+
+		fetchSpy.mockRestore();
+	});
+
+	it("returns pending (not unavailable) for a not-yet-released same-day result", async () => {
+		// Today's session is not published by Databento until ~09:00 UTC the next
+		// day, so the Historical API returns an empty body for it.
+		const today = new Date();
+		today.setUTCHours(0, 0, 0, 0);
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", today);
+
+		expect(result.bars).toHaveLength(0);
+		expect(result.dataQuality).toBe("pending");
+
+		fetchSpy.mockRestore();
+	});
+
+	it("returns unavailable for an empty already-released historical date", async () => {
+		// A long-past date with no bars is genuinely unavailable (bad symbol,
+		// holiday, etc.) — not pending.
+		const oldDate = new Date("2024-01-15T00:00:00Z");
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", oldDate);
+
+		expect(result.bars).toHaveLength(0);
+		expect(result.dataQuality).toBe("unavailable");
+
+		fetchSpy.mockRestore();
+	});
+
+	it("caches a confirmed-empty released day and serves later reads from cache", async () => {
+		// A weekend/holiday session with no bars should only be bought from the
+		// provider once — subsequent reads hit the empty cache entry.
+		const saturday = new Date("2024-01-13T00:00:00Z");
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+
+		const first = await getOHLCBars("ES", "1min", saturday);
+		expect(first.dataQuality).toBe("unavailable");
+		expect(first.source).toBe("api");
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+		// Empty day persisted with 0 bars
+		const cacheRow = await db.query.candleCache.findFirst({
+			where: and(
+				eq(schema.candleCache.symbol, "ES"),
+				eq(schema.candleCache.interval, "1min"),
+				eq(schema.candleCache.date, saturday),
+			),
+		});
+		expect(cacheRow?.barCount).toBe(0);
+
+		const second = await getOHLCBars("ES", "1min", saturday);
+		expect(second.dataQuality).toBe("unavailable");
+		expect(second.source).toBe("cache");
+		expect(fetchSpy).toHaveBeenCalledTimes(1); // no second provider call
+
+		fetchSpy.mockRestore();
+	});
+
+	it("does not cache an empty result for a failed provider request", async () => {
+		// A 429/5xx is transient — caching it would freeze a recoverable gap.
+		const oldDate = new Date("2024-01-16T00:00:00Z");
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("rate limited", { status: 429 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", oldDate);
+
+		expect(result.bars).toHaveLength(0);
+		const cacheRow = await db.query.candleCache.findFirst({
+			where: and(
+				eq(schema.candleCache.symbol, "ES"),
+				eq(schema.candleCache.date, oldDate),
+			),
+		});
+		expect(cacheRow).toBeUndefined();
+
+		fetchSpy.mockRestore();
+	});
+
+	it("does not cache an empty result for a not-yet-released day", async () => {
+		// Today's session is still pending — it will publish later, so an empty
+		// response must not be persisted.
+		const today = new Date();
+		today.setUTCHours(0, 0, 0, 0);
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("", { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "1min", today);
+
+		expect(result.dataQuality).toBe("pending");
+		const cacheRow = await db.query.candleCache.findFirst({
+			where: and(
+				eq(schema.candleCache.symbol, "ES"),
+				eq(schema.candleCache.date, today),
+			),
+		});
+		expect(cacheRow).toBeUndefined();
+
+		fetchSpy.mockRestore();
+	});
+
+	it("should only write 1min and 1h intervals to candle_cache", async () => {
+		const historicalDate = new Date("2024-09-05T00:00:00Z");
+		const mockBars = generateMockBars(historicalDate, 60);
+		const ndjson = createDabentoNDJSON(mockBars);
+
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response(ndjson, { status: 200 }));
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+
+		// Request 5min interval — should cache as 1min internally
+		await getOHLCBars("ES", "5min", historicalDate);
+
+		// Check what intervals are in the DB
+		const allRows = await db.query.candleCache.findMany();
+		const intervals = allRows.map((r) => r.interval);
+
+		// Only base intervals should be stored
+		expect(intervals).not.toContain("5min");
+		expect(intervals).not.toContain("15min");
+		expect(intervals).not.toContain("30min");
+		expect(intervals).not.toContain("4h");
+
+		// Should have stored as 1min
+		expect(intervals).toContain("1min");
+
+		fetchSpy.mockRestore();
+	});
+
+	it("should return correctly aggregated 5min bars from 1min cache data", async () => {
+		const historicalDate = new Date("2024-08-20T00:00:00Z");
+		// Generate 10 1min bars (should produce 2 complete 5min bars)
+		const mockBars = generateMockBars(historicalDate, 10);
+		const lastBar = mockBars[mockBars.length - 1];
+
+		// Pre-populate cache with 1min bars
+		await db.insert(schema.candleCache).values({
+			symbol: "ES",
+			interval: "1min",
+			date: new Date("2024-08-20T00:00:00Z"),
+			bars: JSON.stringify(mockBars),
+			barCount: 10,
+			source: "databento",
+			fetchedAt: new Date(),
+			lastBarAt: lastBar ? new Date(lastBar.timestamp) : null,
+		});
+
+		// Spy on fetch — should NOT be called (data comes from cache)
+		const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "5min", historicalDate);
+
+		// 10 1min bars → 2 5min bars
+		expect(result.bars).toHaveLength(2);
+		expect(result.source).toBe("cache");
+		expect(fetchSpy).not.toHaveBeenCalled();
+
+		// Verify OHLC aggregation correctness for first 5min bar
+		const firstBucket = result.bars[0];
+		expect(firstBucket).toBeDefined();
+
+		// First 5min bar should have:
+		// open = first 1min bar's open
+		expect(firstBucket?.open).toBe(mockBars[0]?.open);
+		// high = max high of first 5 bars
+		const first5 = mockBars.slice(0, 5);
+		const expectedHigh = Math.max(...first5.map((b) => b.high));
+		expect(firstBucket?.high).toBe(expectedHigh);
+		// low = min low of first 5 bars
+		const expectedLow = Math.min(...first5.map((b) => b.low));
+		expect(firstBucket?.low).toBe(expectedLow);
+		// close = last 1min bar's close in bucket
+		expect(firstBucket?.close).toBe(mockBars[4]?.close);
+
+		fetchSpy.mockRestore();
+	});
+
+	it("should aggregate 1h bars to 4h when 4h interval is requested", async () => {
+		const historicalDate = new Date("2024-07-15T00:00:00Z");
+		// Generate 8 1h bars (should produce 2 4h bars)
+		const bars = [];
+		const baseTimestamp = new Date(historicalDate);
+		baseTimestamp.setUTCHours(0, 0, 0, 0);
+
+		for (let i = 0; i < 8; i++) {
+			const ts = baseTimestamp.getTime() + i * 3_600_000; // 1 hour apart
+			const price = 5000 + i * 10;
+			bars.push({
+				timestamp: ts,
+				open: price,
+				high: price + 5,
+				low: price - 3,
+				close: price + 2,
+				volume: 1000 + i * 100,
+			});
+		}
+
+		const lastBar = bars[bars.length - 1];
+
+		// Pre-populate cache with 1h bars
+		await db.insert(schema.candleCache).values({
+			symbol: "ES",
+			interval: "1h",
+			date: new Date("2024-07-15T00:00:00Z"),
+			bars: JSON.stringify(bars),
+			barCount: 8,
+			source: "databento",
+			fetchedAt: new Date(),
+			lastBarAt: lastBar ? new Date(lastBar.timestamp) : null,
+		});
+
+		const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+		const { getOHLCBars } = await import("@/lib/market-data/service");
+		const result = await getOHLCBars("ES", "4h", historicalDate);
+
+		// 8 1h bars → 2 4h bars
+		expect(result.bars).toHaveLength(2);
+		expect(result.source).toBe("cache");
+		expect(fetchSpy).not.toHaveBeenCalled();
+
+		fetchSpy.mockRestore();
+	});
+});
