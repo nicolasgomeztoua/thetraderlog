@@ -1,0 +1,2 @@
+Position ID,Timestamp,Trade Date,Net Pos,Net Price,Bought,Avg. Buy,Sold,Avg. Sell,Account,Contract,Product,Product Description,_priceFormat,_priceFormatType,_tickSize,Pair ID,Buy Fill ID,Sell Fill ID,Paired Qty,Buy Price,Sell Price,P/L,Currency,Bought Timestamp,Sold Timestamp
+440882967939,06/09/2026 15:24:50,2026-06-09,0,,1,29402.50,1,29501.75,PADEMO0000000000001,MNQM6,MNQ,Micro E-mini NASDAQ-100,-2,0,0.25,440882968034,440882967948,440882968032,1,29402.50,29501.75,198.50,USD,06/09/2026 15:20:01,06/09/2026 15:24:50

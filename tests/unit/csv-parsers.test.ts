@@ -14,14 +14,7 @@ import {
 
 function loadFixture(filename: string): string {
 	return readFileSync(
-		path.join(
-			process.cwd(),
-			"docs",
-			"research",
-			"futures-platform-csvs",
-			"platforms",
-			filename,
-		),
+		path.join(process.cwd(), "tests", "fixtures", "csv-parsers", filename),
 		"utf-8",
 	);
 }
