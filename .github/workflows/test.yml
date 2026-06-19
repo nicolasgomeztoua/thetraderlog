@@ -57,7 +57,10 @@ jobs:
     name: Deploy Trigger.dev
     runs-on: ubuntu-latest
     needs: [test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Only deploy from the canonical repo. Forks don't have the Trigger.dev
+    # secret and shouldn't deploy to our project, so skip this job for them
+    # (lint + tests still run on forks).
+    if: github.repository == 'nicolasgomeztoua/thetraderlog' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
