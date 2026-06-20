@@ -590,6 +590,7 @@ function TradeDetailPageContent() {
 											roi: null,
 											duration: null,
 											rMultiple: null,
+											plannedRR: null,
 											risk: null,
 										}
 									}
@@ -668,6 +669,7 @@ function TradeDetailPageContent() {
 									roi: null,
 									duration: null,
 									rMultiple: null,
+									plannedRR: null,
 									risk: null,
 								}
 							}

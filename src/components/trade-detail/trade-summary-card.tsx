@@ -35,14 +35,14 @@ export function TradeSummaryCard({
 		return (
 			<div
 				className={cn(
-					"relative overflow-hidden rounded-sm border border-border/50 bg-gradient-to-br from-muted/50 to-transparent p-8",
+					"relative overflow-hidden rounded-sm border border-border/50 bg-gradient-to-br from-muted/50 to-transparent p-6 sm:p-8",
 					className,
 				)}
 			>
 				{/* Subtle corner accent */}
 				<div className="pointer-events-none absolute top-0 right-0 h-24 w-24 bg-gradient-to-bl from-primary/5 to-transparent" />
 
-				<div className="relative grid grid-cols-3 gap-8 text-center">
+				<div className="relative grid grid-cols-1 gap-6 text-center sm:grid-cols-3 sm:gap-8">
 					<div>
 						<p className="font-mono text-3xl text-muted-foreground">—</p>
 						<p className="mt-2 font-mono text-[10px] text-muted-foreground/70 uppercase tracking-widest">
@@ -74,7 +74,7 @@ export function TradeSummaryCard({
 	return (
 		<div
 			className={cn(
-				"relative overflow-hidden rounded-sm border p-8",
+				"relative overflow-hidden rounded-sm border p-6 sm:p-8",
 				isProfit &&
 					"border-profit/25 bg-gradient-to-br from-profit/4 to-transparent",
 				isLoss && "border-loss/25 bg-gradient-to-br from-loss/4 to-transparent",
@@ -94,12 +94,12 @@ export function TradeSummaryCard({
 				)}
 			/>
 
-			<div className="relative grid grid-cols-3 gap-8 text-center">
+			<div className="relative grid grid-cols-1 gap-6 text-center sm:grid-cols-3 sm:gap-8">
 				{/* Net P&L */}
 				<div>
 					<p
 						className={cn(
-							"font-bold font-mono text-4xl tracking-tight",
+							"font-bold font-mono text-3xl tracking-tight sm:text-4xl",
 							isProfit && "text-profit",
 							isLoss && "text-loss",
 							!isProfit && !isLoss && "text-muted-foreground",

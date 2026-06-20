@@ -448,6 +448,11 @@ export function StatsPanel({
 										}
 									/>
 									<StatRow
+										label="Planned R:R"
+										suffix="R"
+										value={stats.plannedRR?.toFixed(2)}
+									/>
+									<StatRow
 										label="Realized R"
 										suffix="R"
 										value={stats.rMultiple?.toFixed(2)}
