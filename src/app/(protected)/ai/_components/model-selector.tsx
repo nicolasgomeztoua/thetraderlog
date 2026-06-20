@@ -2,18 +2,36 @@
 
 import { FileText, Menu, MessageSquare } from "lucide-react";
 
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { AI_MODEL_OPTIONS } from "@/lib/constants/ai";
+
 type AiMode = "chat" | "report";
 
 interface ModelSelectorProps {
 	mode: AiMode;
 	onModeChange: (mode: AiMode) => void;
 	onMenuClick?: () => void;
+	/** Currently selected OpenRouter model ID. */
+	selectedModel: string;
+	/** Persist + apply a new model selection. */
+	onModelChange: (model: string) => void;
+	/** Lock the picker while a request is in flight. */
+	modelDisabled?: boolean;
 }
 
 export function ModelSelector({
 	mode,
 	onModeChange,
 	onMenuClick,
+	selectedModel,
+	onModelChange,
+	modelDisabled,
 }: ModelSelectorProps) {
 	return (
 		<div className="flex items-center gap-2 border-white/5 border-b px-3 py-2 sm:px-4">
@@ -60,6 +78,38 @@ export function ModelSelector({
 					<FileText className="h-3 w-3" />
 					Reports
 				</button>
+			</div>
+
+			{/* Model Picker (same set for chat + reports; default differs per mode) */}
+			<div className="ml-auto flex items-center gap-1.5">
+				<span className="hidden font-mono text-[10px] text-muted-foreground/50 uppercase tracking-wider sm:inline">
+					Model
+				</span>
+				<Select
+					disabled={modelDisabled}
+					onValueChange={onModelChange}
+					value={selectedModel}
+				>
+					<SelectTrigger
+						className="h-7 gap-1.5 border-white/10 bg-white/[0.01] font-mono text-[10px] text-foreground uppercase tracking-wider"
+						data-testid="ai-model-selector"
+						size="sm"
+					>
+						<SelectValue placeholder="Select model" />
+					</SelectTrigger>
+					<SelectContent align="end">
+						{AI_MODEL_OPTIONS.map((m) => (
+							<SelectItem className="font-mono text-xs" key={m.id} value={m.id}>
+								<span className="flex flex-col">
+									<span className="text-foreground">{m.label}</span>
+									<span className="text-[10px] text-muted-foreground/60">
+										{m.description}
+									</span>
+								</span>
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 			</div>
 		</div>
 	);

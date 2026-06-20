@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { AI_MODEL_IDS } from "@/lib/constants/ai";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { userSettings } from "@/server/db/schema";
 
@@ -36,6 +37,8 @@ export const settingsRouter = createTRPCRouter({
 				tradeLogSort: z.string().optional(), // JSON string of { field, direction }
 				tradingSessions: z.string().optional(), // JSON string of session definitions
 				theme: z.string().optional(), // Theme ID (e.g., "terminal", "midnight", "paper")
+				chatModel: z.enum(AI_MODEL_IDS).optional(), // Sticky default chat model
+				reportModel: z.enum(AI_MODEL_IDS).optional(), // Sticky default report model
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {

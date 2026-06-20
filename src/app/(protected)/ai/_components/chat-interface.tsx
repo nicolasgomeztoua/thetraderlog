@@ -23,6 +23,9 @@ import { useImageUpload } from "@/hooks/use-image-upload";
 import {
 	AI_CHAT_ALLOWED_IMAGE_MIME_TYPES,
 	AI_CHAT_MAX_IMAGE_SIZE,
+	AI_MODEL_IDS,
+	type AiModelId,
+	DEFAULT_CHAT_MODEL,
 	MAX_AI_CHAT_IMAGES,
 	SUGGESTED_CHAT_QUERIES,
 } from "@/lib/constants/ai";
@@ -113,6 +116,8 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	const [activeConversationId, setActiveConversationId] = useState<
 		string | null
 	>(null);
+	const [selectedModel, setSelectedModel] =
+		useState<AiModelId>(DEFAULT_CHAT_MODEL);
 	const [input, setInput] = useState("");
 	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 	const [lastSentAt, setLastSentAt] = useState<number>(0);
@@ -152,6 +157,27 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			{ enabled: !!activeConversationId },
 		);
 
+	// Sticky per-user default model.
+	const { data: userSettings } = api.settings.get.useQuery();
+
+	// Seed the picker from the sticky default for new chats; adopt a conversation's
+	// own stored model when an existing thread is opened.
+	useEffect(() => {
+		if (!activeConversationId && userSettings?.chatModel) {
+			setSelectedModel(userSettings.chatModel as AiModelId);
+		}
+	}, [userSettings?.chatModel, activeConversationId]);
+
+	useEffect(() => {
+		// Only adopt a conversation's stored model if it's still a selectable option.
+		// Older threads may hold a now-removed model; those keep the current (valid)
+		// selection so the next send stays within the allowlist.
+		const stored = conversation?.model;
+		if (stored && (AI_MODEL_IDS as readonly string[]).includes(stored)) {
+			setSelectedModel(stored as AiModelId);
+		}
+	}, [conversation?.model]);
+
 	// Mutations
 	const createConversation = api.ai.createConversation.useMutation({
 		onSuccess: (data) => {
@@ -176,6 +202,18 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			}
 		},
 	});
+
+	const updateSettings = api.settings.update.useMutation();
+
+	const handleModelChange = useCallback(
+		(model: string) => {
+			const next = model as AiModelId;
+			setSelectedModel(next);
+			// Persist as the sticky per-user default for future chats.
+			updateSettings.mutate({ chatModel: next });
+		},
+		[updateSettings],
+	);
 
 	const deleteConversation = api.ai.deleteConversation.useMutation({
 		onSuccess: () => {
@@ -374,6 +412,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			if (!conversationId) {
 				const newConversation = await createConversation.mutateAsync({
 					mode: "chat",
+					model: selectedModel,
 				});
 				conversationId = newConversation.id;
 			}
@@ -381,6 +420,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			sendMessage.mutate({
 				conversationId,
 				content: text,
+				model: selectedModel,
 				...(selectedAccountId && { accountId: selectedAccountId }),
 				...(readyAttachments.length > 0 && {
 					imageAttachments: readyAttachments,
@@ -394,6 +434,7 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			createConversation,
 			sendMessage,
 			selectedAccountId,
+			selectedModel,
 		],
 	);
 
@@ -467,8 +508,11 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				{/* Model Selector replaces terminal header */}
 				<ModelSelector
 					mode={mode}
+					modelDisabled={isLoading}
 					onMenuClick={() => setMobileDrawerOpen(true)}
 					onModeChange={onModeChange}
+					onModelChange={handleModelChange}
+					selectedModel={selectedModel}
 				/>
 
 				{/* Chat Content */}

@@ -498,6 +498,11 @@ export const userSettings = createTable("user_settings", {
 	currency: text("currency").default("USD"),
 	theme: text("theme").default("terminal"), // Theme ID (e.g., "terminal", "midnight", "paper")
 
+	// AI model preferences (sticky per-user defaults; OpenRouter slugs validated
+	// against the AI_MODEL_OPTIONS allowlist in app code). Null = use the app default.
+	chatModel: text("chat_model"),
+	reportModel: text("report_model"),
+
 	// Trade log column preferences (JSON array of column configs)
 	tradeLogColumns: text("trade_log_columns"), // JSON string of column visibility/order
 	tradeLogSort: text("trade_log_sort"), // JSON string of { field, direction }

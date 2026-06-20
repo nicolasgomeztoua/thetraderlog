@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, FileText, Loader2, RefreshCw, Send } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	UsageLimitBanner,
 	useReportLimitReached,
@@ -9,7 +9,11 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
-import { SUGGESTED_REPORT_PROMPTS } from "@/lib/constants/ai";
+import {
+	type AiModelId,
+	DEFAULT_REPORT_MODEL,
+	SUGGESTED_REPORT_PROMPTS,
+} from "@/lib/constants/ai";
 import { ERR_VALIDATION_DATE_RANGE } from "@/lib/constants/errors";
 import { api } from "@/trpc/react";
 import { ModelSelector } from "./model-selector";
@@ -124,10 +128,30 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 	const [dateRangeEnd, setDateRangeEnd] = useState("");
 	const [dateError, setDateError] = useState("");
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const [selectedModel, setSelectedModel] =
+		useState<AiModelId>(DEFAULT_REPORT_MODEL);
 	const { selectedAccountId } = useAccount();
 	const reportLimitReached = useReportLimitReached();
 
 	const utils = api.useUtils();
+
+	// Sticky per-user default report model.
+	const { data: userSettings } = api.settings.get.useQuery();
+	useEffect(() => {
+		if (userSettings?.reportModel) {
+			setSelectedModel(userSettings.reportModel as AiModelId);
+		}
+	}, [userSettings?.reportModel]);
+
+	const updateSettings = api.settings.update.useMutation();
+	const handleModelChange = useCallback(
+		(model: string) => {
+			const next = model as AiModelId;
+			setSelectedModel(next);
+			updateSettings.mutate({ reportModel: next });
+		},
+		[updateSettings],
+	);
 
 	// Fetch reports
 	const { data: reports, isLoading: isReportsLoading } =
@@ -179,6 +203,7 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 
 		startReport.mutate({
 			prompt: content,
+			model: selectedModel,
 			...(dateRangeStart && {
 				dateRangeStart: new Date(dateRangeStart).toISOString(),
 			}),
@@ -203,7 +228,13 @@ export function ReportInterface({ mode, onModeChange }: ReportInterfaceProps) {
 			className="flex h-full flex-col overflow-hidden rounded border border-border bg-card"
 			data-testid="ai-report-interface"
 		>
-			<ModelSelector mode={mode} onModeChange={onModeChange} />
+			<ModelSelector
+				mode={mode}
+				modelDisabled={startReport.isPending}
+				onModeChange={onModeChange}
+				onModelChange={handleModelChange}
+				selectedModel={selectedModel}
+			/>
 
 			<div className="flex min-h-0 flex-1 flex-col gap-3 p-3 lg:flex-row lg:p-4">
 				{/* ================================================================ */}
