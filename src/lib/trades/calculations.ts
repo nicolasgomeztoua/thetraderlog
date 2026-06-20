@@ -175,6 +175,7 @@ export interface TradeStats {
 	roi: number | null;
 	duration: string | null;
 	rMultiple: number | null;
+	plannedRR: number | null;
 	risk: number | null;
 }
 
@@ -200,6 +201,7 @@ export function calculateAllStats(trade: {
 	const netPnl = trade.netPnl ? parseFloat(trade.netPnl) : null;
 	const fees = trade.fees ? parseFloat(trade.fees) : null;
 	const sl = trade.stopLoss ? parseFloat(trade.stopLoss) : null;
+	const tp = trade.takeProfit ? parseFloat(trade.takeProfit) : null;
 
 	const points = calculatePoints(entry, exit, trade.direction);
 	const ticks = calculateTicks(points, trade.symbol);
@@ -212,6 +214,7 @@ export function calculateAllStats(trade: {
 		roi: calculateROI(netPnl, entry, qty, trade.symbol),
 		duration: calculateDuration(trade.entryTime, trade.exitTime),
 		rMultiple: calculateActualRMultiple(netPnl, entry, sl, qty, trade.symbol),
+		plannedRR: calculatePlannedRR(entry, sl, tp),
 		risk: calculateRisk(entry, sl, qty, trade.symbol),
 	};
 }
