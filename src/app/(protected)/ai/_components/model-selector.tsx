@@ -8,12 +8,15 @@ interface ModelSelectorProps {
 	mode: AiMode;
 	onModeChange: (mode: AiMode) => void;
 	onMenuClick?: () => void;
+	/** Optional element pinned to the right of the header (e.g. a share button). */
+	rightSlot?: React.ReactNode;
 }
 
 export function ModelSelector({
 	mode,
 	onModeChange,
 	onMenuClick,
+	rightSlot,
 }: ModelSelectorProps) {
 	return (
 		<div className="flex items-center gap-2 border-white/5 border-b px-3 py-2 sm:px-4">
@@ -61,6 +64,8 @@ export function ModelSelector({
 					Reports
 				</button>
 			</div>
+
+			{rightSlot && <div className="ml-auto">{rightSlot}</div>}
 		</div>
 	);
 }

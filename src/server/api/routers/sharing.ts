@@ -10,6 +10,7 @@ import {
 } from "@/lib/constants";
 import { getExtendedDayBars, getFullDayBars } from "@/lib/market-data/service";
 import { generateShareToken } from "@/lib/shared/id";
+import { getSharedConversationPayload } from "@/server/api/helpers/conversation-share";
 import { getSharedTradePayload } from "@/server/api/helpers/trade-share";
 import {
 	createTRPCRouter,
@@ -19,6 +20,8 @@ import {
 import type { db } from "@/server/db";
 import {
 	accounts,
+	aiConversations,
+	aiMessages,
 	aiReports,
 	shareLinks,
 	shareResourceTypeEnum,
@@ -107,6 +110,25 @@ export const sharingRouter = createTRPCRouter({
 
 			if (link.resourceType === "trade") {
 				const payload = await getSharedTradePayload(ctx.db, link.resourceId);
+
+				if (!payload) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_SHARE_RESOURCE_NOT_FOUND,
+					});
+				}
+
+				return {
+					resourceType: link.resourceType,
+					...payload,
+				};
+			}
+
+			if (link.resourceType === "conversation") {
+				const payload = await getSharedConversationPayload(
+					ctx.db,
+					link.resourceId,
+				);
 
 				if (!payload) {
 					throw new TRPCError({
@@ -253,6 +275,37 @@ export const sharingRouter = createTRPCRouter({
 					throw new TRPCError({
 						code: "NOT_FOUND",
 						message: ERR_SHARE_RESOURCE_NOT_FOUND,
+					});
+				}
+			}
+
+			if (input.resourceType === "conversation") {
+				const conversation = await ctx.db.query.aiConversations.findFirst({
+					where: and(
+						eq(aiConversations.id, input.resourceId),
+						eq(aiConversations.userId, ctx.user.id),
+					),
+					columns: { id: true },
+				});
+
+				if (!conversation) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: ERR_SHARE_RESOURCE_NOT_FOUND,
+					});
+				}
+
+				// Don't mint a link for an empty conversation — the public page would
+				// 404 on it anyway (getSharedConversationPayload returns null).
+				const firstMessage = await ctx.db.query.aiMessages.findFirst({
+					where: eq(aiMessages.conversationId, input.resourceId),
+					columns: { id: true },
+				});
+
+				if (!firstMessage) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: ERR_SHARE_RESOURCE_NOT_COMPLETE,
 					});
 				}
 			}
