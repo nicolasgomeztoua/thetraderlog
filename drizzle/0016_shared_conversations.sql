@@ -1,0 +1,1 @@
+ALTER TYPE "public"."share_resource_type" ADD VALUE IF NOT EXISTS 'conversation';

@@ -5,6 +5,7 @@ import {
 	ArrowRight,
 	BarChart3,
 	Database,
+	Share2,
 	Sparkles,
 	TrendingUp,
 	Zap,
@@ -16,6 +17,7 @@ import {
 	UsageLimitBanner,
 	useChatLimitReached,
 } from "@/components/billing/usage-limit-banner";
+import { ShareLinkPopover } from "@/components/sharing/share-link-popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
@@ -469,6 +471,26 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 					mode={mode}
 					onMenuClick={() => setMobileDrawerOpen(true)}
 					onModeChange={onModeChange}
+					rightSlot={
+						activeConversationId && messages.length > 0 ? (
+							<ShareLinkPopover
+								description="Anyone with the link can view this AI conversation"
+								emptyHint="Create a public, read-only link to this chat. Viewers see the conversation and any AI charts — your raw queries, account, and data stay private."
+								resourceId={activeConversationId}
+								resourceType="conversation"
+								title="Share Chat"
+							>
+								<button
+									className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.01] px-2.5 py-1.5 font-mono text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:border-primary/30 hover:text-primary"
+									data-testid="chat-share-button"
+									type="button"
+								>
+									<Share2 className="h-3 w-3" />
+									<span className="hidden sm:inline">Share</span>
+								</button>
+							</ShareLinkPopover>
+						) : undefined
+					}
 				/>
 
 				{/* Chat Content */}

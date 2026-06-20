@@ -124,6 +124,7 @@ export const shareResourceTypeEnum = pgEnum("share_resource_type", [
 	"report",
 	"trade",
 	"account_analytics",
+	"conversation",
 ]);
 export const bugSeverityEnum = pgEnum("bug_severity", [
 	"low",
