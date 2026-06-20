@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { calculateAggregateStats, calculateWinRate } from "@/lib/analytics";
 import {
 	calculateConsistencyMetric,
 	calculateDailyLossStatus,
@@ -29,7 +30,10 @@ import {
 	tradingPlatformEnum,
 } from "@/lib/shared";
 import { getDateStringInTimezone } from "@/lib/shared/timezone";
-import { getUserTimezone } from "@/server/api/helpers";
+import {
+	getUserBreakevenThreshold,
+	getUserTimezone,
+} from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { accountGroups, accounts, trades } from "@/server/db/schema";
 
@@ -464,14 +468,22 @@ export const accountsRouter = createTRPCRouter({
 				throw new Error(ERR_ACCOUNT_NOT_FOUND);
 			}
 
+			// Breakeven threshold so win/loss classification matches the rest of
+			// the app: trades within ±threshold are breakevens, not wins/losses.
+			const beThreshold = await getUserBreakevenThreshold(
+				ctx.db,
+				ctx.user.id,
+				ctx.userSettingsCache,
+			);
+
 			// Aggregate stats in SQL instead of fetching every closed trade row.
 			// NOTE: intentionally does NOT filter deletedAt — this preserves the
 			// prior behavior of this endpoint (getPropCompliance does filter it).
 			const [agg] = await ctx.db
 				.select({
 					totalTrades: sql<number>`count(*)::int`,
-					wins: sql<number>`count(*) filter (where ${trades.netPnl} > 0)::int`,
-					losses: sql<number>`count(*) filter (where ${trades.netPnl} < 0)::int`,
+					wins: sql<number>`count(*) filter (where ${trades.netPnl} > ${beThreshold})::int`,
+					losses: sql<number>`count(*) filter (where ${trades.netPnl} < ${-beThreshold})::int`,
 					totalPnl: sql<string>`coalesce(sum(${trades.netPnl}), '0')`,
 				})
 				.from(trades)
@@ -491,7 +503,8 @@ export const accountsRouter = createTRPCRouter({
 				totalTrades,
 				wins,
 				losses,
-				winRate: totalTrades > 0 ? (wins / totalTrades) * 100 : 0,
+				// Win rate excludes breakevens from the denominator.
+				winRate: calculateWinRate(wins, losses),
 				totalPnl,
 				initialBalance: parseFloat(account.initialBalance ?? "0"),
 				currentBalance,
@@ -537,12 +550,12 @@ export const accountsRouter = createTRPCRouter({
 				orderBy: [asc(trades.exitTime)],
 			});
 
-			// Get user timezone for date grouping
-			const userTimezone = await getUserTimezone(
-				ctx.db,
-				ctx.user.id,
-				ctx.userSettingsCache,
-			);
+			// Get user timezone for date grouping and breakeven threshold so
+			// win/loss classification matches the rest of the app.
+			const [userTimezone, beThreshold] = await Promise.all([
+				getUserTimezone(ctx.db, ctx.user.id, ctx.userSettingsCache),
+				getUserBreakevenThreshold(ctx.db, ctx.user.id, ctx.userSettingsCache),
+			]);
 
 			const initialBalance = parseFloat(account.initialBalance ?? "0");
 			const maxDrawdownPercent = parseFloat(account.maxDrawdown ?? "0");
@@ -647,21 +660,10 @@ export const accountsRouter = createTRPCRouter({
 				);
 			}
 
-			// Trade stats for Monte Carlo simulation
-			const wins = accountTrades.filter(
-				(t) => t.netPnl && parseFloat(t.netPnl) > 0,
-			).length;
-			const losses = accountTrades.filter(
-				(t) => t.netPnl && parseFloat(t.netPnl) < 0,
-			).length;
-			const grossProfit = accountTrades.reduce((sum, t) => {
-				const pnl = t.netPnl ? parseFloat(t.netPnl) : 0;
-				return pnl > 0 ? sum + pnl : sum;
-			}, 0);
-			const grossLoss = accountTrades.reduce((sum, t) => {
-				const pnl = t.netPnl ? parseFloat(t.netPnl) : 0;
-				return pnl < 0 ? sum + Math.abs(pnl) : sum;
-			}, 0);
+			// Trade stats for Monte Carlo simulation — threshold-aware so win
+			// rate and avg win/loss match the rest of the app (breakevens are
+			// excluded from the win-rate denominator and from avg win/loss).
+			const stats = calculateAggregateStats(accountTrades, beThreshold);
 
 			// Overall status
 			// Profit target is a progress metric, not a risk indicator —
@@ -728,13 +730,12 @@ export const accountsRouter = createTRPCRouter({
 				},
 				overallStatus,
 				tradeStats: {
-					totalTrades: accountTrades.length,
-					wins,
-					losses,
-					winRate:
-						accountTrades.length > 0 ? (wins / accountTrades.length) * 100 : 0,
-					avgWin: wins > 0 ? grossProfit / wins : 0,
-					avgLoss: losses > 0 ? grossLoss / losses : 0,
+					totalTrades: stats.totalTrades,
+					wins: stats.wins,
+					losses: stats.losses,
+					winRate: stats.winRate,
+					avgWin: stats.avgWin,
+					avgLoss: stats.avgLoss,
 				},
 			};
 		}),

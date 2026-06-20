@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { ImageResponse } from "next/og";
 import { getSharedTradePayload } from "@/server/api/helpers/trade-share";
 import { db } from "@/server/db";
-import { shareLinks } from "@/server/db/schema";
+import { aiConversations, shareLinks, users } from "@/server/db/schema";
 
 export const alt = "Shared via TheTraderLog";
 export const size = { width: 1200, height: 630 };
@@ -41,7 +41,95 @@ export default async function OgImage({ params }: OgImageProps) {
 		}
 	}
 
+	if (link && isUsable && link.resourceType === "conversation") {
+		const [conversation, owner] = await Promise.all([
+			db.query.aiConversations.findFirst({
+				where: eq(aiConversations.id, link.resourceId),
+				columns: { title: true },
+			}),
+			db.query.users.findFirst({
+				where: eq(users.id, link.userId),
+				columns: { name: true },
+			}),
+		]);
+		return conversationCard(
+			conversation?.title ?? "AI Trading Analysis",
+			owner?.name ?? null,
+		);
+	}
+
 	return genericCard();
+}
+
+// =============================================================================
+// CONVERSATION CARD
+// =============================================================================
+
+function conversationCard(title: string, traderName: string | null) {
+	return new ImageResponse(
+		<div
+			style={{
+				width: "100%",
+				height: "100%",
+				display: "flex",
+				flexDirection: "column",
+				backgroundColor: COLORS.background,
+				padding: 56,
+			}}
+		>
+			{/* Branded header */}
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 12,
+					fontSize: 24,
+					letterSpacing: 4,
+				}}
+			>
+				<span style={{ color: COLORS.primary, fontWeight: 700 }}>
+					TRADERLOG
+				</span>
+				<span style={{ color: COLORS.muted }}>{"// SHARED CHAT"}</span>
+			</div>
+
+			{/* Title */}
+			<div
+				style={{
+					display: "flex",
+					marginTop: "auto",
+					color: COLORS.foreground,
+					fontSize: 56,
+					fontWeight: 700,
+					lineHeight: 1.15,
+					letterSpacing: -1,
+				}}
+			>
+				{title.length > 110 ? `${title.slice(0, 110)}…` : title}
+			</div>
+
+			{/* Footer: trader identity */}
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					marginTop: 40,
+					borderTop: `1px solid ${COLORS.border}`,
+					paddingTop: 32,
+				}}
+			>
+				<span style={{ color: COLORS.muted, fontSize: 28 }}>
+					AI trading analysis · Shared by{" "}
+					{traderName ?? "a TheTraderLog trader"}
+				</span>
+				<span style={{ color: COLORS.primary, fontSize: 26, letterSpacing: 2 }}>
+					thetraderlog.com
+				</span>
+			</div>
+		</div>,
+		size,
+	);
 }
 
 // =============================================================================

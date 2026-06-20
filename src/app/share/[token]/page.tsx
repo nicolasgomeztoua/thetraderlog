@@ -13,10 +13,18 @@ import { ReportDataProvider } from "@/components/mdx/provider";
 import { sanitizeMdxProse } from "@/lib/mdx/sanitize";
 import { formatCurrency } from "@/lib/shared";
 import { getSharedAnalyticsPayload } from "@/server/api/helpers/analytics-share";
+import { getSharedConversationPayload } from "@/server/api/helpers/conversation-share";
 import { getSharedTradePayload } from "@/server/api/helpers/trade-share";
 import { db } from "@/server/db";
-import { accounts, aiReports, shareLinks, users } from "@/server/db/schema";
+import {
+	accounts,
+	aiConversations,
+	aiReports,
+	shareLinks,
+	users,
+} from "@/server/db/schema";
 import { SharedAnalyticsView } from "./_components/shared-analytics-view";
+import { SharedConversationView } from "./_components/shared-conversation-view";
 import { SharedTradeView } from "./_components/shared-trade-view";
 
 // Dedupe the trade lookup between generateMetadata and the page render
@@ -126,6 +134,34 @@ export async function generateMetadata({
 		};
 	}
 
+	if (link.resourceType === "conversation") {
+		const [conversation, owner] = await Promise.all([
+			db.query.aiConversations.findFirst({
+				where: eq(aiConversations.id, link.resourceId),
+				columns: { title: true },
+			}),
+			db.query.users.findFirst({
+				where: eq(users.id, link.userId),
+				columns: { name: true },
+			}),
+		]);
+
+		const convTitle = conversation?.title ?? "AI Trading Analysis";
+		const sharedBy = owner?.name ? ` · Shared by ${owner.name}` : "";
+		const title = `${convTitle}${sharedBy}`;
+		const description = `${owner?.name ?? "A trader"} shared an AI trading analysis from TheTraderLog.`;
+
+		return {
+			title: `${title} — TheTraderLog`,
+			description,
+			openGraph: {
+				title: `${convTitle} | TheTraderLog`,
+				description,
+				type: "article",
+			},
+		};
+	}
+
 	return { title: "Shared Report — TheTraderLog" };
 }
 
@@ -204,6 +240,14 @@ export default async function SharePage({ params }: SharePageProps) {
 		if (!payload) notFound();
 
 		return <SharedAnalyticsView payload={payload} />;
+	}
+
+	if (link.resourceType === "conversation") {
+		const payload = await getSharedConversationPayload(db, link.resourceId);
+
+		if (!payload) notFound();
+
+		return <SharedConversationView payload={payload} />;
 	}
 
 	notFound();

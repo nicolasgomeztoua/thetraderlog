@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Menu, MessageSquare } from "lucide-react";
+import type * as React from "react";
 
 import {
 	Select,
@@ -23,6 +24,8 @@ interface ModelSelectorProps {
 	onModelChange: (model: string) => void;
 	/** Lock the picker while a request is in flight. */
 	modelDisabled?: boolean;
+	/** Optional element pinned to the right of the header (e.g. a share button). */
+	rightSlot?: React.ReactNode;
 }
 
 export function ModelSelector({
@@ -32,6 +35,7 @@ export function ModelSelector({
 	selectedModel,
 	onModelChange,
 	modelDisabled,
+	rightSlot,
 }: ModelSelectorProps) {
 	return (
 		<div className="flex items-center gap-2 border-white/5 border-b px-3 py-2 sm:px-4">
@@ -80,36 +84,44 @@ export function ModelSelector({
 				</button>
 			</div>
 
-			{/* Model Picker (same set for chat + reports; default differs per mode) */}
-			<div className="ml-auto flex items-center gap-1.5">
-				<span className="hidden font-mono text-[10px] text-muted-foreground/50 uppercase tracking-wider sm:inline">
-					Model
-				</span>
-				<Select
-					disabled={modelDisabled}
-					onValueChange={onModelChange}
-					value={selectedModel}
-				>
-					<SelectTrigger
-						className="h-7 gap-1.5 border-white/10 bg-white/[0.01] font-mono text-[10px] text-foreground uppercase tracking-wider"
-						data-testid="ai-model-selector"
-						size="sm"
+			{/* Right side: model picker + optional slot (e.g. share button) */}
+			<div className="ml-auto flex items-center gap-2">
+				{/* Model Picker (same set for chat + reports; default differs per mode) */}
+				<div className="flex items-center gap-1.5">
+					<span className="hidden font-mono text-[10px] text-muted-foreground/50 uppercase tracking-wider sm:inline">
+						Model
+					</span>
+					<Select
+						disabled={modelDisabled}
+						onValueChange={onModelChange}
+						value={selectedModel}
 					>
-						<SelectValue placeholder="Select model" />
-					</SelectTrigger>
-					<SelectContent align="end">
-						{AI_MODEL_OPTIONS.map((m) => (
-							<SelectItem className="font-mono text-xs" key={m.id} value={m.id}>
-								<span className="flex flex-col">
-									<span className="text-foreground">{m.label}</span>
-									<span className="text-[10px] text-muted-foreground/60">
-										{m.description}
+						<SelectTrigger
+							className="h-7 gap-1.5 border-white/10 bg-white/[0.01] font-mono text-[10px] text-foreground uppercase tracking-wider"
+							data-testid="ai-model-selector"
+							size="sm"
+						>
+							<SelectValue placeholder="Select model" />
+						</SelectTrigger>
+						<SelectContent align="end">
+							{AI_MODEL_OPTIONS.map((m) => (
+								<SelectItem
+									className="font-mono text-xs"
+									key={m.id}
+									value={m.id}
+								>
+									<span className="flex flex-col">
+										<span className="text-foreground">{m.label}</span>
+										<span className="text-[10px] text-muted-foreground/60">
+											{m.description}
+										</span>
 									</span>
-								</span>
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+				{rightSlot}
 			</div>
 		</div>
 	);
