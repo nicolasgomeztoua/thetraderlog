@@ -38,6 +38,11 @@ export function useTypewriter({
 	const indexRef = useRef(0);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const skippedRef = useRef(!enabled);
+	// The text value we've already begun animating. `enabled` can toggle for the
+	// same (immutable) message — e.g. the latest answer when a new message is sent
+	// flips it from history-rendered to "live" — and we must NOT restart the
+	// animation in that case. Only a genuinely new `text` re-types.
+	const animatedTextRef = useRef<string | null>(enabled ? null : text);
 
 	const skip = useCallback(() => {
 		skippedRef.current = true;
@@ -51,12 +56,20 @@ export function useTypewriter({
 
 	useEffect(() => {
 		if (!enabled || !text) {
+			// Disabled (history) or empty — show the full text and remember it so a
+			// later enabled:false→true flip for this same message doesn't re-type it.
+			animatedTextRef.current = text;
 			setDisplayedText(text);
 			setIsComplete(true);
 			return;
 		}
 
+		// Already typed (or mid-typing) this exact text — a re-render or an
+		// enabled toggle must not restart it. Only new content re-types.
+		if (animatedTextRef.current === text) return;
+
 		// Reset on new text
+		animatedTextRef.current = text;
 		indexRef.current = 0;
 		skippedRef.current = false;
 		setDisplayedText("");
