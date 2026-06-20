@@ -78,6 +78,75 @@ export const challengeStatusEnum = pgEnum("challenge_status", [
 	"passed",
 	"failed",
 ]);
+// --- Expanded prop model (2026). Enum string values MUST match the constants in
+// src/lib/constants/prop.ts. See docs/PROP_COMPLIANCE_RESEARCH.md. ---
+export const drawdownAnchorEnum = pgEnum("drawdown_anchor", [
+	"static",
+	"trailing",
+]);
+export const drawdownHighWaterSourceEnum = pgEnum(
+	"drawdown_high_water_source",
+	["intraday_unrealized", "eod_realized"],
+);
+export const drawdownLockEnum = pgEnum("drawdown_lock", [
+	"none",
+	"at_start",
+	"at_start_plus_buffer",
+]);
+export const drawdownBasisEnum = pgEnum("drawdown_basis", [
+	"balance_realized",
+	"equity_unrealized",
+]);
+export const dailyLossAnchorEnum = pgEnum("daily_loss_anchor", [
+	"static_from_initial",
+	"from_day_start_balance",
+]);
+export const consistencyRuleTypeEnum = pgEnum("consistency_rule_type", [
+	"off",
+	"best_day_pct_of_total",
+	"best_day_pct_of_target",
+	"per_trade_pct_of_total",
+	"top_days_ratio",
+	"best_day_pct_of_positive_days",
+]);
+export const consistencyWindowEnum = pgEnum("consistency_window", [
+	"full_evaluation",
+	"since_last_payout",
+	"fixed_cycle",
+]);
+export const consistencyComparatorEnum = pgEnum("consistency_comparator", [
+	"lt",
+	"lte",
+]);
+export const consistencyPhaseEnum = pgEnum("consistency_phase", [
+	"evaluation_only",
+	"funded_only",
+	"both",
+]);
+export const qualifyingDayModeEnum = pgEnum("qualifying_day_mode", [
+	"any_trade",
+	"any_positive",
+	"min_profit_abs",
+	"min_profit_pct",
+]);
+export const payoutCycleTypeEnum = pgEnum("payout_cycle_type", [
+	"winning_days",
+	"calendar_days",
+	"hours",
+]);
+export const bufferTypeEnum = pgEnum("buffer_type", [
+	"none",
+	"start_plus_drawdown",
+]);
+export const scalingBasisEnum = pgEnum("scaling_basis", [
+	"eod_balance",
+	"profit_from_start",
+]);
+export const scalingAppliesAtEnum = pgEnum("scaling_applies_at", [
+	"next_session",
+	"next_day",
+	"immediate",
+]);
 export const tradingPlatformEnum = pgEnum("trading_platform", [
 	"projectx", // ProjectX
 	"topstepx", // TopstepX
@@ -266,6 +335,126 @@ export const accounts = createTable(
 			onDelete: "set null",
 		}),
 
+		// ========== EXPANDED PROP MODEL (2026) ==========
+		// All nullable so existing live/demo/CFD rows are unaffected. The legacy
+		// drawdownType/consistencyRule/etc above are retained for back-compat; these
+		// fields supersede them. See docs/PROP_COMPLIANCE_RESEARCH.md.
+
+		/** Which preset (firm/plan/size) pre-filled these fields, if any. */
+		propPresetId: text("prop_preset_id"),
+
+		// --- Drawdown: 4 independent axes ---
+		drawdownAnchor: drawdownAnchorEnum("drawdown_anchor"),
+		drawdownHighWaterSource: drawdownHighWaterSourceEnum(
+			"drawdown_high_water_source",
+		),
+		drawdownLock: drawdownLockEnum("drawdown_lock"),
+		drawdownLockBuffer: decimal("drawdown_lock_buffer", {
+			precision: 12,
+			scale: 2,
+		}), // USD buffer above start at lock (Apex/MFFU $100)
+		drawdownBasis: drawdownBasisEnum("drawdown_basis"),
+		maxDrawdownAbsolute: decimal("max_drawdown_absolute", {
+			precision: 14,
+			scale: 2,
+		}), // DD in dollars (firms publish $ tables)
+
+		// --- Daily loss ---
+		dailyLossAnchor: dailyLossAnchorEnum("daily_loss_anchor"),
+		dailyLossBasis: drawdownBasisEnum("daily_loss_basis"),
+		dailyLossFailsAccount: boolean("daily_loss_fails_account"), // false for most futures (soft pause)
+		dailyLossResetTime: text("daily_loss_reset_time"), // "HH:MM"
+		dailyLossTimezone: text("daily_loss_timezone"),
+
+		// --- Eval target / timeline ---
+		profitTargetAbsolute: decimal("profit_target_absolute", {
+			precision: 14,
+			scale: 2,
+		}),
+		evalMaxDays: integer("eval_max_days"), // null = unlimited
+
+		// --- Qualifying trading day ---
+		qualifyingDayMode: qualifyingDayModeEnum("qualifying_day_mode"),
+		qualifyingDayMinProfit: decimal("qualifying_day_min_profit", {
+			precision: 12,
+			scale: 2,
+		}),
+		dayBoundaryTimezone: text("day_boundary_timezone"),
+		dayResetTime: text("day_reset_time"), // "HH:MM" futures session boundary
+		inactivityLimitDays: integer("inactivity_limit_days"), // funded; 0 = none
+		inactivityLimitDaysEval: integer("inactivity_limit_days_eval"),
+
+		// --- Consistency (typed) ---
+		consistencyRuleType: consistencyRuleTypeEnum("consistency_rule_type"),
+		consistencyWindow: consistencyWindowEnum("consistency_window"),
+		consistencyComparator: consistencyComparatorEnum("consistency_comparator"),
+		consistencyPhase: consistencyPhaseEnum("consistency_phase"),
+		consistencyExpiresAfterPayouts: integer(
+			"consistency_expires_after_payouts",
+		), // Apex: rule resets per cycle; legacy 30% expired after 6th payout
+		consistencyTiers: text("consistency_tiers"), // JSON [{payoutIndex,pct}]
+
+		// --- Payout eligibility (funded) ---
+		winningDayThreshold: decimal("winning_day_threshold", {
+			precision: 12,
+			scale: 2,
+		}),
+		winningDaysRequired: integer("winning_days_required"),
+		payoutCycleType: payoutCycleTypeEnum("payout_cycle_type"),
+		payoutCycleLength: integer("payout_cycle_length"),
+		firstPayoutWaitDays: integer("first_payout_wait_days"), // CFD time gate
+		bufferType: bufferTypeEnum("buffer_type"),
+		payoutRequiresBufferCleared: boolean("payout_requires_buffer_cleared"),
+		minWithdrawal: decimal("min_withdrawal", { precision: 14, scale: 2 }),
+		firstPayoutCaps: text("first_payout_caps"), // JSON [{payoutIndex,capAmount}]
+		maxLifetimePayouts: integer("max_lifetime_payouts"), // Apex 6
+		payoutConsistencyPct: decimal("payout_consistency_pct", {
+			precision: 6,
+			scale: 2,
+		}),
+		profitSplitTiers: text("profit_split_tiers"), // JSON [{payoutIndex,splitPct}]
+		lifetimeBonusThreshold: decimal("lifetime_bonus_threshold", {
+			precision: 14,
+			scale: 2,
+		}), // 100% of first $X
+		activationFee: decimal("activation_fee", { precision: 12, scale: 2 }),
+
+		// --- Position / scaling ---
+		maxContracts: integer("max_contracts"), // mini-equivalents
+		microToMiniRatio: integer("micro_to_mini_ratio"), // default 10
+		maxLotsFx: decimal("max_lots_fx", { precision: 10, scale: 2 }),
+		maxLotsMetalsIndices: decimal("max_lots_metals_indices", {
+			precision: 10,
+			scale: 2,
+		}),
+		maxOpenPositions: integer("max_open_positions"),
+		maxRiskPerTradePct: decimal("max_risk_per_trade_pct", {
+			precision: 6,
+			scale: 2,
+		}),
+		stopLossRequired: boolean("stop_loss_required"),
+		maxMarginPct: decimal("max_margin_pct", { precision: 6, scale: 2 }),
+		scalingPlan: text("scaling_plan"), // JSON [{balanceThreshold,maxContracts}]
+		scalingBasis: scalingBasisEnum("scaling_basis"),
+		scalingAppliesAt: scalingAppliesAtEnum("scaling_applies_at"),
+
+		// --- Conduct / time ---
+		sessionFlatEnabled: boolean("session_flat_enabled"),
+		sessionFlatTime: text("session_flat_time"), // "HH:MM"
+		sessionFlatTimezone: text("session_flat_timezone"),
+		weekendHoldingAllowed: boolean("weekend_holding_allowed"),
+		overnightHoldingAllowed: boolean("overnight_holding_allowed"),
+		minHoldSeconds: integer("min_hold_seconds"), // HFT heuristic
+		quickStrikeProfitPct: decimal("quick_strike_profit_pct", {
+			precision: 6,
+			scale: 2,
+		}),
+		maxTradesPerDay: integer("max_trades_per_day"),
+		newsBlackoutEnabled: boolean("news_blackout_enabled"),
+		newsBlackoutMinutesBefore: integer("news_blackout_minutes_before"),
+		newsBlackoutMinutesAfter: integer("news_blackout_minutes_after"),
+		prohibitedStrategiesAck: text("prohibited_strategies_ack"), // JSON string[]
+
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -278,6 +467,51 @@ export const accounts = createTable(
 		index("account_is_default_idx").on(t.isDefault),
 		index("account_group_id_idx").on(t.groupId),
 		index("account_linked_account_id_idx").on(t.linkedAccountId),
+	],
+);
+
+// ============================================================================
+// ACCOUNT PAYOUTS TABLE
+// User-maintained log of funded-account payouts. Persistent state required to
+// compute payout cycles, the payout index (caps/ladders/bonuses), and
+// days-since-last-payout. See computePayoutEligibility.
+// ============================================================================
+
+export const accountPayouts = createTable(
+	"account_payout",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => ids.accountPayout()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		accountId: text("account_id")
+			.notNull()
+			.references(() => accounts.id, { onDelete: "cascade" }),
+
+		/** When the payout was requested / received. */
+		date: timestamp("date", { withTimezone: true }).notNull(),
+		/** Amount requested (USD, gross). */
+		requestedAmount: decimal("requested_amount", { precision: 14, scale: 2 }),
+		/** Amount actually paid out (USD, net of split). */
+		paidAmount: decimal("paid_amount", { precision: 14, scale: 2 }),
+		/** Trader's split % applied to this payout. */
+		split: decimal("split", { precision: 6, scale: 2 }),
+		/** 0-based index of this payout (caps / split tiers key off this). */
+		cycleIndex: integer("cycle_index"),
+		notes: text("notes"),
+
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
+	},
+	(t) => [
+		index("account_payout_account_id_idx").on(t.accountId),
+		index("account_payout_user_id_idx").on(t.userId),
 	],
 );
 
@@ -1133,6 +1367,7 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
 		references: [users.id],
 	}),
 	trades: many(trades),
+	payouts: many(accountPayouts),
 	group: one(accountGroups, {
 		fields: [accounts.groupId],
 		references: [accountGroups.id],
@@ -1144,6 +1379,17 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
 	}),
 	linkedFromAccounts: many(accounts, {
 		relationName: "linkedAccounts",
+	}),
+}));
+
+export const accountPayoutsRelations = relations(accountPayouts, ({ one }) => ({
+	user: one(users, {
+		fields: [accountPayouts.userId],
+		references: [users.id],
+	}),
+	account: one(accounts, {
+		fields: [accountPayouts.accountId],
+		references: [accounts.id],
 	}),
 }));
 

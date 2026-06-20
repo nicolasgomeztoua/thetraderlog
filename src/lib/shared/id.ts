@@ -14,6 +14,7 @@ export const ids = {
 	user: () => createId("us"),
 	account: () => createId("ac"),
 	accountGroup: () => createId("ag"),
+	accountPayout: () => createId("ap"),
 	trade: () => createId("tr"),
 	execution: () => createId("ex"),
 	tag: () => createId("tg"),

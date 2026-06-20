@@ -15,10 +15,27 @@ import {
 	calculateStaticDrawdown,
 	calculateTradingDays,
 	calculateTrailingDrawdown,
+	checkConsistency,
+	checkEvalTimeLimit,
+	checkInactivity,
+	computePayoutEligibility,
+	computeTrailingFloor,
+	countQualifyingDays,
 	getOverallComplianceStatus,
 	simulatePropChallenge,
 } from "@/lib/analytics/prop-compliance";
 import type { EquityPoint } from "@/lib/analytics/risk";
+import {
+	BUFFER_TYPE,
+	CONSISTENCY_COMPARATOR,
+	CONSISTENCY_RULE_TYPE,
+	DATA_CONFIDENCE,
+	DRAWDOWN_BASIS,
+	DRAWDOWN_HIGH_WATER_SOURCE,
+	DRAWDOWN_LOCK,
+	PAYOUT_CYCLE_TYPE,
+	QUALIFYING_DAY_MODE,
+} from "@/lib/constants/prop";
 
 // =============================================================================
 // HELPERS
@@ -759,5 +776,371 @@ describe("simulatePropChallenge", () => {
 		});
 		expect(result.passRate).toBe(1);
 		expect(result.failRate).toBe(0);
+	});
+});
+
+// =============================================================================
+// computeTrailingFloor (lock-at-start mechanic)
+// =============================================================================
+
+describe("computeTrailingFloor", () => {
+	const initialBalance = 100000;
+
+	it("with lock=none reproduces high-water-minus-DD drawdown", () => {
+		// +1000, -500, +2500, -500 cumulative → balances 101000,100500,102500,99500
+		const curve: EquityPoint[] = [
+			makeEquityPoint(1000, { tradeIndex: 0 }),
+			makeEquityPoint(500, { tradeIndex: 1 }),
+			makeEquityPoint(2500, { tradeIndex: 2 }),
+			makeEquityPoint(-500, { tradeIndex: 3 }),
+		];
+		const result = computeTrailingFloor(curve, {
+			initialBalance,
+			drawdownAbsolute: 5000,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.INTRADAY_UNREALIZED,
+			lock: DRAWDOWN_LOCK.NONE,
+		});
+		// HWM 102500, current 99500 → drawdown used = 3000 regardless of DD size
+		expect(result.currentDrawdown).toBeCloseTo(3000);
+		expect(result.maxDrawdown).toBeCloseTo(3000);
+	});
+
+	/** Build an EOD point on a specific day (makeEquityPoint hard-codes the date). */
+	function makeDayPoint(cumPnl: number, dateStr: string): EquityPoint {
+		return {
+			date: new Date(dateStr),
+			equity: cumPnl,
+			peak: cumPnl,
+			drawdown: 0,
+			drawdownPercent: 0,
+			pnl: 0,
+			tradeIndex: 0,
+		};
+	}
+
+	it("lock=at_start freezes the floor at the starting balance", () => {
+		// Build +3000 profit (>2000 DD) then give back to exactly start.
+		const curve: EquityPoint[] = [
+			makeDayPoint(3000, "2025-01-14"), // balance 103000
+			makeDayPoint(0, "2025-01-15"), // balance 100000 (back to start)
+		];
+		const result = computeTrailingFloor(curve, {
+			initialBalance,
+			drawdownAbsolute: 2000,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.EOD_REALIZED,
+			lock: DRAWDOWN_LOCK.AT_START,
+		});
+		// Locked floor = 100000; at balance 100000 drawdown used = full DD (2000), NOT 3000
+		expect(result.floor).toBeCloseTo(100000);
+		expect(result.lockEngaged).toBe(true);
+		expect(result.currentDrawdown).toBeCloseTo(2000);
+	});
+
+	it("lock=at_start shows zero drawdown when fully buffered above the floor", () => {
+		const curve: EquityPoint[] = [
+			makeDayPoint(3000, "2025-01-14"), // balance 103000
+			makeDayPoint(2000, "2025-01-15"), // balance 102000, floor 100000
+		];
+		const result = computeTrailingFloor(curve, {
+			initialBalance,
+			drawdownAbsolute: 2000,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.EOD_REALIZED,
+			lock: DRAWDOWN_LOCK.AT_START,
+		});
+		// room = 102000 - 100000 = 2000 == DD → 0 used
+		expect(result.currentDrawdown).toBeCloseTo(0);
+		expect(result.roomToFloor).toBeCloseTo(2000);
+	});
+
+	it("lock=at_start_plus_buffer freezes the floor at start + buffer", () => {
+		const curve: EquityPoint[] = [
+			makeEquityPoint(5000, { tradeIndex: 0 }), // balance 105000
+		];
+		const result = computeTrailingFloor(curve, {
+			initialBalance,
+			drawdownAbsolute: 2500,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.EOD_REALIZED,
+			lock: DRAWDOWN_LOCK.AT_START_PLUS_BUFFER,
+			lockBuffer: 100,
+		});
+		// HWM-DD = 102500 > lockPoint 100100 → floor capped at 100100
+		expect(result.floor).toBeCloseTo(100100);
+		expect(result.lockEngaged).toBe(true);
+	});
+
+	it("flags approximate confidence for intraday/equity sources", () => {
+		const curve: EquityPoint[] = [makeEquityPoint(1000)];
+		const intraday = computeTrailingFloor(curve, {
+			initialBalance,
+			drawdownAbsolute: 2000,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.INTRADAY_UNREALIZED,
+			lock: DRAWDOWN_LOCK.AT_START_PLUS_BUFFER,
+		});
+		expect(intraday.dataConfidence).toBe(DATA_CONFIDENCE.APPROXIMATE);
+
+		const eod = computeTrailingFloor(curve, {
+			initialBalance,
+			drawdownAbsolute: 2000,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.EOD_REALIZED,
+			lock: DRAWDOWN_LOCK.AT_START,
+		});
+		expect(eod.dataConfidence).toBe(DATA_CONFIDENCE.EXACT);
+
+		const equity = computeTrailingFloor(curve, {
+			initialBalance,
+			drawdownAbsolute: 2000,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.EOD_REALIZED,
+			lock: DRAWDOWN_LOCK.AT_START,
+			basis: DRAWDOWN_BASIS.EQUITY_UNREALIZED,
+		});
+		expect(equity.dataConfidence).toBe(DATA_CONFIDENCE.APPROXIMATE);
+	});
+
+	it("returns zero drawdown for empty curve", () => {
+		const result = computeTrailingFloor([], {
+			initialBalance,
+			drawdownAbsolute: 2000,
+			highWaterSource: DRAWDOWN_HIGH_WATER_SOURCE.EOD_REALIZED,
+			lock: DRAWDOWN_LOCK.AT_START,
+		});
+		expect(result.currentDrawdown).toBe(0);
+		expect(result.maxDrawdown).toBe(0);
+	});
+});
+
+// =============================================================================
+// checkConsistency (typed/windowed)
+// =============================================================================
+
+describe("checkConsistency", () => {
+	it("best_day_pct_of_total uses NET total profit and computes extraProfitNeeded", () => {
+		const result = checkConsistency(
+			{ dailyPnls: [500, 50, 60, 40, 50] },
+			{ type: CONSISTENCY_RULE_TYPE.BEST_DAY_PCT_OF_TOTAL, pct: 30 },
+		);
+		// total = 700, best = 500 → 71.4% > 30 → non-compliant
+		expect(result.denominator).toBe(700);
+		expect(result.currentRatio).toBeCloseTo((500 / 700) * 100);
+		expect(result.compliant).toBe(false);
+		// need total >= 500/0.30 = 1666.67 → extra = 966.67
+		expect(result.extraProfitNeeded).toBeCloseTo(500 / 0.3 - 700);
+	});
+
+	it("losses reduce the denominator (Topstep dynamic total)", () => {
+		const result = checkConsistency(
+			{ dailyPnls: [600, -100, 200] },
+			{ type: CONSISTENCY_RULE_TYPE.BEST_DAY_PCT_OF_TOTAL, pct: 50 },
+		);
+		// net total = 700, best 600 → 85.7%
+		expect(result.denominator).toBe(700);
+		expect(result.currentRatio).toBeCloseTo((600 / 700) * 100);
+		expect(result.compliant).toBe(false);
+	});
+
+	it("best_day_pct_of_target uses the profit target as denominator", () => {
+		const result = checkConsistency(
+			{ dailyPnls: [1500, 500, 1000] },
+			{
+				type: CONSISTENCY_RULE_TYPE.BEST_DAY_PCT_OF_TARGET,
+				pct: 50,
+				profitTarget: 3000,
+			},
+		);
+		// best 1500 / target 3000 = 50% → compliant with <= ; extraProfitNeeded N/A (0)
+		expect(result.denominator).toBe(3000);
+		expect(result.currentRatio).toBeCloseTo(50);
+		expect(result.compliant).toBe(true);
+		expect(result.extraProfitNeeded).toBe(0);
+	});
+
+	it("strict comparator (lt) fails at exactly the limit", () => {
+		const result = checkConsistency(
+			{ dailyPnls: [50, 50] },
+			{
+				type: CONSISTENCY_RULE_TYPE.BEST_DAY_PCT_OF_TOTAL,
+				pct: 50,
+				comparator: CONSISTENCY_COMPARATOR.LT,
+			},
+		);
+		// best 50 / total 100 = 50% ; lt 50 → fails
+		expect(result.currentRatio).toBeCloseTo(50);
+		expect(result.compliant).toBe(false);
+	});
+
+	it("type=off is always compliant", () => {
+		const result = checkConsistency(
+			{ dailyPnls: [1000, 10] },
+			{ type: CONSISTENCY_RULE_TYPE.OFF, pct: 30 },
+		);
+		expect(result.compliant).toBe(true);
+	});
+});
+
+// =============================================================================
+// countQualifyingDays
+// =============================================================================
+
+describe("countQualifyingDays", () => {
+	const trades = [
+		{ netPnl: "250", exitTime: new Date("2025-01-15T10:00:00Z") },
+		{ netPnl: "-50", exitTime: new Date("2025-01-15T11:00:00Z") }, // day net 200
+		{ netPnl: "100", exitTime: new Date("2025-01-16T10:00:00Z") }, // day net 100
+		{ netPnl: "-300", exitTime: new Date("2025-01-17T10:00:00Z") }, // day net -300
+	];
+
+	it("any_trade counts every day with a trade", () => {
+		const result = countQualifyingDays(trades, {
+			mode: QUALIFYING_DAY_MODE.ANY_TRADE,
+		});
+		expect(result.count).toBe(3);
+	});
+
+	it("any_positive counts only net-positive days", () => {
+		const result = countQualifyingDays(trades, {
+			mode: QUALIFYING_DAY_MODE.ANY_POSITIVE,
+		});
+		expect(result.count).toBe(2); // 200 and 100
+	});
+
+	it("min_profit_abs counts days at/above the threshold", () => {
+		const result = countQualifyingDays(trades, {
+			mode: QUALIFYING_DAY_MODE.MIN_PROFIT_ABS,
+			minProfit: 200,
+		});
+		expect(result.count).toBe(1); // only the 200 day
+		expect(result.dates).toEqual(["2025-01-15"]);
+	});
+});
+
+// =============================================================================
+// checkInactivity / checkEvalTimeLimit
+// =============================================================================
+
+describe("checkInactivity", () => {
+	const now = new Date("2025-02-01T00:00:00Z");
+
+	it("reports days until breach when within limit", () => {
+		const last = new Date("2025-01-22T00:00:00Z"); // 10 days idle
+		const result = checkInactivity(last, 30, now);
+		expect(result.idleDays).toBe(10);
+		expect(result.breached).toBe(false);
+		expect(result.daysUntilBreach).toBe(20);
+	});
+
+	it("flags breach when idle beyond the limit", () => {
+		const last = new Date("2024-12-15T00:00:00Z"); // >30 days
+		const result = checkInactivity(last, 30, now);
+		expect(result.breached).toBe(true);
+		expect(result.daysUntilBreach).toBe(0);
+	});
+
+	it("no limit configured → never breaches", () => {
+		const result = checkInactivity(new Date("2024-01-01"), 0, now);
+		expect(result.breached).toBe(false);
+		expect(result.daysUntilBreach).toBeNull();
+	});
+});
+
+describe("checkEvalTimeLimit", () => {
+	const now = new Date("2025-02-01T00:00:00Z");
+
+	it("computes remaining days and expiry (Apex-style 30-day cap)", () => {
+		const start = new Date("2025-01-02T00:00:00Z"); // 30 days elapsed
+		const result = checkEvalTimeLimit(start, 30, now);
+		expect(result.daysElapsed).toBe(30);
+		expect(result.daysRemaining).toBe(0);
+		expect(result.expired).toBe(true);
+	});
+
+	it("null/zero maxDays → unlimited, never expires", () => {
+		const start = new Date("2024-01-01T00:00:00Z");
+		const result = checkEvalTimeLimit(start, null, now);
+		expect(result.expired).toBe(false);
+		expect(result.daysRemaining).toBeNull();
+	});
+});
+
+// =============================================================================
+// computePayoutEligibility
+// =============================================================================
+
+describe("computePayoutEligibility", () => {
+	const now = new Date("2025-02-01T00:00:00Z");
+
+	// 6 winning days each ≥ $200, summing to $3000 of realized profit
+	const fundedTrades = [
+		{ netPnl: "500", exitTime: new Date("2025-01-10T10:00:00Z") },
+		{ netPnl: "500", exitTime: new Date("2025-01-11T10:00:00Z") },
+		{ netPnl: "500", exitTime: new Date("2025-01-12T10:00:00Z") },
+		{ netPnl: "500", exitTime: new Date("2025-01-13T10:00:00Z") },
+		{ netPnl: "500", exitTime: new Date("2025-01-14T10:00:00Z") },
+		{ netPnl: "500", exitTime: new Date("2025-01-15T10:00:00Z") },
+	];
+
+	const baseConfig = {
+		initialBalance: 50000,
+		totalRealizedPnl: 3000,
+		drawdownAbsolute: 2500,
+		winningDayThreshold: 200,
+		winningDaysRequired: 5,
+		payoutCycleType: PAYOUT_CYCLE_TYPE.WINNING_DAYS,
+		payoutCycleLength: 5,
+		bufferType: BUFFER_TYPE.START_PLUS_DRAWDOWN,
+		minWithdrawal: 0,
+		profitSplit: 90,
+	};
+
+	it("is eligible when winning days + buffer + min withdrawal all pass", () => {
+		const result = computePayoutEligibility(fundedTrades, [], baseConfig, now);
+		expect(result.winningDays.count).toBe(6);
+		// balance 53000, bufferFloor 52500 → withdrawable 500
+		expect(result.buffer.withdrawableProfit).toBeCloseTo(500);
+		expect(result.buffer.cleared).toBe(true);
+		expect(result.eligible).toBe(true);
+		expect(result.blockers).toHaveLength(0);
+		expect(result.splitPct).toBe(90);
+		expect(result.estimatedNet).toBeCloseTo(450); // 500 * 0.9
+	});
+
+	it("blocks when winning days are insufficient", () => {
+		const result = computePayoutEligibility(
+			fundedTrades.slice(0, 3),
+			[],
+			{ ...baseConfig, totalRealizedPnl: 1500 },
+			now,
+		);
+		expect(result.winningDays.count).toBe(3);
+		expect(result.eligible).toBe(false);
+		expect(result.blockers.some((b) => b.includes("winning days"))).toBe(true);
+	});
+
+	it("blocks when balance is below the buffer floor", () => {
+		const result = computePayoutEligibility(
+			fundedTrades,
+			[],
+			{ ...baseConfig, totalRealizedPnl: 1000 }, // balance 51000 < 52500 floor
+			now,
+		);
+		expect(result.buffer.cleared).toBe(false);
+		expect(result.eligible).toBe(false);
+	});
+
+	it("resolves escalating split tiers by payout index", () => {
+		const result = computePayoutEligibility(
+			fundedTrades,
+			[{ date: new Date("2025-01-05T00:00:00Z"), paidAmount: 400 }],
+			{
+				...baseConfig,
+				profitSplitTiers: [
+					{ payoutIndex: 0, splitPct: 80 },
+					{ payoutIndex: 1, splitPct: 90 },
+					{ payoutIndex: 3, splitPct: 100 },
+				],
+			},
+			now,
+		);
+		// one prior payout → payoutIndex 1 → 90%
+		expect(result.payoutIndex).toBe(1);
+		expect(result.splitPct).toBe(90);
 	});
 });
