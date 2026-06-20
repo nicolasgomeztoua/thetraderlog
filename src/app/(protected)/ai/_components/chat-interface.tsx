@@ -116,7 +116,12 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 		string | null
 	>(null);
 	const [input, setInput] = useState("");
-	const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+	// Optimistic "sending" message text, keyed by the conversation it belongs to.
+	// Scoping by id keeps an in-flight send from showing as "sending" in other
+	// chats the user switches to while it's still pending.
+	const [pendingByConversationId, setPendingByConversationId] = useState<
+		Record<string, string>
+	>({});
 	const [lastSentAt, setLastSentAt] = useState<number>(0);
 	const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 	const [pendingAttachments, setPendingAttachments] = useState<
@@ -141,6 +146,16 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 
 	const utils = api.useUtils();
 
+	// Drop the optimistic message for one conversation once its send settles.
+	const clearPendingMessage = useCallback((conversationId: string) => {
+		setPendingByConversationId((prev) => {
+			if (!(conversationId in prev)) return prev;
+			const next = { ...prev };
+			delete next[conversationId];
+			return next;
+		});
+	}, []);
+
 	// Fetch conversations
 	const { data: conversations, isLoading: isConversationsLoading } =
 		api.ai.listConversations.useQuery({
@@ -163,16 +178,19 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	});
 
 	const sendMessage = api.ai.sendMessage.useMutation({
-		onSuccess: () => {
-			setPendingMessage(null);
+		// Clear the optimistic message for the conversation the send actually
+		// targeted (variables.conversationId), not whichever chat is active now —
+		// the user may have switched chats while this request was in flight.
+		onSuccess: (_data, variables) => {
+			clearPendingMessage(variables.conversationId);
 			void utils.billing.getUsage.invalidate();
 			void utils.ai.getConversation.invalidate({
-				conversationId: activeConversationId ?? "",
+				conversationId: variables.conversationId,
 			});
 			void utils.ai.listConversations.invalidate();
 		},
-		onError: (err) => {
-			setPendingMessage(null);
+		onError: (err, variables) => {
+			clearPendingMessage(variables.conversationId);
 			if (err.data?.code === "FORBIDDEN") {
 				void utils.billing.getUsage.invalidate();
 			}
@@ -180,8 +198,15 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 	});
 
 	const deleteConversation = api.ai.deleteConversation.useMutation({
-		onSuccess: () => {
-			setActiveConversationId(null);
+		onSuccess: (_data, variables) => {
+			// Drop any in-flight pending entry for the deleted chat so its key
+			// doesn't linger in pendingByConversationId.
+			clearPendingMessage(variables.conversationId);
+			// Only leave the chat view if the deleted chat was the active one —
+			// deleting a different chat from the sidebar shouldn't navigate away.
+			setActiveConversationId((prev) =>
+				prev === variables.conversationId ? null : prev,
+			);
 			void utils.ai.listConversations.invalidate();
 		},
 	});
@@ -368,7 +393,6 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 			// Free any remaining blob previews (error-state chips) before clearing.
 			for (const a of pendingAttachments) revokeBlob(a.previewUrl);
 			setPendingAttachments([]);
-			setPendingMessage(text || "📎 Chart attached");
 			setLastSentAt(Date.now());
 
 			// Create conversation if needed
@@ -379,6 +403,13 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 				});
 				conversationId = newConversation.id;
 			}
+
+			// Show the optimistic message under the resolved conversation id so it
+			// stays bound to this chat even if the user switches away mid-send.
+			setPendingByConversationId((prev) => ({
+				...prev,
+				[conversationId]: text || "📎 Chart attached",
+			}));
 
 			sendMessage.mutate({
 				conversationId,
@@ -401,12 +432,22 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 
 	const handleNewConversation = () => {
 		setActiveConversationId(null);
-		setPendingMessage(null);
 		setLastSentAt(0);
+		// Note: an in-flight send in another chat keeps its own pending state
+		// (keyed by conversation id) — starting a new chat must not clear it.
 	};
 
 	const messages = conversation?.messages ?? [];
-	const isLoading = sendMessage.isPending || createConversation.isPending;
+	// The optimistic message for the chat currently on screen (if any is sending).
+	const activePendingMessage =
+		activeConversationId !== null
+			? (pendingByConversationId[activeConversationId] ?? null)
+			: null;
+	// Loading reflects only the active chat: a pending send in this conversation,
+	// or the brand-new-chat creation round trip (no id yet, so active is null).
+	const isLoading =
+		activePendingMessage !== null ||
+		(activeConversationId === null && createConversation.isPending);
 
 	// For each assistant message, the chart attachment(s) of the user message
 	// directly before it — the source the proposal was extracted from.
@@ -644,8 +685,8 @@ export function ChatInterface({ mode, onModeChange }: ChatInterfaceProps) {
 										/>
 									);
 								})}
-								{pendingMessage && (
-									<ChatPendingMessage content={pendingMessage} />
+								{activePendingMessage && (
+									<ChatPendingMessage content={activePendingMessage} />
 								)}
 								{isLoading && <ChatLoadingIndicator />}
 							</div>
