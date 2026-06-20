@@ -3,17 +3,56 @@
 // =============================================================================
 
 /**
- * Default AI model used for chat mode
- * Kimi K2.5: 262K context, AIME 96.1%, HumanEval 99.0, $0.38/$1.72
+ * User-selectable AI models (shown in the chat/report model dropdowns).
+ *
+ * These are the current top open-weight frontier models on OpenRouter as of
+ * June 2026 — all 1M-context, agentic, and reasoning-capable. The same set is
+ * offered for both chat and reports; only the default differs per use case.
+ *
+ * IMPORTANT: this list is the server-side allowlist. Any model the client can
+ * select MUST live here — getModel() forwards the ID straight to OpenRouter, so
+ * a free-form string would be an injection vector. Add the slug here first.
  */
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
+export const AI_MODEL_OPTIONS = [
+	{
+		id: "deepseek/deepseek-v4-pro",
+		label: "DeepSeek V4 Pro",
+		description: "Frontier reasoning · 1M context · $0.44/$0.87",
+	},
+	{
+		id: "xiaomi/mimo-v2.5-pro",
+		label: "MiMo V2.5 Pro",
+		description: "Agentic flagship · 1M context · $0.44/$0.87",
+	},
+	{
+		id: "z-ai/glm-5.2",
+		label: "GLM 5.2",
+		description: "Most capable open model · 1M context · $1.20/$4.10",
+	},
+] as const;
+
+/** Union of selectable OpenRouter model IDs. */
+export type AiModelId = (typeof AI_MODEL_OPTIONS)[number]["id"];
+
+/** Tuple of selectable model IDs — feed into z.enum() for server-side validation. */
+export const AI_MODEL_IDS = AI_MODEL_OPTIONS.map((m) => m.id) as [
+	AiModelId,
+	...AiModelId[],
+];
 
 /**
- * Default AI model used for report generation
- * MiMo-V2-Pro: 1M context, 1T params MoE, #1 on OpenRouter, near Opus-level agentic
- * Pricing: $1.00/$3.00 per 1M tokens (input/output)
+ * Default AI model used for chat mode.
+ * DeepSeek V4 Pro: 1M context, thinking/non-thinking modes, strong numeric
+ * reasoning per dollar ($0.44/$0.87) — best fit for tool-heavy interactive Q&A.
  */
-export const DEFAULT_REPORT_MODEL = "xiaomi/mimo-v2-pro";
+export const DEFAULT_CHAT_MODEL: AiModelId = "deepseek/deepseek-v4-pro";
+
+/**
+ * Default AI model used for report generation.
+ * GLM 5.2: the most capable open-weight model (Jun 2026), 1M context, built for
+ * long-horizon agentic workflows — quality-first for the deep report pipeline.
+ */
+export const DEFAULT_REPORT_MODEL: AiModelId = "z-ai/glm-5.2";
 
 /**
  * Vision model used ONLY for chat turns that carry an image (e.g. a pasted chart

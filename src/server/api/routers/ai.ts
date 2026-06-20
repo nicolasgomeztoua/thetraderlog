@@ -13,6 +13,7 @@ import { getChatTools } from "@/lib/ai/tools/definitions";
 import { createPdfToken } from "@/lib/auth/pdf-token";
 import { isBetaFromMetadata } from "@/lib/billing/utils";
 import {
+	AI_MODEL_IDS,
 	CHAT_REASONING_TOKENS,
 	DEFAULT_CHAT_MODEL,
 	DEFAULT_REPORT_MODEL,
@@ -70,6 +71,8 @@ export const aiRouter = createTRPCRouter({
 			z.object({
 				mode: z.enum(["chat"]),
 				initialPrompt: z.string().optional(),
+				// Selected chat model (allowlist-validated). Falls back to the default.
+				model: z.enum(AI_MODEL_IDS).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -78,7 +81,7 @@ export const aiRouter = createTRPCRouter({
 				.values({
 					userId: ctx.user.id,
 					mode: input.mode,
-					model: DEFAULT_CHAT_MODEL,
+					model: input.model ?? DEFAULT_CHAT_MODEL,
 					initialPrompt: input.initialPrompt ?? null,
 					status: "active",
 				})
@@ -102,6 +105,9 @@ export const aiRouter = createTRPCRouter({
 					conversationId: z.string(),
 					content: z.string().max(10_000),
 					accountId: z.string().optional(),
+					// Selected chat model (allowlist-validated). When it differs from
+					// the conversation's stored model, the switch is persisted below.
+					model: z.enum(AI_MODEL_IDS).optional(),
 					// Image attachments (e.g. a pasted chart screenshot). Keys must live
 					// under the caller's images/{userId}/ prefix — enforced server-side.
 					imageAttachments: z
@@ -240,18 +246,27 @@ export const aiRouter = createTRPCRouter({
 					};
 				});
 
-				// Route image-bearing turns to the vision model; text-only turns keep the
-				// conversation default (Kimi). conversation.model is left untouched so later
-				// text turns revert automatically. Derive this from the message actually
-				// built so it can never disagree with what's sent to the model.
+				// Resolve the text model for this turn: an explicit selection wins, else
+				// the conversation's stored model, else the app default. A mid-conversation
+				// switch is persisted so every later turn uses it too.
+				const selectedModel =
+					input.model ?? conversation.model ?? DEFAULT_CHAT_MODEL;
+				if (input.model && input.model !== conversation.model) {
+					await ctx.db
+						.update(aiConversations)
+						.set({ model: input.model })
+						.where(eq(aiConversations.id, input.conversationId));
+				}
+
+				// Route image-bearing turns to the vision model regardless of the user's
+				// text-model choice; text-only turns use selectedModel. Derived from the
+				// message actually built so it can never disagree with what's sent.
 				const hasImageThisTurn = messages.some(
 					(m) =>
 						Array.isArray(m.content) &&
 						m.content.some((part) => part.type === "image"),
 				);
-				const modelId = hasImageThisTurn
-					? DEFAULT_VISION_MODEL
-					: (conversation.model ?? DEFAULT_CHAT_MODEL);
+				const modelId = hasImageThisTurn ? DEFAULT_VISION_MODEL : selectedModel;
 
 				// Vercel AI SDK handles the tool-calling loop via maxSteps
 				const tools = getChatTools({
@@ -481,6 +496,8 @@ export const aiRouter = createTRPCRouter({
 				dateRangeEnd: z.string().datetime().optional(),
 				templateId: z.string().optional(),
 				accountId: z.string().optional(),
+				// Selected report model (allowlist-validated). Falls back to the default.
+				model: z.enum(AI_MODEL_IDS).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -502,7 +519,7 @@ export const aiRouter = createTRPCRouter({
 				);
 				usageMonth = usage.month;
 				usageYear = usage.year;
-				const model = DEFAULT_REPORT_MODEL;
+				const model = input.model ?? DEFAULT_REPORT_MODEL;
 				const title =
 					input.title ??
 					(input.prompt.length > 100
