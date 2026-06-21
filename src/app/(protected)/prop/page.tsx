@@ -1,11 +1,12 @@
 "use client";
 
-import { ShieldIcon } from "lucide-react";
+import { InfoIcon, ShieldIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ChallengeHistory } from "@/components/prop/challenge-history";
 import { ChallengeSimulator } from "@/components/prop/challenge-simulator";
 import { ComplianceGrid } from "@/components/prop/compliance-grid";
 import { DrawdownChart } from "@/components/prop/drawdown-chart";
+import { PayoutReadinessPanel } from "@/components/prop/payout-readiness-panel";
 import { TradingDaysTimeline } from "@/components/prop/trading-days-timeline";
 import {
 	Select,
@@ -16,10 +17,12 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/contexts/account-context";
-import type { ComplianceStatus } from "@/lib/constants/prop";
+import type { ComplianceStatus, DataConfidence } from "@/lib/constants/prop";
 import {
 	CHALLENGE_STATUS_LABELS,
 	COMPLIANCE_STATUS_COLORS,
+	DATA_CONFIDENCE,
+	DATA_CONFIDENCE_LABELS,
 	isPropAccountType,
 } from "@/lib/constants/prop";
 import { cn } from "@/lib/shared";
@@ -162,15 +165,22 @@ export default function PropPage() {
 						<div className="flex items-center gap-3">
 							<StatusDot status={data.overallStatus} />
 							<div>
-								<span
-									className={cn(
-										"font-mono font-semibold text-sm uppercase",
-										COMPLIANCE_STATUS_COLORS[data.overallStatus],
+								<div className="flex items-center gap-2">
+									<span
+										className={cn(
+											"font-mono font-semibold text-sm uppercase",
+											COMPLIANCE_STATUS_COLORS[data.overallStatus],
+										)}
+										data-testid="prop-overall-status"
+									>
+										{data.overallStatus}
+									</span>
+									{data.drawdown.dataConfidence !== DATA_CONFIDENCE.EXACT && (
+										<ConfidenceBadge
+											confidence={data.drawdown.dataConfidence}
+										/>
 									)}
-									data-testid="prop-overall-status"
-								>
-									{data.overallStatus}
-								</span>
+								</div>
 								<p className="font-mono text-[10px] text-muted-foreground">
 									Overall compliance status for {data.account.name}
 								</p>
@@ -210,6 +220,43 @@ export default function PropPage() {
 							tradingDays={data.tradingDays}
 						/>
 					</div>
+
+					{/* Risk timers — only render when configured */}
+					{(data.inactivity.limitDays > 0 ||
+						data.evalTimeLimit.maxDays != null) && (
+						<div
+							className="grid gap-4 sm:grid-cols-2"
+							data-testid="prop-risk-timers"
+						>
+							{data.evalTimeLimit.maxDays != null && (
+								<RiskTimerCard
+									danger={data.evalTimeLimit.expired}
+									label="Evaluation deadline"
+									primary={
+										data.evalTimeLimit.daysRemaining != null
+											? `${data.evalTimeLimit.daysRemaining}d left`
+											: `${data.evalTimeLimit.maxDays}d limit`
+									}
+									sub={`${data.evalTimeLimit.daysElapsed ?? 0} of ${data.evalTimeLimit.maxDays} days elapsed`}
+								/>
+							)}
+							{data.inactivity.limitDays > 0 && (
+								<RiskTimerCard
+									danger={data.inactivity.breached}
+									label="Inactivity timeout"
+									primary={
+										data.inactivity.breached
+											? "Breached"
+											: `${data.inactivity.daysUntilBreach ?? data.inactivity.limitDays}d left`
+									}
+									sub={`Idle ${data.inactivity.idleDays} of ${data.inactivity.limitDays} days`}
+								/>
+							)}
+						</div>
+					)}
+
+					{/* Payout readiness — funded accounts only */}
+					{data.payout && <PayoutReadinessPanel payout={data.payout} />}
 
 					{/* Challenge Simulator */}
 					<ChallengeSimulator
@@ -311,6 +358,53 @@ function StatusDot({ status }: { status: ComplianceStatus }) {
 			className={cn("inline-block h-2.5 w-2.5 rounded-full", dotColor)}
 			data-testid="prop-status-dot"
 		/>
+	);
+}
+
+/** Badge flagging that a metric is approximate / needs live data. */
+function ConfidenceBadge({ confidence }: { confidence: DataConfidence }) {
+	return (
+		<span
+			className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] text-primary uppercase tracking-wider"
+			data-testid="prop-confidence-badge"
+			title="Computed from realized closed-trade P&L only — intraday/equity-based rules can only be approximated."
+		>
+			<InfoIcon className="h-2.5 w-2.5" />
+			{DATA_CONFIDENCE_LABELS[confidence]}
+		</span>
+	);
+}
+
+/** Small card for an account-loss countdown (eval deadline / inactivity). */
+function RiskTimerCard({
+	label,
+	primary,
+	sub,
+	danger,
+}: {
+	label: string;
+	primary: string;
+	sub: string;
+	danger: boolean;
+}) {
+	return (
+		<div
+			className="rounded border border-white/5 bg-white/1 p-4"
+			data-testid="prop-risk-timer-card"
+		>
+			<p className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+				{label}
+			</p>
+			<p
+				className={cn(
+					"mt-1 font-mono font-semibold text-lg",
+					danger ? "text-loss" : "text-foreground",
+				)}
+			>
+				{primary}
+			</p>
+			<p className="font-mono text-[10px] text-muted-foreground/60">{sub}</p>
+		</div>
 	);
 }
 
