@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useAccount } from "@/contexts/account-context";
 import {
 	cn,
-	formatCurrency,
+	formatPnL,
 	getEndOfMonth,
+	getPnLColorClass,
 	getStartOfMonth,
 	toDateString,
 } from "@/lib/shared";
@@ -252,10 +253,10 @@ export function PnLCalendarWidget() {
 											<div
 												className={cn(
 													"font-mono font-semibold text-[10px]",
-													day.pnl >= 0 ? "text-profit" : "text-loss",
+													getPnLColorClass(day.pnl),
 												)}
 											>
-												{formatCurrency(day.pnl)}
+												{formatPnL(day.pnl)}
 											</div>
 										</div>
 									)}
@@ -321,10 +322,10 @@ export function PnLCalendarWidget() {
 												<div
 													className={cn(
 														"font-mono font-semibold text-sm",
-														day.pnl >= 0 ? "text-profit" : "text-loss",
+														getPnLColorClass(day.pnl),
 													)}
 												>
-													{formatCurrency(day.pnl)}
+													{formatPnL(day.pnl)}
 												</div>
 											</div>
 										) : (
@@ -342,10 +343,10 @@ export function PnLCalendarWidget() {
 						<div
 							className={cn(
 								"font-mono font-semibold",
-								monthStats.totalPnl >= 0 ? "text-profit" : "text-loss",
+								getPnLColorClass(monthStats.totalPnl),
 							)}
 						>
-							{formatCurrency(monthStats.totalPnl)}
+							{formatPnL(monthStats.totalPnl)}
 						</div>
 						<div className="font-mono text-[9px] text-muted-foreground uppercase tracking-wider">
 							P&L
