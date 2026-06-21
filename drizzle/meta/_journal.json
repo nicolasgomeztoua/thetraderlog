@@ -120,6 +120,20 @@
 			"when": 1781973223000,
 			"tag": "0016_shared_conversations",
 			"breakpoints": true
+		},
+		{
+			"idx": 17,
+			"version": "7",
+			"when": 1781973224000,
+			"tag": "0017_ai_model_preferences",
+			"breakpoints": true
+		},
+		{
+			"idx": 18,
+			"version": "7",
+			"when": 1781973225000,
+			"tag": "0018_prop_compliance_overhaul",
+			"breakpoints": true
 		}
 	]
 }
