@@ -6,12 +6,17 @@ import {
 	calculateDailyLossStatus,
 	calculateDailyPnl,
 	calculateDrawdownStatus,
-	calculateEodTrailingDrawdown,
 	calculateProfitTargetProgress,
 	calculateStaticDrawdown,
 	calculateTradingDays,
-	calculateTrailingDrawdown,
+	checkConsistency,
+	checkEvalTimeLimit,
+	checkInactivity,
+	computePayoutEligibility,
+	computeTrailingFloor,
+	countQualifyingDays,
 	getOverallComplianceStatus,
+	type PayoutRecord,
 } from "@/lib/analytics/prop-compliance";
 import { buildEquityCurve } from "@/lib/analytics/risk";
 import {
@@ -21,7 +26,32 @@ import {
 	ERR_CHALLENGE_ACCOUNT_NOT_FOUND,
 	ERR_GROUP_NOT_FOUND,
 } from "@/lib/constants/errors";
-import { isPropAccountType } from "@/lib/constants/prop";
+import {
+	BUFFER_TYPE,
+	type BufferType,
+	COMPLIANCE_STATUS,
+	CONSISTENCY_COMPARATOR,
+	CONSISTENCY_RULE_TYPE,
+	type ComplianceStatus,
+	type ConsistencyComparator,
+	type ConsistencyRuleType,
+	DATA_CONFIDENCE,
+	type DataConfidence,
+	DEFAULT_DRAWDOWN_LOCK_BUFFER,
+	DRAWDOWN_ANCHOR,
+	DRAWDOWN_LOCK,
+	type DrawdownBasis,
+	type DrawdownHighWaterSource,
+	type DrawdownLock,
+	isPropAccountType,
+	LEGACY_DRAWDOWN_TYPE_TO_AXES,
+	PAYOUT_CYCLE_TYPE,
+	type PayoutCap,
+	type PayoutCycleType,
+	type ProfitSplitTier,
+	QUALIFYING_DAY_MODE,
+	type QualifyingDayMode,
+} from "@/lib/constants/prop";
 import {
 	accountTypeEnum,
 	drawdownTypeEnum,
@@ -35,7 +65,30 @@ import {
 	getUserTimezone,
 } from "@/server/api/helpers";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { accountGroups, accounts, trades } from "@/server/db/schema";
+import {
+	accountGroups,
+	accountPayouts,
+	accounts,
+	trades,
+} from "@/server/db/schema";
+
+/** Parse a numeric DB decimal/string into a number, or fall back. */
+function num(value: string | number | null | undefined, fallback = 0): number {
+	if (value === null || value === undefined) return fallback;
+	const n = typeof value === "number" ? value : parseFloat(value);
+	return Number.isNaN(n) ? fallback : n;
+}
+
+/** Parse a JSON-string ladder column into a typed array, or []. */
+function parseJsonArray<T>(value: string | null | undefined): T[] {
+	if (!value) return [];
+	try {
+		const parsed = JSON.parse(value);
+		return Array.isArray(parsed) ? (parsed as T[]) : [];
+	} catch {
+		return [];
+	}
+}
 
 // Input schemas
 const createAccountSchema = z
@@ -574,29 +627,69 @@ export const accountsRouter = createTRPCRouter({
 			// Build equity curve for drawdown calculations
 			const equityCurve = buildEquityCurve(accountTrades);
 
-			// Drawdown calculation (trailing vs eod vs static)
+			// --- Drawdown: 4-axis model with lock-at-start. New axis fields win;
+			// otherwise fall back to the legacy drawdownType mapping (no lock), so
+			// untouched accounts compute identically until they adopt a preset. ---
+			const legacyAxes =
+				LEGACY_DRAWDOWN_TYPE_TO_AXES[account.drawdownType ?? "static"] ??
+				LEGACY_DRAWDOWN_TYPE_TO_AXES.static;
+			const ddAnchor = account.drawdownAnchor ?? legacyAxes.anchor;
+			const ddHighWaterSource = (account.drawdownHighWaterSource ??
+				legacyAxes.highWaterSource) as DrawdownHighWaterSource;
+			const ddLock = (account.drawdownLock ?? legacyAxes.lock) as DrawdownLock;
+			const ddBasis = (account.drawdownBasis ??
+				legacyAxes.basis) as DrawdownBasis;
+			const ddLockBuffer =
+				account.drawdownLockBuffer != null
+					? num(account.drawdownLockBuffer)
+					: ddLock === DRAWDOWN_LOCK.AT_START_PLUS_BUFFER
+						? DEFAULT_DRAWDOWN_LOCK_BUFFER
+						: 0;
+			// Drawdown amount in dollars: explicit absolute wins, else % of initial.
+			const drawdownAbsolute =
+				account.maxDrawdownAbsolute != null
+					? num(account.maxDrawdownAbsolute)
+					: (maxDrawdownPercent / 100) * initialBalance;
+			const drawdownLimitPercent =
+				initialBalance > 0
+					? (drawdownAbsolute / initialBalance) * 100
+					: maxDrawdownPercent;
+
 			let currentDrawdownPercent: number;
-			if (account.drawdownType === "trailing") {
-				const trailing = calculateTrailingDrawdown(equityCurve, initialBalance);
-				currentDrawdownPercent = trailing.currentDrawdownPercent;
-			} else if (account.drawdownType === "eod") {
-				const eod = calculateEodTrailingDrawdown(
-					equityCurve,
-					initialBalance,
-					userTimezone,
-				);
-				currentDrawdownPercent = eod.currentDrawdownPercent;
-			} else {
+			let drawdownConfidence: DataConfidence = DATA_CONFIDENCE.EXACT;
+			let drawdownFloor = initialBalance - drawdownAbsolute;
+			let drawdownRoom = currentBalance - drawdownFloor;
+			let drawdownLockEngaged = false;
+			if (ddAnchor === DRAWDOWN_ANCHOR.STATIC) {
 				const staticDd = calculateStaticDrawdown(
 					initialBalance,
 					currentBalance,
 				);
 				currentDrawdownPercent = staticDd.drawdownPercent;
+				drawdownConfidence =
+					ddBasis === "equity_unrealized"
+						? DATA_CONFIDENCE.APPROXIMATE
+						: DATA_CONFIDENCE.EXACT;
+			} else {
+				const floorResult = computeTrailingFloor(equityCurve, {
+					initialBalance,
+					drawdownAbsolute,
+					highWaterSource: ddHighWaterSource,
+					lock: ddLock,
+					lockBuffer: ddLockBuffer,
+					basis: ddBasis,
+					timezone: userTimezone,
+				});
+				currentDrawdownPercent = floorResult.currentDrawdownPercent;
+				drawdownConfidence = floorResult.dataConfidence;
+				drawdownFloor = floorResult.floor;
+				drawdownRoom = floorResult.roomToFloor;
+				drawdownLockEngaged = floorResult.lockEngaged;
 			}
 
 			const drawdownStatus = calculateDrawdownStatus(
 				currentDrawdownPercent,
-				maxDrawdownPercent,
+				drawdownLimitPercent,
 			);
 
 			// Daily loss (timezone-aware)
@@ -633,6 +726,27 @@ export const accountsRouter = createTRPCRouter({
 				consistencyRulePercent,
 			);
 
+			// Typed consistency detail (denominator/comparator/extra-profit-needed).
+			const consistencyType = (account.consistencyRuleType ??
+				CONSISTENCY_RULE_TYPE.BEST_DAY_PCT_OF_TOTAL) as ConsistencyRuleType;
+			const consistencyDetail =
+				consistencyType === CONSISTENCY_RULE_TYPE.OFF ||
+				consistencyRulePercent <= 0
+					? null
+					: checkConsistency(
+							{ dailyPnls },
+							{
+								type: consistencyType,
+								pct: consistencyRulePercent,
+								comparator: (account.consistencyComparator ??
+									CONSISTENCY_COMPARATOR.LTE) as ConsistencyComparator,
+								profitTarget:
+									account.profitTargetAbsolute != null
+										? num(account.profitTargetAbsolute)
+										: (profitTargetPercent / 100) * initialBalance,
+							},
+						);
+
 			// Trading days
 			const tradingDays = calculateTradingDays(
 				accountTrades,
@@ -665,13 +779,87 @@ export const accountsRouter = createTRPCRouter({
 			// excluded from the win-rate denominator and from avg win/loss).
 			const stats = calculateAggregateStats(accountTrades, beThreshold);
 
-			// Overall status
-			// Profit target is a progress metric, not a risk indicator —
-			// exclude it so it doesn't flag "danger" while the account is safe.
-			const overallStatus = getOverallComplianceStatus([
-				drawdownStatus.status,
-				dailyLossStatus.status,
-			]);
+			// Eval time limit (Apex-style 30-day cap; null = unlimited)
+			const evalTimeLimit = checkEvalTimeLimit(
+				account.challengeStartDate ?? null,
+				account.evalMaxDays ?? null,
+				now,
+			);
+
+			// Inactivity timeout (last closed trade is the latest exitTime — list is asc)
+			const lastTradeDate =
+				accountTrades.length > 0
+					? (accountTrades[accountTrades.length - 1]?.exitTime ?? null)
+					: null;
+			const inactivity = checkInactivity(
+				lastTradeDate,
+				account.inactivityLimitDays ?? 0,
+				now,
+			);
+
+			// Qualifying days (winning-day definition for payout context)
+			const qualifyingDayMode = (account.qualifyingDayMode ??
+				QUALIFYING_DAY_MODE.ANY_TRADE) as QualifyingDayMode;
+			const qualifyingDaysResult = countQualifyingDays(accountTrades, {
+				mode: qualifyingDayMode,
+				minProfit: num(account.qualifyingDayMinProfit),
+				timezone: userTimezone,
+			});
+
+			// Payout eligibility (funded accounts only)
+			let payout: ReturnType<typeof computePayoutEligibility> | null = null;
+			if (account.accountType === "prop_funded") {
+				const payoutRows = await ctx.db.query.accountPayouts.findMany({
+					where: eq(accountPayouts.accountId, account.id),
+					orderBy: [asc(accountPayouts.date)],
+				});
+				const payoutRecords: PayoutRecord[] = payoutRows.map((p) => ({
+					date: p.date,
+					paidAmount: num(p.paidAmount),
+				}));
+				payout = computePayoutEligibility(
+					accountTrades,
+					payoutRecords,
+					{
+						initialBalance,
+						totalRealizedPnl: totalPnl,
+						drawdownAbsolute,
+						winningDayThreshold: num(account.winningDayThreshold),
+						winningDaysRequired: account.winningDaysRequired ?? 0,
+						payoutCycleType: (account.payoutCycleType ??
+							PAYOUT_CYCLE_TYPE.WINNING_DAYS) as PayoutCycleType,
+						payoutCycleLength: account.payoutCycleLength ?? 0,
+						firstPayoutWaitDays: account.firstPayoutWaitDays ?? undefined,
+						firstTradeDate: accountTrades[0]?.exitTime ?? null,
+						bufferType: (account.bufferType ?? BUFFER_TYPE.NONE) as BufferType,
+						minWithdrawal: num(account.minWithdrawal),
+						firstPayoutCaps: parseJsonArray<PayoutCap>(account.firstPayoutCaps),
+						maxLifetimePayouts: account.maxLifetimePayouts ?? undefined,
+						payoutConsistencyPct: num(account.payoutConsistencyPct),
+						consistencyComparator: (account.consistencyComparator ??
+							CONSISTENCY_COMPARATOR.LTE) as ConsistencyComparator,
+						profitSplitTiers: parseJsonArray<ProfitSplitTier>(
+							account.profitSplitTiers,
+						),
+						profitSplit: num(account.profitSplit, 100),
+						timezone: userTimezone,
+					},
+					now,
+				);
+			}
+
+			// Overall status — the account-fail risk indicator.
+			// Profit target is progress (excluded). Daily loss only counts where it
+			// actually fails the account (most futures firms = soft pause, not breach).
+			const overallStatuses: ComplianceStatus[] = [drawdownStatus.status];
+			if (account.dailyLossFailsAccount) {
+				overallStatuses.push(dailyLossStatus.status);
+			}
+			if (inactivity.breached) overallStatuses.push(COMPLIANCE_STATUS.DANGER);
+			if (evalTimeLimit.expired && account.challengeStatus === "active") {
+				overallStatuses.push(COMPLIANCE_STATUS.DANGER);
+			}
+			const overallStatus = getOverallComplianceStatus(overallStatuses);
 
 			return {
 				account: {
@@ -690,6 +878,17 @@ export const accountsRouter = createTRPCRouter({
 					remaining: drawdownStatus.remaining,
 					type: account.drawdownType ?? "static",
 					status: drawdownStatus.status,
+					// Expanded 4-axis model
+					anchor: ddAnchor,
+					highWaterSource: ddHighWaterSource,
+					lock: ddLock,
+					basis: ddBasis,
+					absolute: drawdownAbsolute,
+					limitPercent: drawdownLimitPercent,
+					floor: drawdownFloor,
+					roomToFloor: drawdownRoom,
+					lockEngaged: drawdownLockEngaged,
+					dataConfidence: drawdownConfidence,
 					equityCurve: equityCurve.map((p) => ({
 						date: p.date,
 						equity: p.equity,
@@ -704,6 +903,7 @@ export const accountsRouter = createTRPCRouter({
 					used: dailyLossStatus.used,
 					remaining: dailyLossStatus.remaining,
 					status: dailyLossStatus.status,
+					failsAccount: account.dailyLossFailsAccount ?? false,
 				},
 				profitTarget: {
 					current: profitTarget.current,
@@ -715,6 +915,9 @@ export const accountsRouter = createTRPCRouter({
 					maxDayPercent: consistency.maxDayPercent,
 					limit: consistency.limit,
 					isCompliant: consistency.isCompliant,
+					// Typed detail (null when the rule is off)
+					detail: consistencyDetail,
+					ruleType: consistencyType,
 				},
 				tradingDays: {
 					daysTraded: tradingDays.daysTraded,
@@ -722,6 +925,24 @@ export const accountsRouter = createTRPCRouter({
 					remaining: tradingDays.remaining,
 					dates: Array.from(dailyPnlMap.keys()),
 				},
+				qualifyingDays: {
+					mode: qualifyingDayMode,
+					count: qualifyingDaysResult.count,
+					dates: qualifyingDaysResult.dates,
+				},
+				inactivity: {
+					idleDays: inactivity.idleDays,
+					limitDays: inactivity.limitDays,
+					breached: inactivity.breached,
+					daysUntilBreach: inactivity.daysUntilBreach,
+				},
+				evalTimeLimit: {
+					daysElapsed: evalTimeLimit.daysElapsed,
+					maxDays: evalTimeLimit.maxDays,
+					daysRemaining: evalTimeLimit.daysRemaining,
+					expired: evalTimeLimit.expired,
+				},
+				payout,
 				timeline: {
 					startDate,
 					endDate,
@@ -738,6 +959,89 @@ export const accountsRouter = createTRPCRouter({
 					avgLoss: stats.avgLoss,
 				},
 			};
+		}),
+
+	// ============================================================================
+	// ACCOUNT PAYOUTS (funded payout log)
+	// ============================================================================
+
+	// List payouts for a funded account (newest first)
+	listPayouts: protectedProcedure
+		.input(z.object({ accountId: z.string() }))
+		.query(async ({ ctx, input }) => {
+			const account = await ctx.db.query.accounts.findFirst({
+				where: and(
+					eq(accounts.id, input.accountId),
+					eq(accounts.userId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+			if (!account) throw new Error(ERR_ACCOUNT_NOT_FOUND);
+
+			return ctx.db.query.accountPayouts.findMany({
+				where: eq(accountPayouts.accountId, input.accountId),
+				orderBy: [desc(accountPayouts.date)],
+			});
+		}),
+
+	// Add a payout to the log
+	addPayout: protectedProcedure
+		.input(
+			z.object({
+				accountId: z.string(),
+				date: z.string(),
+				requestedAmount: z.string().optional(),
+				paidAmount: z.string().optional(),
+				split: z.string().optional(),
+				notes: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const account = await ctx.db.query.accounts.findFirst({
+				where: and(
+					eq(accounts.id, input.accountId),
+					eq(accounts.userId, ctx.user.id),
+				),
+				columns: { id: true },
+			});
+			if (!account) throw new Error(ERR_ACCOUNT_NOT_FOUND);
+
+			// cycleIndex = number of existing payouts (0-based).
+			const existing = await ctx.db.query.accountPayouts.findMany({
+				where: eq(accountPayouts.accountId, input.accountId),
+				columns: { id: true },
+			});
+
+			const [created] = await ctx.db
+				.insert(accountPayouts)
+				.values({
+					userId: ctx.user.id,
+					accountId: input.accountId,
+					date: new Date(input.date),
+					requestedAmount: input.requestedAmount,
+					paidAmount: input.paidAmount,
+					split: input.split,
+					cycleIndex: existing.length,
+					notes: input.notes,
+				})
+				.returning();
+
+			return created;
+		}),
+
+	// Delete a payout from the log
+	deletePayout: protectedProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			await ctx.db
+				.delete(accountPayouts)
+				.where(
+					and(
+						eq(accountPayouts.id, input.id),
+						eq(accountPayouts.userId, ctx.user.id),
+					),
+				);
+			return { success: true };
 		}),
 
 	// ============================================================================
