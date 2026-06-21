@@ -73,6 +73,13 @@ import {
 	ERR_VALIDATION_GROUP_NAME_REQUIRED,
 } from "@/lib/constants/errors";
 import {
+	getPresetById,
+	getPresetFirms,
+	getPresetsByFirm,
+	type PropPreset,
+	type PropPresetFields,
+} from "@/lib/constants/prop-presets";
+import {
 	ACCOUNT_TYPE_COLORS,
 	cn,
 	localHourToUtcHour,
@@ -213,6 +220,41 @@ const defaultAccountForm: AccountFormState = {
 	groupId: "",
 };
 
+// Preset decimal fields are stored as numbers but the account API expects
+// strings (drizzle decimal columns); everything else passes through unchanged.
+const PRESET_DECIMAL_KEYS = new Set<keyof PropPresetFields>([
+	"drawdownLockBuffer",
+	"maxDrawdown",
+	"maxDrawdownAbsolute",
+	"dailyLossLimit",
+	"profitTarget",
+	"profitTargetAbsolute",
+	"qualifyingDayMinProfit",
+	"consistencyRule",
+	"winningDayThreshold",
+	"minWithdrawal",
+	"payoutConsistencyPct",
+	"profitSplit",
+	"activationFee",
+]);
+
+/** Convert applied preset fields into an account-mutation payload fragment. */
+function presetFieldsToPayload(
+	fields: PropPresetFields | null,
+): Record<string, string | number | boolean> {
+	if (!fields) return {};
+	const out: Record<string, string | number | boolean> = {};
+	for (const [k, v] of Object.entries(fields)) {
+		if (v === null || v === undefined) continue;
+		out[k] =
+			PRESET_DECIMAL_KEYS.has(k as keyof PropPresetFields) &&
+			typeof v === "number"
+				? String(v)
+				: v;
+	}
+	return out;
+}
+
 const SETTINGS_TABS = [
 	{ value: "general", label: "General" },
 	{ value: "trading", label: "Trading" },
@@ -304,6 +346,15 @@ export function SettingsContent() {
 	const [editingAccount, setEditingAccount] = useState<string | null>(null);
 	const [accountForm, setAccountForm] =
 		useState<AccountFormState>(defaultAccountForm);
+
+	// Prop preset state: the full field set applied from a preset (persisted on
+	// save alongside the editable legacy inputs) + picker selection.
+	const [presetId, setPresetId] = useState<string | null>(null);
+	const [presetFields, setPresetFields] = useState<PropPresetFields | null>(
+		null,
+	);
+	const [presetFirm, setPresetFirm] = useState<string>("");
+	const appliedPreset = presetId ? getPresetById(presetId) : undefined;
 
 	// Convert to funded dialog state
 	const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
@@ -530,6 +581,33 @@ export function SettingsContent() {
 
 	const resetAccountForm = () => {
 		setAccountForm(defaultAccountForm);
+		setPresetId(null);
+		setPresetFields(null);
+		setPresetFirm("");
+	};
+
+	/**
+	 * Apply a firm preset: store the full field set (persisted on save) and
+	 * mirror the overlapping values into the editable legacy inputs.
+	 */
+	const applyPreset = (preset: PropPreset) => {
+		const f = preset.fields;
+		setPresetId(preset.id);
+		setPresetFields(f);
+		const str = (n: number | null | undefined) =>
+			n === null || n === undefined ? "" : n.toString();
+		setAccountForm((prev) => ({
+			...prev,
+			accountType: preset.phase === "funded" ? "prop_funded" : "prop_challenge",
+			initialBalance: prev.initialBalance || preset.accountSize.toString(),
+			maxDrawdown: str(f.maxDrawdown),
+			drawdownType: f.drawdownType ?? prev.drawdownType,
+			dailyLossLimit: str(f.dailyLossLimit),
+			profitTarget: str(f.profitTarget),
+			consistencyRule: str(f.consistencyRule),
+			minTradingDays: str(f.minTradingDays),
+			profitSplit: str(f.profitSplit),
+		}));
 	};
 
 	const resetGroupForm = () => {
@@ -542,6 +620,16 @@ export function SettingsContent() {
 
 	const openEditAccount = (account: (typeof accounts)[0]) => {
 		setEditingAccount(account.id);
+		// Remember which preset (if any) seeded this account. We don't reconstruct
+		// presetFields here — the account's expanded columns are already in the DB,
+		// and an update only sets the fields we send, so they're preserved.
+		setPresetId(account.propPresetId ?? null);
+		setPresetFields(null);
+		setPresetFirm(
+			account.propPresetId
+				? (getPresetById(account.propPresetId)?.firm ?? "")
+				: "",
+		);
 		setAccountForm({
 			name: account.name,
 			broker: account.broker ?? "",
@@ -620,13 +708,23 @@ export function SettingsContent() {
 			groupId: accountForm.groupId || undefined,
 		};
 
+		// Merge expanded preset fields (decimals stringified) under the editable
+		// legacy inputs, which override on overlap; tag which preset seeded it.
+		const fullData = {
+			...presetFieldsToPayload(presetFields),
+			...submitData,
+			propPresetId: presetId ?? undefined,
+		};
+
 		if (editingAccount) {
 			updateAccount.mutate({
 				id: editingAccount,
-				...submitData,
-			});
+				...fullData,
+			} as Parameters<typeof updateAccount.mutate>[0]);
 		} else {
-			createAccount.mutate(submitData);
+			createAccount.mutate(
+				fullData as Parameters<typeof createAccount.mutate>[0],
+			);
 		}
 	};
 
@@ -1527,6 +1625,74 @@ export function SettingsContent() {
 														</h4>
 														<p className="text-muted-foreground text-xs">
 															Configure your prop firm account parameters
+														</p>
+													</div>
+
+													{/* Firm preset picker */}
+													<div className="space-y-3 rounded border border-white/5 bg-white/2 p-3">
+														<div className="flex items-center justify-between gap-2">
+															<Label>Load a firm preset</Label>
+															{appliedPreset && (
+																<span className="font-mono text-[10px] text-muted-foreground">
+																	as of {appliedPreset.asOf}
+																</span>
+															)}
+														</div>
+														<div className="grid gap-3 sm:grid-cols-2">
+															<Select
+																onValueChange={(v) => setPresetFirm(v)}
+																value={presetFirm}
+															>
+																<SelectTrigger>
+																	<SelectValue placeholder="Select firm" />
+																</SelectTrigger>
+																<SelectContent>
+																	{getPresetFirms().map((firm) => (
+																		<SelectItem key={firm} value={firm}>
+																			{firm}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+															<Select
+																disabled={!presetFirm}
+																onValueChange={(v) => {
+																	const p = getPresetById(v);
+																	if (p) applyPreset(p);
+																}}
+																value={presetId ?? ""}
+															>
+																<SelectTrigger>
+																	<SelectValue placeholder="Select plan & size" />
+																</SelectTrigger>
+																<SelectContent>
+																	{getPresetsByFirm(presetFirm).map((p) => (
+																		<SelectItem key={p.id} value={p.id}>
+																			{p.label}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+														</div>
+														{appliedPreset && (
+															<div className="space-y-1 rounded bg-white/2 p-2">
+																<p className="font-mono text-[11px] text-muted-foreground">
+																	{appliedPreset.summary}
+																</p>
+																{appliedPreset.approximate && (
+																	<p className="font-mono text-[10px] text-primary">
+																		Equity-based firm — drawdown/daily-loss
+																		checks are approximated from realized P&L.
+																	</p>
+																)}
+															</div>
+														)}
+														<p className="text-[10px] text-muted-foreground">
+															Presets pre-fill the rules below plus the advanced
+															compliance fields (drawdown lock, payout rules,
+															etc.). They're starting points — rules change
+															often, so verify against your firm and edit as
+															needed.
 														</p>
 													</div>
 
