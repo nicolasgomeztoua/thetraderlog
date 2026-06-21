@@ -1,30 +1,86 @@
 -- =============================================================================
--- 0016 — Prop Compliance Overhaul (2026 model)
+-- 0018 — Prop Compliance Overhaul (2026 model)
 -- Adds the expanded prop-firm rule model: drawdown 4-axis fields, daily-loss
 -- variants, typed consistency, qualifying-day definition, payout-eligibility
 -- fields, position/scaling, conduct/time rules, and the account_payout table.
 --
--- Apply with:  bun run db:migrate:sql drizzle/0016_prop_compliance_overhaul.sql
+-- Apply with:  bun run db:migrate:sql drizzle/0018_prop_compliance_overhaul.sql
 -- The runner splits on the drizzle breakpoint marker and SKIPS duplicate-object,
 -- duplicate-column and already-exists errors, so this is safe to re-run and to
 -- apply to BOTH Neon branches (dev + prod — see memory neon-prod-dev-branches).
 -- All columns are nullable so existing live/demo/CFD rows are unaffected.
 -- =============================================================================
 --> statement-breakpoint
-CREATE TYPE "drawdown_anchor" AS ENUM ('static','trailing');--> statement-breakpoint
-CREATE TYPE "drawdown_high_water_source" AS ENUM ('intraday_unrealized','eod_realized');--> statement-breakpoint
-CREATE TYPE "drawdown_lock" AS ENUM ('none','at_start','at_start_plus_buffer');--> statement-breakpoint
-CREATE TYPE "drawdown_basis" AS ENUM ('balance_realized','equity_unrealized');--> statement-breakpoint
-CREATE TYPE "daily_loss_anchor" AS ENUM ('static_from_initial','from_day_start_balance');--> statement-breakpoint
-CREATE TYPE "consistency_rule_type" AS ENUM ('off','best_day_pct_of_total','best_day_pct_of_target','per_trade_pct_of_total','top_days_ratio','best_day_pct_of_positive_days');--> statement-breakpoint
-CREATE TYPE "consistency_window" AS ENUM ('full_evaluation','since_last_payout','fixed_cycle');--> statement-breakpoint
-CREATE TYPE "consistency_comparator" AS ENUM ('lt','lte');--> statement-breakpoint
-CREATE TYPE "consistency_phase" AS ENUM ('evaluation_only','funded_only','both');--> statement-breakpoint
-CREATE TYPE "qualifying_day_mode" AS ENUM ('any_trade','any_positive','min_profit_abs','min_profit_pct');--> statement-breakpoint
-CREATE TYPE "payout_cycle_type" AS ENUM ('winning_days','calendar_days','hours');--> statement-breakpoint
-CREATE TYPE "buffer_type" AS ENUM ('none','start_plus_drawdown');--> statement-breakpoint
-CREATE TYPE "scaling_basis" AS ENUM ('eod_balance','profit_from_start');--> statement-breakpoint
-CREATE TYPE "scaling_applies_at" AS ENUM ('next_session','next_day','immediate');--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "drawdown_anchor" AS ENUM ('static','trailing');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "drawdown_high_water_source" AS ENUM ('intraday_unrealized','eod_realized');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "drawdown_lock" AS ENUM ('none','at_start','at_start_plus_buffer');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "drawdown_basis" AS ENUM ('balance_realized','equity_unrealized');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "daily_loss_anchor" AS ENUM ('static_from_initial','from_day_start_balance');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "consistency_rule_type" AS ENUM ('off','best_day_pct_of_total','best_day_pct_of_target','per_trade_pct_of_total','top_days_ratio','best_day_pct_of_positive_days');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "consistency_window" AS ENUM ('full_evaluation','since_last_payout','fixed_cycle');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "consistency_comparator" AS ENUM ('lt','lte');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "consistency_phase" AS ENUM ('evaluation_only','funded_only','both');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "qualifying_day_mode" AS ENUM ('any_trade','any_positive','min_profit_abs','min_profit_pct');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "payout_cycle_type" AS ENUM ('winning_days','calendar_days','hours');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "buffer_type" AS ENUM ('none','start_plus_drawdown');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "scaling_basis" AS ENUM ('eod_balance','profit_from_start');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "scaling_applies_at" AS ENUM ('next_session','next_day','immediate');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
 ALTER TABLE "account" ADD COLUMN IF NOT EXISTS "prop_preset_id" text;--> statement-breakpoint
 ALTER TABLE "account" ADD COLUMN IF NOT EXISTS "drawdown_anchor" "drawdown_anchor";--> statement-breakpoint
 ALTER TABLE "account" ADD COLUMN IF NOT EXISTS "drawdown_high_water_source" "drawdown_high_water_source";--> statement-breakpoint
@@ -101,7 +157,15 @@ CREATE TABLE IF NOT EXISTS "account_payout" (
 	"created_at" timestamp with time zone NOT NULL,
 	"updated_at" timestamp with time zone
 );--> statement-breakpoint
-ALTER TABLE "account_payout" ADD CONSTRAINT "account_payout_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "account_payout" ADD CONSTRAINT "account_payout_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "account"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "account_payout" ADD CONSTRAINT "account_payout_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "account_payout" ADD CONSTRAINT "account_payout_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "account"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "account_payout_account_id_idx" ON "account_payout" ("account_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "account_payout_user_id_idx" ON "account_payout" ("user_id");
