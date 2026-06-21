@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Menu, MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
 
 type AiMode = "chat" | "report";
 
@@ -8,12 +9,18 @@ interface ModelSelectorProps {
 	mode: AiMode;
 	onModeChange: (mode: AiMode) => void;
 	onMenuClick?: () => void;
+	/**
+	 * Optional right-aligned slot (e.g. the report model indicator chip).
+	 * Rendered after the mode toggle; the slot owns its own `ml-auto`.
+	 */
+	rightSlot?: ReactNode;
 }
 
 export function ModelSelector({
 	mode,
 	onModeChange,
 	onMenuClick,
+	rightSlot,
 }: ModelSelectorProps) {
 	return (
 		<div className="flex items-center gap-2 border-white/5 border-b px-3 py-2 sm:px-4">
@@ -61,6 +68,8 @@ export function ModelSelector({
 					Reports
 				</button>
 			</div>
+
+			{rightSlot}
 		</div>
 	);
 }
