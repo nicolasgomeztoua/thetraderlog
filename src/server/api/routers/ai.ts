@@ -2,7 +2,7 @@ import { runs } from "@trigger.dev/sdk/v3";
 import { TRPCError } from "@trpc/server";
 
 import type { ModelMessage } from "ai";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { aiGenerateText } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
@@ -730,8 +730,28 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			// Resolve the cursor (a report id) to its createdAt for keyset
+			// pagination — ids are nanoid-based and NOT time-ordered, so we
+			// can't filter on the id directly.
+			let cursorCreatedAt: Date | undefined;
+			if (input.cursor) {
+				const cursorRow = await ctx.db.query.aiReports.findFirst({
+					where: and(
+						eq(aiReports.id, input.cursor),
+						eq(aiReports.userId, ctx.user.id),
+					),
+					columns: { createdAt: true },
+				});
+				cursorCreatedAt = cursorRow?.createdAt ?? undefined;
+			}
+
 			const reports = await ctx.db.query.aiReports.findMany({
-				where: eq(aiReports.userId, ctx.user.id),
+				where: and(
+					eq(aiReports.userId, ctx.user.id),
+					cursorCreatedAt
+						? lt(aiReports.createdAt, cursorCreatedAt)
+						: undefined,
+				),
 				orderBy: [desc(aiReports.createdAt)],
 				limit: input.limit + 1,
 			});
