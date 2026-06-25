@@ -2,7 +2,7 @@
 
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import { aggregateBars } from "@/lib/market-data";
+import { aggregateBars, resolveAutoInterval } from "@/lib/market-data";
 import { cn, STALE_TIME_MEDIUM } from "@/lib/shared";
 import type { Execution } from "@/lib/trades/running-pnl";
 import { generateRunningPnlSeries } from "@/lib/trades/running-pnl";
@@ -52,8 +52,20 @@ export function RunningPnlTab({
 	executions = [],
 	className,
 }: RunningPnlTabProps) {
-	// Get interval preference from store (same as replay)
-	const interval = useChartPreferencesStore((s) => s.interval);
+	// Resolve the same timeframe the user sees on the chart: a manual override if
+	// set, otherwise the per-trade auto interval derived from trade duration.
+	const intervalOverride = useChartPreferencesStore((s) => s.intervalOverride);
+	const interval = useMemo(
+		() =>
+			intervalOverride ??
+			(entryTime
+				? resolveAutoInterval(
+						new Date(entryTime),
+						exitTime ? new Date(exitTime) : null,
+					)
+				: "15min"),
+		[intervalOverride, entryTime, exitTime],
+	);
 
 	// Fetch chart data using same endpoint as replay
 	const {

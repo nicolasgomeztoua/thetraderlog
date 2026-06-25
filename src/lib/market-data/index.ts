@@ -7,4 +7,5 @@
  */
 
 export * from "./candle-aggregation";
+export * from "./chart-auto-range";
 export * from "./symbols";
