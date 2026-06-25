@@ -407,6 +407,15 @@ export const accounts = createTable(
 		bufferType: bufferTypeEnum("buffer_type"),
 		payoutRequiresBufferCleared: boolean("payout_requires_buffer_cleared"),
 		minWithdrawal: decimal("min_withdrawal", { precision: 14, scale: 2 }),
+		// Nominal program account size (e.g. 50000 for a "50K"), independent of the
+		// possibly mid-stream initialBalance the user logs at. All program rules
+		// (safety-net floor, drawdown lock point) anchor to this, not initialBalance.
+		accountSize: decimal("account_size", { precision: 20, scale: 2 }),
+		// Withdrawable safety-net cushion in USD ABOVE accountSize (the firm's
+		// published buffer). Floor = accountSize + safetyNetBuffer. Decoupled from the
+		// trailing drawdown amount (Apex/MFFU/Bulenox/ETF = DD+$100, TPT = DD, Tradeify
+		// = DD+$1,000, Earn2Trade/FundedNext-most = 0). See PROP_COMPLIANCE_RESEARCH.md.
+		safetyNetBuffer: decimal("safety_net_buffer", { precision: 14, scale: 2 }),
 		firstPayoutCaps: text("first_payout_caps"), // JSON [{payoutIndex,capAmount}]
 		maxLifetimePayouts: integer("max_lifetime_payouts"), // Apex 6
 		payoutConsistencyPct: decimal("payout_consistency_pct", {

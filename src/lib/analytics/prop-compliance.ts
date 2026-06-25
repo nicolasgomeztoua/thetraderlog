@@ -693,8 +693,15 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 // =============================================================================
 
 export interface TrailingFloorOptions {
-	/** Account starting balance in dollars. */
+	/** Account starting balance in dollars (the equity curve baseline). */
 	initialBalance: number;
+	/**
+	 * Nominal account size the LOCK POINT anchors to (e.g. 50000). For accounts
+	 * logged mid-stream, initialBalance is above the nominal start, so the lock
+	 * (start / start+buffer) must anchor here, not to initialBalance. Defaults to
+	 * initialBalance when unset.
+	 */
+	lockAnchor?: number;
 	/** Max drawdown / max-loss-limit in DOLLARS. */
 	drawdownAbsolute: number;
 	/** Whether the high-water mark follows intraday or end-of-day equity. */
@@ -748,6 +755,7 @@ export function computeTrailingFloor(
 ): TrailingFloorResult {
 	const {
 		initialBalance,
+		lockAnchor,
 		drawdownAbsolute,
 		highWaterSource,
 		lock,
@@ -762,11 +770,14 @@ export function computeTrailingFloor(
 			? DATA_CONFIDENCE.APPROXIMATE
 			: DATA_CONFIDENCE.EXACT;
 
+	// The lock freezes relative to the nominal account size, not the (possibly
+	// mid-stream) equity-curve baseline.
+	const anchor = lockAnchor ?? initialBalance;
 	const lockPoint =
 		lock === DRAWDOWN_LOCK.AT_START
-			? initialBalance
+			? anchor
 			: lock === DRAWDOWN_LOCK.AT_START_PLUS_BUFFER
-				? initialBalance + lockBuffer
+				? anchor + lockBuffer
 				: Number.POSITIVE_INFINITY;
 
 	if (initialBalance <= 0 || drawdownAbsolute <= 0) {
@@ -1076,9 +1087,22 @@ export interface PayoutRecord {
 
 export interface PayoutEligibilityConfig {
 	initialBalance: number;
+	/**
+	 * Nominal program account size (e.g. 50000 for a "50K"). The safety-net floor
+	 * anchors to THIS, not initialBalance — a funded account logged mid-stream has
+	 * an initialBalance above the nominal start, and the firm's safety-net is fixed
+	 * to the program size. Falls back to initialBalance when unset.
+	 */
+	accountSize?: number;
+	/**
+	 * Withdrawable safety-net cushion in USD above accountSize (the firm's published
+	 * buffer). Floor = accountSize + safetyNetBuffer. When unset, falls back to
+	 * drawdownAbsolute to preserve the legacy start+DD behavior for un-migrated rows.
+	 */
+	safetyNetBuffer?: number;
 	/** Sum of all realized closed-trade P&L (account-wide). */
 	totalRealizedPnl: number;
-	/** Drawdown amount in dollars, for the safety-net buffer floor. */
+	/** Drawdown amount in dollars (legacy safety-net fallback when safetyNetBuffer unset). */
 	drawdownAbsolute: number;
 	/** Per-winning-day profit threshold in dollars. */
 	winningDayThreshold: number;
@@ -1153,6 +1177,8 @@ export function computePayoutEligibility(
 ): PayoutEligibilityResult {
 	const {
 		initialBalance,
+		accountSize,
+		safetyNetBuffer,
 		totalRealizedPnl,
 		drawdownAbsolute,
 		winningDayThreshold,
@@ -1204,11 +1230,18 @@ export function computePayoutEligibility(
 	}
 
 	// --- Buffer / withdrawable profit ---
+	// currentBalance uses the logged initialBalance (real, mid-stream-aware).
+	// The safety-net floor anchors to the nominal accountSize plus the firm's
+	// published cushion — NOT initialBalance and NOT the trailing-DD amount.
 	const currentBalance = initialBalance + totalRealizedPnl;
+	const nominalStart = accountSize ?? initialBalance;
+	// safetyNetBuffer is the canonical cushion; fall back to drawdownAbsolute so
+	// un-migrated rows keep their old start+DD floor.
+	const buffer = safetyNetBuffer ?? drawdownAbsolute;
 	const bufferFloor =
 		bufferType === BUFFER_TYPE.START_PLUS_DRAWDOWN
-			? initialBalance + drawdownAbsolute
-			: initialBalance;
+			? nominalStart + buffer
+			: nominalStart;
 	const withdrawableProfit = Math.max(0, currentBalance - bufferFloor);
 	const bufferCleared = currentBalance >= bufferFloor && withdrawableProfit > 0;
 	if (!bufferCleared) {
