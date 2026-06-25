@@ -83,6 +83,7 @@ import {
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { getErrorMessage } from "@/lib/shared/utils";
 import { api } from "@/trpc/react";
+import { RefetchMarketDataButton } from "./_components/refetch-market-data-button";
 import { TradeCard } from "./_components/trade-card";
 import { TradeRow } from "./_components/trade-row";
 import { TradeSearchInput } from "./_components/trade-search-input";
@@ -509,8 +510,12 @@ export default function JournalPage() {
 						)}
 					</p>
 				</div>
-				{/* Hide ColumnConfig on mobile */}
+				{/* Hide header actions on mobile */}
 				<div className="hidden items-center gap-2 sm:flex">
+					<RefetchMarketDataButton
+						accountId={selectedAccountId ?? undefined}
+						hasFeature={hasTradeManagement}
+					/>
 					<ColumnConfig
 						columns={columns}
 						onReset={resetColumns}
