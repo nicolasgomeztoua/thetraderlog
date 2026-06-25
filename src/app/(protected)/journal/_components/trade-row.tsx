@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/select";
 import { StarRating } from "@/components/ui/star-rating";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { TRADE_RESULT_META } from "@/lib/constants/trade-result";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
+import { deriveTradeResult } from "@/lib/trades/result";
 import type { RouterOutputs } from "@/trpc/react";
 
 /** A single trade row as returned by the journal's trades.getAll query. */
@@ -139,20 +141,15 @@ function renderCell(
 					{trade.netPnl ? formatCurrency(parseFloat(trade.netPnl)) : "—"}
 				</span>
 			);
-		case "result":
-			return trade.status === "open" ? (
-				<span className="font-mono text-muted-foreground text-xs">Open</span>
-			) : trade.exitReason === "take_profit" || trade.takeProfitHit ? (
-				<span className="font-mono text-profit text-xs">TP</span>
-			) : trade.exitReason === "stop_loss" || trade.stopLossHit ? (
-				<span className="font-mono text-loss text-xs">SL</span>
-			) : trade.exitReason === "trailing_stop" ? (
-				<span className="font-mono text-accent text-xs">Trail</span>
-			) : trade.exitReason === "breakeven" ? (
-				<span className="font-mono text-breakeven text-xs">BE</span>
-			) : (
-				<span className="font-mono text-muted-foreground text-xs">Manual</span>
+		case "result": {
+			const result = deriveTradeResult(trade);
+			const meta = TRADE_RESULT_META[result];
+			return (
+				<span className={cn("font-mono text-xs", meta.className)}>
+					{meta.label}
+				</span>
 			);
+		}
 		case "rating":
 			return (
 				<StarRating
