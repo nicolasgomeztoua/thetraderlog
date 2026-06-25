@@ -729,7 +729,10 @@
 	.animate-shimmer,
 	.animate-fade-out,
 	.animate-slide-out-left,
-	.animate-shake {
+	.animate-shake,
+	.pulse-dot,
+	.animate-pulse,
+	.animate-spin {
 		animation: none;
 		opacity: 1;
 	}

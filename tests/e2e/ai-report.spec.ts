@@ -26,23 +26,20 @@ test.describe("AI Report Mode", () => {
 	// Form Section
 	// =========================================================================
 
-	test("report mode shows request form with all sections", async ({ page }) => {
-		// Prompt input should be visible
+	test("report mode shows composer with all controls", async ({ page }) => {
+		// Prompt (omnibox) input should be visible
 		const promptInput = page.getByTestId("report-prompt-input");
 		await expect(promptInput).toBeVisible();
 
-		// Date range inputs should be visible
-		const dateStart = page.getByTestId("report-date-start");
-		await expect(dateStart).toBeVisible();
-
-		const dateEnd = page.getByTestId("report-date-end");
-		await expect(dateEnd).toBeVisible();
-
-		// Generate button should be visible
+		// Generate (Run) button should be visible
 		const generateButton = page.getByTestId("report-generate-button");
 		await expect(generateButton).toBeVisible();
 
-		// Suggested prompts section should be visible
+		// Date-range scope control should be visible (inputs live in its popover)
+		const scopeTrigger = page.getByTestId("report-scope-trigger");
+		await expect(scopeTrigger).toBeVisible();
+
+		// Suggested prompts section should be visible (shown while input is empty)
 		const suggestedPrompts = page.getByTestId("report-suggested-prompts");
 		await expect(suggestedPrompts).toBeVisible();
 	});
@@ -55,7 +52,9 @@ test.describe("AI Report Mode", () => {
 			"Analyze my weekly performance trends",
 		);
 
-		// Fill in date range
+		// Date range lives behind the scope popover
+		await page.getByTestId("report-scope-trigger").click();
+
 		const dateStart = page.getByTestId("report-date-start");
 		await dateStart.fill("2026-01-01");
 		await expect(dateStart).toHaveValue("2026-01-01");
@@ -66,7 +65,8 @@ test.describe("AI Report Mode", () => {
 	});
 
 	test("quick date presets fill in date fields", async ({ page }) => {
-		// Click a date preset button (e.g., "Last 7 days")
+		// Open the scope popover, then click a preset (e.g., "Last 7 days")
+		await page.getByTestId("report-scope-trigger").click();
 		const presetButton = page.getByRole("button", { name: "Last 7 days" });
 		await presetButton.click();
 
