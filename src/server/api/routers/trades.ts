@@ -34,6 +34,7 @@ import {
 	SEARCH_MIN_QUERY_LENGTH,
 } from "@/lib/constants/search";
 import type { SortField } from "@/lib/constants/trade-log";
+import { TRADE_RESULT_SORT_RANK } from "@/lib/constants/trade-result";
 import { logger } from "@/lib/logger";
 import { calculateAndStoreMAEMFE } from "@/lib/market-data/maemfe";
 import { clearCandleCacheForTrade } from "@/lib/market-data/service";
@@ -69,6 +70,7 @@ import {
 import {
 	buildCursorCondition,
 	buildOrderByClause,
+	derivedResultRankSql,
 } from "@/server/api/helpers/sort-builder";
 import {
 	createTRPCRouter,
@@ -489,7 +491,23 @@ export const tradesRouter = createTRPCRouter({
 				conditions.push(eq(trades.setupType, input.setupType));
 			}
 			if (input?.exitReason) {
-				conditions.push(eq(trades.exitReason, input.exitReason));
+				// For price-detectable reasons, match the derived result (explicit
+				// or auto-detected) so the filter stays consistent with the column.
+				const derivedKey =
+					input.exitReason === "take_profit"
+						? "tp"
+						: input.exitReason === "stop_loss"
+							? "sl"
+							: input.exitReason === "trailing_stop"
+								? "trailing"
+								: null;
+				if (derivedKey) {
+					conditions.push(
+						sql`${derivedResultRankSql()} = ${TRADE_RESULT_SORT_RANK[derivedKey]}`,
+					);
+				} else {
+					conditions.push(eq(trades.exitReason, input.exitReason));
+				}
 			}
 			if (input?.strategyId) {
 				conditions.push(eq(trades.strategyId, input.strategyId));

@@ -4,6 +4,8 @@
  */
 
 import type { SortField } from "@/lib/constants/trade-log";
+import { TRADE_RESULT_SORT_RANK } from "@/lib/constants/trade-result";
+import { deriveTradeResult } from "@/lib/trades/result";
 
 /**
  * Compound cursor containing both sort value and trade ID
@@ -42,12 +44,18 @@ export function decodeCursor(encoded: string): CompoundCursor {
 interface TradeWithRelations {
 	id: string;
 	symbol: string;
+	status: string;
 	direction: "long" | "short";
 	entryTime: Date;
 	exitTime: Date | null;
 	entryPrice: string;
 	exitPrice: string | null;
 	stopLoss: string | null;
+	takeProfit: string | null;
+	trailedStopLoss: string | null;
+	wasTrailed: boolean | null;
+	stopLossHit: boolean | null;
+	takeProfitHit: boolean | null;
 	quantity: string;
 	netPnl: string | null;
 	fees: string | null;
@@ -81,7 +89,9 @@ export function extractSortValue(
 		case "pnl":
 			return trade.netPnl ? Number.parseFloat(trade.netPnl) : null;
 		case "result":
-			return trade.exitReason;
+			// Mirror the SQL rank in derivedResultRankSql so the cursor value
+			// matches the ORDER BY expression exactly.
+			return TRADE_RESULT_SORT_RANK[deriveTradeResult(trade)];
 		case "rating":
 			return trade.rating;
 		case "reviewed":

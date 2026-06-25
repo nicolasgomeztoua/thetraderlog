@@ -5,7 +5,47 @@
 
 import { type SQL, sql } from "drizzle-orm";
 import type { SortDirection, SortField } from "@/lib/constants/trade-log";
+import { TRADE_RESULT_SORT_RANK } from "@/lib/constants/trade-result";
 import { accounts, strategies, trades } from "@/server/db/schema";
+
+/**
+ * SQL expression that derives a trade's result rank, mirroring
+ * `deriveTradeResult` in @/lib/trades/result. Returns the integer ranks from
+ * TRADE_RESULT_SORT_RANK so server-side sorting/filtering of the "Result"
+ * column matches exactly what the UI renders (explicit exit reason wins, then
+ * trailing stop, take profit, stop loss, else manual).
+ */
+export function derivedResultRankSql(): SQL {
+	const r = TRADE_RESULT_SORT_RANK;
+	return sql`
+		CASE
+			WHEN ${trades.status} <> 'closed' OR ${trades.exitPrice} IS NULL THEN ${r.open}
+			WHEN ${trades.exitReason} = 'take_profit' THEN ${r.tp}
+			WHEN ${trades.exitReason} = 'stop_loss' THEN ${r.sl}
+			WHEN ${trades.exitReason} = 'trailing_stop' THEN ${r.trailing}
+			WHEN ${trades.exitReason} = 'breakeven' THEN ${r.breakeven}
+			WHEN ${trades.exitReason} IN ('manual', 'time_based') THEN ${r.manual}
+			WHEN ${trades.wasTrailed} = TRUE AND ${trades.trailedStopLoss} IS NOT NULL
+				AND (
+					(${trades.direction} = 'long' AND CAST(${trades.exitPrice} AS DECIMAL) <= CAST(${trades.trailedStopLoss} AS DECIMAL))
+					OR (${trades.direction} = 'short' AND CAST(${trades.exitPrice} AS DECIMAL) >= CAST(${trades.trailedStopLoss} AS DECIMAL))
+				) THEN ${r.trailing}
+			WHEN (
+				${trades.takeProfit} IS NOT NULL AND (
+					(${trades.direction} = 'long' AND CAST(${trades.exitPrice} AS DECIMAL) >= CAST(${trades.takeProfit} AS DECIMAL))
+					OR (${trades.direction} = 'short' AND CAST(${trades.exitPrice} AS DECIMAL) <= CAST(${trades.takeProfit} AS DECIMAL))
+				)
+			) OR (${trades.takeProfit} IS NULL AND ${trades.takeProfitHit} = TRUE) THEN ${r.tp}
+			WHEN (
+				${trades.stopLoss} IS NOT NULL AND (
+					(${trades.direction} = 'long' AND CAST(${trades.exitPrice} AS DECIMAL) <= CAST(${trades.stopLoss} AS DECIMAL))
+					OR (${trades.direction} = 'short' AND CAST(${trades.exitPrice} AS DECIMAL) >= CAST(${trades.stopLoss} AS DECIMAL))
+				)
+			) OR (${trades.stopLoss} IS NULL AND ${trades.stopLossHit} = TRUE) THEN ${r.sl}
+			ELSE ${r.manual}
+		END
+	`;
+}
 
 /**
  * Get the SQL expression for a sort field
@@ -23,7 +63,7 @@ export function getSortExpression(field: SortField): SQL {
 		case "exit":
 			return sql`${trades.exitTime}`;
 		case "result":
-			return sql`${trades.exitReason}`;
+			return derivedResultRankSql();
 		case "rating":
 			return sql`${trades.rating}`;
 		case "reviewed":

@@ -32,3 +32,8 @@ export {
 	TRADE_SORT_FIELDS,
 	type TradeSort,
 } from "./trade-log";
+export {
+	TRADE_RESULT_META,
+	TRADE_RESULT_SORT_RANK,
+	type TradeResultMeta,
+} from "./trade-result";

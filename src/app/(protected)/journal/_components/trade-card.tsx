@@ -13,8 +13,10 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StarRating } from "@/components/ui/star-rating";
+import { TRADE_RESULT_META } from "@/lib/constants/trade-result";
 import { cn, formatCurrency, getPnLColorClass } from "@/lib/shared";
 import { calculateActualRMultiple } from "@/lib/trades/calculations";
+import { deriveTradeResult } from "@/lib/trades/result";
 import type { JournalTrade } from "./trade-row";
 
 interface TradeCardProps {
@@ -110,19 +112,10 @@ function TradeCardComponent({
 							{rMultiple.toFixed(2)}R
 						</span>
 					)}
-					{trade.status === "open" ? (
-						<span className="text-muted-foreground">Open</span>
-					) : trade.exitReason === "take_profit" || trade.takeProfitHit ? (
-						<span className="text-profit">TP</span>
-					) : trade.exitReason === "stop_loss" || trade.stopLossHit ? (
-						<span className="text-loss">SL</span>
-					) : trade.exitReason === "trailing_stop" ? (
-						<span className="text-accent">Trail</span>
-					) : trade.exitReason === "breakeven" ? (
-						<span className="text-breakeven">BE</span>
-					) : (
-						<span className="text-muted-foreground">Manual</span>
-					)}
+					{(() => {
+						const meta = TRADE_RESULT_META[deriveTradeResult(trade)];
+						return <span className={meta.className}>{meta.label}</span>;
+					})()}
 				</div>
 			</div>
 
