@@ -200,6 +200,7 @@ export default function JournalPage() {
 	const {
 		applyUpdate: applyOptimisticUpdate,
 		clearUpdates: clearOptimisticUpdates,
+		clearUpdate: clearOptimisticUpdate,
 		mergeWithData,
 	} = useOptimisticState<Record<string, unknown>>();
 
@@ -279,16 +280,19 @@ export default function JournalPage() {
 		getKey: ({ id }) => id, // Per-trade debouncing
 	});
 
-	// Review mutation with optimistic update
+	// Review mutation with optimistic update.
+	// Intentionally does NOT invalidate/refetch the list. A refetch would re-sort
+	// the table or, with a review filter active, drop the just-toggled row — which
+	// makes rapid bulk-reviewing impossible. The optimistic override is the source
+	// of truth for the row until the next natural refetch (filter change / remount);
+	// on failure we roll back only the affected trade so other in-flight toggles are
+	// left untouched.
 	const markReviewed = api.trades.markReviewed.useMutation({
 		onMutate: ({ id, isReviewed }) => {
 			applyOptimisticUpdate(id, { isReviewed });
 		},
-		onSettled: async () => {
-			await utils.trades.getAll.invalidate();
-			clearOptimisticUpdates();
-		},
-		onError: (error) => {
+		onError: (error, { id }) => {
+			clearOptimisticUpdate(id);
 			toast.error(getErrorMessage(error, ERR_REVIEW_UPDATE_FAILED));
 		},
 	});
