@@ -1786,6 +1786,121 @@ export const tradesRouter = createTRPCRouter({
 		}),
 
 	/**
+	 * Bulk re-fetch market data + recompute MAE/MFE for the given trades.
+	 *
+	 * The bulk counterpart of `refreshMarketData` (the single-trade "Re-fetch
+	 * data" button): for each trade it busts the cached candle window and then
+	 * recomputes with `skipAlreadyProcessed: false`, so trades still awaiting data
+	 * (NULL or "pending" market-data quality) re-pull fresh bars from the provider
+	 * — including days previously cached empty. Processed in small concurrent
+	 * batches (MAEMFE_BATCH_CONCURRENCY) to respect Databento's effective per-key
+	 * concurrency; the client chunks large pending sets and calls this once per
+	 * chunk to stay within the request budget and surface progress.
+	 */
+	bulkRefreshMarketData: requireFeature(FEATURE_TRADE_MANAGEMENT)
+		.input(z.object({ tradeIds: z.array(z.string()).min(1).max(25) }))
+		.mutation(async ({ ctx, input }) => {
+			// Only touch closed trades the user owns; silently skip the rest.
+			const eligibleTrades = await ctx.db.query.trades.findMany({
+				where: and(
+					eq(trades.userId, ctx.user.id),
+					inArray(trades.id, input.tradeIds),
+					eq(trades.status, "closed"),
+				),
+				columns: { id: true, symbol: true, entryTime: true, exitTime: true },
+			});
+
+			const results = {
+				requested: input.tradeIds.length,
+				refreshed: 0,
+				pending: 0,
+				unavailable: 0,
+				skipped: input.tradeIds.length - eligibleTrades.length,
+			};
+
+			// Each trade busts its candle cache then makes a Databento fetch
+			// (network), so process in small concurrent batches rather than fanning
+			// out across every trade — capped at Databento's effective per-key
+			// concurrency, matching the single-trade and bulk-calculate paths.
+			for (
+				let i = 0;
+				i < eligibleTrades.length;
+				i += MAEMFE_BATCH_CONCURRENCY
+			) {
+				const batch = eligibleTrades.slice(i, i + MAEMFE_BATCH_CONCURRENCY);
+				const batchResults = await Promise.all(
+					batch.map(async (trade) => {
+						// Drop cached candles for this trade's window first so a
+						// released-but-empty ("unavailable") cached day is re-pulled
+						// fresh — exactly what the single-trade refreshMarketData does.
+						await clearCandleCacheForTrade(
+							trade.symbol,
+							trade.entryTime,
+							trade.exitTime,
+						);
+						return calculateAndStoreMAEMFE(trade.id, {
+							skipAlreadyProcessed: false,
+						});
+					}),
+				);
+
+				// A "pending" outcome (session not published yet) is normal, not a
+				// failure — it self-heals on a later refetch. Bucket by quality so
+				// the UI can report refreshed / awaiting / unavailable counts.
+				for (const result of batchResults) {
+					if (result.dataQuality === "pending") {
+						results.pending++;
+					} else if (result.success) {
+						results.refreshed++;
+					} else {
+						results.unavailable++;
+					}
+				}
+			}
+
+			return results;
+		}),
+
+	/**
+	 * Trade IDs that still need market data (MAE/MFE) computed — closed trades
+	 * whose market-data quality is NULL (never processed) or "pending" (awaiting
+	 * the provider's delayed release). Powers the journal's bulk "Refetch data"
+	 * button: the count drives the button and the IDs are chunked through
+	 * `bulkRefreshMarketData`.
+	 */
+	getPendingMarketDataTrades: protectedProcedure
+		.input(z.object({ accountId: z.string().optional() }).optional())
+		.query(async ({ ctx, input }) => {
+			const conditions = [
+				eq(trades.userId, ctx.user.id),
+				eq(trades.status, "closed"),
+				isNull(trades.deletedAt),
+				or(
+					isNull(trades.marketDataQuality),
+					eq(trades.marketDataQuality, "pending"),
+				),
+			];
+
+			if (input?.accountId) {
+				conditions.push(eq(trades.accountId, input.accountId));
+			}
+
+			// Fetch one past the cap so the client can tell the user there are
+			// still more pending trades than a single run will cover.
+			const pending = await ctx.db.query.trades.findMany({
+				where: and(...conditions),
+				orderBy: [desc(trades.exitTime)], // Most recent first
+				limit: 501,
+				columns: { id: true },
+			});
+
+			return {
+				tradeIds: pending.slice(0, 500).map((t) => t.id),
+				truncated: pending.length > 500,
+			};
+		}),
+
+	/**
 	 * Get trades that need MAE/MFE calculation
 	 * Returns closed trades without MAE/MFE data
 	 */
