@@ -60,3 +60,33 @@ export const CHART_INTERVALS: ChartInterval[] = [
 	"30min",
 	"1h",
 ] as const;
+
+// =============================================================================
+// DURATION-ADAPTIVE TIMEFRAME (AUTO MODE)
+// =============================================================================
+
+/**
+ * Upper duration bounds (in MINUTES) for each auto-selected timeframe tier.
+ * A trade whose duration is `<=` a bound picks that tier (boundaries belong to
+ * the coarser side, so a trade exactly on the line is deterministic). The goal
+ * is for the trade body to span a readable ~12–48 candles at the chosen tf.
+ *
+ *   <= 40 min  -> "1min"   (10-min trade  -> 10 candles)
+ *   <= 3 h     -> "5min"   (90-min trade  -> 18 candles)
+ *   <= 8 h     -> "15min"  (4-h trade     -> 16 candles)
+ *   <= 18 h    -> "30min"  (14-h overnight-> 28 candles)
+ *   >  18 h    -> "1h"     (2-day swing   -> ~46 candles)
+ */
+export const AUTO_TIER_THRESHOLDS_MIN = {
+	oneMin: 40,
+	fiveMin: 180,
+	fifteenMin: 480,
+	thirtyMin: 1080,
+} as const;
+
+/**
+ * Open trades have no exit, so duration is measured to "now". Clamp that span
+ * (for both interval choice and the visible window) so a stale open position
+ * doesn't force the coarsest tf and a 10-day-wide chart.
+ */
+export const STALE_OPEN_CAP_MS = 24 * MS_PER_HOUR;

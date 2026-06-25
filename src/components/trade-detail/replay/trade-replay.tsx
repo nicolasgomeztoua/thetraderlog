@@ -2,9 +2,9 @@
 
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TradingChartSkeleton } from "@/components/trade-detail/trading-chart-skeleton";
-import { aggregateBars } from "@/lib/market-data";
+import { aggregateBars, resolveAutoInterval } from "@/lib/market-data";
 import {
 	type ChartInterval,
 	cn,
@@ -67,9 +67,29 @@ export function TradeReplay({
 	className,
 }: TradeReplayProps) {
 	// Preferences from stores
-	const interval = useChartPreferencesStore((s) => s.interval);
-	const setInterval = useChartPreferencesStore((s) => s.setInterval);
+	const intervalOverride = useChartPreferencesStore((s) => s.intervalOverride);
 	const defaultSpeed = useReplayPreferencesStore((s) => s.defaultSpeed);
+
+	// Replay keeps its own interval (seeded from the chart's resolved timeframe)
+	// so switching tf mid-replay doesn't flip the chart tab out of Auto mode.
+	const autoInterval = useMemo<ChartInterval>(
+		() =>
+			entryTime
+				? resolveAutoInterval(
+						new Date(entryTime),
+						exitTime ? new Date(exitTime) : null,
+					)
+				: "15min",
+		[entryTime, exitTime],
+	);
+	const [interval, setInterval] = useState<ChartInterval>(
+		intervalOverride ?? autoInterval,
+	);
+	// Re-seed when the trade changes (or the chart's override changes), not on a
+	// local pick — so paging trades reframes but the user's in-replay tf sticks.
+	useEffect(() => {
+		setInterval(intervalOverride ?? autoInterval);
+	}, [autoInterval, intervalOverride]);
 
 	// Fetch chart data
 	const { data: rawChartData, isLoading } =

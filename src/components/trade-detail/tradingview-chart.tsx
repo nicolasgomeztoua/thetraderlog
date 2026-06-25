@@ -49,9 +49,15 @@ import {
 	ERR_ANNOTATION_CLEAR_FAILED,
 	ERR_ANNOTATION_CREATE_FAILED,
 } from "@/lib/constants/errors";
-import { aggregateBars, getTradingViewSymbol } from "@/lib/market-data";
+import {
+	aggregateBars,
+	computeWindow,
+	getTradingViewSymbol,
+	resolveAutoInterval,
+} from "@/lib/market-data";
 import { barsCoverTradeEntry } from "@/lib/market-data/chart-coverage";
 import {
+	CHART_INTERVALS,
 	type ChartInterval,
 	cn,
 	INTERVAL_LABELS,
@@ -256,64 +262,43 @@ class VerticalLinePrimitive implements ISeriesPrimitive {
 }
 
 // =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-/**
- * Calculate the visible range for auto-fit
- * Shows trade duration plus context candles on each side
- */
-function calculateVisibleRange(
-	entryTime: Date | string | null,
-	exitTime: Date | string | null,
-	intervalMs: number,
-	contextCandles: number = 3,
-): { from: UTCTimestamp; to: UTCTimestamp } | null {
-	if (!entryTime) return null;
-
-	const entryTs = Math.floor(new Date(entryTime).getTime() / 1000);
-	const exitTs = exitTime
-		? Math.floor(new Date(exitTime).getTime() / 1000)
-		: Math.floor(Date.now() / 1000);
-
-	const candleSeconds = intervalMs / 1000;
-
-	return {
-		from: (entryTs - contextCandles * candleSeconds) as UTCTimestamp,
-		to: (exitTs + contextCandles * candleSeconds) as UTCTimestamp,
-	};
-}
-
-// =============================================================================
 // TIMEFRAME SELECTOR COMPONENT
 // =============================================================================
 
-const CHART_INTERVALS: ChartInterval[] = [
-	"1min",
-	"5min",
-	"15min",
-	"30min",
-	"1h",
-];
+const AUTO_VALUE = "auto";
 
+/**
+ * Timeframe selector with an AUTO affordance.
+ * - `intervalOverride === null` => AUTO mode (timeframe derived per trade).
+ * - `resolvedInterval` is the timeframe currently shown (the override, or the
+ *   auto-derived one) so AUTO can surface what it resolved to (e.g. "AUTO·15m").
+ * - `onSelect(null)` returns to AUTO; `onSelect(tf)` pins a manual timeframe.
+ */
 function TimeframeSelector({
-	interval,
-	onIntervalChange,
+	intervalOverride,
+	resolvedInterval,
+	onSelect,
 	disabled,
 	isMobile,
 }: {
-	interval: ChartInterval;
-	onIntervalChange: (interval: ChartInterval) => void;
+	intervalOverride: ChartInterval | null;
+	resolvedInterval: ChartInterval;
+	onSelect: (interval: ChartInterval | null) => void;
 	disabled?: boolean;
 	isMobile?: boolean;
 }) {
-	// Mobile: Use dropdown select
+	const isAuto = intervalOverride === null;
+	const autoLabel = `AUTO·${INTERVAL_LABELS[resolvedInterval]}`;
+
+	// Mobile: Use dropdown select (AUTO is the first option)
 	if (isMobile) {
 		return (
 			<Select
 				disabled={disabled}
-				onValueChange={(value) => onIntervalChange(value as ChartInterval)}
-				value={interval}
+				onValueChange={(value) =>
+					onSelect(value === AUTO_VALUE ? null : (value as ChartInterval))
+				}
+				value={intervalOverride ?? AUTO_VALUE}
 			>
 				<SelectTrigger
 					className="h-7 min-h-9 w-auto min-w-15 gap-1 border-none bg-muted px-2 font-mono text-[10px] uppercase hover:bg-muted/80"
@@ -322,6 +307,12 @@ function TimeframeSelector({
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
+					<SelectItem
+						className="min-h-11 font-mono text-xs uppercase"
+						value={AUTO_VALUE}
+					>
+						{autoLabel}
+					</SelectItem>
 					{CHART_INTERVALS.map((tf) => (
 						<SelectItem
 							className="min-h-11 font-mono text-xs uppercase"
@@ -336,21 +327,40 @@ function TimeframeSelector({
 		);
 	}
 
-	// Desktop: Use button row
+	// Desktop: Use button row, AUTO chip first
 	return (
 		<div className="flex items-center gap-1">
+			<button
+				className={cn(
+					"rounded px-2 py-1 font-mono text-[10px] uppercase transition-colors",
+					"disabled:cursor-not-allowed disabled:opacity-50",
+					isAuto
+						? "bg-primary text-primary-foreground"
+						: "bg-muted text-muted-foreground hover:bg-muted/80",
+				)}
+				disabled={disabled}
+				onClick={() => onSelect(null)}
+				title="Auto timeframe (from trade duration)"
+				type="button"
+			>
+				{isAuto ? autoLabel : "AUTO"}
+			</button>
 			{CHART_INTERVALS.map((tf) => (
 				<button
 					className={cn(
 						"rounded px-2 py-1 font-mono text-[10px] uppercase transition-colors",
 						"disabled:cursor-not-allowed disabled:opacity-50",
-						interval === tf
+						intervalOverride === tf
 							? "bg-primary text-primary-foreground"
-							: "bg-muted text-muted-foreground hover:bg-muted/80",
+							: cn(
+									"bg-muted text-muted-foreground hover:bg-muted/80",
+									// In AUTO mode, hint which timeframe it resolved to.
+									isAuto && resolvedInterval === tf && "ring-1 ring-primary/40",
+								),
 					)}
 					disabled={disabled}
 					key={tf}
-					onClick={() => onIntervalChange(tf)}
+					onClick={() => onSelect(tf)}
 					type="button"
 				>
 					{INTERVAL_LABELS[tf]}
@@ -424,34 +434,71 @@ function LightweightChartInner({
 	const isMobile = useIsMobile();
 	const { timezone } = useTimezone();
 
-	// Chart preferences from persistent store
-	const interval = useChartPreferencesStore((s) => s.interval);
-	const setInterval = useChartPreferencesStore((s) => s.setInterval);
-
-	// Use refs for zoom to avoid re-renders - only apply on initial load
-	const setVisibleBarsCountRef = useRef(
-		useChartPreferencesStore.getState().setVisibleBarsCount,
+	// Chart preferences from persistent store. `intervalOverride === null` => AUTO:
+	// the timeframe is derived per trade from its duration.
+	const intervalOverride = useChartPreferencesStore((s) => s.intervalOverride);
+	const setIntervalOverride = useChartPreferencesStore(
+		(s) => s.setIntervalOverride,
 	);
-	const initialVisibleBarsCountRef = useRef(
-		useChartPreferencesStore.getState().visibleBarsCount,
+
+	// Auto timeframe from trade duration; the effective `interval` is the manual
+	// override when one is pinned, otherwise the auto pick.
+	const autoInterval = useMemo<ChartInterval>(
+		() =>
+			entryTime
+				? resolveAutoInterval(
+						new Date(entryTime),
+						exitTime ? new Date(exitTime) : null,
+					)
+				: "15min",
+		[entryTime, exitTime],
 	);
-	const hasAppliedInitialZoomRef = useRef(false);
-	const zoomDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const interval = intervalOverride ?? autoInterval;
 
-	// Reset initial zoom flag when navigating to a different trade
-	// biome-ignore lint/correctness/useExhaustiveDependencies: entryTime triggers reset for new trades
-	useEffect(() => {
-		hasAppliedInitialZoomRef.current = false;
-		initialVisibleBarsCountRef.current =
-			useChartPreferencesStore.getState().visibleBarsCount;
-	}, [entryTime]);
+	// Zoom state lives in refs (no re-renders). A genuine user zoom sets
+	// `zoomOverrideRef` so we stop auto-framing; `isProgrammaticRef` keeps our own
+	// setVisibleLogicalRange from being mistaken for a user zoom. The latest chart
+	// bars are mirrored so the Fit button can re-frame on demand.
+	const zoomOverrideRef = useRef(false);
+	const isProgrammaticRef = useRef(false);
+	const chartBarsRef = useRef<CandleDataPoint[]>([]);
 
-	// Handler to fit chart to trade (called from Fit button)
-	const handleFitToTrade = useCallback(() => {
-		if (chartRef.current) {
-			chartRef.current.timeScale().fitContent();
+	// Frame the trade with a gap-proof bar-count window (computeWindow returns
+	// logical bar indices; lightweight-charts collapses overnight/weekend gaps).
+	const applyAutoWindow = useCallback(() => {
+		const chart = chartRef.current;
+		const bars = chartBarsRef.current;
+		if (!chart || !entryTime || bars.length === 0) return;
+		if (!barsCoverTradeEntry(bars, entryTime)) return;
+		const win = computeWindow({
+			bars,
+			entryTime: new Date(entryTime),
+			exitTime: exitTime ? new Date(exitTime) : null,
+			interval,
+		});
+		isProgrammaticRef.current = true;
+		if (win) {
+			chart.timeScale().setVisibleLogicalRange(win);
+		} else {
+			chart.timeScale().fitContent();
 		}
-	}, []);
+		queueMicrotask(() => {
+			isProgrammaticRef.current = false;
+		});
+	}, [entryTime, exitTime, interval]);
+
+	// Drop any per-trade zoom override when navigating to another trade or when the
+	// timeframe changes (a new bar size needs a fresh frame).
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-run to reset the override on trade/timeframe change
+	useEffect(() => {
+		zoomOverrideRef.current = false;
+	}, [entryTime, interval]);
+
+	// Fit button: drop any manual zoom and re-frame to the smart window.
+	const handleFitToTrade = useCallback(() => {
+		zoomOverrideRef.current = false;
+		applyAutoWindow();
+	}, [applyAutoWindow]);
 
 	// Get theme colors from the actual theme configuration
 	// (optional: share pages render the chart without a ThemeProvider)
@@ -877,6 +924,8 @@ function LightweightChartInner({
 			: [];
 
 		candlestickSeries.setData(chartBars);
+		// Mirror the on-series bars so the Fit button can re-frame on demand.
+		chartBarsRef.current = chartBars;
 
 		// Add markers for entry/exit/executions
 		let markersPrimitive: { detach: () => void } | null = null;
@@ -942,69 +991,19 @@ function LightweightChartInner({
 			});
 		}
 
-		// Apply zoom: only on initial load, use saved visibleBarsCount or auto-fit
-		const savedBarsCount = initialVisibleBarsCountRef.current;
-		const shouldApplyInitialZoom =
-			!hasAppliedInitialZoomRef.current &&
-			savedBarsCount &&
-			chartBars.length > 0 &&
-			entryTime;
-
-		if (shouldApplyInitialZoom) {
-			// User has a saved zoom preference - center on trade entry
-			const entryTs = Math.floor(new Date(entryTime).getTime() / 1000);
-			const entryIndex = chartBars.findIndex(
-				(bar) => (bar.time as number) >= entryTs,
-			);
-			if (entryIndex >= 0) {
-				const halfVisible = savedBarsCount / 2;
-				chart.timeScale().setVisibleLogicalRange({
-					from: entryIndex - halfVisible,
-					to: entryIndex + halfVisible,
-				});
-			} else {
-				chart.timeScale().fitContent();
-			}
-			hasAppliedInitialZoomRef.current = true;
-		} else if (!hasAppliedInitialZoomRef.current) {
-			// No saved zoom - auto-fit to show trade window with context
-			if (hasRealData && entryTime) {
-				const range = calculateVisibleRange(
-					entryTime,
-					exitTime ?? null,
-					INTERVAL_MS[interval],
-					3,
-				);
-				if (range) {
-					// Ensure we have at least 5 candles visible
-					const minVisibleSeconds = 5 * (INTERVAL_MS[interval] / 1000);
-					const actualRange = (range.to as number) - (range.from as number);
-					if (actualRange < minVisibleSeconds) {
-						const padding = (minVisibleSeconds - actualRange) / 2;
-						range.from = ((range.from as number) - padding) as UTCTimestamp;
-						range.to = ((range.to as number) + padding) as UTCTimestamp;
-					}
-					chart.timeScale().setVisibleRange(range);
-				} else {
-					chart.timeScale().fitContent();
-				}
-			} else {
-				chart.timeScale().fitContent();
-			}
-			hasAppliedInitialZoomRef.current = true;
+		// Frame the trade with the smart bar-count window, unless the user has
+		// actively zoomed this trade (we then leave their view alone until they
+		// navigate away or change timeframe).
+		if (!zoomOverrideRef.current) {
+			applyAutoWindow();
 		}
 
-		// Subscribe to zoom changes to persist for next trade load
+		// A genuine user zoom/pan switches off auto-framing for THIS trade only
+		// (reset on trade/timeframe change). Our own programmatic frames are
+		// suppressed via isProgrammaticRef so they never count as a user zoom.
 		const zoomHandler = (range: { from: number; to: number } | null) => {
-			if (range) {
-				const barsVisible = Math.round(range.to - range.from);
-				// Debounced save to store (won't cause re-renders due to refs)
-				if (zoomDebounceRef.current) {
-					clearTimeout(zoomDebounceRef.current);
-				}
-				zoomDebounceRef.current = setTimeout(() => {
-					setVisibleBarsCountRef.current(barsVisible);
-				}, 300);
+			if (range && !isProgrammaticRef.current) {
+				zoomOverrideRef.current = true;
 			}
 		};
 		chart.timeScale().subscribeVisibleLogicalRangeChange(zoomHandler);
@@ -1153,9 +1152,6 @@ function LightweightChartInner({
 		// Cleanup
 		return () => {
 			chart.timeScale().unsubscribeVisibleLogicalRangeChange(zoomHandler);
-			if (zoomDebounceRef.current) {
-				clearTimeout(zoomDebounceRef.current);
-			}
 			if (markersPrimitive) {
 				markersPrimitive.detach();
 			}
@@ -1185,14 +1181,12 @@ function LightweightChartInner({
 		hasRealData,
 		chartData,
 		markers,
-		entryTime,
-		exitTime,
-		interval,
 		maePrice,
 		mfePrice,
 		tradeId,
 		createAnnotation.mutate,
 		timezone,
+		applyAutoWindow,
 	]);
 
 	// Render persisted annotations separately to avoid full chart recreation on annotation changes
@@ -1306,12 +1300,13 @@ function LightweightChartInner({
 					</span>
 				</div>
 
-				{/* Timeframe selector */}
+				{/* Timeframe selector (AUTO derives from trade duration) */}
 				<TimeframeSelector
 					disabled={isLoading}
-					interval={interval}
+					intervalOverride={intervalOverride}
 					isMobile={isMobile}
-					onIntervalChange={setInterval}
+					onSelect={setIntervalOverride}
+					resolvedInterval={interval}
 				/>
 
 				{/* Fit to trade button */}
