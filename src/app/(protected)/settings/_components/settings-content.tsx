@@ -232,6 +232,8 @@ const PRESET_DECIMAL_KEYS = new Set<keyof PropPresetFields>([
 	"qualifyingDayMinProfit",
 	"consistencyRule",
 	"winningDayThreshold",
+	"accountSize",
+	"safetyNetBuffer",
 	"minWithdrawal",
 	"payoutConsistencyPct",
 	"profitSplit",
@@ -591,7 +593,9 @@ export function SettingsContent() {
 	 * mirror the overlapping values into the editable legacy inputs.
 	 */
 	const applyPreset = (preset: PropPreset) => {
-		const f = preset.fields;
+		// Carry the nominal account size onto the field set so it persists as the
+		// rule-anchor (independent of the balance the user logs at).
+		const f = { ...preset.fields, accountSize: preset.accountSize };
 		setPresetId(preset.id);
 		setPresetFields(f);
 		const str = (n: number | null | undefined) =>

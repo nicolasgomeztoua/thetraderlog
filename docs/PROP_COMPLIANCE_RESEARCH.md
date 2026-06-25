@@ -252,3 +252,39 @@ approximate."
 > Caveat from the fact-check: Apex's official pages were behind Cloudflare/anti-bot, so Apex
 > values rest on Google-indexed excerpts + corroboration. Confirm 25K/150K Apex DD on the
 > live help center before shipping those presets.
+
+---
+
+## ADDENDUM — Withdrawable-buffer floor, VERIFIED & FIXED 2026-06-25
+
+Re-researched all 10 funded firms (10 web agents + adversarial verify). The original
+"buffer/safety-net floor = start + DD$" (§A.6) was **wrong for most firms**, and the calc
+also anchored the floor to the user-entered `initialBalance` instead of the nominal program
+size — so an account logged mid-stream (initialBalance above nominal start) got an inflated
+floor. Both are now fixed (migration `0019`, columns `account_size` + `safety_net_buffer`;
+floor = `account_size + safety_net_buffer`, drawdown lock anchored to `account_size`).
+
+**Verified per-firm withdrawable-floor model (funded):**
+| Firm | Floor formula | Confidence |
+|---|---|---|
+| Apex (4.0, since 2026-03-01) | start + DD + **$100**; DDs 1,000/2,000/3,000/4,000 (legacy was 1,500/2,500/3,000/5,000) | med (official pages 403/429, 5+ corroborating) |
+| MyFundedFutures | start + DD + **$100** (50K=52,100 / 100K=103,100 / 150K=154,600) | high |
+| Bulenox | start + DD + **$100** ("Withdrawal Safety Threshold Reserve"; 50K=52,600) | high |
+| Elite Trader Funding | start + DD + **$100** (50K=52,100 / 100K=103,100 / 150K=155,100) | high |
+| Take Profit Trader | start + DD (no +$100) | high |
+| Tradeify (3.0) | start + DD + **$1,000** (Growth 50K=53,000); fail-floor = start+$100 | high (Growth); Select/Lightning via formula |
+| Earn2Trade | **no buffer** — floor = start | high |
+| FTMO | **no buffer** — profit removed on payout, account resets | high |
+| FundedNext | Rapid/Legacy/Flex = start (no buffer); **Bolt** = start+DD+$100 | high |
+| Topstep XFA | **$0-anchored** — "50K" is *buying power*, balance starts at $0 | high |
+
+`safety_net_buffer` (USD over nominal start) is now set on all funded presets per the above.
+
+**Remaining follow-ups (not done in the 0019 pass):**
+- **Topstep XFA** left unmodelled — its $0-anchored balance needs its own treatment (the
+  start+buffer floor model doesn't fit). Presets carry no `safetyNetBuffer`.
+- **FundedNext Bolt** still has `bufferType` unset (defaults to floor=start); should be
+  start+DD+$100 — left as a flagged follow-up.
+- **MFFU/ETF drawdown-amount display:** some preset `maxDrawdownAbsolute` values (MFFU
+  100K/150K, ETF 150K) disagree with the verified DDs. The *buffer* is now correct
+  (decoupled via `safety_net_buffer`), but the drawdown-loss display still uses these.

@@ -1,0 +1,21 @@
+-- =============================================================================
+-- 0019 — Prop safety-net buffer + nominal account size
+-- Fixes the withdrawable-buffer floor for funded prop accounts. The floor was
+-- computed as `initialBalance + trailingDrawdown`, which is wrong twice over:
+--   1. it anchored to the (possibly mid-stream) logged initialBalance instead of
+--      the nominal program size (e.g. a 50K account logged at $52,083 made the
+--      floor float upward), and
+--   2. it used the trailing-drawdown amount as the cushion, but firms publish a
+--      distinct safety-net (Apex/MFFU/Bulenox/ETF = DD+$100, TPT = DD, Tradeify
+--      = DD+$1,000, Earn2Trade/FundedNext-most = 0).
+--
+-- New floor = account_size + safety_net_buffer. Both columns are nullable; when
+-- unset the calc falls back to the old initialBalance + drawdown behaviour, so
+-- existing rows are unaffected until a preset (or a manual edit) populates them.
+--
+-- Apply with:  bun run db:migrate:sql drizzle/0019_prop_safety_net_buffer.sql
+-- The runner skips already-exists errors, so it is safe to re-run and to apply
+-- to BOTH Neon branches (dev + prod — see memory neon-prod-dev-branches).
+-- =============================================================================
+ALTER TABLE "account" ADD COLUMN IF NOT EXISTS "account_size" numeric(20, 2);--> statement-breakpoint
+ALTER TABLE "account" ADD COLUMN IF NOT EXISTS "safety_net_buffer" numeric(14, 2);

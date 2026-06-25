@@ -611,6 +611,10 @@ export const accountsRouter = createTRPCRouter({
 			]);
 
 			const initialBalance = parseFloat(account.initialBalance ?? "0");
+			// Nominal program size (e.g. 50000) that program rules anchor to. Falls
+			// back to initialBalance for accounts created before this field existed.
+			const nominalAccountSize =
+				account.accountSize != null ? num(account.accountSize) : initialBalance;
 			const maxDrawdownPercent = parseFloat(account.maxDrawdown ?? "0");
 			const dailyLossLimitPercent = parseFloat(account.dailyLossLimit ?? "0");
 			const profitTargetPercent = parseFloat(account.profitTarget ?? "0");
@@ -673,6 +677,7 @@ export const accountsRouter = createTRPCRouter({
 			} else {
 				const floorResult = computeTrailingFloor(equityCurve, {
 					initialBalance,
+					lockAnchor: nominalAccountSize,
 					drawdownAbsolute,
 					highWaterSource: ddHighWaterSource,
 					lock: ddLock,
@@ -822,6 +827,11 @@ export const accountsRouter = createTRPCRouter({
 					payoutRecords,
 					{
 						initialBalance,
+						accountSize: nominalAccountSize,
+						safetyNetBuffer:
+							account.safetyNetBuffer != null
+								? num(account.safetyNetBuffer)
+								: undefined,
 						totalRealizedPnl: totalPnl,
 						drawdownAbsolute,
 						winningDayThreshold: num(account.winningDayThreshold),

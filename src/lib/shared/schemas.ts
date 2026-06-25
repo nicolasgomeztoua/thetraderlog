@@ -239,6 +239,8 @@ export const propFieldsSchema = z.object({
 	bufferType: bufferTypeEnum.optional(),
 	payoutRequiresBufferCleared: z.boolean().optional(),
 	minWithdrawal: z.string().optional(),
+	accountSize: z.string().optional(),
+	safetyNetBuffer: z.string().optional(),
 	firstPayoutCaps: z.string().optional(),
 	maxLifetimePayouts: z.number().optional(),
 	payoutConsistencyPct: z.string().optional(),

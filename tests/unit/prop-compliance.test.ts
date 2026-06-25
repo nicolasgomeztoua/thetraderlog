@@ -1143,4 +1143,53 @@ describe("computePayoutEligibility", () => {
 		expect(result.payoutIndex).toBe(1);
 		expect(result.splitPct).toBe(90);
 	});
+
+	// --- safety-net anchoring (account_size + safety_net_buffer) ---
+
+	it("anchors the buffer floor to nominal accountSize + safetyNetBuffer, not the mid-stream logged balance", () => {
+		// Real Apex 50K (4.0) logged mid-stream: started journaling at $52,083.65
+		// after the buffer was already built, +$592.50 logged since.
+		const result = computePayoutEligibility(
+			[],
+			[],
+			{
+				...baseConfig,
+				initialBalance: 52083.65, // balance when logging started (real)
+				accountSize: 50000, // nominal program size
+				safetyNetBuffer: 2100, // Apex 4.0 50K cushion
+				totalRealizedPnl: 592.5,
+				drawdownAbsolute: 2000,
+				minWithdrawal: 500,
+			},
+			now,
+		);
+		// Floor anchors to 50,000 + 2,100 = 52,100 — NOT 52,083.65 + 2,000 (54,083.65)
+		expect(result.buffer.floor).toBe(52100);
+		expect(result.buffer.withdrawableProfit).toBeCloseTo(576.15);
+		expect(result.buffer.cleared).toBe(true);
+		expect(result.minWithdrawalMet).toBe(true);
+	});
+
+	it("treats safetyNetBuffer 0 as a floor at the nominal start (no-buffer firms)", () => {
+		const result = computePayoutEligibility(
+			[],
+			[],
+			{
+				...baseConfig,
+				initialBalance: 50000,
+				accountSize: 50000,
+				safetyNetBuffer: 0,
+				totalRealizedPnl: 800,
+			},
+			now,
+		);
+		expect(result.buffer.floor).toBe(50000);
+		expect(result.buffer.withdrawableProfit).toBeCloseTo(800);
+	});
+
+	it("falls back to initialBalance + drawdown when accountSize/safetyNetBuffer are unset (legacy rows)", () => {
+		const result = computePayoutEligibility(fundedTrades, [], baseConfig, now);
+		// 50,000 + 2,500 — unchanged legacy behaviour
+		expect(result.buffer.floor).toBe(52500);
+	});
 });
