@@ -2,7 +2,7 @@ import { runs } from "@trigger.dev/sdk/v3";
 import { TRPCError } from "@trpc/server";
 
 import type { ModelMessage } from "ai";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { z } from "zod";
 import { aiGenerateText } from "@/lib/ai/client";
 import { buildUserContext } from "@/lib/ai/context-builder";
@@ -730,23 +730,89 @@ export const aiRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			// Resolve the cursor (a report id) to a (createdAt, id) keyset — ids are
+			// nanoid-based and NOT time-ordered, so we page on createdAt with id as a
+			// tiebreaker for rows that share a timestamp.
+			let cursor: { createdAt: Date; id: string } | undefined;
+			if (input.cursor) {
+				const cursorRow = await ctx.db.query.aiReports.findFirst({
+					where: and(
+						eq(aiReports.id, input.cursor),
+						eq(aiReports.userId, ctx.user.id),
+					),
+					columns: { id: true, createdAt: true },
+				});
+				if (cursorRow) {
+					cursor = { createdAt: cursorRow.createdAt, id: cursorRow.id };
+				}
+			}
+
 			const reports = await ctx.db.query.aiReports.findMany({
-				where: eq(aiReports.userId, ctx.user.id),
-				orderBy: [desc(aiReports.createdAt)],
+				where: and(
+					eq(aiReports.userId, ctx.user.id),
+					cursor
+						? or(
+								lt(aiReports.createdAt, cursor.createdAt),
+								and(
+									eq(aiReports.createdAt, cursor.createdAt),
+									lt(aiReports.id, cursor.id),
+								),
+							)
+						: undefined,
+				),
+				orderBy: [desc(aiReports.createdAt), desc(aiReports.id)],
 				limit: input.limit + 1,
 			});
 
 			let nextCursor: string | undefined;
 			if (reports.length > input.limit) {
-				const next = reports.pop();
-				nextCursor = next?.id;
+				reports.pop(); // discard the probe row…
+				nextCursor = reports[reports.length - 1]?.id; // …cursor = last RETURNED row
 			}
 
+			// Recover reports stuck in queued/generating past the worker's max
+			// duration (mirrors getReportStatus) so the live poll can stop. The
+			// omnibox reads only listReports, so recovery must live here too.
+			const STALE_THRESHOLD_MS = 35 * 60 * 1000;
+			const staleCutoff = Date.now() - STALE_THRESHOLD_MS;
+			const staleIds = reports
+				.filter(
+					(r) =>
+						(r.status === "queued" || r.status === "generating") &&
+						new Date(r.createdAt).getTime() < staleCutoff,
+				)
+				.map((r) => r.id);
+			if (staleIds.length > 0) {
+				await ctx.db
+					.update(aiReports)
+					.set({
+						status: "failed",
+						progressStage: "failed",
+						completedAt: new Date(),
+						errorMessage:
+							"Report generation timed out. Please try again with a shorter date range.",
+					})
+					.where(inArray(aiReports.id, staleIds));
+			}
+			const staleSet = new Set(staleIds);
+
 			return {
-				items: reports.map((report) => ({
-					...report,
-					hasContent: report.content != null && report.content.length > 0,
-				})),
+				items: reports.map((report) => {
+					const recovered = staleSet.has(report.id)
+						? {
+								...report,
+								status: "failed" as const,
+								progressStage: "failed",
+								errorMessage:
+									"Report generation timed out. Please try again with a shorter date range.",
+							}
+						: report;
+					return {
+						...recovered,
+						hasContent:
+							recovered.content != null && recovered.content.length > 0,
+					};
+				}),
 				nextCursor,
 			};
 		}),
@@ -963,6 +1029,56 @@ export const aiRouter = createTRPCRouter({
 				}
 				throw error;
 			}
+		}),
+
+	/**
+	 * Delete a report. If it's still in flight, cancel the Trigger.dev run first
+	 * (delete doubles as cancel — there is no separate cancel endpoint). Deleting
+	 * the backing report-mode conversation cascades to the report row + messages.
+	 */
+	deleteReport: protectedProcedure
+		.input(z.object({ reportId: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			const report = await ctx.db.query.aiReports.findFirst({
+				where: and(
+					eq(aiReports.id, input.reportId),
+					eq(aiReports.userId, ctx.user.id),
+				),
+				columns: {
+					id: true,
+					status: true,
+					conversationId: true,
+					triggerTaskId: true,
+				},
+			});
+
+			if (!report) {
+				throw new Error(ERR_REPORT_NOT_FOUND);
+			}
+
+			// Cancel an in-flight run so the worker doesn't keep burning tokens
+			// writing to a row we're about to delete.
+			const active =
+				report.status === "queued" || report.status === "generating";
+			if (active && report.triggerTaskId) {
+				try {
+					await runs.cancel(report.triggerTaskId);
+				} catch {
+					logger.error(
+						"Failed to cancel Trigger.dev run on deleteReport",
+						undefined,
+						{ reportId: report.id, triggerTaskId: report.triggerTaskId },
+					);
+				}
+			}
+
+			// Deleting the conversation cascades to the report + its messages
+			// (aiReports.conversationId and aiMessages.conversationId both cascade).
+			await ctx.db
+				.delete(aiConversations)
+				.where(eq(aiConversations.id, report.conversationId));
+
+			return { success: true };
 		}),
 
 	// =========================================================================
